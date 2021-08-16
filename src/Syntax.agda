@@ -37,9 +37,9 @@ module Syntax (Class : Set) where
   {- The de Bruijn indices are binary numbers because shapes are binary trees.
      [ A , Δ ]∈ Γ is the set of variable indices in Γ whose arity is (A , Δ). -}
   data [_,_]∈_ : Shape → Class → Shape → Set where
-    var-here : ∀ {Ξ : Shape} {A} → [ Ξ , A ]∈  [ Ξ , A ]
-    var-left :  ∀ {Ξ : Shape} {A} {Γ : Shape} {Δ : Shape} → [ Ξ , A ]∈ Γ → [ Ξ , A ]∈ Γ ⊕ Δ
-    var-right : ∀ {Ξ : Shape} {A} {Γ : Shape} {Δ : Shape} → [ Ξ , A ]∈ Δ → [ Ξ , A ]∈ Γ ⊕ Δ
+    var-here : ∀ {Ξ} {A} → [ Ξ , A ]∈  [ Ξ , A ]
+    var-left :  ∀ {Ξ} {A} {Γ} {Δ} → [ Ξ , A ]∈ Γ → [ Ξ , A ]∈ Γ ⊕ Δ
+    var-right : ∀ {Ξ} {A} {Γ} {Δ} → [ Ξ , A ]∈ Δ → [ Ξ , A ]∈ Γ ⊕ Δ
 
   {- Examples:
 
@@ -70,27 +70,27 @@ module Syntax (Class : Set) where
   infix 9 _`_
 
   data Expr : Shape → Class → Set where
-    _`_ : ∀ {Γ : Shape} {Δ : Shape} {A} (x : [ Δ , A ]∈ Γ) →
-            (ts : ∀ {Ξ : Shape} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Δ) B) → Expr Γ A
+    _`_ : ∀ {Γ} {Δ} {A} (x : [ Δ , A ]∈ Γ) →
+            (ts : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Δ) B) → Expr Γ A
 
   -- Syntactic equality of expressions
 
   infix 4 _≈_
 
-  data _≈_ : ∀ {Γ : Shape} {A} → Expr Γ A → Expr Γ A → Set where
-    ≈-≡ : ∀ {Γ : Shape} {A} {t u : Expr Γ A} (ξ : t ≡ u) → t ≈ u
-    ≈-` : ∀ {Γ : Shape} {Δ : Shape} {A} {x : [ Δ , A ]∈ Γ} →
-            {ts us : ∀ {Ξ : Shape} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Δ) B}
-            (ξ : ∀ {Ξ : Shape} {B} (y : [ Ξ , B ]∈ Δ) → ts y ≈ us y) → x ` ts ≈ x ` us
+  data _≈_ : ∀ {Γ} {A} → Expr Γ A → Expr Γ A → Set where
+    ≈-≡ : ∀ {Γ} {A} {t u : Expr Γ A} (ξ : t ≡ u) → t ≈ u
+    ≈-` : ∀ {Γ} {Δ} {A} {x : [ Δ , A ]∈ Γ} →
+            {ts us : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Δ) B}
+            (ξ : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → ts y ≈ us y) → x ` ts ≈ x ` us
 
-  ≈-refl : ∀ {Γ : Shape} {A} {t : Expr Γ A} → t ≈ t
+  ≈-refl : ∀ {Γ} {A} {t : Expr Γ A} → t ≈ t
   ≈-refl = ≈-≡ refl
 
-  ≈-sym : ∀ {Γ : Shape} {A} {t u : Expr Γ A} → t ≈ u → u ≈ t
+  ≈-sym : ∀ {Γ} {A} {t u : Expr Γ A} → t ≈ u → u ≈ t
   ≈-sym (≈-≡ ξ) = ≈-≡ (sym ξ)
   ≈-sym (≈-` ξ) = ≈-` λ { y → ≈-sym (ξ y) }
 
-  ≈-trans : ∀ {Γ : Shape} {A} {t u v : Expr Γ A} → t ≈ u → u ≈ v → t ≈ v
+  ≈-trans : ∀ {Γ} {A} {t u v : Expr Γ A} → t ≈ u → u ≈ v → t ≈ v
   ≈-trans (≈-≡ refl) ξ = ξ
   ≈-trans (≈-` ζ) (≈-≡ refl) = ≈-` ζ
   ≈-trans (≈-` ζ) (≈-` ξ) = ≈-` λ { y → ≈-trans (ζ y) (ξ y) }
