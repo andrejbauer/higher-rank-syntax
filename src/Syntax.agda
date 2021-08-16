@@ -1,7 +1,4 @@
-{-# OPTIONS --sized-types #-}
-
 open import Data.Nat
-open import Size
 
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans; subst)
 
@@ -30,19 +27,19 @@ module Syntax (Class : Set) where
      class and a binding shape. We model shapes as binary trees so that it is easy to concatenate two of them. A more
      traditional approach models shapes as lists, in which case one has to append lists. -}
 
-  data Shape : ∀ (i : Size) → Set where
-    𝟘 : ∀ {i} → Shape i -- the empty shape
-    [_,_] : ∀ {i} (Γ : Shape i) (cl : Class) → Shape (↑ i) -- the shape with precisely one variable
-    _⊕_ : ∀ {j k} → Shape j → Shape k → Shape (j ⊔ˢ k) -- disjoint sum of shapes
+  data Shape : Set where
+    𝟘 : Shape -- the empty shape
+    [_,_] : ∀ (Γ : Shape) (cl : Class) → Shape -- the shape with precisely one variable
+    _⊕_ : Shape → Shape → Shape -- disjoint sum of shapes
 
   infix 5 [_,_]∈_
 
   {- The de Bruijn indices are binary numbers because shapes are binary trees.
      [ A , Δ ]∈ Γ is the set of variable indices in Γ whose arity is (A , Δ). -}
-  data [_,_]∈_ : ∀ {i} {j : Size< i} → Shape j → Class → Shape i → Set where
-    var-here : ∀ {i} {Ξ : Shape i} {A} → [ Ξ , A ]∈  [ Ξ , A ]
-    var-left :  ∀ {j k} {i : Size< j} {Ξ : Shape i} {A} {Γ : Shape j} {Δ : Shape k} → [ Ξ , A ]∈ Γ → [ Ξ , A ]∈ Γ ⊕ Δ
-    var-right : ∀ {j k} {i : Size< k} {Ξ : Shape i} {A} {Γ : Shape j} {Δ : Shape k} → [ Ξ , A ]∈ Δ → [ Ξ , A ]∈ Γ ⊕ Δ
+  data [_,_]∈_ : Shape → Class → Shape → Set where
+    var-here : ∀ {Ξ : Shape} {A} → [ Ξ , A ]∈  [ Ξ , A ]
+    var-left :  ∀ {Ξ : Shape} {A} {Γ : Shape} {Δ : Shape} → [ Ξ , A ]∈ Γ → [ Ξ , A ]∈ Γ ⊕ Δ
+    var-right : ∀ {Ξ : Shape} {A} {Γ : Shape} {Δ : Shape} → [ Ξ , A ]∈ Δ → [ Ξ , A ]∈ Γ ⊕ Δ
 
   {- Examples:
 
@@ -72,28 +69,28 @@ module Syntax (Class : Set) where
 
   infix 9 _`_
 
-  data Expr : ∀ {i} → Shape i → Class → Set where
-    _`_ : ∀ {i} {j : Size< i} {Γ : Shape i} {Δ : Shape j} {A} (x : [ Δ , A ]∈ Γ) →
-            (ts : ∀ {k : Size< j} {Ξ : Shape k} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Δ) B) → Expr Γ A
+  data Expr : Shape → Class → Set where
+    _`_ : ∀ {Γ : Shape} {Δ : Shape} {A} (x : [ Δ , A ]∈ Γ) →
+            (ts : ∀ {Ξ : Shape} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Δ) B) → Expr Γ A
 
   -- Syntactic equality of expressions
 
   infix 4 _≈_
 
-  data _≈_ : ∀ {i} {Γ : Shape i} {A} → Expr Γ A → Expr Γ A → Set where
-    ≈-≡ : ∀ {i} {Γ : Shape i} {A} {t u : Expr Γ A} (ξ : t ≡ u) → t ≈ u
-    ≈-` : ∀ {i} {j : Size< i} {Γ : Shape i} {Δ : Shape j} {A} {x : [ Δ , A ]∈ Γ} →
-            {ts us : ∀ {k : Size< j} {Ξ : Shape k} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Δ) B}
-            (ξ : ∀ {k : Size< j} {Ξ : Shape k} {B} (y : [ Ξ , B ]∈ Δ) → ts y ≈ us y) → x ` ts ≈ x ` us
+  data _≈_ : ∀ {Γ : Shape} {A} → Expr Γ A → Expr Γ A → Set where
+    ≈-≡ : ∀ {Γ : Shape} {A} {t u : Expr Γ A} (ξ : t ≡ u) → t ≈ u
+    ≈-` : ∀ {Γ : Shape} {Δ : Shape} {A} {x : [ Δ , A ]∈ Γ} →
+            {ts us : ∀ {Ξ : Shape} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Δ) B}
+            (ξ : ∀ {Ξ : Shape} {B} (y : [ Ξ , B ]∈ Δ) → ts y ≈ us y) → x ` ts ≈ x ` us
 
-  ≈-refl : ∀ {i} {Γ : Shape i} {A} {t : Expr Γ A} → t ≈ t
+  ≈-refl : ∀ {Γ : Shape} {A} {t : Expr Γ A} → t ≈ t
   ≈-refl = ≈-≡ refl
 
-  ≈-sym : ∀ {i} {Γ : Shape i} {A} {t u : Expr Γ A} → t ≈ u → u ≈ t
+  ≈-sym : ∀ {Γ : Shape} {A} {t u : Expr Γ A} → t ≈ u → u ≈ t
   ≈-sym (≈-≡ ξ) = ≈-≡ (sym ξ)
   ≈-sym (≈-` ξ) = ≈-` λ { y → ≈-sym (ξ y) }
 
-  ≈-trans : ∀ {i} {Γ : Shape i} {A} {t u v : Expr Γ A} → t ≈ u → u ≈ v → t ≈ v
+  ≈-trans : ∀ {Γ : Shape} {A} {t u v : Expr Γ A} → t ≈ u → u ≈ v → t ≈ v
   ≈-trans (≈-≡ refl) ξ = ξ
   ≈-trans (≈-` ζ) (≈-≡ refl) = ≈-` ζ
   ≈-trans (≈-` ζ) (≈-` ξ) = ≈-` λ { y → ≈-trans (ζ y) (ξ y) }
