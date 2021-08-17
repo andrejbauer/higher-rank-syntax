@@ -1,4 +1,8 @@
 open import Data.Nat
+-- open import Data.Nat.Properties
+
+open import Induction.WellFounded
+
 
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans; subst)
 
@@ -35,7 +39,7 @@ module Syntax (Class : Set) where
   infix 5 [_,_]∈_
 
   {- The de Bruijn indices are binary numbers because shapes are binary trees.
-     [ A , Δ ]∈ Γ is the set of variable indices in Γ whose arity is (A , Δ). -}
+     [ Δ , A ]∈ Γ is the set of variable indices in Γ whose arity is (A , Δ). -}
   data [_,_]∈_ : Shape → Class → Shape → Set where
     var-here : ∀ {Ξ} {A} → [ Ξ , A ]∈  [ Ξ , A ]
     var-left :  ∀ {Ξ} {A} {Γ} {Δ} → [ Ξ , A ]∈ Γ → [ Ξ , A ]∈ Γ ⊕ Δ
@@ -55,14 +59,49 @@ module Syntax (Class : Set) where
   Π-arity : Shape
   Π-arity = [ [ 𝟘 , ty ] ⊕ [ [ 𝟘 , tm ] , tm ] , ty ]
 
+  [ Π-arity , ty ]∈ ([ 𝟘 , tm ] ⊕ [ 𝟘 , ty ])
+
   -}
+
+  -- A well-founded order on shapes such that the shapes contained in a shape are smaller
+
+  progressive : ∀ (P : Shape → Set) → Set
+  progressive P = ∀ (Γ : Shape) → (∀ {Δ A} → [ Δ , A ]∈ Γ → P Δ) → P Γ
+
+  ind-∈ : ∀ (P : Shape → Set) → progressive P → ∀ Γ → P Γ
+  ind-∈ P r 𝟘 = r 𝟘 (λ { () })
+  ind-∈ P r [ Γ , cl ] = r [ Γ , cl ] (λ { var-here → ind-∈ P r Γ })
+  ind-∈ P r (Γ ⊕ Δ) = r (Γ ⊕ Δ) (λ { (var-left x) → {!!} ; (var-right y) → {!!} })
+
+  infix 4 _≺_
+
+  data _≺_ : Shape → Shape → Set where
+    ≺-∈ : ∀ {Γ Δ A} → [ Δ , A ]∈ Γ → Δ ≺ Γ
+
+  ≺-wf : WellFounded _≺_
+  ≺-wf 𝟘 = acc λ { _ (≺-∈ ()) }
+  ≺-wf [ Γ , cl ] = acc λ { _ (≺-∈ var-here) → ≺-wf Γ}
+  ≺-wf (Γ ⊕ Δ) = acc f
+    where f : WfRec _≺_ (Acc _≺_) (Γ ⊕ Δ)
+          f Ξ (≺-∈ (var-left x)) =  {!!}
+          f Ξ (≺-∈ (var-right x)) = {!!}
+
+  -- ≺-wf 𝟘 = acc λ { _ (≺-∈ ()) }
+  -- ≺-wf [ Γ , cl ] = acc λ { _ (≺-∈ var-here) → ≺-wf Γ }
+  -- ≺-wf (Γ ⊕ Δ) = acc λ { Θ (≺-∈ (var-left x)) → {!!} ; _ (≺-∈ (var-right x)) → {!!} }
 
   {- The order of a shape -}
 
-  order : Shape → ℕ
-  order 𝟘 = zero
-  order [ Γ , cl ] = suc (order Γ)
-  order (Γ ⊕ Δ) = order Γ ⊔ order Δ
+  -- order : Shape → ℕ
+  -- order 𝟘 = zero
+  -- order [ Γ , cl ] = suc (order Γ)
+  -- order (Γ ⊕ Δ) = order Γ ⊔ order Δ
+
+  -- -- The order of a variable in smaller than the order of the shape
+  -- order-< : ∀ {Γ Δ A} → [ Δ , A ]∈ Γ → order Δ < order Γ
+  -- order-< {Δ = Δ} var-here = n<1+n (order Δ)
+  -- order-< {Δ = Δ} (var-left x) = m<n⇒m<n⊔o _ (order-< x)
+  -- order-< {Δ = Δ} (var-right y) = m<n⇒m<o⊔n _ (order-< y)
 
   {- Because everything is a variable, even symbols, there is a single expression constructor
      x ` ts which forms and expression by applying the variable x to arguments ts. -}

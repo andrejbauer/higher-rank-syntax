@@ -1,3 +1,5 @@
+open import Data.Nat
+open import Data.Nat.Properties
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans; subst; cong)
 
 import Syntax
@@ -42,6 +44,14 @@ module Substitution (Class : Set) where
   shift : ∀ {Γ} {Δ} {Θ} → Δ ⊕ Θ →ʳ (Γ ⊕ Δ) ⊕ Θ
   shift (var-left x) = var-left (var-right x)
   shift (var-right y) = var-right y
+
+  generic-apply : ∀ {Γ Δ A} (x : [ Δ , A ]∈ Γ) → order Δ < order Γ → Expr (Γ ⊕ Δ) A
+  generic-apply x p = {!p!}
+
+  -- generic-apply x ≺-here = (var-left x) ` (λ y →  [ shift ]ʳ (generic-apply y (∈-≺ y)))
+  -- generic-apply x (≺-left p) = (var-left x) ` (λ y → [ shift ]ʳ (generic-apply y {!∈-≺ y!}))
+  -- generic-apply x (≺-right p) = {!!}
+
 
   𝟙ˢ : ∀ {Γ} → Γ →ˢ Γ
   𝟙ˢ {Γ} {Θ} {A} x = var-left x ` (λ y → [ shift ]ʳ (𝟙ˢ y))
