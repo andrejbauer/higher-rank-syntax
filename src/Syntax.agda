@@ -71,7 +71,7 @@ module Syntax (Class : Set) where
 
   data Expr : Shape → Class → Set where
     _`_ : ∀ {Γ} {Δ} {A} (x : [ Δ , A ]∈ Γ) →
-            (ts : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Δ) B) → Expr Γ A
+            (ts : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Ξ) B) → Expr Γ A
 
   -- Syntactic equality of expressions
 
@@ -80,7 +80,7 @@ module Syntax (Class : Set) where
   data _≈_ : ∀ {Γ} {A} → Expr Γ A → Expr Γ A → Set where
     ≈-≡ : ∀ {Γ} {A} {t u : Expr Γ A} (ξ : t ≡ u) → t ≈ u
     ≈-` : ∀ {Γ} {Δ} {A} {x : [ Δ , A ]∈ Γ} →
-            {ts us : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Δ) B}
+            {ts us : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Ξ) B}
             (ξ : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → ts y ≈ us y) → x ` ts ≈ x ` us
 
   ≈-refl : ∀ {Γ} {A} {t : Expr Γ A} → t ≈ t
