@@ -43,8 +43,8 @@ module Substitution (Class : Set) where
   shift (var-left x) = var-left (var-right x)
   shift (var-right y) = var-right y
 
-  𝟙ˢ : ∀ {Γ} {Θ} {A} → [ Θ , A ]∈ Γ → Expr (Γ ⊕ Θ) A
-  𝟙ˢ {Γ} {Θ} {A} x = var-left x ` (λ { y → [ shift ]ʳ 𝟙ˢ y })
+  𝟙ˢ : ∀ {Γ} → Γ →ˢ Γ
+  𝟙ˢ {Γ} {Θ} {A} x = var-left x ` (λ y → [ shift ]ʳ (𝟙ˢ y))
 
   -- -- substitution extension
 

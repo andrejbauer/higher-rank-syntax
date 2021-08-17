@@ -59,10 +59,10 @@ module Syntax (Class : Set) where
 
   {- The order of a shape -}
 
-  -- order : Shape → ℕ
-  -- order 𝟘 = zero
-  -- order [ Γ , cl ] = suc (order Γ)
-  -- order (Γ ⊕ Δ) = order Γ ⊔ order Δ
+  order : Shape → ℕ
+  order 𝟘 = zero
+  order [ Γ , cl ] = suc (order Γ)
+  order (Γ ⊕ Δ) = order Γ ⊔ order Δ
 
   {- Because everything is a variable, even symbols, there is a single expression constructor
      x ` ts which forms and expression by applying the variable x to arguments ts. -}
