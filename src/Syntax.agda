@@ -1,6 +1,3 @@
-open import Data.Nat
--- open import Data.Nat.Properties
-
 open import Induction.WellFounded
 
 
@@ -65,43 +62,36 @@ module Syntax (Class : Set) where
 
   -- A well-founded order on shapes such that the shapes contained in a shape are smaller
 
-  progressive : ∀ (P : Shape → Set) → Set
-  progressive P = ∀ (Γ : Shape) → (∀ {Δ A} → [ Δ , A ]∈ Γ → P Δ) → P Γ
-
-  ind-∈ : ∀ (P : Shape → Set) → progressive P → ∀ Γ → P Γ
-  ind-∈ P r 𝟘 = r 𝟘 (λ { () })
-  ind-∈ P r [ Γ , cl ] = r [ Γ , cl ] (λ { var-here → ind-∈ P r Γ })
-  ind-∈ P r (Γ ⊕ Δ) = r (Γ ⊕ Δ) (λ { (var-left x) → {!!} ; (var-right y) → {!!} })
-
   infix 4 _≺_
 
   data _≺_ : Shape → Shape → Set where
     ≺-∈ : ∀ {Γ Δ A} → [ Δ , A ]∈ Γ → Δ ≺ Γ
 
-  ≺-wf : WellFounded _≺_
-  ≺-wf 𝟘 = acc λ { _ (≺-∈ ()) }
-  ≺-wf [ Γ , cl ] = acc λ { _ (≺-∈ var-here) → ≺-wf Γ}
-  ≺-wf (Γ ⊕ Δ) = acc f
+  wf-≺ : WellFounded _≺_
+  wf-≺ 𝟘 = acc λ { _ (≺-∈ ()) }
+  wf-≺ [ Γ , cl ] = acc λ { _ (≺-∈ var-here) → wf-≺ Γ}
+  wf-≺ (Γ ⊕ Δ) = acc f
     where f : WfRec _≺_ (Acc _≺_) (Γ ⊕ Δ)
-          f Ξ (≺-∈ (var-left x)) =  {!!}
-          f Ξ (≺-∈ (var-right x)) = {!!}
+          f Ξ (≺-∈ (var-left x)) = acc-inverse (wf-≺ Γ) Ξ (≺-∈ x)
+          f Ξ (≺-∈ (var-right y)) = acc-inverse (wf-≺ Δ) Ξ (≺-∈ y)
 
-  -- ≺-wf 𝟘 = acc λ { _ (≺-∈ ()) }
-  -- ≺-wf [ Γ , cl ] = acc λ { _ (≺-∈ var-here) → ≺-wf Γ }
-  -- ≺-wf (Γ ⊕ Δ) = acc λ { Θ (≺-∈ (var-left x)) → {!!} ; _ (≺-∈ (var-right x)) → {!!} }
+  {- The order of a shape is the maximum nesting level of shapes.
+     We could use it instead of wf-≺ above, and pen & paper mathematicians
+     probably would. -}
 
-  {- The order of a shape -}
+  open import Data.Nat
+  open import Data.Nat.Properties
 
-  -- order : Shape → ℕ
-  -- order 𝟘 = zero
-  -- order [ Γ , cl ] = suc (order Γ)
-  -- order (Γ ⊕ Δ) = order Γ ⊔ order Δ
+  order : Shape → ℕ
+  order 𝟘 = zero
+  order [ Γ , cl ] = suc (order Γ)
+  order (Γ ⊕ Δ) = order Γ ⊔ order Δ
 
-  -- -- The order of a variable in smaller than the order of the shape
-  -- order-< : ∀ {Γ Δ A} → [ Δ , A ]∈ Γ → order Δ < order Γ
-  -- order-< {Δ = Δ} var-here = n<1+n (order Δ)
-  -- order-< {Δ = Δ} (var-left x) = m<n⇒m<n⊔o _ (order-< x)
-  -- order-< {Δ = Δ} (var-right y) = m<n⇒m<o⊔n _ (order-< y)
+  -- The order of a variable in smaller than the order of the shape
+  order-< : ∀ {Γ Δ A} → [ Δ , A ]∈ Γ → order Δ < order Γ
+  order-< {Δ = Δ} var-here = n<1+n (order Δ)
+  order-< {Δ = Δ} (var-left x) = m<n⇒m<n⊔o _ (order-< x)
+  order-< {Δ = Δ} (var-right y) = m<n⇒m<o⊔n _ (order-< y)
 
   {- Because everything is a variable, even symbols, there is a single expression constructor
      x ` ts which forms and expression by applying the variable x to arguments ts. -}

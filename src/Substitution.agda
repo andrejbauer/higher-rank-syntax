@@ -1,5 +1,4 @@
-open import Data.Nat
-open import Data.Nat.Properties
+open import Induction.WellFounded
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans; subst; cong)
 
 import Syntax
@@ -36,25 +35,17 @@ module Substitution (Class : Set) where
   ≈ˢ-trans ζ ξ x = ≈-trans (ζ x) (ξ x)
 
   -- identity substitution
+  module _ where
 
-  2-3 : ∀ {Γ Δ Θ} → Γ ⊕ Θ →ʳ (Γ ⊕ Δ) ⊕ Θ
-  2-3 (var-left x) = var-left (var-left x)
-  2-3 (var-right y) = var-right y
+    -- open FixPoint wf-≺
 
-  shift : ∀ {Γ} {Δ} {Θ} → Δ ⊕ Θ →ʳ (Γ ⊕ Δ) ⊕ Θ
-  shift (var-left x) = var-left (var-right x)
-  shift (var-right y) = var-right y
-
-  generic-apply : ∀ {Γ Δ A} (x : [ Δ , A ]∈ Γ) → order Δ < order Γ → Expr (Γ ⊕ Δ) A
-  generic-apply x p = {!p!}
-
-  -- generic-apply x ≺-here = (var-left x) ` (λ y →  [ shift ]ʳ (generic-apply y (∈-≺ y)))
-  -- generic-apply x (≺-left p) = (var-left x) ` (λ y → [ shift ]ʳ (generic-apply y {!∈-≺ y!}))
-  -- generic-apply x (≺-right p) = {!!}
+    2-to-3-right : ∀ {Γ} {Δ} {Θ} → Δ ⊕ Θ →ʳ (Γ ⊕ Δ) ⊕ Θ
+    2-to-3-right (var-left x) = var-left (var-right x)
+    2-to-3-right (var-right y) = var-right y
 
 
-  𝟙ˢ : ∀ {Γ} → Γ →ˢ Γ
-  𝟙ˢ {Γ} {Θ} {A} x = var-left x ` (λ y → [ shift ]ʳ (𝟙ˢ y))
+    -- 𝟙ˢ : ∀ {Γ} → Γ →ˢ Γ
+    -- 𝟙ˢ {Γ} {Θ} {A} x = var-left x ` (λ y → [ 2-to-3-right ]ʳ (𝟙ˢ y))
 
   -- -- substitution extension
 
