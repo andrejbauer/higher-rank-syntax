@@ -1,6 +1,3 @@
-open import Induction.WellFounded
-
-
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans; subst)
 
 {-
@@ -30,8 +27,8 @@ module Syntax (Class : Set) where
 
   data Shape : Set where
     𝟘 : Shape -- the empty shape
-    [_,_] : ∀ (Γ : Shape) (cl : Class) → Shape -- the shape with precisely one variable
-    _⊕_ : Shape → Shape → Shape -- disjoint sum of shapes
+    [_,_] : ∀ (Γ : Shape) (A : Class) → Shape -- the shape with precisely one variable
+    _⊕_ : ∀ (Γ : Shape) (Δ : Shape) → Shape -- disjoint sum of shapes
 
   infix 5 [_,_]∈_
 
@@ -59,39 +56,6 @@ module Syntax (Class : Set) where
   [ Π-arity , ty ]∈ ([ 𝟘 , tm ] ⊕ [ 𝟘 , ty ])
 
   -}
-
-  -- A well-founded order on shapes such that the shapes contained in a shape are smaller
-
-  infix 4 _≺_
-
-  data _≺_ : Shape → Shape → Set where
-    ≺-∈ : ∀ {Γ Δ A} → [ Δ , A ]∈ Γ → Δ ≺ Γ
-
-  wf-≺ : WellFounded _≺_
-  wf-≺ 𝟘 = acc λ { _ (≺-∈ ()) }
-  wf-≺ [ Γ , cl ] = acc λ { _ (≺-∈ var-here) → wf-≺ Γ}
-  wf-≺ (Γ ⊕ Δ) = acc f
-    where f : WfRec _≺_ (Acc _≺_) (Γ ⊕ Δ)
-          f Ξ (≺-∈ (var-left x)) = acc-inverse (wf-≺ Γ) Ξ (≺-∈ x)
-          f Ξ (≺-∈ (var-right y)) = acc-inverse (wf-≺ Δ) Ξ (≺-∈ y)
-
-  {- The order of a shape is the maximum nesting level of shapes.
-     We could use it instead of wf-≺ above, and pen & paper mathematicians
-     probably would. -}
-
-  open import Data.Nat
-  open import Data.Nat.Properties
-
-  order : Shape → ℕ
-  order 𝟘 = zero
-  order [ Γ , cl ] = suc (order Γ)
-  order (Γ ⊕ Δ) = order Γ ⊔ order Δ
-
-  -- The order of a variable in smaller than the order of the shape
-  order-< : ∀ {Γ Δ A} → [ Δ , A ]∈ Γ → order Δ < order Γ
-  order-< {Δ = Δ} var-here = n<1+n (order Δ)
-  order-< {Δ = Δ} (var-left x) = m<n⇒m<n⊔o _ (order-< x)
-  order-< {Δ = Δ} (var-right y) = m<n⇒m<o⊔n _ (order-< y)
 
   {- Because everything is a variable, even symbols, there is a single expression constructor
      x ` ts which forms and expression by applying the variable x to arguments ts. -}

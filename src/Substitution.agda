@@ -1,4 +1,3 @@
-open import Induction.WellFounded
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans; subst; cong)
 
 import Syntax
@@ -33,22 +32,16 @@ module Substitution (Class : Set) where
 
   ≈ˢ-trans : ∀ {Γ} {Δ} {f g h : Γ →ˢ Δ} → f ≈ˢ g → g ≈ˢ h → f ≈ˢ h
   ≈ˢ-trans ζ ξ x = ≈-trans (ζ x) (ξ x)
-
   -- identity substitution
-  module _ where
 
-    -- open FixPoint wf-≺
+  𝟙ˢ : ∀ {Γ} → Γ →ˢ Γ
+  𝟙ˢ {𝟘} ()
+  𝟙ˢ {[ Γ , A ]} var-here = var-left var-here ` λ y →  [ 2-to-3-right ]ʳ 𝟙ˢ y
+  𝟙ˢ {Γ Syntax.⊕ Δ} (var-left x) =  [ 2-to-3 ]ʳ 𝟙ˢ x
+  𝟙ˢ {Γ Syntax.⊕ Δ} (var-right y) = [ 2-to-3-right ]ʳ 𝟙ˢ y
 
-    2-to-3-right : ∀ {Γ} {Δ} {Θ} → Δ ⊕ Θ →ʳ (Γ ⊕ Δ) ⊕ Θ
-    2-to-3-right (var-left x) = var-left (var-right x)
-    2-to-3-right (var-right y) = var-right y
+  -- substitution extension
 
-
-    -- 𝟙ˢ : ∀ {Γ} → Γ →ˢ Γ
-    -- 𝟙ˢ {Γ} {Θ} {A} x = var-left x ` (λ y → [ 2-to-3-right ]ʳ (𝟙ˢ y))
-
-  -- -- substitution extension
-
-  -- ⇑ˢ : ∀ {Γ Δ Θ} → Γ →ˢ Δ → Γ ⊕ Θ →ˢ Δ ⊕ Θ
-  -- ⇑ˢ f (var-left x) =  [ 2-3 ]ʳ f x
-  -- ⇑ˢ f (var-right y) =  [ shift ]ʳ  𝟙ˢ y
+  ⇑ˢ : ∀ {Γ Δ Θ} → Γ →ˢ Δ → Γ ⊕ Θ →ˢ Δ ⊕ Θ
+  ⇑ˢ f (var-left x) =  [ 2-to-3 ]ʳ f x
+  ⇑ˢ f (var-right y) =  [ 2-to-3-right ]ʳ 𝟙ˢ y
