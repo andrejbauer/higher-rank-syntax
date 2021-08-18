@@ -9,7 +9,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans
 
    * order 1: ordinary variables and substitutions, for example those of λ-calculus
    * order 2: meta-variables and their instantiations
-   * order 3: symbols (term formers) in dependent type theory, such as Π, Σ, W
+   * order 3: symbols (term formers) in dependent type theory, such as Π, Σ, W, and syntactic transformations between theories
 
    The syntax is parameterized by a type Class of syntactic classes. For example, in dependent type theory there might
    be two syntactic classes, ty and tm, corresponding to type and term expressions.
@@ -51,7 +51,7 @@ module Syntax (Class : Set) where
   binary-type-metavariable-arity = [ [ 𝟘 , tm ] ⊕ [ 𝟘 , tm ] , ty ]
 
   Π-arity : Shape
-  Π-arity = [ [ 𝟘 , ty ] ⊕ [ [ 𝟘 , tm ] , tm ] , ty ]
+  Π-arity = [ [ 𝟘 , ty ] ⊕ [ [ 𝟘 , tm ] , ty ] , ty ]
 
   [ Π-arity , ty ]∈ ([ 𝟘 , tm ] ⊕ [ 𝟘 , ty ])
 
@@ -62,9 +62,14 @@ module Syntax (Class : Set) where
 
   infix 9 _`_
 
-  data Expr : Shape → Class → Set where
+  data Expr : Shape → Class → Set
+
+  Arg : Shape → Shape → Class → Set
+  Arg Γ Ξ A = Expr (Γ ⊕ Ξ) A
+
+  data Expr where
     _`_ : ∀ {Γ} {Δ} {A} (x : [ Δ , A ]∈ Γ) →
-            (ts : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Ξ) B) → Expr Γ A
+            (ts : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B) → Expr Γ A
 
   -- Syntactic equality of expressions
 
@@ -73,7 +78,7 @@ module Syntax (Class : Set) where
   data _≈_ : ∀ {Γ} {A} → Expr Γ A → Expr Γ A → Set where
     ≈-≡ : ∀ {Γ} {A} {t u : Expr Γ A} (ξ : t ≡ u) → t ≈ u
     ≈-` : ∀ {Γ} {Δ} {A} {x : [ Δ , A ]∈ Γ} →
-            {ts us : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Expr (Γ ⊕ Ξ) B}
+            {ts us : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B}
             (ξ : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → ts y ≈ us y) → x ` ts ≈ x ` us
 
   ≈-refl : ∀ {Γ} {A} {t : Expr Γ A} → t ≈ t

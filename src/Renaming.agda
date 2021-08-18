@@ -10,13 +10,13 @@ module Renaming (Sort : Set) where
   infix 5 _→ʳ_
 
   _→ʳ_ : Shape → Shape → Set
-  _→ʳ_ Γ Δ = ∀ {Ξ} {A} (x : [ Ξ , A ]∈ Γ) → [ Ξ , A ]∈ Δ
+  Γ →ʳ Δ = ∀ {Ξ} {A} (x : [ Ξ , A ]∈ Γ) → [ Ξ , A ]∈ Δ
 
   -- equality of renamings
   infix 5 _≡ʳ_
 
   _≡ʳ_ : ∀ {Γ} {Δ} → (ρ : Γ →ʳ Δ) → (τ : Γ →ʳ Δ) → Set
-  _≡ʳ_ {Γ = Γ} ρ τ = ∀ {Ξ} {A} (x : [ Ξ , A ]∈ Γ) → ρ x ≡ τ x
+  ρ ≡ʳ τ = ∀ {Ξ} {A} (x : [ Ξ , A ]∈ _) → ρ x ≡ τ x
 
   -- equality is an equivalence relation
 
@@ -38,16 +38,6 @@ module Renaming (Sort : Set) where
 
   𝟘-initial : ∀ {Γ} → 𝟘 →ʳ Γ
   𝟘-initial ()
-
-  -- some commonly used weakenings
-
-  2-to-3-right : ∀ {Γ} {Δ} {Θ} → Δ ⊕ Θ →ʳ (Γ ⊕ Δ) ⊕ Θ
-  2-to-3-right (var-left x) = var-left (var-right x)
-  2-to-3-right (var-right y) = var-right y
-
-  2-to-3 : ∀ {Γ Δ Θ} → Γ ⊕ Θ →ʳ (Γ ⊕ Δ) ⊕ Θ
-  2-to-3 (var-left x) = var-left (var-left x)
-  2-to-3 (var-right y) = var-right y
 
   -- composition of renamings
 
