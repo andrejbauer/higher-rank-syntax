@@ -93,11 +93,7 @@ module Substitution (Class : Set) where
   infix 6 [_]ˢ_
 
   [_]ˢ_ : ∀ {Γ Δ B} (f : Γ →ˢ Δ) → Expr Γ B → Expr Δ B
-  [_]ˢ_ {Γ} {Δ} {B} f =
-    rec-∈
-      {!!}
-      {!!}
-      {!!}
+  [_]ˢ_ {Γ} {Δ} {B} f = {!!}
 
   -- {-# TERMINATING #-}
   -- [_]ˢ_ : ∀ {Γ Δ B} (f : Γ →ˢ Δ) → Expr Γ B → Expr Δ B
