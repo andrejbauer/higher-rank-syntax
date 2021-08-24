@@ -1,4 +1,9 @@
+{-# OPTIONS --allow-unsolved-metas #-}
+
+open import Agda.Primitive
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans; subst)
+open import Relation.Unary
+open import Relation.Binary
 
 {-
 
@@ -66,6 +71,70 @@ module Syntax (Class : Set) where
 
   Arg : Shape → Shape → Class → Set
   Arg Γ Ξ A = Expr (Γ ⊕ Ξ) A
+
+  -- A recursion principle for shapes which needs to be explained to Agda
+  module _
+    (P : ∀ {Γ Θ A} (x : [ Θ , A ]∈ Γ) → Set)
+    (r : ∀ {Γ Θ A} (x : [ Θ , A ]∈ Γ) → (∀ {Ξ B} (y : [ Ξ , B ]∈ Θ) → P y) → P x) where
+
+    open import Induction
+    open import Induction.WellFounded
+
+    infix 4 _≺_
+
+    -- A well-founded relation on shapes
+    data _≺_ (Θ : Shape) (Γ : Shape) : Set where
+      ≺-∈ : ∀ {B} → [ Θ , B ]∈ Γ → Θ ≺ Γ
+
+    wf-≺ : WellFounded _≺_
+    wf-≺ 𝟘 = acc (λ { _ (≺-∈ ())})
+    wf-≺ [ Γ , A ] = acc (λ { Θ (≺-∈ var-here) → wf-≺ Γ})
+    wf-≺ (Γ₁ ⊕ Γ₂) = acc (λ { Θ (≺-∈ (var-left x)) → acc-inverse (wf-≺ Γ₁) Θ (≺-∈ x)
+                            ; Θ (≺-∈ (var-right y)) → acc-inverse (wf-≺ Γ₂) Θ (≺-∈ y)})
+    open All wf-≺
+
+    -- Curried version of P
+    private Q : Shape → Set
+    Q Γ = ∀ {Θ A} (x : [ Θ , A ]∈ Γ) → P x
+
+    -- Recursor suitable for Q derived from the recursor r
+    private q : ∀ (Γ : Shape) (ε : WfRec _≺_ Q Γ) → Q Γ
+    q Γ ε {Θ} {A} x = r x (λ y → ε Θ (≺-∈ x) y)
+
+    -- The main recursion-forming operator
+    rec-∈ : ∀ {Γ Θ A} (x : [ Θ , A ]∈ Γ) → P x
+    rec-∈ {Γ = Γ} = wfRec _ Q q Γ
+
+    -- We show that rec-∈ satisfies the desired fixpoint equation
+    -- with respect to any relation that is preserved by the recursor r
+    module _
+         (_∼_ : ∀ {Γ Θ A} {x : [ Θ , A ]∈ Γ} → P x → P x → Set)
+         (r-ext : ∀ {Γ Θ A} (x : [ Θ , A ]∈ Γ) {f g : Q Θ} →
+                  (∀ {Ξ B} (y : [ Ξ , B ]∈ Θ) → f y ∼ g y) → r x f ∼ r x g) where
+
+      -- The fixpoint equation for rec-∈
+      unfold-rec-∈ : ∀ {Γ Θ A} {x : [ Θ , A ]∈ Γ} → rec-∈ x ∼ r x rec-∈
+      unfold-rec-∈ {Γ = Γ} {x = x} = q-ext Γ wfRecBuilder-wfRec x
+        where
+          -- The following is adapted from the standard library
+
+          q-ext : ∀ Γ {δ ε : WfRec _≺_ Q Γ} → (∀ {Δ} Δ≺Γ {Ξ B} (x : [ Ξ , B ]∈ Δ) → δ Δ Δ≺Γ x ∼ ε Δ Δ≺Γ x) →
+                        ∀ {Θ A} (x : [ Θ , A ]∈ Γ) → q Γ δ x ∼ q Γ ε x
+          q-ext Γ δ∼ε x = r-ext x (δ∼ε (≺-∈ x))
+
+          some-wfRec-irrelevant : ∀ Γ (ζ η : Acc _≺_ Γ) →
+                                  ∀ {Ξ B} (x : [ Ξ , B ]∈ Γ) → Some.wfRec Q q Γ ζ x ∼ Some.wfRec Q q Γ η x
+          some-wfRec-irrelevant =
+            All.wfRec wf-≺ _
+              (λ Γ → ∀ ζ η {Ξ B} (x : [ Ξ , B ]∈ Γ) → Some.wfRec Q q Γ ζ x ∼ Some.wfRec Q q Γ η x)
+              λ {Γ H (acc ζ') (acc η') x → q-ext Γ (λ Δ≺Γ y → H _ Δ≺Γ (ζ' _ Δ≺Γ) (η' _ Δ≺Γ) y) x}
+
+          wfRecBuilder-wfRec : ∀ {Γ Δ : Shape} Δ≺Γ {Ξ B} (x : [ Ξ , B ]∈ Δ) →
+                                wfRecBuilder _ Q q Γ Δ Δ≺Γ x ∼ wfRec lzero Q q Δ x
+          wfRecBuilder-wfRec {Γ} {Δ} Γ≺Δ with wf-≺ Γ
+          ... | acc rs = some-wfRec-irrelevant Δ (rs Δ Γ≺Δ) (wf-≺ Δ)
+
+  -- Expressions
 
   data Expr where
     _`_ : ∀ {Γ} {Δ} {A} (x : [ Δ , A ]∈ Γ) →

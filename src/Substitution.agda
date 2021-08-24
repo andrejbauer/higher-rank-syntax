@@ -35,34 +35,43 @@ module Substitution (Class : Set) where
 
   -- identity substitution
 
-  -- definition of identity substitution which does not require any magic
-  𝟙ˢ : ∀ {Γ} → Γ →ˢ Γ
-  𝟙ˢ {𝟘} ()
-  𝟙ˢ {[ Γ , A ]} var-here = var-left var-here ` λ y →  [ ⇑ʳ var-right ]ʳ 𝟙ˢ y
-  𝟙ˢ {Γ Syntax.⊕ Δ} (var-left x) =  [ ⇑ʳ var-left ]ʳ 𝟙ˢ x
-  𝟙ˢ {Γ Syntax.⊕ Δ} (var-right y) = [ ⇑ʳ var-right ]ʳ 𝟙ˢ y
+  -- -- Definition of identity substitution which does not require any magic
+  -- 𝟙ˢ : ∀ {Γ} → Γ →ˢ Γ
+  -- 𝟙ˢ {𝟘} ()
+  -- 𝟙ˢ {[ Γ , A ]} var-here = var-left var-here ` λ y →  [ ⇑ʳ var-right ]ʳ 𝟙ˢ y
+  -- 𝟙ˢ {Γ Syntax.⊕ Δ} (var-left x) =  [ ⇑ʳ var-left ]ʳ 𝟙ˢ x
+  -- 𝟙ˢ {Γ Syntax.⊕ Δ} (var-right y) = [ ⇑ʳ var-right ]ʳ 𝟙ˢ y
 
-  -- In an idea world we would use the definition given below, but instead
-  -- we just show that it holds as an equation.
-
+  -- -- Definition of identity substitution using magic
   -- {-# TERMINATING #-}
   -- 𝟙ˢ : ∀ {Γ} → Γ →ˢ Γ
   -- 𝟙ˢ x =  var-left x ` λ y →  [ 2-to-3-right ]ʳ 𝟙ˢ y
 
-  𝟙ˢ-≈ : ∀ {Γ Δ A} (x : [ Δ , A ]∈ Γ) → 𝟙ˢ x ≈ var-left x ` λ y → [ ⇑ʳ var-right ]ʳ 𝟙ˢ y
-  𝟙ˢ-≈ {Γ = [ Γ , A ]} var-here = ≈-refl
-  𝟙ˢ-≈ {Γ = Γ ⊕ Δ} (var-left x) =
-    ≈-trans
-      ([]ʳ-resp-≈ (⇑ʳ var-left) (𝟙ˢ-≈ x))
-      (≈-` (λ y → ≈-trans
-                    (≈-sym ([∘ʳ] (𝟙ˢ y)))
-                    ([]ʳ-resp-≡ʳ (𝟙ˢ y) (λ { (var-left _) → refl ; (var-right _) → refl}))))
-  𝟙ˢ-≈ {Γ = Γ ⊕ Δ} (var-right y) =
-    ≈-trans
-      ([]ʳ-resp-≈ (⇑ʳ var-right) (𝟙ˢ-≈ y))
-      (≈-` (λ z → ≈-trans
-                    (≈-sym ([∘ʳ] (𝟙ˢ z)))
-                    ([]ʳ-resp-≡ʳ (𝟙ˢ z) (λ { (var-left _) → refl ; (var-right _) → refl}))))
+  -- Definition of identity substitution using well-founded recursion
+  𝟙ˢ : ∀ {Γ} → Γ →ˢ Γ
+  𝟙ˢ = rec-∈
+         (λ {Γ} {Θ} {A} _ → Arg Γ Θ A)
+         (λ x r → var-left x ` λ y → [ ⇑ʳ var-right ]ʳ r y)
+
+  𝟙ˢ-≈ : ∀ {Γ Θ A} (x : [ Θ , A ]∈ Γ) → 𝟙ˢ x ≈ var-left x ` (λ y → [ ⇑ʳ var-right ]ʳ 𝟙ˢ y)
+  𝟙ˢ-≈ =
+    rec-∈
+      (λ {Γ} {Θ} {A} x → 𝟙ˢ x ≈ var-left x ` (λ y → [ ⇑ʳ var-right ]ʳ 𝟙ˢ y))
+      (λ x r → ≈-` (λ y → []ʳ-resp-≈ (⇑ʳ var-right) (≈-trans {!!} {!!})))
+
+  -- 𝟙ˢ-≈ {Γ = [ Γ , A ]} var-here = ≈-refl
+  -- 𝟙ˢ-≈ {Γ = Γ ⊕ Δ} (var-left x) =
+  --   ≈-trans
+  --     ([]ʳ-resp-≈ (⇑ʳ var-left) (𝟙ˢ-≈ x))
+  --     (≈-` (λ y → ≈-trans
+  --                   (≈-sym ([∘ʳ] (𝟙ˢ y)))
+  --                   ([]ʳ-resp-≡ʳ (𝟙ˢ y) (λ { (var-left _) → refl ; (var-right _) → refl}))))
+  -- 𝟙ˢ-≈ {Γ = Γ ⊕ Δ} (var-right y) =
+  --   ≈-trans
+  --     ([]ʳ-resp-≈ (⇑ʳ var-right) (𝟙ˢ-≈ y))
+  --     (≈-` (λ z → ≈-trans
+  --                   (≈-sym ([∘ʳ] (𝟙ˢ z)))
+  --                   ([]ʳ-resp-≡ʳ (𝟙ˢ z) (λ { (var-left _) → refl ; (var-right _) → refl}))))
 
   -- substitution sum
 
