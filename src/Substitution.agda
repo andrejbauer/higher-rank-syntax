@@ -1,3 +1,5 @@
+open import Induction.WellFounded
+open import Relation.Unary
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans; subst; cong)
 
 import Syntax
@@ -88,12 +90,64 @@ module Substitution (Class : Set) where
   ⇑ˢ-resp-≈ˢ ξ (var-left x) = []ʳ-resp-≈ _ (ξ x)
   ⇑ˢ-resp-≈ˢ ξ (var-right y) = ≈-refl
 
+  infixl 7 _ʳ∘ˢ_
+
+  _ʳ∘ˢ_ : ∀ {Γ Δ Θ} (ρ : Δ →ʳ Θ) (f : Γ →ˢ Δ) → Γ →ˢ Θ
+  (ρ ʳ∘ˢ f) x = [ ⇑ʳ ρ ]ʳ f x
+
   -- the action of a substitution on an expression
+  module _ where
 
-  infix 6 [_]ˢ_
+    open All wf-≺
 
-  [_]ˢ_ : ∀ {Γ Δ B} (f : Γ →ˢ Δ) → Expr Γ B → Expr Δ B
-  [_]ˢ_ {Γ} {Δ} {B} f = {!!}
+    assoc-right : ∀ {Δ Θ Ξ} → (Δ ⊕ Θ) ⊕ Ξ →ʳ Δ ⊕ (Θ ⊕ Ξ)
+    assoc-right (var-left (var-left x)) = var-left x
+    assoc-right (var-left (var-right y)) = var-right (var-left y)
+    assoc-right (var-right z) = var-right (var-right z)
+
+    assoc-left : ∀ {Δ Θ Ξ} → Δ ⊕ (Θ ⊕ Ξ) →ʳ (Δ ⊕ Θ) ⊕ Ξ
+    assoc-left (var-left x) = var-left (var-left x)
+    assoc-left (var-right (var-left y)) = var-left (var-right y)
+    assoc-left (var-right (var-right z)) = var-right z
+
+    infix 6 [_]ˢ_
+    [_]ˢ_ : ∀ {Γ Δ A} (f : Γ →ˢ Δ) → Expr Γ A → Expr Δ A
+
+    [_]ˢ_ f (x ` ts) = sb x (λ y → [ ⇑ˢ f ]ˢ ts y) (f x)
+      where
+       sb-right : ∀ {Γ Θ A} (x : [ Θ , A ]∈ Γ) → ∀ {Δ} → (Γ →ˢ Δ) → Arg Γ Θ A → Arg Δ Θ A
+       sb-right =
+         wfRec _
+           (λ Θ → ∀ {Γ A} (x : [ Θ , A ]∈ Γ) → ∀ {Δ} → (Γ →ˢ Δ) → Arg Γ Θ A → Arg Δ Θ A)
+           (λ Θ r x f →
+              λ { (var-left y ` ts) → {!!}
+                ; (var-right y ` ts) → var-right y ` λ z → r _ (≺-∈ {!!}) {!!} {!!} (ts z)})
+           _
+
+
+       sb : ∀ {Γ Θ A} (x : [ Θ , A ]∈ Γ) → ∀ {Δ} → (Θ →ˢ Δ) → Expr (Δ ⊕ Θ) A → Expr Δ A
+       sb =
+         rec-∈
+           (λ {Γ} {Θ} {A} _ → ∀ {Δ} → (Θ →ˢ Δ) → Expr (Δ ⊕ Θ) A → Expr Δ A)
+           (λ x r g →
+              λ { (var-left x ` ts) → x ` λ y → {! ts y!}
+                ; (var-right x ` ts) → r x (λ y → {!ts y!}) (g x)})
+
+       -- sb g (var-left x ` ts) = x ` λ y → sbb [ 𝟙ˢ , g ]ˢ (ts y)
+       -- sb g (var-right x ` ts) =  {!  g x!}
+
+
+
+
+
+    -- [_]ˢ_ {Γ} =
+    --   wfRec
+    --     _
+    --     (λ Γ → ∀ {Δ B} (f : Γ →ˢ Δ) → Expr Γ B → Expr Δ B)
+    --     (λ {Γ r {Δ} {B} f (x ` ts) →
+    --        r (Δ ⊕ _) {!!} {!!} (f x)}
+    --     )
+    --     Γ
 
   -- {-# TERMINATING #-}
   -- [_]ˢ_ : ∀ {Γ Δ B} (f : Γ →ˢ Δ) → Expr Γ B → Expr Δ B
@@ -122,13 +176,12 @@ module Substitution (Class : Set) where
 
   -- [_]ˢ_ : ∀ {Γ Δ B} (f : Γ →ˢ Δ) → Expr Γ B → Expr Δ B
   -- [_]ˢ_ {Γ = 𝟘} f (() ` _)
-  -- [_]ˢ_ {Γ = [ Γ , A ]} f (var-here ` ts) = {! f var-here!}
+  -- [_]ˢ_ {Γ = [ Γ , A ]} f (var-here ` ts) =  [ {!!} ]ˢ f var-here
   -- [_]ˢ_ {Γ = Γ ⊕ Δ} f (var-left x ` ts) = {! f (var-left x)!}
   -- [_]ˢ_ {Γ = Γ ⊕ Δ} f (var-right y ` ts) = {!!}
 
-  -- substitution respects equality
+  -- -- substitution respects equality
 
-  -- {-# TERMINATING #-}
   -- []ˢ-resp-≈ : ∀ {Γ Δ A} (f : Γ →ˢ Δ) {t u : Expr Γ A} → t ≈ u → [ f ]ˢ t ≈ [ f ]ˢ u
 
   -- []ˢ-resp-≈ˢ : ∀ {Γ Δ A} {f g : Γ →ˢ Δ} (t : Expr Γ A) → f ≈ˢ g → [ f ]ˢ t ≈ [ g ]ˢ t
@@ -136,7 +189,7 @@ module Substitution (Class : Set) where
   -- []ˢ-resp-≈-≈ˢ : ∀ {Γ Δ A} {f g : Γ →ˢ Δ} {t u : Expr Γ A} → f ≈ˢ g → t ≈ u → [ f ]ˢ t ≈ [ g ]ˢ u
 
   -- []ˢ-resp-≈ f (≈-≡ ξ) = ≈-≡ (cong ( [ f ]ˢ_) ξ)
-  -- []ˢ-resp-≈ f (≈-` ξ) = []ˢ-resp-≈ˢ (f _) ([,]ˢ-resp-≈ˢ (λ y → ≈-refl) (λ y → []ˢ-resp-≈ (⇑ˢ f) (ξ y)))
+  -- []ˢ-resp-≈ f (≈-` ξ) = ?
 
   -- []ˢ-resp-≈ˢ (x ` ts) ξ = []ˢ-resp-≈-≈ˢ
   --                            ([,]ˢ-resp-≈ˢ (λ x → ≈-refl) λ y → []ˢ-resp-≈ˢ (ts y) ((⇑ˢ-resp-≈ˢ ξ)))
@@ -157,11 +210,6 @@ module Substitution (Class : Set) where
 
   -- _ˢ∘ʳ_ :  ∀ {Γ Δ Θ} (f : Δ →ˢ Θ) (ρ : Γ →ʳ Δ) → Γ →ˢ Θ
   -- (f ˢ∘ʳ ρ) x = f (ρ x)
-
-  -- infixl 7 _ʳ∘ˢ_
-
-  -- _ʳ∘ˢ_ : ∀ {Γ Δ Θ} (ρ : Δ →ʳ Θ) (f : Γ →ˢ Δ) → Γ →ˢ Θ
-  -- (ρ ʳ∘ˢ f) x = [ ⇑ʳ ρ ]ʳ f x
 
   -- -- extension respects identity
 
