@@ -72,6 +72,34 @@ module Syntax (Class : Set) where
   Arg : Shape → Shape → Class → Set
   Arg Γ Ξ A = Expr (Γ ⊕ Ξ) A
 
+  -- Expressions
+
+  data Expr where
+    _`_ : ∀ {Γ} {Δ} {A} (x : [ Δ , A ]∈ Γ) →
+            (ts : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B) → Expr Γ A
+
+  -- Syntactic equality of expressions
+
+  infix 4 _≈_
+
+  data _≈_ : ∀ {Γ} {A} → Expr Γ A → Expr Γ A → Set where
+    ≈-≡ : ∀ {Γ} {A} {t u : Expr Γ A} (ξ : t ≡ u) → t ≈ u
+    ≈-` : ∀ {Γ} {Δ} {A} {x : [ Δ , A ]∈ Γ} →
+            {ts us : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B}
+            (ξ : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → ts y ≈ us y) → x ` ts ≈ x ` us
+
+  ≈-refl : ∀ {Γ} {A} {t : Expr Γ A} → t ≈ t
+  ≈-refl = ≈-≡ refl
+
+  ≈-sym : ∀ {Γ} {A} {t u : Expr Γ A} → t ≈ u → u ≈ t
+  ≈-sym (≈-≡ ξ) = ≈-≡ (sym ξ)
+  ≈-sym (≈-` ξ) = ≈-` λ { y → ≈-sym (ξ y) }
+
+  ≈-trans : ∀ {Γ} {A} {t u v : Expr Γ A} → t ≈ u → u ≈ v → t ≈ v
+  ≈-trans (≈-≡ refl) ξ = ξ
+  ≈-trans (≈-` ζ) (≈-≡ refl) = ≈-` ζ
+  ≈-trans (≈-` ζ) (≈-` ξ) = ≈-` λ { y → ≈-trans (ζ y) (ξ y) }
+
   -- A recursion principle for shapes which needs to be explained to Agda
   module _ where
 
@@ -135,31 +163,3 @@ module Syntax (Class : Set) where
                                   wfRecBuilder _ Q q Γ Δ Δ≺Γ x ∼ wfRec lzero Q q Δ x
             wfRecBuilder-wfRec {Γ} {Δ} Γ≺Δ with wf-≺ Γ
             ... | acc rs = some-wfRec-irrelevant Δ (rs Δ Γ≺Δ) (wf-≺ Δ)
-
-  -- Expressions
-
-  data Expr where
-    _`_ : ∀ {Γ} {Δ} {A} (x : [ Δ , A ]∈ Γ) →
-            (ts : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B) → Expr Γ A
-
-  -- Syntactic equality of expressions
-
-  infix 4 _≈_
-
-  data _≈_ : ∀ {Γ} {A} → Expr Γ A → Expr Γ A → Set where
-    ≈-≡ : ∀ {Γ} {A} {t u : Expr Γ A} (ξ : t ≡ u) → t ≈ u
-    ≈-` : ∀ {Γ} {Δ} {A} {x : [ Δ , A ]∈ Γ} →
-            {ts us : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B}
-            (ξ : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → ts y ≈ us y) → x ` ts ≈ x ` us
-
-  ≈-refl : ∀ {Γ} {A} {t : Expr Γ A} → t ≈ t
-  ≈-refl = ≈-≡ refl
-
-  ≈-sym : ∀ {Γ} {A} {t u : Expr Γ A} → t ≈ u → u ≈ t
-  ≈-sym (≈-≡ ξ) = ≈-≡ (sym ξ)
-  ≈-sym (≈-` ξ) = ≈-` λ { y → ≈-sym (ξ y) }
-
-  ≈-trans : ∀ {Γ} {A} {t u v : Expr Γ A} → t ≈ u → u ≈ v → t ≈ v
-  ≈-trans (≈-≡ refl) ξ = ξ
-  ≈-trans (≈-` ζ) (≈-≡ refl) = ≈-` ζ
-  ≈-trans (≈-` ζ) (≈-` ξ) = ≈-` λ { y → ≈-trans (ζ y) (ξ y) }
