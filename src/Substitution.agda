@@ -1,6 +1,8 @@
-open import Induction.WellFounded
+open import Agda.Primitive
 open import Relation.Unary
-open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans; subst; cong)
+open import Relation.Binary.PropositionalEquality
+open import Data.Sum
+open import Agda.Builtin.Sigma
 
 import Syntax
 import Renaming
@@ -9,13 +11,6 @@ module Substitution (Class : Set) where
 
   open Syntax Class
   open Renaming Class
-
-  -- the set of substitutions
-
-  infix 5 _→ˢ_
-
-  _→ˢ_ : Shape → Shape → Set
-  Γ →ˢ Δ = ∀ {Θ} {A} (x : [ Θ , A ]∈ Γ) → Arg Δ Θ A
 
   -- equality of substitutions
 
@@ -96,64 +91,60 @@ module Substitution (Class : Set) where
   (ρ ʳ∘ˢ f) x = [ ⇑ʳ ρ ]ʳ f x
 
   -- the action of a substitution on an expression
+
+  -- instantiation of bound variables
   module _ where
 
-    open All wf-≺
+    open import Data.Nat
+    open import Data.Nat.Properties
+    open import Data.Nat.Induction
+    open import Induction.WellFounded
+    open import Data.Product.Relation.Binary.Lex.Strict
 
-    assoc-right : ∀ {Δ Θ Ξ} → (Δ ⊕ Θ) ⊕ Ξ →ʳ Δ ⊕ (Θ ⊕ Ξ)
-    assoc-right (var-left (var-left x)) = var-left x
-    assoc-right (var-left (var-right y)) = var-right (var-left y)
-    assoc-right (var-right z) = var-right (var-right z)
+    open All (×-wellFounded wf-≺ <-wellFounded)
 
-    assoc-left : ∀ {Δ Θ Ξ} → Δ ⊕ (Θ ⊕ Ξ) →ʳ (Δ ⊕ Θ) ⊕ Ξ
-    assoc-left (var-left x) = var-left (var-left x)
-    assoc-left (var-right (var-left y)) = var-left (var-right y)
-    assoc-left (var-right (var-right z)) = var-right z
+    inst : ∀ {Γ Δ A} → (Γ →ˢ Δ) → Arg Δ Γ A → Expr Δ A
+    inst {Γ = Γ} f e =
+        wfRec
+          lzero
+          (λ { (Γ , n) → ∀ {Δ A} (f : Γ →ˢ Δ) (e : Arg Δ Γ A) → size e ≡ n → Expr Δ A})
+          (λ { (Γ , n) r f (var-left x ` ts) ξ →
+                 x ` λ y → r (Γ , (size ([ swap-bound ]ʳ ts y)))
+                             (inj₂ (refl , respʳ _<_ ξ (respˡ _<_ []ʳ-resp-size (size-arg-< {x = var-left x}))))
+                             (var-left ʳ∘ˢ f) ([ swap-bound ]ʳ ts y) refl
+             ; (Γ , n) r f (var-right x ` ts) ξ →
+                 r (_ , (size (f x))) (inj₁ (≺-∈ x))
+                   (λ y → r (Γ , size ([ swap-bound ]ʳ ts y))
+                            (inj₂ (refl , respʳ _<_ ξ (respˡ _<_ []ʳ-resp-size (size-arg-< {x = var-right x}))))
+                            (var-left ʳ∘ˢ f) ([ swap-bound ]ʳ ts y) refl)
+                   (f x) refl
+             })
+          (Γ , (size e)) f e refl
+      where
 
+      swap-bound : ∀ {Γ Θ Ξ} → (Γ ⊕ Θ) ⊕ Ξ →ʳ (Γ ⊕ Ξ) ⊕ Θ
+      swap-bound (var-left (var-left x)) = var-left (var-left x)
+      swap-bound (var-left (var-right y)) = var-right y
+      swap-bound (var-right z) = var-left (var-right z)
+
+  mutual
+    -- the action of a substitution on an expression
     infix 6 [_]ˢ_
     [_]ˢ_ : ∀ {Γ Δ A} (f : Γ →ˢ Δ) → Expr Γ A → Expr Δ A
+    [_]ˢ_ f (x ` ts) = inst (f ∘ˢ ts) (f x)
 
-    [_]ˢ_ f (x ` ts) = sb x (λ y → [ ⇑ˢ f ]ˢ ts y) (f x)
-      where
-       sb-right : ∀ {Γ Θ A} (x : [ Θ , A ]∈ Γ) → ∀ {Δ} → (Γ →ˢ Δ) → Arg Γ Θ A → Arg Δ Θ A
-       sb-right =
-         wfRec _
-           (λ Θ → ∀ {Γ A} (x : [ Θ , A ]∈ Γ) → ∀ {Δ} → (Γ →ˢ Δ) → Arg Γ Θ A → Arg Δ Θ A)
-           (λ Θ r x f →
-              λ { (var-left y ` ts) → {!!}
-                ; (var-right y ` ts) → var-right y ` λ z → r _ (≺-∈ {!!}) {!!} {!!} (ts z)})
-           _
+    -- composition of substitutions
+    infixl 7 _∘ˢ_
+    _∘ˢ_ : ∀ {Γ Δ Θ} (g : Δ →ˢ Θ) (f : Γ →ˢ Δ) → Γ →ˢ Θ
+    (g ∘ˢ f) x =  [ ⇑ˢ g ]ˢ f x
 
-
-       sb : ∀ {Γ Θ A} (x : [ Θ , A ]∈ Γ) → ∀ {Δ} → (Θ →ˢ Δ) → Expr (Δ ⊕ Θ) A → Expr Δ A
-       sb =
-         rec-∈
-           (λ {Γ} {Θ} {A} _ → ∀ {Δ} → (Θ →ˢ Δ) → Expr (Δ ⊕ Θ) A → Expr Δ A)
-           (λ x r g →
-              λ { (var-left x ` ts) → x ` λ y → {! ts y!}
-                ; (var-right x ` ts) → r x (λ y → {!ts y!}) (g x)})
-
-       -- sb g (var-left x ` ts) = x ` λ y → sbb [ 𝟙ˢ , g ]ˢ (ts y)
-       -- sb g (var-right x ` ts) =  {!  g x!}
-
-
-
-
-
-    -- [_]ˢ_ {Γ} =
-    --   wfRec
-    --     _
-    --     (λ Γ → ∀ {Δ B} (f : Γ →ˢ Δ) → Expr Γ B → Expr Δ B)
-    --     (λ {Γ r {Δ} {B} f (x ` ts) →
-    --        r (Δ ⊕ _) {!!} {!!} (f x)}
-    --     )
-    --     Γ
-
+  -- In a language that is either a lot smarter or accepts suspicious recursion,
+  -- the action of substitution a one-liner:
   -- {-# TERMINATING #-}
   -- [_]ˢ_ : ∀ {Γ Δ B} (f : Γ →ˢ Δ) → Expr Γ B → Expr Δ B
   -- [ f ]ˢ x ` ts =  [ [ 𝟙ˢ , (λ z → [ ⇑ˢ f ]ˢ ts z) ]ˢ ]ˢ f x
 
-  -- composition of a renaming and a substitutition
+  -- composition of a substitutition and a renaming
 
   infixl 7 _ˢ∘ʳ_
 

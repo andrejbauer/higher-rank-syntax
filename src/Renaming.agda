@@ -1,16 +1,14 @@
-open import Level
+open import Agda.Primitive
 open import Relation.Binary.PropositionalEquality
+open import Data.Nat
+
 import Categories.Category
 import Syntax
+
 
 module Renaming (Sort : Set) where
 
   open Syntax Sort
-
-  infix 5 _→ʳ_
-
-  _→ʳ_ : Shape → Shape → Set
-  Γ →ʳ Δ = ∀ {Ξ} {A} (x : [ Ξ , A ]∈ Γ) → [ Ξ , A ]∈ Δ
 
   -- equality of renamings
   infix 5 _≡ʳ_
@@ -118,7 +116,7 @@ module Renaming (Sort : Set) where
   module _ where
     open Categories.Category
 
-    Renamings : Category zero zero zero
+    Renamings : Category lzero lzero lzero
     Renamings =
      record
        { Obj = Shape
@@ -134,3 +132,17 @@ module Renaming (Sort : Set) where
        ; equiv = record { refl = λ { _ → refl } ; sym = ≡ʳ-sym ; trans = ≡ʳ-trans }
        ; ∘-resp-≈ = λ {_} {_} {_} {ρ} {_} {_} {τ} ζ ξ → λ { x → trans (cong ρ (ξ x)) (ζ (τ x)) }
        }
+
+  assoc-right : ∀ {Δ Θ Ξ} → (Δ ⊕ Θ) ⊕ Ξ →ʳ Δ ⊕ (Θ ⊕ Ξ)
+  assoc-right (var-left (var-left x)) = var-left x
+  assoc-right (var-left (var-right y)) = var-right (var-left y)
+  assoc-right (var-right z) = var-right (var-right z)
+
+  assoc-left : ∀ {Δ Θ Ξ} → Δ ⊕ (Θ ⊕ Ξ) →ʳ (Δ ⊕ Θ) ⊕ Ξ
+  assoc-left (var-left x) = var-left (var-left x)
+  assoc-left (var-right (var-left y)) = var-left (var-right y)
+  assoc-left (var-right (var-right z)) = var-right z
+
+  -- renaming preserves size
+  []ʳ-resp-size : ∀ {Γ Δ A} {ρ : Γ →ʳ Δ} {t : Expr Γ A} → size t ≡ size ([ ρ ]ʳ t)
+  []ʳ-resp-size {ρ = ρ} {t = x ` ts} = cong suc (shape-sum-resp-≡ (λ y → []ʳ-resp-size {ρ = ⇑ʳ ρ} {t = ts y}))
