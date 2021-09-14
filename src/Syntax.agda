@@ -1,9 +1,8 @@
-{-# OPTIONS --allow-unsolved-metas #-}
-
 open import Agda.Primitive
-open import Relation.Binary.PropositionalEquality using (_≡_; refl; sym; trans; subst)
+open import Relation.Binary.PropositionalEquality
 open import Relation.Unary
 open import Relation.Binary
+open import Induction.WellFounded
 
 {-
 
@@ -78,33 +77,25 @@ module Syntax (Class : Set) where
     _`_ : ∀ {Γ} {Δ} {A} (x : [ Δ , A ]∈ Γ) →
             (ts : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B) → Expr Γ A
 
-  -- Syntactic equality of expressions
+  -- We define renamings and substitutions here so that they can be referred to.
+  -- In particular, notice that the ts above is just a substituition
 
-  infix 4 _≈_
+  -- renaming
+  infix 5 _→ʳ_
 
-  data _≈_ : ∀ {Γ} {A} → Expr Γ A → Expr Γ A → Set where
-    ≈-≡ : ∀ {Γ} {A} {t u : Expr Γ A} (ξ : t ≡ u) → t ≈ u
-    ≈-` : ∀ {Γ} {Δ} {A} {x : [ Δ , A ]∈ Γ} →
-            {ts us : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B}
-            (ξ : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → ts y ≈ us y) → x ` ts ≈ x ` us
+  _→ʳ_ : Shape → Shape → Set
+  Γ →ʳ Δ = ∀ {Ξ} {A} (x : [ Ξ , A ]∈ Γ) → [ Ξ , A ]∈ Δ
 
-  ≈-refl : ∀ {Γ} {A} {t : Expr Γ A} → t ≈ t
-  ≈-refl = ≈-≡ refl
+  -- substitution
+  infix 5 _→ˢ_
 
-  ≈-sym : ∀ {Γ} {A} {t u : Expr Γ A} → t ≈ u → u ≈ t
-  ≈-sym (≈-≡ ξ) = ≈-≡ (sym ξ)
-  ≈-sym (≈-` ξ) = ≈-` λ { y → ≈-sym (ξ y) }
-
-  ≈-trans : ∀ {Γ} {A} {t u v : Expr Γ A} → t ≈ u → u ≈ v → t ≈ v
-  ≈-trans (≈-≡ refl) ξ = ξ
-  ≈-trans (≈-` ζ) (≈-≡ refl) = ≈-` ζ
-  ≈-trans (≈-` ζ) (≈-` ξ) = ≈-` λ { y → ≈-trans (ζ y) (ξ y) }
+  _→ˢ_ : Shape → Shape → Set
+  Γ →ˢ Δ = ∀ {Θ} {A} (x : [ Θ , A ]∈ Γ) → Arg Δ Θ A
 
   -- A recursion principle for shapes which needs to be explained to Agda
   module _ where
 
-    open import Induction
-    open import Induction.WellFounded
+    open Induction.WellFounded
 
     infix 4 _≺_
 
@@ -163,3 +154,59 @@ module Syntax (Class : Set) where
                                   wfRecBuilder _ Q q Γ Δ Δ≺Γ x ∼ wfRec lzero Q q Δ x
             wfRecBuilder-wfRec {Γ} {Δ} Γ≺Δ with wf-≺ Γ
             ... | acc rs = some-wfRec-irrelevant Δ (rs Δ Γ≺Δ) (wf-≺ Δ)
+
+  -- The size of a term
+  module _ where
+    open import Data.Nat
+    open import Data.Nat.Properties
+
+    size : ∀ {Γ A} → Expr Γ A → ℕ
+
+    shape-sum : ∀ {Γ} → (∀ {Ξ B} → [ Ξ , B ]∈ Γ → ℕ) → ℕ
+    shape-sum {𝟘} f = 0
+    shape-sum {[ Γ , A ]} f = f var-here
+    shape-sum {Γ ⊕ Δ} f = (shape-sum (λ x → f (var-left x))) + (shape-sum (λ y → f (var-right y)))
+
+    shape-sum-resp-≡ : ∀ {Γ} → {f g : ∀ {Ξ B} → [ Ξ , B ]∈ Γ → ℕ} →
+                       (∀ {Ξ B} (y : [ Ξ , B ]∈ Γ) → f y ≡ g y) → shape-sum f ≡ shape-sum g
+    shape-sum-resp-≡ {𝟘} ξ = refl
+    shape-sum-resp-≡ {[ Γ , A ]} ξ = ξ var-here
+    shape-sum-resp-≡ {Γ ⊕ Δ} ξ =
+      cong₂ _+_
+        (shape-sum-resp-≡ (λ y → ξ (var-left y)))
+        (shape-sum-resp-≡ (λ y → ξ (var-right y)))
+
+    size (x ` ts) = suc (shape-sum (λ y → size (ts y)))
+
+    shape-sum-≤ : ∀ {Γ} (f : ∀ {Θ A} → [ Θ , A ]∈ Γ → ℕ) {Θ A} {y : [ Θ , A ]∈ Γ} → f y ≤ shape-sum f
+    shape-sum-≤ {Γ = [ Γ , A ]} _ {y = var-here} = ≤-refl
+    shape-sum-≤ {Γ = Γ₁ ⊕ Γ₂} f {y = var-left y} =
+      ≤-trans (shape-sum-≤ (λ x → f (var-left x))) (m≤m+n _ _)
+    shape-sum-≤ {Γ = Γ₁ ⊕ Γ₂} f {y = var-right y} =
+      ≤-trans (shape-sum-≤ (λ x → f (var-right x))) (m≤n+m _ _)
+
+    -- an argument is smaller than the whole expression
+    size-arg-< : ∀ {Γ Θ A} {x : [ Θ , A ]∈ Γ} {ts : Θ →ˢ Γ} {Ξ B} {y : [ Ξ , B ]∈ Θ} →
+                 size (ts y) < size (x ` ts)
+    size-arg-< {ts = ts} = s≤s (shape-sum-≤ λ y → size (ts y))
+
+  -- Syntactic equality of expressions
+
+  infix 4 _≈_
+
+  data _≈_ : ∀ {Γ} {A} → Expr Γ A → Expr Γ A → Set where
+    ≈-≡ : ∀ {Γ} {A} {t u : Expr Γ A} (ξ : t ≡ u) → t ≈ u
+    ≈-` : ∀ {Γ} {Δ} {A} {x : [ Δ , A ]∈ Γ} {ts us : Δ →ˢ Γ}
+            (ξ : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → ts y ≈ us y) → x ` ts ≈ x ` us
+
+  ≈-refl : ∀ {Γ} {A} {t : Expr Γ A} → t ≈ t
+  ≈-refl = ≈-≡ refl
+
+  ≈-sym : ∀ {Γ} {A} {t u : Expr Γ A} → t ≈ u → u ≈ t
+  ≈-sym (≈-≡ ξ) = ≈-≡ (sym ξ)
+  ≈-sym (≈-` ξ) = ≈-` λ { y → ≈-sym (ξ y) }
+
+  ≈-trans : ∀ {Γ} {A} {t u v : Expr Γ A} → t ≈ u → u ≈ v → t ≈ v
+  ≈-trans (≈-≡ refl) ξ = ξ
+  ≈-trans (≈-` ζ) (≈-≡ refl) = ≈-` ζ
+  ≈-trans (≈-` ζ) (≈-` ξ) = ≈-` λ { y → ≈-trans (ζ y) (ξ y) }
