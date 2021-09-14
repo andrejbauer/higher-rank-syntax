@@ -104,9 +104,10 @@ module Substitution (Class : Set) where
     open import Data.Product.Relation.Binary.Lex.Strict
 
     -- we proceed by well-founded recursion on the lexicographic order given by _≺_ and _<_
-    wf-≺-< = ×-wellFounded wf-≺ <-wellFounded
+    _≺,<_ = ×-Lex _≡_ _≺_ _<_
+    wf-≺,< = ×-wellFounded wf-≺ <-wellFounded
 
-    open All wf-≺-<
+    open All wf-≺,< lzero
 
     -- the type family over which we recurse to define instantiation
     private P : Shape × ℕ → Set
@@ -120,7 +121,7 @@ module Substitution (Class : Set) where
 
     mutual
       -- the matrix of the recursion
-      b : ∀ (Γ,m : Shape × ℕ) → (∀ (Ω,n : Shape × ℕ) → ×-Lex _≡_ _≺_ _<_ Ω,n Γ,m → P Ω,n) → P Γ,m
+      b : ∀ (Γ,m : Shape × ℕ) → (∀ (Ω,n : Shape × ℕ) → Ω,n ≺,< Γ,m → P Ω,n) → P Γ,m
       b (Γ , n) r f (var-left x ` ts) ξ =
         x ` λ y → r (Γ , (size ([ swap-bound ]ʳ ts y)))
                     (inj₂ (refl , respʳ _<_ ξ (respˡ _<_ []ʳ-resp-size (size-arg-< {x = var-left x}))))
@@ -133,52 +134,36 @@ module Substitution (Class : Set) where
           (f x) refl
 
       inst : ∀ {Γ Δ A} → (Γ →ˢ Δ) → Arg Δ Γ A → Expr Δ A
-      inst {Γ = Γ} f e = wfRec lzero P b (Γ , (size e)) f e refl
+      inst {Γ = Γ} f e = wfRec P b (Γ , (size e)) f e refl
 
-    -- to show that inst satisfies the desired fixed-point equation we adapt Wellfounded.FixedPoint
     module _ where
+      -- To show that inst satisfies the desired fixed-point equation we adapt Wellfounded.FixedPoint.
+      -- This is all a bit annoying because we want to avoid function extensionality.
 
-      b-ext : ∀ {Γ,m : Shape × ℕ}
-                 (r₁ r₂ : (∀ (Ω,n : Shape × ℕ) → ×-Lex _≡_ _≺_ _<_ Ω,n Γ,m → P Ω,n)) →
-                 (∀ {Ω,n} p {Δ A}
-                    (g₁ g₂ : proj₁ Ω,n →ˢ Δ) (g₁≈ˢg₂ : g₁ ≈ˢ g₂)
-                    (e₁ e₂ : Arg Δ (proj₁ Ω,n) A) (e₁≈e₂ : e₁ ≈ e₂)
-                    (ξ₁ : size e₁ ≡ proj₂ Ω,n) →
-                    (ξ₂ : size e₂ ≡ proj₂ Ω,n) →
-                    r₁ Ω,n p g₁ e₁ ξ₁ ≈ r₂ Ω,n p g₂ e₂ ξ₂) →
-                 ∀ {Δ A}
-                    (g₁ g₂ : proj₁ Γ,m →ˢ Δ) (g₁≈ˢg₂ : g₁ ≈ˢ g₂)
-                    (e₁ e₂ : Arg Δ (proj₁ Γ,m) A) (e₁≈e₂ : e₁ ≈ e₂)
-                    (ξ₁ : size e₁ ≡ proj₂ Γ,m) →
-                    (ξ₂ : size e₂ ≡ proj₂ Γ,m) →
-                    b Γ,m r₁ g₁ e₁ ξ₁ ≈ b Γ,m r₂ g₂ e₂ ξ₂
-      b-ext r₁ r₂ ζ g₁ g₂ g₁≈ˢg₂ (var-left x₁ ` ts₁) (var-left .x₁ ` .ts₁) (≈-≡ refl) ξ₁ ξ₂ = {!!}
-      b-ext r₁ r₂ ζ g₁ g₂ g₁≈ˢg₂ (var-left x₁ ` ts₁) (var-left .x₁ ` ts₂) (≈-` ξ) ξ₁ ξ₂ = {!!}
-      b-ext r₁ r₂ ζ g₁ g₂ g₁≈ˢg₂ (var-left x₁ ` ts₁) (var-right x₂ ` ts₂) (≈-≡ ()) ξ₁ ξ₂
-      b-ext r₁ r₂ ζ g₁ g₂ g₁≈ˢg₂ (var-right x ` ts) e₂ e₁≈e₂ ξ₁ ξ₂ = {!!}
+      _≈'_ : ∀ {Γ n} (u v : ∀ {Δ A} (g : Γ →ˢ Δ) (e : Arg Δ Γ A) → size e ≡ n → Expr Δ A) → Set
+      _≈'_ {Γ} u v = ∀ {Δ A} {g : Γ →ˢ Δ} {e₁ e₂ : Arg Δ Γ A} {ξ₁ ξ₂} → e₁ ≈ e₂ → u g e₁ ξ₁ ≈ v g e₂ ξ₂
 
+      -- the matrix respects syntacitc equality in all arguments
+      b-ext : ∀ (Γ,m : Shape × ℕ) {r₁ r₂ : WfRec _≺,<_ P Γ,m} → (∀ {Ω,n} p → r₁ Ω,n p ≈' r₂ Ω,n p) → b Γ,m r₁ ≈' b Γ,m r₂
+      b-ext Γ,m ζ {e₁ = e₁} e₁≈e₂ = {!!}
 
+      some-wfRec-irrelevant : ∀ Γ,m → (r₁ r₂ : Acc _≺,<_ Γ,m) → Some.wfRec P b Γ,m r₁ ≈' Some.wfRec P b Γ,m r₂
+      some-wfRec-irrelevant =
+        wfRec
+          (λ Γ,n → ∀ r₁ r₂ → Some.wfRec P b Γ,n r₁ ≈' Some.wfRec P b Γ,n r₂)
+          (λ { Γ,n ζ (acc rs₁) (acc rs₂) → b-ext Γ,n λ {p → ζ _ p (rs₁ _ p) (rs₂ _ p)}})
 
-      -- some-wfRec-irrelevant : ∀ Ω,n q q′ {Δ A} (g  : proj₁ Ω,n →ˢ Δ) (e : Arg Δ (proj₁ Ω,n) A) ξ →
-      --                         Some.wfRec P b Ω,n q g e ξ ≈ Some.wfRec P b Ω,n q′ g e ξ
-      -- some-wfRec-irrelevant =
-      --   wfRec _
-      --     (λ Ω,n → ∀ r₁ r₂ {Δ A} (g  : proj₁ Ω,n →ˢ Δ) (e : Arg Δ (proj₁ Ω,n) A) ξ →
-      --              Some.wfRec P b Ω,n r₁ g e ξ ≈ Some.wfRec P b Ω,n r₂ g e ξ)
-      --     λ Ω,n p r₁ r₂ g e ξ → b-ext {!!} {!!} {!!} g e ξ
-      --     -- (λ { Ω,n IH (acc rs) (acc rs′) → d-ext Ω,n (λ y<x → IH _ y<x (rs _ y<x) (rs′ _ y<x)) })
+      wfRecBuilder-wfRec : ∀ {Γ,m Ω,n} p → wfRecBuilder P b Γ,m Ω,n p ≈' wfRec P b Ω,n
+      wfRecBuilder-wfRec {Γ,m} {Ω,n} p with wf-≺,< Γ,m
+      ... | acc rs = some-wfRec-irrelevant {!!} {!!} {!!}
 
-      -- wfRecBuilder-wfRec : ∀ {x y} y<x → wfRecBuilder P f x y y<x ∼ wfRec P f y
-      -- wfRecBuilder-wfRec {x} {y} y<x with x
-      -- ... | acc rs = some-wfRec-irrelevant y (rs y y<x) ((wf-≺-<) y)
-
-      -- unfold-wfRec : ∀ {x} → wfRec P f x ∼ f x (λ y _ → wfRec P f y)
-      -- unfold-wfRec {x} = f-ext x wfRecBuilder-wfRec
+      unfold-wfRec : ∀ {Γ,m} → wfRec P b Γ,m ≈' b Γ,m (λ Ω,n _ → wfRec P b Ω,n)
+      unfold-wfRec {Γ,m} = b-ext Γ,m wfRecBuilder-wfRec
 
 
     -- unfold-inst-left : {!!} -- ∀ {Γ Δ Ξ A} {f : Γ →ˢ Δ} {x : [ Ξ , A ]∈ Δ} {ts : Ξ →ˢ Δ ⊕ Γ} → {!!}
     -- unfold-inst-left =
-    --   unfold-wfRec (wf-≺-<) _ P b
+    --   unfold-wfRec (wf-≺,<) _ P b
     --     (λ {x} f g → {!!})
 
 
