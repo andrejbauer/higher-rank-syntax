@@ -130,17 +130,20 @@ module Substitution (Class : Set) where
 
     module _ where
       -- To show that inst satisfies the desired fixed-point equation we adapt Wellfounded.FixedPoint.
-      -- This is all a bit annoying because we want to avoid function extensionality.
 
-      _≈'_ : ∀ {Γ} {n} (u v : ∀ {Δ A} (g : Γ →ˢ Δ) (e : Arg Δ Γ A) → size e ≡ n → Expr Δ A) → Set
+      _≈'_ : ∀ {Γ n₁ n₂}
+               (u : ∀ {Δ A} (g : Γ →ˢ Δ) (e : Arg Δ Γ A) → size e ≡ n₁ → Expr Δ A) →
+               (v : ∀ {Δ A} (g : Γ →ˢ Δ) (e : Arg Δ Γ A) → size e ≡ n₂ → Expr Δ A) → Set
       _≈'_ {Γ} u v = ∀ {Δ A} →
                        ∀ {g₁ g₂ : Γ →ˢ Δ} → g₁ ≈ˢ g₂ →
-                       ∀ {e₁ e₂ : Arg Δ Γ A} {ξ₁ ξ₂} → e₁ ≈ e₂ →
+                       ∀ {e₁ e₂ : Arg Δ Γ A} {ξ₁ ξ₂} →
+                       e₁ ≈ e₂ →
                        u g₁ e₁ ξ₁ ≈ v g₂ e₂ ξ₂
 
-      canonize-size : ∀ {Γ,m} {r : WfRec _≺,<_ P Γ,m} {Γ,m} {k} {p} → k ≡ proj₂ Γ,m →
-                        r (proj₁ Γ,m , k) p ≈' r Γ,m {!!}
-      canonize-size ζ = {!!}
+      canonize-size : ∀ {Γ,m} {r : WfRec _≺,<_ P Γ,m} {k} {p} {ξ : k ≡ proj₂ Γ,m} →
+                        r (proj₁ Γ,m , k) p ≈' r Γ,m (subst _ ξ p)
+      canonize-size {Γ,m} {r} {k} {p} {ξ} g₁≈ˢg₂ e₁≈e₂ =
+        ≈-trans (≈-≡ (resp {!λ j → ∀ p → r (proj₁ Γ,m , k) p ≈' r Γ,m (subst _ ξ p) !} ξ {!!})) {!!}
 
       -- the matrix respects syntacitc equality in all arguments
       b-ext : ∀ Γ,m {r₁ r₂ : WfRec _≺,<_ P Γ,m} → (∀ {Ω,n} p → r₁ Ω,n p ≈' r₂ Ω,n p) → b Γ,m r₁ ≈' b Γ,m r₂
