@@ -133,27 +133,18 @@ module Syntax (Class : Set) where
            (r-ext : ∀ {Γ Θ A} (x : [ Θ , A ]∈ Γ) {f g : Q Θ} →
                     (∀ {Ξ B} (y : [ Ξ , B ]∈ Θ) → f y ∼ g y) → r x f ∼ r x g) where
 
+        _∼'_ : ∀ {Γ} (u v : ∀ {Ξ B} (x : [ Ξ , B ]∈ Γ) → P x) → Set
+        _∼'_ {Γ} u v = ∀ {Ξ B} (x : [ Ξ , B ]∈ Γ) → u x ∼ v x
+
+        q-ext : ∀ Γ {δ ε : WfRec _≺_ Q Γ} → (∀ {Δ} Δ≺Γ {Ξ B} (x : [ Ξ , B ]∈ Δ) → δ Δ Δ≺Γ x ∼ ε Δ Δ≺Γ x) →
+                  ∀ {Θ A} (x : [ Θ , A ]∈ Γ) → q Γ δ x ∼ q Γ ε x
+        q-ext Γ δ∼ε x = r-ext x (δ∼ε (≺-∈ x))
+
+        open import FixPointRel wf-≺ _ Q q _∼'_ q-ext
+
         -- The fixpoint equation for rec-∈
         unfold-rec-∈ : ∀ {Γ Θ A} {x : [ Θ , A ]∈ Γ} → rec-∈ x ∼ r x rec-∈
-        unfold-rec-∈ {Γ = Γ} {x = x} = q-ext Γ wfRecBuilder-wfRec x
-          where
-            -- The following is adapted from the standard library
-
-            q-ext : ∀ Γ {δ ε : WfRec _≺_ Q Γ} → (∀ {Δ} Δ≺Γ {Ξ B} (x : [ Ξ , B ]∈ Δ) → δ Δ Δ≺Γ x ∼ ε Δ Δ≺Γ x) →
-                          ∀ {Θ A} (x : [ Θ , A ]∈ Γ) → q Γ δ x ∼ q Γ ε x
-            q-ext Γ δ∼ε x = r-ext x (δ∼ε (≺-∈ x))
-
-            some-wfRec-irrelevant : ∀ Γ (ζ η : Acc _≺_ Γ) →
-                                    ∀ {Ξ B} (x : [ Ξ , B ]∈ Γ) → Some.wfRec Q q Γ ζ x ∼ Some.wfRec Q q Γ η x
-            some-wfRec-irrelevant =
-              All.wfRec wf-≺ _
-                (λ Γ → ∀ ζ η {Ξ B} (x : [ Ξ , B ]∈ Γ) → Some.wfRec Q q Γ ζ x ∼ Some.wfRec Q q Γ η x)
-                λ {Γ H (acc ζ') (acc η') → q-ext Γ (λ Δ≺Γ → H _ Δ≺Γ (ζ' _ Δ≺Γ) (η' _ Δ≺Γ))}
-
-            wfRecBuilder-wfRec : ∀ {Γ Δ : Shape} Δ≺Γ {Ξ B} (x : [ Ξ , B ]∈ Δ) →
-                                  wfRecBuilder Q q Γ Δ Δ≺Γ x ∼ wfRec Q q Δ x
-            wfRecBuilder-wfRec {Γ} {Δ} Γ≺Δ with wf-≺ Γ
-            ... | acc rs = some-wfRec-irrelevant Δ (rs Δ Γ≺Δ) (wf-≺ Δ)
+        unfold-rec-∈ {x = x} = unfold-wfRec x
 
   -- The size of a term
   module _ where
