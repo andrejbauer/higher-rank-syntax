@@ -108,7 +108,7 @@ module Syntax (Class : Set) where
     wf-≺ [ Γ , A ] = acc (λ { Θ (≺-∈ var-here) → wf-≺ Γ})
     wf-≺ (Γ₁ ⊕ Γ₂) = acc (λ { Θ (≺-∈ (var-left x)) → acc-inverse (wf-≺ Γ₁) Θ (≺-∈ x)
                             ; Θ (≺-∈ (var-right y)) → acc-inverse (wf-≺ Γ₂) Θ (≺-∈ y)})
-    open All wf-≺
+    open All wf-≺ lzero
 
     module _
       (P : ∀ {Γ Θ A} (x : [ Θ , A ]∈ Γ) → Set)
@@ -124,7 +124,7 @@ module Syntax (Class : Set) where
 
       -- The main recursion-forming operator
       rec-∈ : ∀ {Γ Θ A} (x : [ Θ , A ]∈ Γ) → P x
-      rec-∈ {Γ = Γ} = wfRec _ Q q Γ
+      rec-∈ {Γ = Γ} = wfRec Q q Γ
 
       -- We show that rec-∈ satisfies the desired fixpoint equation
       -- with respect to any relation that is preserved by the recursor r
@@ -148,10 +148,10 @@ module Syntax (Class : Set) where
             some-wfRec-irrelevant =
               All.wfRec wf-≺ _
                 (λ Γ → ∀ ζ η {Ξ B} (x : [ Ξ , B ]∈ Γ) → Some.wfRec Q q Γ ζ x ∼ Some.wfRec Q q Γ η x)
-                λ {Γ H (acc ζ') (acc η') x → q-ext Γ (λ Δ≺Γ y → H _ Δ≺Γ (ζ' _ Δ≺Γ) (η' _ Δ≺Γ) y) x}
+                λ {Γ H (acc ζ') (acc η') → q-ext Γ (λ Δ≺Γ → H _ Δ≺Γ (ζ' _ Δ≺Γ) (η' _ Δ≺Γ))}
 
             wfRecBuilder-wfRec : ∀ {Γ Δ : Shape} Δ≺Γ {Ξ B} (x : [ Ξ , B ]∈ Δ) →
-                                  wfRecBuilder _ Q q Γ Δ Δ≺Γ x ∼ wfRec lzero Q q Δ x
+                                  wfRecBuilder Q q Γ Δ Δ≺Γ x ∼ wfRec Q q Δ x
             wfRecBuilder-wfRec {Γ} {Δ} Γ≺Δ with wf-≺ Γ
             ... | acc rs = some-wfRec-irrelevant Δ (rs Δ Γ≺Δ) (wf-≺ Δ)
 

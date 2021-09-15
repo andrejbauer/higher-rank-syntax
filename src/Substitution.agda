@@ -140,31 +140,30 @@ module Substitution (Class : Set) where
       -- To show that inst satisfies the desired fixed-point equation we adapt Wellfounded.FixedPoint.
       -- This is all a bit annoying because we want to avoid function extensionality.
 
-      _≈'_ : ∀ {Γ n} (u v : ∀ {Δ A} (g : Γ →ˢ Δ) (e : Arg Δ Γ A) → size e ≡ n → Expr Δ A) → Set
-      _≈'_ {Γ} u v = ∀ {Δ A} {g : Γ →ˢ Δ} {e₁ e₂ : Arg Δ Γ A} {ξ₁ ξ₂} → e₁ ≈ e₂ → u g e₁ ξ₁ ≈ v g e₂ ξ₂
+      _≈'_ : ∀ {Γ,n} (u v : ∀ {Δ A} (g : proj₁ Γ,n →ˢ Δ) (e : Arg Δ (proj₁ Γ,n) A) → size e ≡ proj₂ Γ,n → Expr Δ A) → Set
+      _≈'_ {Γ,n} u v = ∀ {Δ A} {g : proj₁ Γ,n →ˢ Δ} {e₁ e₂ : Arg Δ (proj₁ Γ,n) A} {ξ₁ ξ₂} → e₁ ≈ e₂ → u g e₁ ξ₁ ≈ v g e₂ ξ₂
 
       -- the matrix respects syntacitc equality in all arguments
-      b-ext : ∀ (Γ,m : Shape × ℕ) {r₁ r₂ : WfRec _≺,<_ P Γ,m} → (∀ {Ω,n} p → r₁ Ω,n p ≈' r₂ Ω,n p) → b Γ,m r₁ ≈' b Γ,m r₂
-      b-ext Γ,m ζ {e₁ = e₁} e₁≈e₂ = {!!}
+      b-ext : ∀ Γ,m {r₁ r₂ : WfRec _≺,<_ P Γ,m} → (∀ {Ω,n} p → r₁ Ω,n p ≈' r₂ Ω,n p) → b Γ,m r₁ ≈' b Γ,m r₂
+      b-ext Γ,m ζ {e₁ = var-left x ` ts} (≈-≡ refl) =
+        ≈-` (λ y → {!!})
+      b-ext Γ,m ζ {e₁ = var-right x ` ts} (≈-≡ refl) = {!!}
+      b-ext Γ,m ζ {e₁ = .(var-left x ` _)} (≈-` {x = var-left x} ξ) =
+        ≈-` (λ y → {!!})
+      b-ext Γ,m ζ {e₁ = .(var-right x ` _)} (≈-` {x = var-right x} ξ) =
+        {!!}
 
-      some-wfRec-irrelevant : ∀ Γ,m → (r₁ r₂ : Acc _≺,<_ Γ,m) → Some.wfRec P b Γ,m r₁ ≈' Some.wfRec P b Γ,m r₂
-      some-wfRec-irrelevant =
-        wfRec
-          (λ Γ,n → ∀ r₁ r₂ → Some.wfRec P b Γ,n r₁ ≈' Some.wfRec P b Γ,n r₂)
-          (λ { Γ,n ζ (acc rs₁) (acc rs₂) → b-ext Γ,n λ {p → ζ _ p (rs₁ _ p) (rs₂ _ p)}})
+      open import FixPointRel wf-≺,< lzero P b _≈'_ b-ext
 
-      wfRecBuilder-wfRec : ∀ {Γ,m Ω,n} p → wfRecBuilder P b Γ,m Ω,n p ≈' wfRec P b Ω,n
-      wfRecBuilder-wfRec {Γ,m} {Ω,n} p with wf-≺,< Γ,m
-      ... | acc rs = some-wfRec-irrelevant {!!} {!!} {!!}
+      unfold-inst-left : ∀ {Γ Δ Ξ A} {f : Γ →ˢ Δ} {x : [ Ξ , A ]∈ Δ} {ts : Ξ →ˢ Δ ⊕ Γ} →
+                           inst f (var-left x ` ts) ≈ x ` λ y → inst (var-left ʳ∘ˢ f) ([ swap-bound ]ʳ ts y)
+      unfold-inst-left {Γ = Γ} {Δ = Δ} {A = A} {f = f} {x = x} {ts = ts} =
+        unfold-wfRec {(Γ , _)} {Δ} {A} {f} {e₁ = var-left x ` ts} {e₂ = var-left x ` ts} {ξ₁ = refl} {ξ₂ = refl} ≈-refl
 
-      unfold-wfRec : ∀ {Γ,m} → wfRec P b Γ,m ≈' b Γ,m (λ Ω,n _ → wfRec P b Ω,n)
-      unfold-wfRec {Γ,m} = b-ext Γ,m wfRecBuilder-wfRec
-
-
-    -- unfold-inst-left : {!!} -- ∀ {Γ Δ Ξ A} {f : Γ →ˢ Δ} {x : [ Ξ , A ]∈ Δ} {ts : Ξ →ˢ Δ ⊕ Γ} → {!!}
-    -- unfold-inst-left =
-    --   unfold-wfRec (wf-≺,<) _ P b
-    --     (λ {x} f g → {!!})
+      unfold-inst-right : ∀ {Γ Δ Ξ A} {f : Γ →ˢ Δ} {x : [ Ξ , A ]∈ Γ} {ts : Ξ →ˢ Δ ⊕ Γ} →
+                           inst f (var-right x ` ts) ≈ inst (λ y → inst (var-left ʳ∘ˢ f) ([ swap-bound ]ʳ ts y)) (f x)
+      unfold-inst-right {Γ = Γ} {Δ = Δ} {A = A} {f = f} {x = x} {ts = ts} =
+        unfold-wfRec {(Γ , _)} {Δ} {A} {f} {e₁ = var-right x ` ts} {e₂ = var-right x ` ts} {ξ₁ = refl} {ξ₂ = refl} ≈-refl
 
 
   mutual
@@ -187,7 +186,7 @@ module Substitution (Class : Set) where
   -- We can still show that the equation holds
   unfold-[]ˢ : ∀ {Γ Δ} {f : Γ →ˢ Δ} {Θ A} {x : [ Θ , A ]∈ Γ} {ts : Θ →ˢ Γ} →
                  [ f ]ˢ x ` ts ≈ [ [ 𝟙ˢ , (λ z → [ ⇑ˢ f ]ˢ ts z) ]ˢ ]ˢ f x
-  unfold-[]ˢ {f = f} {x = x} {ts = ts} = {!!}
+  unfold-[]ˢ {f = f} {x = x} {ts = ts} = ≈-trans {!!} {!!}
     where
     ξ : inst (f ∘ˢ ts) (f x) ≡ {!!}
     ξ = {!!}
