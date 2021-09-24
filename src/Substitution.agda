@@ -5,7 +5,6 @@ open import Relation.Binary.PropositionalEquality
 open import Data.Sum
 open import Agda.Builtin.Sigma
 open import Induction.WellFounded
-open import Axiom.Extensionality.Propositional
 
 import Syntax
 import Renaming
@@ -99,18 +98,9 @@ module Substitution (Class : Set) where
     _≺,<_ = ×-Lex _≡_ _≺_ _<_
     wf-≺,< = ×-wellFounded wf-≺ <-wellFounded
 
-    -- the type over which we recurse to define instantiation
-    data Σ-Arg : Set where
-      arg : ∀ {Γ Θ A} → Arg Γ Θ A → Σ-Arg
-
-    size-≺,< : Σ-Arg → Shape × ℕ
-    size-≺,< (arg {Θ = Θ} e) = (Θ , size e)
-
-    open import SizeInduction wf-≺,< size-≺,<
-
     -- the type family over which we recurse to define instantiation
-    P : Σ-Arg → Set
-    P (arg {Γ = Γ} {Θ = Θ} {A = A} e) = (Θ →ˢ Γ) → Expr Γ A
+    P : Shape × ℕ → Set
+    P (Γ , n) = ∀ {Δ A} (f : Γ →ˢ Δ) (e : Arg Δ Γ A) → size e ≡ n → Expr Δ A
 
     -- an auxiliary renaming
     swap-bound : ∀ {Γ Θ Ξ} → (Γ ⊕ Θ) ⊕ Ξ →ʳ (Γ ⊕ Ξ) ⊕ Θ
@@ -118,106 +108,86 @@ module Substitution (Class : Set) where
     swap-bound (var-left (var-right y)) = var-right y
     swap-bound (var-right z) = var-left (var-right z)
 
+    open All wf-≺,< lzero
+
     -- the matrix of the recursion
-    b : ∀ a → (∀ a' → size-≺,< a' ≺,< size-≺,< a → P a') → P a
-    b (arg (var-left x ` ts)) r f =
-      x ` λ y →
-          r (arg ([ swap-bound ]ʳ ts y))
-            (inj₂ (refl , respˡ _<_ []ʳ-resp-size (size-arg-< {x = var-left x})))
-            (var-left ʳ∘ˢ f)
-    b (arg (var-right x ` ts)) r f =
-      r (arg (f x))
-        (inj₁ (≺-∈ x))
-        (λ y → r (arg ([ swap-bound ]ʳ ts y))
-                 (inj₂ (refl , (respˡ _<_ []ʳ-resp-size (size-arg-< {x = var-right x}))))
-                 (var-left ʳ∘ˢ f))
+    b : ∀ (Γ,m : Shape × ℕ) → (∀ (Ω,n : Shape × ℕ) → Ω,n ≺,< Γ,m → P Ω,n) → P Γ,m
+    b (Γ , n) r f (var-left x ` ts) ξ =
+      x ` λ y → r (Γ , (size ([ swap-bound ]ʳ ts y)))
+                  (inj₂ (refl , respʳ _<_ ξ (respˡ _<_ []ʳ-resp-size (size-arg-< {x = var-left x}))))
+                  (var-left ʳ∘ˢ f) ([ swap-bound ]ʳ ts y) refl
+    b (Γ , n) r f (var-right x ` ts) ξ =
+      r (_ , (size (f x))) (inj₁ (≺-∈ x))
+        (λ y → r (Γ , size ([ swap-bound ]ʳ ts y))
+                 (inj₂ (refl , respʳ _<_ ξ (respˡ _<_ []ʳ-resp-size (size-arg-< {x = var-right x}))))
+                 (var-left ʳ∘ˢ f) ([ swap-bound ]ʳ ts y) refl)
+        (f x) refl
 
     inst : ∀ {Γ Δ A} → (Γ →ˢ Δ) → Arg Δ Γ A → Expr Δ A
-    inst {Γ = Γ} f e = sizeRec P b (arg e) f
+    inst {Γ = Γ} f e = wfRec P b (Γ , (size e)) f e refl
 
-    module _ where
-      -- We show that inst satisfies the desired fixed-point equations
+    _≡'_ : ∀ {Γ} {n} (u v : ∀ {Δ A} (g : Γ →ˢ Δ) (e : Arg Δ Γ A) → size e ≡ n → Expr Δ A) → Set
+    u ≡' v = ∀ {Δ A} (g : _ →ˢ Δ) (e : Arg Δ _ A) ξ → u g e ξ ≡ v g e ξ
 
-      open FixPoint wf-≺,< {!P!}
+    -- the matrix respects syntacitc equality in all arguments
+    b-ext : ∀ Γ,m {r₁ r₂ : WfRec _≺,<_ P Γ,m} → (∀ {Ω,n} (p : Ω,n ≺,< Γ,m) → r₁ Ω,n p ≡' r₂ Ω,n p) → b Γ,m r₁ ≡' b Γ,m r₂
+    b-ext (Γ , m) ζ g (var-left x ` _) _ = cong (_`_ x) ( (arg-extensionality λ y → ζ _ _ _ refl) )
+    b-ext (Γ , m) {r₁} {r₂} ζ g (var-right x ` ts) ξ =
+      trans
+        (cong-app (cong-app (cong (r₁ _ _) (arg-extensionality (λ y → ζ _ _ _ refl))) _) _)
+        (ζ _ _ _ refl)
 
+    open import FixPointRel wf-≺,< lzero P b _≡'_ b-ext
 
-  -- --     _≈'_ : ∀ {Γ n₁ n₂}
-  -- --              (u : ∀ {Δ A} (g : Γ →ˢ Δ) (e : Arg Δ Γ A) → size e ≡ n₁ → Expr Δ A) →
-  -- --              (v : ∀ {Δ A} (g : Γ →ˢ Δ) (e : Arg Δ Γ A) → size e ≡ n₂ → Expr Δ A) → Set
-  -- --     _≈'_ {Γ} u v = ∀ {Δ A} →
-  -- --                      ∀ {g₁ g₂ : Γ →ˢ Δ} → g₁ ≈ˢ g₂ →
-  -- --                      ∀ {e₁ e₂ : Arg Δ Γ A} {ξ₁ ξ₂} →
-  -- --                      e₁ ≈ e₂ →
-  -- --                      u g₁ e₁ ξ₁ ≈ v g₂ e₂ ξ₂
+    unfold-inst-left : ∀ {Γ Δ Ξ A} {f : Γ →ˢ Δ} {x : [ Ξ , A ]∈ Δ} {ts : Ξ →ˢ Δ ⊕ Γ} →
+                         inst f (var-left x ` ts) ≈ x ` λ y → inst (var-left ʳ∘ˢ f) ([ swap-bound ]ʳ ts y)
+    unfold-inst-left {Γ = Γ} {Δ = Δ} {A = A} {f = f} {x = x} {ts = ts} =
+      ≈-≡ (unfold-wfRec f (var-left x ` ts) refl)
 
-  -- --     canonize-size : ∀ {Γ,m} {r : WfRec _≺,<_ P Γ,m} {k} {p} {ξ : k ≡ proj₂ Γ,m} →
-  -- --                       r (proj₁ Γ,m , k) p ≈' r Γ,m (subst _ ξ p)
-  -- --     canonize-size {Γ,m} {r} {k} {p} {ξ} g₁≈ˢg₂ e₁≈e₂ =
-  -- --       ≈-trans (≈-≡ (resp {!λ j → ∀ p → r (proj₁ Γ,m , k) p ≈' r Γ,m (subst _ ξ p) !} ξ {!!})) {!!}
+    unfold-inst-right : ∀ {Γ Δ Ξ A} {f : Γ →ˢ Δ} {x : [ Ξ , A ]∈ Γ} {ts : Ξ →ˢ Δ ⊕ Γ} →
+                          inst f (var-right x ` ts) ≈ inst (λ y → inst (var-left ʳ∘ˢ f) ([ swap-bound ]ʳ ts y)) (f x)
+    unfold-inst-right {Γ = Γ} {Δ = Δ} {A = A} {f = f} {x = x} {ts = ts} =
+      ≈-≡ (unfold-wfRec f (var-right x ` ts) refl)
 
-  -- --     -- the matrix respects syntacitc equality in all arguments
-  -- --     b-ext : ∀ Γ,m {r₁ r₂ : WfRec _≺,<_ P Γ,m} → (∀ {Ω,n} p → r₁ Ω,n p ≈' r₂ Ω,n p) → b Γ,m r₁ ≈' b Γ,m r₂
-  -- --     b-ext Γ,m ξ ζ {e₁ = var-left x ` ts} (≈-≡ refl) =
-  -- --       ≈-` (λ y → {!!})
-  -- --     b-ext Γ,m ξ ζ {e₁ = var-right x ` ts} (≈-≡ refl) = {!!}
-  -- --     b-ext Γ,m ξ ζ {e₁ = .(var-left x ` _)} (≈-` {x = var-left x} η) =
-  -- --       ≈-` (λ y → {!!})
-  -- --     b-ext Γ,m ξ ζ {e₁ = .(var-right x ` _)} (≈-` {x = var-right x} η) =
-  -- --       {!!}
+    mutual
+      -- the action of a substitution on an expression
+      infix 6 [_]ˢ_
+      [_]ˢ_ : ∀ {Γ Δ A} (f : Γ →ˢ Δ) → Expr Γ A → Expr Δ A
+      [_]ˢ_ f (x ` ts) = inst (f ∘ˢ ts) (f x)
 
-  -- --     open import FixPointRel wf-≺,< _ P b _≈'_ b-ext
+      -- composition of substitutions
+      infixl 7 _∘ˢ_
+      _∘ˢ_ : ∀ {Γ Δ Θ} (g : Δ →ˢ Θ) (f : Γ →ˢ Δ) → Γ →ˢ Θ
+      (g ∘ˢ f) x =  [ ⇑ˢ g ]ˢ f x
 
-  -- --     unfold-inst-left : ∀ {Γ Δ Ξ A} {f : Γ →ˢ Δ} {x : [ Ξ , A ]∈ Δ} {ts : Ξ →ˢ Δ ⊕ Γ} →
-  -- --                          inst f (var-left x ` ts) ≈ x ` λ y → inst (var-left ʳ∘ˢ f) ([ swap-bound ]ʳ ts y)
-  -- --     unfold-inst-left {Γ = Γ} {Δ = Δ} {A = A} {f = f} {x = x} {ts = ts} =
-  -- --       unfold-wfRec
-  -- --         {(Γ , _)} {Δ} {A}
-  -- --         (≈ˢ-refl {f = f})
-  -- --         {e₁ = var-left x ` ts} {e₂ = var-left x ` ts}
-  -- --         {ξ₁ = refl} {ξ₂ = refl} ≈-refl
+    -- In a formalism that accepts suspicious recursion, the action of substitution a one-liner:
+    -- {-# TERMINATING #-}
+    -- [_]ˢ_ : ∀ {Γ Δ A} (f : Γ →ˢ Δ) → Expr Γ A → Expr Δ A
+    -- [ f ]ˢ x ` ts = [ [ 𝟙ˢ , f ∘ˢ ts ]ˢ ]ˢ f x
 
-  -- --     unfold-inst-right : ∀ {Γ Δ Ξ A} {f : Γ →ˢ Δ} {x : [ Ξ , A ]∈ Γ} {ts : Ξ →ˢ Δ ⊕ Γ} →
-  -- --                          inst f (var-right x ` ts) ≈ inst (λ y → inst (var-left ʳ∘ˢ f) ([ swap-bound ]ʳ ts y)) (f x)
-  -- --     unfold-inst-right {Γ = Γ} {Δ = Δ} {A = A} {f = f} {x = x} {ts = ts} =
-  -- --       unfold-wfRec
-  -- --         {(Γ , _)} {Δ} {A}
-  -- --         (≈ˢ-refl {f = f})
-  -- --         {e₁ = var-right x ` ts} {e₂ = var-right x ` ts}
-  -- --         {ξ₁ = refl} {ξ₂ = refl} ≈-refl
+    -- We can still show that the equation holds, after some preparation
 
-  -- -- mutual
-  -- --   -- the action of a substitution on an expression
-  -- --   infix 6 [_]ˢ_
-  -- --   [_]ˢ_ : ∀ {Γ Δ A} (f : Γ →ˢ Δ) → Expr Γ A → Expr Δ A
-  -- --   [_]ˢ_ f (x ` ts) = inst (f ∘ˢ ts) (f x)
+    inst-resp-≈ : ∀ {Γ Δ A} {f : Γ →ˢ Δ} {e₁ e₂ : Arg Δ Γ A} → e₁ ≈ e₂ → inst f e₁ ≈ inst f e₂
+    inst-resp-≈ ξ = {!!}
 
-  -- --   -- composition of substitutions
-  -- --   infixl 7 _∘ˢ_
-  -- --   _∘ˢ_ : ∀ {Γ Δ Θ} (g : Δ →ˢ Θ) (f : Γ →ˢ Δ) → Γ →ˢ Θ
-  -- --   (g ∘ˢ f) x =  [ ⇑ˢ g ]ˢ f x
+    inst-resp-≈ˢ : ∀ {Γ Δ A} {f g : Γ →ˢ Δ} {e : Arg Δ Γ A} → f ≈ˢ g → inst f e ≈ inst g e
+    inst-resp-≈ˢ ξ = {!!}
 
-  -- -- -- In a formalism that accepts suspicious recursion, the action of substitution a one-liner:
-  -- -- -- {-# TERMINATING #-}
-  -- -- -- [_]ˢ_ : ∀ {Γ Δ A} (f : Γ →ˢ Δ) → Expr Γ A → Expr Δ A
-  -- -- -- [ f ]ˢ x ` ts = [ [ 𝟙ˢ , f ∘ˢ ts ]ˢ ]ˢ f x
+    mutual
 
-  -- -- -- We can still show that the equation holds, after some preparation
+      unfold-inst : ∀ {Γ Δ A} {f : Γ →ˢ Δ} {e : Arg Δ Γ A} → inst f e ≈ [ [ 𝟙ˢ , f ]ˢ ]ˢ e
+      unfold-inst {f = f} {e = var-left x ` ts} =
+         ≈-trans
+           (unfold-inst-left {ts = ts})
+           {!!}
+      unfold-inst {f = f} {e = var-right x ` ts} = {!!}
+        -- ≈-trans
+        --   (unfold-inst-right {f = f} {x = x} {ts = ts})
+        --   (inst-resp-≈ˢ {e = f x} λ y → {!!})
 
-  -- -- unfold-inst : ∀ {Δ Θ A} {f : Θ →ˢ Δ} (e : Arg Δ Θ A) → inst f e ≈ [ [ 𝟙ˢ , f ]ˢ ]ˢ e
-  -- -- unfold-inst (var-left x ` ts) =
-  -- --   ≈-trans
-  -- --     (unfold-inst-left {x = x} {ts = ts})
-  -- --     (≈-trans {!!} (≈-sym {! unfold-inst-left {x = x} {ts = ts} !}))
-
-  -- -- unfold-inst {f = f} (var-right x ` ts) =
-  -- --   ≈-trans (unfold-inst-right {f = f} {x = x} {ts = ts}) {!!}
-
-
-  -- -- -- The desired recursion for substitution
-
-  -- -- unfold-[]ˢ : ∀ {Γ Δ} {f : Γ →ˢ Δ} {Θ A} {x : [ Θ , A ]∈ Γ} {ts : Θ →ˢ Γ} →
-  -- --                [ f ]ˢ x ` ts ≈ [ [ 𝟙ˢ , f ∘ˢ ts ]ˢ ]ˢ f x
-  -- -- unfold-[]ˢ {f = f} {x = x} = unfold-inst (f x)
+      unfold-[]ˢ : ∀ {Γ Δ} {f : Γ →ˢ Δ} {Θ A} {x : [ Θ , A ]∈ Γ} {ts : Θ →ˢ Γ} →
+                   [ f ]ˢ x ` ts ≈ [ [ 𝟙ˢ , f ∘ˢ ts ]ˢ ]ˢ f x
+      unfold-[]ˢ {f = f} {x = x} {ts = ts} = unfold-inst {f = f ∘ˢ ts} {e = f x}
 
   -- -- -- composition of a substitutition and a renaming
   -- -- infixl 7 _ˢ∘ʳ_

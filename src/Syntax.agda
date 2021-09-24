@@ -77,6 +77,12 @@ module Syntax (Class : Set) where
     _`_ : ∀ {Γ} {Δ} {A} (x : [ Δ , A ]∈ Γ) →
             (ts : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B) → Expr Γ A
 
+  -- We shall reqiure a modicum of function extensionality
+  postulate arg-extensionality : ∀ {Γ Δ}
+                                   {ts₁ ts₂ : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B} →
+                                   (∀ {Ξ B} (y : [ Ξ , B ]∈ Δ) → ts₁ y ≡ ts₂ y) →
+                                   (λ {Ξ B} (y : [ Ξ , B ]∈ Δ) → ts₁ y) ≡ (λ y → ts₂ y)
+
   -- We define renamings and substitutions here so that they can be referred to.
   -- In particular, notice that the ts above is just a substituition
 
