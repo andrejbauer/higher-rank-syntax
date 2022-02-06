@@ -77,12 +77,6 @@ module Syntax (Class : Set) where
     _`_ : ∀ {Γ} {Δ} {A} (x : [ Δ , A ]∈ Γ) →
             (ts : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B) → Expr Γ A
 
-  -- We shall reqiure a modicum of function extensionality
-  postulate arg-extensionality : ∀ {Γ Δ}
-                                   {ts₁ ts₂ : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B} →
-                                   (∀ {Ξ B} (y : [ Ξ , B ]∈ Δ) → ts₁ y ≡ ts₂ y) →
-                                   (λ {Ξ B} (y : [ Ξ , B ]∈ Δ) → ts₁ y) ≡ (λ y → ts₂ y)
-
   -- We define renamings and substitutions here so that they can be referred to.
   -- In particular, notice that the ts above is just a substituition
 
@@ -189,21 +183,16 @@ module Syntax (Class : Set) where
 
   -- Syntactic equality of expressions
 
-  infix 4 _≈_
+  -- We require several instances of function extensionality, here is one for arguments.
+  -- The commit log testifies to the fact that every effort was made to avoid
+  -- an extensionality axiom by having a custom syntactic equality relation. However,
+  -- it seemed hard, if not impossible, to combine it with well-founded recursion.
+  postulate argext : ∀ {Γ Δ}
+                       {ts₁ ts₂ : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → Arg Γ Ξ B} →
+                       (∀ {Ξ B} (y : [ Ξ , B ]∈ Δ) → ts₁ y ≡ ts₂ y) →
+                       (λ {Ξ B} (y : [ Ξ , B ]∈ Δ) → ts₁ y) ≡ (λ y → ts₂ y)
 
-  data _≈_ : ∀ {Γ} {A} → Expr Γ A → Expr Γ A → Set where
-    ≈-≡ : ∀ {Γ} {A} {t u : Expr Γ A} (ξ : t ≡ u) → t ≈ u
-    ≈-` : ∀ {Γ} {Δ} {A} {x : [ Δ , A ]∈ Γ} {ts us : Δ →ˢ Γ}
-            (ξ : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → ts y ≈ us y) → x ` ts ≈ x ` us
-
-  ≈-refl : ∀ {Γ} {A} {t : Expr Γ A} → t ≈ t
-  ≈-refl = ≈-≡ refl
-
-  ≈-sym : ∀ {Γ} {A} {t u : Expr Γ A} → t ≈ u → u ≈ t
-  ≈-sym (≈-≡ ξ) = ≈-≡ (sym ξ)
-  ≈-sym (≈-` ξ) = ≈-` λ { y → ≈-sym (ξ y) }
-
-  ≈-trans : ∀ {Γ} {A} {t u v : Expr Γ A} → t ≈ u → u ≈ v → t ≈ v
-  ≈-trans (≈-≡ refl) ξ = ξ
-  ≈-trans (≈-` ζ) (≈-≡ refl) = ≈-` ζ
-  ≈-trans (≈-` ζ) (≈-` ξ) = ≈-` λ { y → ≈-trans (ζ y) (ξ y) }
+  -- The common use of arg-extensionality
+  ≡-` : ∀ {Γ} {Δ} {A} {x : [ Δ , A ]∈ Γ} {ts us : Δ →ˢ Γ}
+          (ξ : ∀ {Ξ} {B} (y : [ Ξ , B ]∈ Δ) → ts y ≡ us y) → x ` ts ≡ x ` us
+  ≡-` ξ = cong (_`_ _) (argext (λ y → ξ y))
