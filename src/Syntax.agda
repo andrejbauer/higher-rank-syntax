@@ -55,21 +55,19 @@ module Syntax (Class : Set) where
     var-left :  ∀ {α} {γ} {δ} → α ∈ γ → α ∈ γ ⊕ δ
     var-right : ∀ {α} {γ} {δ} → α ∈ δ → α ∈ γ ⊕ δ
 
-  -- Examples:
+  -- -- Examples:
 
-  postulate ty : Class -- type class
-  postulate tm : Class -- term class
+  -- postulate ty : Class -- type class
+  -- postulate tm : Class -- term class
 
-  ordinary-variable-arity : Class → Shape
-  ordinary-variable-arity c = [ 𝟘 , c ]
+  -- ordinary-variable-arity : Class → Shape
+  -- ordinary-variable-arity c = [ 𝟘 , c ]
 
-  binary-type-metavariable-arity : Shape
-  binary-type-metavariable-arity = [ [ 𝟘 , tm ] ⊕ [ 𝟘 , tm ] , ty ]
+  -- binary-type-metavariable-arity : Shape
+  -- binary-type-metavariable-arity = [ [ 𝟘 , tm ] ⊕ [ 𝟘 , tm ] , ty ]
 
-  Π-arity : Shape
-  Π-arity = [ [ 𝟘 , ty ] ⊕ [ [ 𝟘 , tm ] , ty ] , ty ]
-
-
+  -- Π-arity : Shape
+  -- Π-arity = [ [ 𝟘 , ty ] ⊕ [ [ 𝟘 , tm ] , ty ] , ty ]
 
   {- Because everything is a variable, even symbols, there is a single expression constructor
      x ` ts which forms and expression by applying the variable x to arguments ts. -}
@@ -90,7 +88,7 @@ module Syntax (Class : Set) where
   -- Expressions
 
   data Expr where
-    _`_ : ∀ {γ} {γˣ} (x : (γˣ , class γ) ∈ arg γ) → (ts : γˣ →ˢ arg γ) → Expr γ
+    _`_ : ∀ {γ} {cl} {γˣ} (x : (γˣ , cl) ∈ γ) → (ts : γˣ →ˢ γ) → Expr (γ , cl)
 
   -- We define renamings and substitutions here so that they can be referred to.
   -- In particular, notice that the ts above is just a substituition
