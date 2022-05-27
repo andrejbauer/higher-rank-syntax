@@ -144,7 +144,7 @@ module Syntax (Class : Set) where
   -- Expressions
 
   data Expr where
-    _`_ : ∀ {γ} {α} (x : α ∈ γ) → (ts : arg α →ˢ γ) → Expr α
+    _`_ : ∀ {α γ} (x : (γ , class α) ∈ arg α) → (ts : γ →ˢ arg α) → Expr α
 
   -- We define renamings and substitutions here so that they can be referred to.
   -- In particular, notice that the ts above is just a substituition
@@ -156,6 +156,6 @@ module Syntax (Class : Set) where
   γ →ʳ δ = All (_∈ δ) γ
 
   -- Syntactic equality of expressions
-  ≡-` : ∀ {γ} {α} {x : α ∈ γ} {ts us : arg α →ˢ γ}
-          (ξ : ∀ {αʸ} (y : αʸ ∈ arg α) → ts ∙ y ≡ us ∙ y) → x ` ts ≡ x ` us
+  ≡-` : ∀ {α} {γ} {x : (γ , class α) ∈ arg α} {ts us : γ →ˢ arg α}
+          (ξ : ∀ {αʸ} (y : αʸ ∈ γ) → ts ∙ y ≡ us ∙ y) → x ` ts ≡ x ` us
   ≡-` ξ = cong (_`_ _) (shape-≡ ξ)

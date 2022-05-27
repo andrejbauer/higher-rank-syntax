@@ -11,6 +11,7 @@ open ≡-Reasoning
 import Syntax
 import Renaming
 
+
 module Substitution (Class : Set) where
 
   open Syntax Class

@@ -1,7 +1,8 @@
 open import Agda.Primitive
 open import Relation.Binary.PropositionalEquality
 open import Data.Nat
-open import Data.Product
+open import Data.Product hiding (map)
+open import Function using (_∘_)
 
 import Categories.Category
 import Syntax
@@ -24,37 +25,66 @@ module Renaming (Sort : Set) where
 
   infixl 7 _∘ʳ_
 
-  _∘ʳ_ : ∀ {γ} {δ} {Θ} → (δ →ʳ Θ) → (γ →ʳ δ) → (γ →ʳ Θ)
+  _∘ʳ_ : ∀ {γ} {δ} {θ} → (δ →ʳ θ) → (γ →ʳ δ) → (γ →ʳ θ)
   (ρ ∘ʳ τ) = tabulate (λ x → ρ ∙ (τ ∙ x))
 
   -- join of renamings
 
   infix 6 [_,_]ʳ
 
-  [_,_]ʳ : ∀ {γ δ Θ} → (γ →ʳ Θ) → (δ →ʳ Θ) → (γ ⊕ δ →ʳ Θ)
+  [_,_]ʳ : ∀ {γ δ θ} → (γ →ʳ θ) → (δ →ʳ θ) → (γ ⊕ δ →ʳ θ)
   [ ρ , τ ]ʳ = ρ ⊕ τ
 
   -- renaming extension
 
-  ⇑ʳ : ∀ {γ} {δ} {Θ} → (γ →ʳ δ) → (γ ⊕ Θ →ʳ δ ⊕ Θ)
-  ⇑ʳ ρ = tabulate (λ { (var-left x) → var-left (ρ ∙ x) ; (var-right y) → var-right y })
+  ⇑ʳ : ∀ {γ} {δ} {θ} → (γ →ʳ δ) → (γ ⊕ θ →ʳ δ ⊕ θ)
+  ⇑ʳ ρ = map var-left ρ ⊕ map var-right 𝟙ʳ
 
   -- extension respects identity
 
-  ⇑ʳ-resp-𝟙ʳ : ∀ {γ} {δ} → ⇑ʳ {Θ = δ} (𝟙ʳ {γ = γ}) ≡ 𝟙ʳ
-  ⇑ʳ-resp-𝟙ʳ = cong₂ _⊕_ (tabulate-ext (cong var-left 𝟙ʳ-≡)) refl
+  ⇑ʳ-resp-𝟙ʳ : ∀ {γ} {δ} → ⇑ʳ {θ = δ} (𝟙ʳ {γ = γ}) ≡ 𝟙ʳ
+  ⇑ʳ-resp-𝟙ʳ = shape-≡ (λ { (var-left x) → {!!} ; (var-right y) → {!!}})
 
   -- extension commutes with composition
 
-  ⇑ʳ-resp-∘ʳ : ∀ {B γ δ Θ} {ρ : B →ʳ γ} {τ : γ →ʳ δ} → ⇑ʳ {Θ = Θ} (τ ∘ʳ ρ) ≡ ⇑ʳ τ ∘ʳ ⇑ʳ ρ
-  ⇑ʳ-resp-∘ʳ = cong₂ _⊕_ (tabulate-ext {!!}) (tabulate-ext {!!})
+  -- ⇑ʳ-resp-∘ʳ : ∀ {γ δ η θ} {ρ : γ →ʳ δ} {τ : δ →ʳ η} → ⇑ʳ {θ = θ} (τ ∘ʳ ρ) ≡ ⇑ʳ τ ∘ʳ ⇑ʳ ρ
+  -- ⇑ʳ-resp-∘ʳ {γ = γ} {θ = θ} {ρ = ρ} {τ = τ} = cong₂ _⊕_ (tabulate-ext ξ₁) (tabulate-ext ξ₂)
+  --   where
+  --     open ≡-Reasoning
 
-  -- -- the action of a renaming on an expression
+  --     ξ₂ :  {α : Arity} {x : α ∈ θ} → var-right x ≡ ⇑ʳ τ ∙ (tabulate var-right ∙ x)
+  --     ξ₂ {x = x} =
+  --       begin
+  --         var-right x
+  --           ≡⟨ sym (tabulate-∙ var-right) ⟩
+  --         ⇑ʳ τ ∙ (var-right x)
+  --           ≡⟨ sym (cong (⇑ʳ τ ∙_) (tabulate-∙ var-right)) ⟩
+  --         ⇑ʳ τ ∙ (tabulate var-right ∙ x)
+  --       ∎
+
+  --     ξ₁ : {α : Arity} {x : α ∈ γ} → var-left ((τ ∘ʳ ρ) ∙ x) ≡ ⇑ʳ τ ∙ (tabulate (λ y → var-left (ρ ∙ y)) ∙ x)
+  --     ξ₁ {x = x} =
+  --       begin
+  --         var-left ((τ ∘ʳ ρ) ∙ x)
+  --           ≡⟨ cong var-left (tabulate-∙ (λ y → τ ∙ (ρ ∙ y))) ⟩
+  --         var-left (τ ∙ (ρ ∙ x))
+  --           ≡⟨ sym (tabulate-∙ (λ y → var-left (τ ∙ y))) ⟩
+  --         ⇑ʳ τ ∙ var-left (ρ ∙ x)
+  --           ≡⟨ sym (cong (⇑ʳ τ ∙_) (tabulate-∙ (λ y → var-left (ρ ∙ y)))) ⟩
+  --         ⇑ʳ τ ∙ (tabulate (λ y → var-left (ρ ∙ y)) ∙ x)
+  --       ∎
+
+  -- the action of a renaming on an expression
+
+  _ʳ∘ˢ_ : ∀ {γ δ Θ} (ρ : δ →ʳ Θ) (σ : γ →ˢ δ) → γ →ˢ Θ
+  ρ ʳ∘ˢ σ = tabulate (λ x → {! !})
 
   -- infixr 6 [_]ʳ_
 
   -- [_]ʳ_ : ∀ {γ} {cl} {δ} (ρ : γ →ʳ δ) → Expr (γ , cl) → Expr (δ , cl)
-  -- [ ρ ]ʳ (x ` ts) = ρ x ` λ { y → [ ⇑ʳ ρ ]ʳ ts y }
+  -- [ ρ ]ʳ (x ` ts) = {!!}
+
+
 
   -- -- -- the action respects equality of renamings and equality of terms
 
@@ -75,7 +105,7 @@ module Renaming (Sort : Set) where
   -- [𝟙ʳ] : ∀ {α} {t : Expr α} → [ 𝟙ʳ ]ʳ t ≡ t
   -- [𝟙ʳ] {t = x ` ts} = ≡-` λ y → trans ([]ʳ-resp-≡ (ts y) ⇑ʳ-resp-𝟙ʳ) [𝟙ʳ]
 
-  -- [∘ʳ] : ∀ {γ δ Θ cl} {ρ : γ →ʳ δ} {τ : δ →ʳ Θ} (t : Expr (γ , cl)) → [ τ ∘ʳ ρ ]ʳ t ≡ [ τ ]ʳ [ ρ ]ʳ t
+  -- [∘ʳ] : ∀ {γ δ θ cl} {ρ : γ →ʳ δ} {τ : δ →ʳ θ} (t : Expr (γ , cl)) → [ τ ∘ʳ ρ ]ʳ t ≡ [ τ ]ʳ [ ρ ]ʳ t
   -- [∘ʳ] (x ` ts) = ≡-` (λ { y → trans ([]ʳ-resp-≡ (ts y) ⇑ʳ-resp-∘ʳ) ([∘ʳ] (ts y)) })
 
   -- -- if a renaming equals identity then it acts as identity
