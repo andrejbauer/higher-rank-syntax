@@ -89,10 +89,6 @@ module Substitution (Class : Set) where
   ⇑ˢ-resp-≡ˢ ξ (var-left x) = []ʳ-resp-≡ (ξ x)
   ⇑ˢ-resp-≡ˢ ξ (var-right y) = refl
 
-  infixl 7 _ʳ∘ˢ_
-
-  _ʳ∘ˢ_ : ∀ {γ δ Θ} (ρ : δ →ʳ Θ) (f : γ →ˢ δ) → γ →ˢ Θ
-  (ρ ʳ∘ˢ f) x = [ ⇑ʳ ρ ]ʳ f x
 
   -- action of substitution on an expression
   infix 6 [_]ˢ_

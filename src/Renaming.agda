@@ -43,11 +43,24 @@ module Renaming (Sort : Set) where
   -- extension respects identity
 
   ⇑ʳ-resp-𝟙ʳ : ∀ {γ} {δ} → ⇑ʳ {θ = δ} (𝟙ʳ {γ = γ}) ≡ 𝟙ʳ
-  ⇑ʳ-resp-𝟙ʳ = shape-≡ (λ { (var-left x) → {!!} ; (var-right y) → {!!}})
+  ⇑ʳ-resp-𝟙ʳ = cong₂ _⊕_ map-tabulate map-tabulate
 
   -- extension commutes with composition
 
-  -- ⇑ʳ-resp-∘ʳ : ∀ {γ δ η θ} {ρ : γ →ʳ δ} {τ : δ →ʳ η} → ⇑ʳ {θ = θ} (τ ∘ʳ ρ) ≡ ⇑ʳ τ ∘ʳ ⇑ʳ ρ
+  ⇑ʳ-resp-∘ʳ : ∀ {γ δ η θ} {ρ : γ →ʳ δ} {τ : δ →ʳ η} → ⇑ʳ {θ = θ} (τ ∘ʳ ρ) ≡ ⇑ʳ τ ∘ʳ ⇑ʳ ρ
+  ⇑ʳ-resp-∘ʳ {γ = γ} {θ = θ} {ρ = ρ} {τ = τ} =
+    cong₂ _⊕_
+     (trans map-tabulate (tabulate-ext ξ₁))
+     (trans map-tabulate (tabulate-ext ξ₂))
+    where
+      open ≡-Reasoning
+
+      ξ₁ : ∀ {α : Arity} {x : α ∈ γ} → var-left (τ ∙ (ρ ∙ x)) ≡ ⇑ʳ τ ∙ (map var-left ρ ∙ x)
+      ξ₁ {x = x} = {!!}
+
+      ξ₂ : ∀ {α : Arity} {x : α ∈ θ} → var-right x ≡ ⇑ʳ τ ∙ (map var-right 𝟙ʳ ∙ x)
+      ξ₂ = {!!}
+
   -- ⇑ʳ-resp-∘ʳ {γ = γ} {θ = θ} {ρ = ρ} {τ = τ} = cong₂ _⊕_ (tabulate-ext ξ₁) (tabulate-ext ξ₂)
   --   where
   --     open ≡-Reasoning
@@ -76,15 +89,17 @@ module Renaming (Sort : Set) where
 
   -- the action of a renaming on an expression
 
-  _ʳ∘ˢ_ : ∀ {γ δ Θ} (ρ : δ →ʳ Θ) (σ : γ →ˢ δ) → γ →ˢ Θ
-  ρ ʳ∘ˢ σ = tabulate (λ x → {! !})
+  infixr 6 [_]ʳ_
+  infixl 7 _ʳ∘ˢ_
 
-  -- infixr 6 [_]ʳ_
+  [_]ʳ_ : ∀ {γ δ cl} → γ →ʳ δ → Expr γ cl → Expr δ cl
+  _ʳ∘ˢ_ : ∀ {γ δ η} → δ →ʳ η → γ →ˢ δ → γ →ˢ η
 
-  -- [_]ʳ_ : ∀ {γ} {cl} {δ} (ρ : γ →ʳ δ) → Expr (γ , cl) → Expr (δ , cl)
-  -- [ ρ ]ʳ (x ` ts) = {!!}
+  [ ρ ]ʳ (x ` ts) = ρ ∙ x ` (ρ ʳ∘ˢ ts)
 
-
+  ρ ʳ∘ˢ 𝟘 = 𝟘
+  ρ ʳ∘ˢ [ t ] = [ [ map var-left ρ ⊕ map var-right 𝟙ʳ ]ʳ t ]
+  ρ ʳ∘ˢ (ts₁ ⊕ ts₂) = (ρ ʳ∘ˢ ts₁) ⊕ (ρ ʳ∘ˢ ts₂)
 
   -- -- -- the action respects equality of renamings and equality of terms
 
@@ -102,8 +117,8 @@ module Renaming (Sort : Set) where
 
   -- -- the action is functorial
 
-  -- [𝟙ʳ] : ∀ {α} {t : Expr α} → [ 𝟙ʳ ]ʳ t ≡ t
-  -- [𝟙ʳ] {t = x ` ts} = ≡-` λ y → trans ([]ʳ-resp-≡ (ts y) ⇑ʳ-resp-𝟙ʳ) [𝟙ʳ]
+  [𝟙ʳ] : ∀ {γ cl} {t : Expr γ cl} → [ 𝟙ʳ ]ʳ t ≡ t
+  [𝟙ʳ] {t = x ` ts} = ≡-` 𝟙ʳ-≡ λ z → {!!}
 
   -- [∘ʳ] : ∀ {γ δ θ cl} {ρ : γ →ʳ δ} {τ : δ →ʳ θ} (t : Expr (γ , cl)) → [ τ ∘ʳ ρ ]ʳ t ≡ [ τ ]ʳ [ ρ ]ʳ t
   -- [∘ʳ] (x ` ts) = ≡-` (λ { y → trans ([]ʳ-resp-≡ (ts y) ⇑ʳ-resp-∘ʳ) ([∘ʳ] (ts y)) })

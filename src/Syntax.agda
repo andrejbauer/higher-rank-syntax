@@ -113,6 +113,9 @@ module Syntax (Class : Set) where
   tabulate-∙ f {x = var-left x} = tabulate-∙ (f ∘ var-left)
   tabulate-∙ f {x = var-right y} = tabulate-∙ (f ∘ var-right)
 
+  cong-∙ : ∀ {γ P} {f g : All P γ} {α} {x y : α ∈ γ} → f ≡ g → x ≡ y → f ∙ x ≡ g ∙ y
+  cong-∙ refl refl = refl
+
   map : ∀ {γ P Q} → (∀ {α} → P α → Q α) → All P γ → All Q γ
   map f 𝟘 = 𝟘
   map f [ x ] = [ f x ]
@@ -125,15 +128,27 @@ module Syntax (Class : Set) where
   shape-≡ {ps = ps₁ ⊕ ps₂} {qs = qs₁ ⊕ qs₂} ξ =
     cong₂ _⊕_ (shape-≡ (ξ ∘ var-left)) (shape-≡ (ξ ∘ var-right))
 
+  -- The interaction of map and tabulate
+  map-tabulate : ∀ {P Q : Arity → Set} {γ} {g : ∀ {α} → P α → Q α} → {f : (∀ {α} → α ∈ γ → P α)} →
+                 map g (tabulate f) ≡ tabulate (g ∘ f)
+  map-tabulate {γ = 𝟘} = refl
+  map-tabulate {γ = [ _ ]} = refl
+  map-tabulate {γ = _ ⊕ _} = cong₂ _⊕_ map-tabulate map-tabulate
+
+  map-∙ : ∀ {γ P} {Q : Arity → Set} → {f : ∀ {α} → P α → Q α} {ps : All P γ} {α : Arity} {x : α ∈ γ} → map f ps ∙ x  ≡ f (ps ∙ x)
+  map-∙ {ps = [ _ ]} {x = var-here} = refl
+  map-∙ {ps = ps₁ ⊕ ps₂} {x = var-left x} = map-∙ {ps = ps₁}
+  map-∙ {ps = ps₁ ⊕ ps₂} {x = var-right x} = map-∙ {ps = ps₂}
+
   {- Because everything is a variable, even symbols, there is a single expression constructor
      x ` ts which forms and expression by applying the variable x to arguments ts. -}
 
   infix 9 _`_
 
-  data Expr : Arity → Set
+  data Expr : Shape → Class → Set
 
   Arg : Shape → Arity → Set
-  Arg γ (δ , cl) = Expr (γ ⊕ δ , cl)
+  Arg γ (δ , cl) = Expr (γ ⊕ δ) cl
 
   -- substitution
   infix 5 _→ˢ_
@@ -144,7 +159,7 @@ module Syntax (Class : Set) where
   -- Expressions
 
   data Expr where
-    _`_ : ∀ {α γ} (x : (γ , class α) ∈ arg α) → (ts : γ →ˢ arg α) → Expr α
+    _`_ : ∀ {γ δ} {cl} (x : (δ , cl) ∈ γ) → (ts : δ →ˢ γ) → Expr γ cl
 
   -- We define renamings and substitutions here so that they can be referred to.
   -- In particular, notice that the ts above is just a substituition
@@ -156,6 +171,6 @@ module Syntax (Class : Set) where
   γ →ʳ δ = All (_∈ δ) γ
 
   -- Syntactic equality of expressions
-  ≡-` : ∀ {α} {γ} {x : (γ , class α) ∈ arg α} {ts us : γ →ˢ arg α}
-          (ξ : ∀ {αʸ} (y : αʸ ∈ γ) → ts ∙ y ≡ us ∙ y) → x ` ts ≡ x ` us
-  ≡-` ξ = cong (_`_ _) (shape-≡ ξ)
+  ≡-` : ∀ {α} {γ} {x y : (γ , class α) ∈ arg α} {ts us : γ →ˢ arg α} →
+          x ≡ y → (∀ {αᶻ} (z : αᶻ ∈ γ) → ts ∙ z ≡ us ∙ z) → x ` ts ≡ y ` us
+  ≡-` ζ ξ = cong₂ (_`_) ζ (shape-≡ ξ)
