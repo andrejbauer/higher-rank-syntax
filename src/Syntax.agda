@@ -135,6 +135,7 @@ module Syntax (Class : Set) where
   map-tabulate {γ = [ _ ]} = refl
   map-tabulate {γ = _ ⊕ _} = cong₂ _⊕_ map-tabulate map-tabulate
 
+  -- the interaction of map and ∙
   map-∙ : ∀ {γ P} {Q : Arity → Set} → {f : ∀ {α} → P α → Q α} {ps : All P γ} {α : Arity} {x : α ∈ γ} → map f ps ∙ x  ≡ f (ps ∙ x)
   map-∙ {ps = [ _ ]} {x = var-here} = refl
   map-∙ {ps = ps₁ ⊕ ps₂} {x = var-left x} = map-∙ {ps = ps₁}

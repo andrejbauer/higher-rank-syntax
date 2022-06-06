@@ -28,6 +28,10 @@ module Renaming (Sort : Set) where
   _∘ʳ_ : ∀ {γ} {δ} {θ} → (δ →ʳ θ) → (γ →ʳ δ) → (γ →ʳ θ)
   (ρ ∘ʳ τ) = tabulate (λ x → ρ ∙ (τ ∙ x))
 
+  ∘ʳ-∙ : ∀ {γ δ θ} {ρ : δ →ʳ θ} {τ : γ →ʳ δ} {α} {x : α ∈ γ} → (ρ ∘ʳ τ) ∙ x ≡ ρ ∙ (τ ∙ x)
+  ∘ʳ-∙ {ρ = ρ} {τ = τ} = tabulate-∙ (λ x → ρ ∙ (τ ∙ x))
+
+
   -- join of renamings
 
   infix 6 [_,_]ʳ
@@ -56,10 +60,28 @@ module Renaming (Sort : Set) where
       open ≡-Reasoning
 
       ξ₁ : ∀ {α : Arity} {x : α ∈ γ} → var-left (τ ∙ (ρ ∙ x)) ≡ ⇑ʳ τ ∙ (map var-left ρ ∙ x)
-      ξ₁ {x = x} = {!!}
+      ξ₁ {x = x} =
+        begin
+          var-left (τ ∙ (ρ ∙ x))
+             ≡⟨ sym (map-∙ {ps = τ}) ⟩
+          ⇑ʳ τ ∙ var-left (ρ ∙ x)
+             ≡⟨ cong-∙ {f = ⇑ʳ τ} {y = map var-left ρ ∙ x} refl (sym (map-∙ {ps = ρ})) ⟩
+          ⇑ʳ τ ∙ (map var-left ρ ∙ x)
+          ∎
 
       ξ₂ : ∀ {α : Arity} {x : α ∈ θ} → var-right x ≡ ⇑ʳ τ ∙ (map var-right 𝟙ʳ ∙ x)
-      ξ₂ = {!!}
+      ξ₂ {x = x} =
+        begin
+          var-right x
+            ≡⟨ cong var-right (sym 𝟙ʳ-≡) ⟩
+          var-right (𝟙ʳ ∙ x)
+            ≡⟨ cong var-right (sym 𝟙ʳ-≡) ⟩
+          var-right (𝟙ʳ ∙ (𝟙ʳ ∙ x))
+            ≡⟨  sym (map-∙ {f = var-right} {ps = 𝟙ʳ})  ⟩
+          ⇑ʳ τ ∙ var-right (𝟙ʳ ∙ x)
+            ≡⟨ cong-∙ {f = ⇑ʳ τ} {y = map var-right 𝟙ʳ ∙ x} refl (sym (map-∙ {f = var-right} {ps = 𝟙ʳ})) ⟩
+          ⇑ʳ τ ∙ (map var-right 𝟙ʳ ∙ x)
+          ∎
 
   -- ⇑ʳ-resp-∘ʳ {γ = γ} {θ = θ} {ρ = ρ} {τ = τ} = cong₂ _⊕_ (tabulate-ext ξ₁) (tabulate-ext ξ₂)
   --   where
@@ -101,6 +123,9 @@ module Renaming (Sort : Set) where
   ρ ʳ∘ˢ [ t ] = [ [ map var-left ρ ⊕ map var-right 𝟙ʳ ]ʳ t ]
   ρ ʳ∘ˢ (ts₁ ⊕ ts₂) = (ρ ʳ∘ˢ ts₁) ⊕ (ρ ʳ∘ˢ ts₂)
 
+  𝟙ʳ-ʳ∘ˢ : ∀ {γ δ} → {ts : γ →ˢ δ} → 𝟙ʳ ʳ∘ˢ ts ≡ ts
+  𝟙ʳ-ʳ∘ˢ = {!!}
+
   -- -- -- the action respects equality of renamings and equality of terms
 
   -- []ʳ-resp-≡ : ∀ {γ} {δ} {cl} {ρ : γ →ʳ δ} {t u : Expr (γ , cl)} →
@@ -118,9 +143,10 @@ module Renaming (Sort : Set) where
   -- -- the action is functorial
 
   [𝟙ʳ] : ∀ {γ cl} {t : Expr γ cl} → [ 𝟙ʳ ]ʳ t ≡ t
-  [𝟙ʳ] {t = x ` ts} = ≡-` 𝟙ʳ-≡ λ z → {!!}
+  [𝟙ʳ] {t = x ` ts} = ≡-` 𝟙ʳ-≡ λ z → cong-∙ {f = 𝟙ʳ ʳ∘ˢ ts} 𝟙ʳ-ʳ∘ˢ refl
 
-  -- [∘ʳ] : ∀ {γ δ θ cl} {ρ : γ →ʳ δ} {τ : δ →ʳ θ} (t : Expr (γ , cl)) → [ τ ∘ʳ ρ ]ʳ t ≡ [ τ ]ʳ [ ρ ]ʳ t
+  [∘ʳ] : ∀ {γ δ θ cl} {ρ : γ →ʳ δ} {τ : δ →ʳ θ} (t : Expr γ  cl) → [ τ ∘ʳ ρ ]ʳ t ≡ [ τ ]ʳ [ ρ ]ʳ t
+  [∘ʳ] (x ` ts) = ≡-` ∘ʳ-∙ {!!}
   -- [∘ʳ] (x ` ts) = ≡-` (λ { y → trans ([]ʳ-resp-≡ (ts y) ⇑ʳ-resp-∘ʳ) ([∘ʳ] (ts y)) })
 
   -- -- if a renaming equals identity then it acts as identity
