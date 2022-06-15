@@ -124,7 +124,13 @@ module Renaming (Sort : Set) where
   ρ ʳ∘ˢ (ts₁ ⊕ ts₂) = (ρ ʳ∘ˢ ts₁) ⊕ (ρ ʳ∘ˢ ts₂)
 
   𝟙ʳ-ʳ∘ˢ : ∀ {γ δ} → {ts : γ →ˢ δ} → 𝟙ʳ ʳ∘ˢ ts ≡ ts
-  𝟙ʳ-ʳ∘ˢ = {!!}
+  [𝟙ʳ] : ∀ {γ cl} {t : Expr γ cl} → [ 𝟙ʳ ]ʳ t ≡ t
+
+  𝟙ʳ-ʳ∘ˢ {ts = 𝟘} = refl
+  𝟙ʳ-ʳ∘ˢ {ts = [ x ]} = cong [_] (trans (cong₂ [_]ʳ_ (cong₂ _⊕_ map-tabulate map-tabulate) refl) [𝟙ʳ])
+  𝟙ʳ-ʳ∘ˢ {ts = ts ⊕ ts₁} = cong₂ _⊕_ 𝟙ʳ-ʳ∘ˢ 𝟙ʳ-ʳ∘ˢ
+
+  [𝟙ʳ] {t = x ` ts} = ≡-` 𝟙ʳ-≡ λ z → cong-∙ {f = 𝟙ʳ ʳ∘ˢ ts} 𝟙ʳ-ʳ∘ˢ refl
 
   -- -- -- the action respects equality of renamings and equality of terms
 
@@ -142,11 +148,14 @@ module Renaming (Sort : Set) where
 
   -- -- the action is functorial
 
-  [𝟙ʳ] : ∀ {γ cl} {t : Expr γ cl} → [ 𝟙ʳ ]ʳ t ≡ t
-  [𝟙ʳ] {t = x ` ts} = ≡-` 𝟙ʳ-≡ λ z → cong-∙ {f = 𝟙ʳ ʳ∘ˢ ts} 𝟙ʳ-ʳ∘ˢ refl
+  ∘ʳ-ʳ∘ˢ : ∀ {γ δ θ η} {ρ : γ →ʳ δ} {τ : δ →ʳ θ} {σ : η →ˢ γ}  → τ ∘ʳ ρ ʳ∘ˢ σ ≡ τ ʳ∘ˢ (ρ ʳ∘ˢ σ)
+  [∘ʳ] : ∀ {γ δ θ cl} {ρ : γ →ʳ δ} {τ : δ →ʳ θ} (t : Expr γ cl) → [ τ ∘ʳ ρ ]ʳ t ≡ [ τ ]ʳ [ ρ ]ʳ t
 
-  [∘ʳ] : ∀ {γ δ θ cl} {ρ : γ →ʳ δ} {τ : δ →ʳ θ} (t : Expr γ  cl) → [ τ ∘ʳ ρ ]ʳ t ≡ [ τ ]ʳ [ ρ ]ʳ t
-  [∘ʳ] (x ` ts) = ≡-` ∘ʳ-∙ {!!}
+  ∘ʳ-ʳ∘ˢ {σ = 𝟘} = refl
+  ∘ʳ-ʳ∘ˢ {ρ = ρ} {τ = τ} {σ = [ t ]} = cong [_] (trans (cong (λ η → [ η ]ʳ t) (⇑ʳ-resp-∘ʳ {ρ = ρ} {τ = τ})) ([∘ʳ] t))
+  ∘ʳ-ʳ∘ˢ {σ = σ₁ ⊕ σ₂} = cong₂ _⊕_ ∘ʳ-ʳ∘ˢ ∘ʳ-ʳ∘ˢ
+
+  [∘ʳ] {ρ = ρ} {τ = τ} (x ` ts) = ≡-` (tabulate-∙ (λ z → τ ∙ (ρ ∙ z))) λ z → cong (_∙ z) (∘ʳ-ʳ∘ˢ {σ = ts})
   -- [∘ʳ] (x ` ts) = ≡-` (λ { y → trans ([]ʳ-resp-≡ (ts y) ⇑ʳ-resp-∘ʳ) ([∘ʳ] (ts y)) })
 
   -- -- if a renaming equals identity then it acts as identity
@@ -156,25 +165,29 @@ module Renaming (Sort : Set) where
 
   -- -- the categorical structure of shapes and renamings
 
-  -- module _ where
-  --   open Categories.Category
+  ∘ʳ-assoc : {γ δ θ η : Shape} {f : γ →ʳ δ} {g : δ →ʳ θ} {h : θ →ʳ η} → h ∘ʳ g ∘ʳ f ≡ h ∘ʳ (g ∘ʳ f)
+  ∘ʳ-assoc {f = f} {g = g} {h = h} =
+    tabulate-ext (trans (tabulate-∙ (λ x → h ∙ (g ∙ x))) (cong (h ∙_) (sym (tabulate-∙ (λ x → g ∙ (f ∙ x))))))
 
-  --   Renamings : Category lzero lzero lzero
-  --   Renamings =
-  --    record
-  --      { Obj = Shape
-  --      ; _⇒_ = _→ʳ_
-  --      ; _≈_ = _≡_
-  --      ; id = 𝟙ʳ
-  --      ; _∘_ = _∘ʳ_
-  --      ; assoc = λ { _ → refl }
-  --      ; sym-assoc = λ { _ → refl }
-  --      ; identityˡ = λ { _ → refl }
-  --      ; identityʳ = λ { _ → refl }
-  --      ; identity² = λ { _ → refl }
-  --      ; equiv = record { refl = λ { _ → refl } ; sym = ≡-sym ; trans = ≡-trans }
-  --      ; ∘-resp-≈ = λ {_} {_} {_} {ρ} {_} {_} {τ} ζ ξ → λ { x → trans (cong ρ (ξ x)) (ζ (τ x)) }
-  --      }
+  module _ where
+    open Categories.Category
+
+    Renamings : Category lzero lzero lzero
+    Renamings =
+     record
+       { Obj = Shape
+       ; _⇒_ = _→ʳ_
+       ; _≈_ = _≡_
+       ; id = 𝟙ʳ
+       ; _∘_ = _∘ʳ_
+       ; assoc = λ {_} {_} {_} {_} {f} {g} {h} → ∘ʳ-assoc {f = f} {g = g} {h = h}
+       ; sym-assoc = λ {_} {_} {_} {_} {f} {g} {h} → sym (∘ʳ-assoc {f = f} {g = g} {h = h})
+       ; identityˡ = λ {γ} {_} {ρ} → shape-≡ (λ x → trans (∘ʳ-∙ {ρ = 𝟙ʳ} {τ = ρ}) 𝟙ʳ-≡)
+       ; identityʳ = λ {_} {_} {ρ} → shape-≡ (λ x → trans ((∘ʳ-∙ {ρ = ρ} {τ = 𝟙ʳ})) (cong (ρ ∙_) 𝟙ʳ-≡))
+       ; identity² = tabulate-ext (trans 𝟙ʳ-≡ 𝟙ʳ-≡)
+       ; equiv = record { refl = refl ; sym = sym ; trans = trans }
+       ; ∘-resp-≈ = λ ζ ξ → cong₂ _∘ʳ_ ζ ξ
+       }
 
   -- assoc-right : ∀ {γ δ η} → (γ ⊕ δ) ⊕ η →ʳ γ ⊕ (δ ⊕ η)
   -- assoc-right (var-left (var-left x)) = var-left x
