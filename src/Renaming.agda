@@ -95,7 +95,7 @@ module Renaming (Sort : Set) where
 
   [𝟙ʳ] {t = x ` ts} = ≡-` 𝟙ʳ-≡ λ z → cong-∙ {f = 𝟙ʳ ʳ∘ˢ ts} 𝟙ʳ-ʳ∘ˢ refl
 
-  -- -- the action is functorial
+  -- the action is functorial
 
   ∘ʳ-ʳ∘ˢ : ∀ {γ δ θ η} {ρ : γ →ʳ δ} {τ : δ →ʳ θ} {σ : η →ˢ γ}  → τ ∘ʳ ρ ʳ∘ˢ σ ≡ τ ʳ∘ˢ (ρ ʳ∘ˢ σ)
   [∘ʳ] : ∀ {γ δ θ cl} {ρ : γ →ʳ δ} {τ : δ →ʳ θ} (t : Expr γ cl) → [ τ ∘ʳ ρ ]ʳ t ≡ [ τ ]ʳ [ ρ ]ʳ t
@@ -106,11 +106,13 @@ module Renaming (Sort : Set) where
 
   [∘ʳ] {ρ = ρ} {τ = τ} (x ` ts) = ≡-` (tabulate-∙ (λ z → τ ∙ (ρ ∙ z))) λ z → cong (_∙ z) (∘ʳ-ʳ∘ˢ {σ = ts})
 
-  -- -- the categorical structure of shapes and renamings
+  -- the categorical structure of shapes and renamings
 
   ∘ʳ-assoc : {γ δ θ η : Shape} {f : γ →ʳ δ} {g : δ →ʳ θ} {h : θ →ʳ η} → h ∘ʳ g ∘ʳ f ≡ h ∘ʳ (g ∘ʳ f)
   ∘ʳ-assoc {f = f} {g = g} {h = h} =
     tabulate-ext (trans (tabulate-∙ (λ x → h ∙ (g ∙ x))) (cong (h ∙_) (sym (tabulate-∙ (λ x → g ∙ (f ∙ x))))))
+
+  -- The category of shapes and renamings
 
   module _ where
     open Categories.Category

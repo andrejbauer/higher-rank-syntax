@@ -7,17 +7,18 @@ open import Function using (_∘_)
 
 {-
 
-   A formalization of (raw) syntax with higher-order binders.
+   A formalization of (raw) syntax with higher-rank binders.
 
-   We define a notion of syntax which allows for higher-order binders, variables and substitutions. Ordinary notions of
+   We define a notion of syntax which allows for higher-rank binders, variables and substitutions. Ordinary notions of
    variables are special cases:
 
-   * order 1: ordinary variables and substitutions, for example those of λ-calculus
-   * order 2: meta-variables and their instantiations
-   * order 3: symbols (term formers) in dependent type theory, such as Π, Σ, W, and syntactic transformations between theories
+   * rank 1: ordinary variables and substitutions, for example those of λ-calculus
+   * rank 2: meta-variables and their instantiations
+   * rank 3: symbols (term formers) in dependent type theory, such as Π, Σ, W, and syntactic transformations between theories
 
    The syntax is parameterized by a type Class of syntactic classes. For example, in dependent type theory there might
-   be two syntactic classes, ty and tm, corresponding to type and term expressions.
+   be two syntactic classes, ty and tm, corresponding to type and term expressions. In the futre we would prefer to
+   generalize the situation to any number of proof-relevant and proof-irrelevant judgements.
 
 -}
 
@@ -151,7 +152,15 @@ module Syntax (Class : Set) where
   Arg : Shape → Arity → Set
   Arg γ (δ , cl) = Expr (γ ⊕ δ) cl
 
-  -- substitution
+  -- We define renamings and substitutions here so that they can be referred to.
+
+  -- Renaming
+  infix 5 _→ʳ_
+
+  _→ʳ_ : Shape → Shape → Set
+  γ →ʳ δ = All (_∈ δ) γ
+
+  -- Substitution
   infix 5 _→ˢ_
 
   _→ˢ_ : Shape → Shape → Set
@@ -162,16 +171,8 @@ module Syntax (Class : Set) where
   data Expr where
     _`_ : ∀ {γ δ} {cl} (x : (δ , cl) ∈ γ) → (ts : δ →ˢ γ) → Expr γ cl
 
-  -- We define renamings and substitutions here so that they can be referred to.
-  -- In particular, notice that the ts above is just a substituition
-
-  -- renaming
-  infix 5 _→ʳ_
-
-  _→ʳ_ : Shape → Shape → Set
-  γ →ʳ δ = All (_∈ δ) γ
-
   -- Syntactic equality of expressions
+
   ≡-` : ∀ {α} {γ} {x y : (γ , class α) ∈ arg α} {ts us : γ →ˢ arg α} →
           x ≡ y → (∀ {αᶻ} (z : αᶻ ∈ γ) → ts ∙ z ≡ us ∙ z) → x ` ts ≡ y ` us
   ≡-` ζ ξ = cong₂ (_`_) ζ (shape-≡ ξ)
