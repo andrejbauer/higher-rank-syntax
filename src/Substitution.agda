@@ -15,12 +15,28 @@ module Substitution (Class : Set) where
   open Syntax Class
   open Renaming Class
 
-  -- Lifting a renaming to a substitution
+  -- Lifting of renamings to substitutions, and of variables to expressions
 
   lift : ∀ {γ δ} → (γ →ʳ δ) → (γ →ˢ δ)
+
+  η : ∀ {γ γˣ clˣ} (x : (γˣ , clˣ) ∈ γ) → Expr (γ ⊕ γˣ) clˣ
+
   lift 𝟘 = 𝟘
-  lift [ x ] = [ var-left x ` lift (map var-right 𝟙ʳ) ]
+  lift [ x ] = [ η x ]
   lift (ρ₁ ⊕ ρ₂) = lift ρ₁ ⊕ lift ρ₂
+
+  η x = var-left x ` lift (tabulate var-right)
+
+  -- Ideally we would like the following to be the definition of lift,
+  -- but Agda termination gets in the way
+
+  lift-map : ∀ {γ δ} (ρ : γ →ʳ δ) → lift ρ ≡ map η ρ
+  lift-map 𝟘 = refl
+  lift-map [ x ] = refl
+  lift-map (ρ₁ ⊕ ρ₂) = cong₂ _⊕_ (lift-map ρ₁) (lift-map ρ₂)
+
+  lift-𝟙ʳ : ∀ {γ} → lift 𝟙ʳ ≡ tabulate (η {γ = γ})
+  lift-𝟙ʳ = trans (lift-map 𝟙ʳ) map-tabulate
 
   -- Identity substitution
 
@@ -30,7 +46,15 @@ module Substitution (Class : Set) where
   -- Substitution extension
 
   ⇑ˢ : ∀ {γ δ θ} → γ →ˢ δ → γ ⊕ θ →ˢ δ ⊕ θ
-  ⇑ˢ {θ = θ} f =  map (λ t →  [ ⇑ʳ (tabulate var-left) ]ʳ t) f  ⊕ lift (tabulate var-right)
+  ⇑ˢ {θ = θ} f =  map [ ⇑ʳ (tabulate var-left) ]ʳ_ f ⊕ lift (tabulate var-right)
+
+  -- The interaction of lifting with various operations
+
+  -- ⇑ˢ-⊕ : ∀ {γ₁ γ₂ δ θ} (f : γ₁ →ˢ δ) (g : γ₂ →ˢ δ) → ⇑ˢ {θ = θ} (f ⊕ g) ≡ f ⊕ ⇑ˢ g
+
+  ⇑ˢ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) → ⇑ˢ {θ = θ} (lift ρ) ≡ lift (⇑ʳ ρ)
+  ⇑ˢ-lift ρ = cong₂ _⊕_ (trans {!!} (sym (lift-map _))) refl
+
 
   -- Action of substitution
   infix 6 [_]ˢ_
@@ -65,6 +89,18 @@ module Substitution (Class : Set) where
   actˢ f (x ` ts) (def-[]ˢ D E) = actˢ (𝟙ˢ ⊕ (compˢ f ts D)) (f ∙ x) E
 
   compˢ g f (def-∘ˢ D) = tabulate (λ x → actˢ (⇑ˢ g) (f ∙ x) (D x))
+
+  -- Showing that actˢ and compˢ are total requires several steps.
+
+  -- The lifting of a renaming is total
+
+  actˢ-lift-total : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → defined-[]ˢ (lift ρ) e
+  actˢ-lift-total ρ (x ` ts) = def-[]ˢ (def-∘ˢ (λ y → {!!})) {!!}
+
+  -- The identity substittion is total
+  actˢ-𝟙ˢ-total : ∀ {γ cl} (e : Expr γ cl) → defined-[]ˢ 𝟙ˢ e
+  actˢ-𝟙ˢ-total (x ` ts) = def-[]ˢ {!!} {!!}
+
 
   total-actˢ : ∀ {γ δ cl} (f : γ →ˢ δ) (e : Expr γ cl) → defined-[]ˢ f e
   total-compˢ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) → defined-∘ˢ g f

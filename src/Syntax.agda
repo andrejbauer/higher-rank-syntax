@@ -122,6 +122,8 @@ module Syntax (Class : Set) where
   map f [ x ] = [ f x ]
   map f (ps ⊕ qs) = map f ps ⊕ map f qs
 
+  -- map-ext : ∀ {γ P Q} (f g : ∀ {a} → P a → Q a) →
+
   shape-≡ : ∀ {γ P} {ps qs : All P γ} → (∀ {α} (x : α ∈ γ) → ps ∙ x ≡ qs ∙ x)
             → ps ≡ qs
   shape-≡ {ps = 𝟘} {qs = 𝟘} ξ = refl
