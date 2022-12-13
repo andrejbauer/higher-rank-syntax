@@ -122,6 +122,12 @@ module Syntax (Class : Set) where
   map f [ x ] = [ f x ]
   map f (ps ⊕ qs) = map f ps ⊕ map f qs
 
+  map-map : ∀ {γ} {P Q R : Arity → Set} (f : ∀ {α} → P α → Q α) (g : ∀ {α} → Q α → R α) {p : All P γ} →
+              map (g ∘ f) p ≡ map g (map f p)
+  map-map f g {p = 𝟘} = refl
+  map-map f g {p = [ x ]} = refl
+  map-map f g {p = p₁ ⊕ p₂} = cong₂ _⊕_ (map-map f g) (map-map f g)
+
   -- map-ext : ∀ {γ P Q} (f g : ∀ {a} → P a → Q a) →
 
   shape-≡ : ∀ {γ P} {ps qs : All P γ} → (∀ {α} (x : α ∈ γ) → ps ∙ x ≡ qs ∙ x)

@@ -3,6 +3,7 @@ open import Relation.Unary hiding (_∈_)
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
 open import Data.Product using (_,_)
+open import Function using (_∘_)
 
 open ≡-Reasoning
 
@@ -30,13 +31,13 @@ module Substitution (Class : Set) where
   -- Ideally we would like the following to be the definition of lift,
   -- but Agda termination gets in the way
 
-  lift-map : ∀ {γ δ} (ρ : γ →ʳ δ) → lift ρ ≡ map η ρ
-  lift-map 𝟘 = refl
-  lift-map [ x ] = refl
-  lift-map (ρ₁ ⊕ ρ₂) = cong₂ _⊕_ (lift-map ρ₁) (lift-map ρ₂)
+  lift-map-η : ∀ {γ δ} (ρ : γ →ʳ δ) → lift ρ ≡ map η ρ
+  lift-map-η 𝟘 = refl
+  lift-map-η [ x ] = refl
+  lift-map-η (ρ₁ ⊕ ρ₂) = cong₂ _⊕_ (lift-map-η ρ₁) (lift-map-η ρ₂)
 
   lift-𝟙ʳ : ∀ {γ} → lift 𝟙ʳ ≡ tabulate (η {γ = γ})
-  lift-𝟙ʳ = trans (lift-map 𝟙ʳ) map-tabulate
+  lift-𝟙ʳ = trans (lift-map-η 𝟙ʳ) map-tabulate
 
   -- Identity substitution
 
@@ -50,10 +51,26 @@ module Substitution (Class : Set) where
 
   -- The interaction of lifting with various operations
 
+  lift-∙ : ∀ {γ δ} (ρ : γ →ʳ δ) {γˣ clˣ} (x : (γˣ , clˣ) ∈ γ) →
+           lift ρ ∙ x ≡ η (ρ ∙ x)
+  lift-∙ [ _ ] var-here = refl
+  lift-∙ (ρ₁ ⊕ ρ₂) (var-left x) = lift-∙ ρ₁ x
+  lift-∙ (ρ₁ ⊕ ρ₂) (var-right y) = lift-∙ ρ₂ y
+
+  η-∙ : ∀ {γ δ} (ρ : γ →ʳ δ) {γˣ clˣ} (x : (γˣ , clˣ) ∈ γ) →
+          η (ρ ∙ x) ≡ [ ⇑ʳ ρ ]ʳ η x
+  η-∙ ρ x = {!!}
+
+  lift-map : ∀ {γ δ θ} (f : ∀ {α} → α ∈ γ → α ∈ δ) (ρ : θ →ʳ γ) →
+             lift (map f ρ) ≡ map [ ⇑ʳ (tabulate f) ]ʳ_ (lift ρ)
+  lift-map f 𝟘 = refl
+  lift-map f [ x ] = cong [_] (trans (cong η (sym (tabulate-∙ f))) (η-∙ (tabulate f) x))
+  lift-map f (ρ₁ ⊕ ρ₂) = cong₂ _⊕_ (lift-map f ρ₁) (lift-map f ρ₂)
+
   -- ⇑ˢ-⊕ : ∀ {γ₁ γ₂ δ θ} (f : γ₁ →ˢ δ) (g : γ₂ →ˢ δ) → ⇑ˢ {θ = θ} (f ⊕ g) ≡ f ⊕ ⇑ˢ g
 
   ⇑ˢ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) → ⇑ˢ {θ = θ} (lift ρ) ≡ lift (⇑ʳ ρ)
-  ⇑ˢ-lift ρ = cong₂ _⊕_ (trans {!!} (sym (lift-map _))) refl
+  ⇑ˢ-lift ρ = cong₂ _⊕_ (sym (lift-map var-left ρ)) refl
 
 
   -- Action of substitution
@@ -94,12 +111,12 @@ module Substitution (Class : Set) where
 
   -- The lifting of a renaming is total
 
-  actˢ-lift-total : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → defined-[]ˢ (lift ρ) e
-  actˢ-lift-total ρ (x ` ts) = def-[]ˢ (def-∘ˢ (λ y → {!!})) {!!}
+  []ˢ-lift-total : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → defined-[]ˢ (lift ρ) e
+  []ˢ-lift-total ρ (x ` ts) = def-[]ˢ (def-∘ˢ (λ y → subst (λ τ → defined-[]ˢ τ (ts ∙ y)) (sym (⇑ˢ-lift ρ)) {!!})) {!!}
 
   -- The identity substittion is total
-  actˢ-𝟙ˢ-total : ∀ {γ cl} (e : Expr γ cl) → defined-[]ˢ 𝟙ˢ e
-  actˢ-𝟙ˢ-total (x ` ts) = def-[]ˢ {!!} {!!}
+  []-𝟙ˢ-total : ∀ {γ cl} (e : Expr γ cl) → defined-[]ˢ 𝟙ˢ e
+  []-𝟙ˢ-total (x ` ts) = def-[]ˢ (def-∘ˢ (λ y → {!!})) {!!}
 
 
   total-actˢ : ∀ {γ δ cl} (f : γ →ˢ δ) (e : Expr γ cl) → defined-[]ˢ f e
