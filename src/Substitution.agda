@@ -20,7 +20,7 @@ module Substitution (Class : Set) where
 
   lift : ∀ {γ δ} → (γ →ʳ δ) → (γ →ˢ δ)
 
-  η : ∀ {γ γˣ clˣ} (x : (γˣ , clˣ) ∈ γ) → Expr (γ ⊕ γˣ) clˣ
+  η : ∀ {γ a} (x : a ∈ γ) → Arg γ a
 
   lift 𝟘 = 𝟘
   lift [ x ] = [ η x ]
@@ -109,12 +109,19 @@ module Substitution (Class : Set) where
 
   -- Showing that actˢ and compˢ are total requires several steps.
 
+  is-total-[]ˢ : ∀ {γ δ} (f : γ →ˢ δ) → Set
+  is-total-[]ˢ {γ = γ} f = ∀ {cl} (e : Expr γ cl) → defined-[]ˢ f e
+
   -- The lifting of a renaming is total
 
   []ˢ-lift-total : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → defined-[]ˢ (lift ρ) e
   []ˢ-lift-total ρ (x ` ts) = def-[]ˢ (def-∘ˢ (λ y → subst (λ τ → defined-[]ˢ τ (ts ∙ y)) (sym (⇑ˢ-lift ρ)) {!!})) {!!}
 
-  -- The identity substittion is total
+  ⊕-total : ∀ {γ δ θ} (f : γ →ˢ θ) (g : δ →ˢ θ) → is-total-[]ˢ f → is-total-[]ˢ g → is-total-[]ˢ (f ⊕ g)
+  ⊕-total f g fg gt = {!!}
+
+
+  -- The identity substitution is total
   []-𝟙ˢ-total : ∀ {γ cl} (e : Expr γ cl) → defined-[]ˢ 𝟙ˢ e
   []-𝟙ˢ-total (x ` ts) = def-[]ˢ (def-∘ˢ (λ y → {!!})) {!!}
 
