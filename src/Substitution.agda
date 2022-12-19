@@ -51,20 +51,26 @@ module Substitution (Class : Set) where
 
   -- The interaction of lifting with various operations
 
-  lift-∙ : ∀ {γ δ} (ρ : γ →ʳ δ) {γˣ clˣ} (x : (γˣ , clˣ) ∈ γ) →
+  lift-∙ : ∀ {γ δ} (ρ : γ →ʳ δ) {a} (x : a ∈ γ) →
            lift ρ ∙ x ≡ η (ρ ∙ x)
   lift-∙ [ _ ] var-here = refl
   lift-∙ (ρ₁ ⊕ ρ₂) (var-left x) = lift-∙ ρ₁ x
   lift-∙ (ρ₁ ⊕ ρ₂) (var-right y) = lift-∙ ρ₂ y
 
+  [⊕]ʳ-η-left : ∀ {γ δ θ} (ρ : γ →ʳ θ) {τ : δ →ʳ θ} {a} (x : a ∈ γ) →
+                [ ⇑ʳ (ρ ⊕ τ) ]ʳ η (var-left x) ≡ [ ⇑ʳ ρ ]ʳ η x
+  [⊕]ʳ-η-left ρ x =
+    ≡-` refl
+        λ z → trans {!ʳ∘ˢ-∙!} {!!}
+
   η-∙ : ∀ {γ δ} (ρ : γ →ʳ δ) {γˣ clˣ} (x : (γˣ , clˣ) ∈ γ) →
-          η (ρ ∙ x) ≡ [ ⇑ʳ ρ ]ʳ η x
+          [ ⇑ʳ ρ ]ʳ η x ≡ η (ρ ∙ x)
   η-∙ ρ x = {!!}
 
   lift-map : ∀ {γ δ θ} (f : ∀ {α} → α ∈ γ → α ∈ δ) (ρ : θ →ʳ γ) →
              lift (map f ρ) ≡ map [ ⇑ʳ (tabulate f) ]ʳ_ (lift ρ)
   lift-map f 𝟘 = refl
-  lift-map f [ x ] = cong [_] (trans (cong η (sym (tabulate-∙ f))) (η-∙ (tabulate f) x))
+  lift-map f [ x ] = cong [_] (trans (cong η (sym (tabulate-∙ f))) {! η-∙ (tabulate f) x !})
   lift-map f (ρ₁ ⊕ ρ₂) = cong₂ _⊕_ (lift-map f ρ₁) (lift-map f ρ₂)
 
   -- ⇑ˢ-⊕ : ∀ {γ₁ γ₂ δ θ} (f : γ₁ →ˢ δ) (g : γ₂ →ˢ δ) → ⇑ˢ {θ = θ} (f ⊕ g) ≡ f ⊕ ⇑ˢ g
