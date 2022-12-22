@@ -57,6 +57,25 @@ module Substitution (Class : Set) where
   lift-∙ (ρ₁ ⊕ ρ₂) (var-left x) = lift-∙ ρ₁ x
   lift-∙ (ρ₁ ⊕ ρ₂) (var-right y) = lift-∙ ρ₂ y
 
+  lift-∘ʳ : ∀ { γ δ θ } (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) →
+             lift (τ ∘ʳ ρ) ∙ x ≡ [ ⇑ʳ τ ]ʳ (lift ρ ∙ x)
+  lift-∘ʳ [ y ] τ var-here =
+     ≡-` (sym (map-∙ {f = var-left} {ps = τ} ))
+         λ z → trans {!!} (sym (ʳ∘ˢ-∙ {ts = lift (tabulate var-right)} {x = z}))
+  lift-∘ʳ (ρ₁ ⊕ ρ₂) τ (var-left x) = {!!}
+  lift-∘ʳ (ρ ⊕ ρ₁) τ (var-right x) = {!!}
+
+  []ʳ-η : ∀ { γ δ } (ρ : γ →ʳ δ) {a} (x : a ∈ γ) → [ ⇑ʳ ρ ]ʳ η x ≡ η (ρ ∙ x)
+  []ʳ-η ρ x =
+    ≡-`
+      (map-∙ {f = var-left} {ps = ρ})
+      λ z →
+        trans
+          (ʳ∘ˢ-∙ {ts = lift (tabulate var-right)} {x = z})
+          (trans
+             {!!}
+             (sym (lift-∙ (tabulate var-right) z)))
+
   [⊕]ʳ-η-left : ∀ {γ δ θ} (ρ : γ →ʳ θ) {τ : δ →ʳ θ} {a} (x : a ∈ γ) →
                 [ ⇑ʳ (ρ ⊕ τ) ]ʳ η (var-left x) ≡ [ ⇑ʳ ρ ]ʳ η x
   [⊕]ʳ-η-left ρ x =
