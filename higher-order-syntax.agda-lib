@@ -1,3 +1,0 @@
-name: higher-order-syntax -- formalization of higher-order syntax
-depend: agda-categories
-include: src
