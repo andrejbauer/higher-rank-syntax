@@ -57,24 +57,29 @@ module Substitution (Class : Set) where
   lift-∙ (ρ₁ ⊕ ρ₂) (var-left x) = lift-∙ ρ₁ x
   lift-∙ (ρ₁ ⊕ ρ₂) (var-right y) = lift-∙ ρ₂ y
 
-  lift-∘ʳ : ∀ { γ δ θ } (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) →
-             lift (τ ∘ʳ ρ) ∙ x ≡ [ ⇑ʳ τ ]ʳ (lift ρ ∙ x)
-  lift-∘ʳ [ y ] τ var-here =
-     ≡-` (sym (map-∙ {f = var-left} {ps = τ} ))
-         λ z → trans {!!} (sym (ʳ∘ˢ-∙ {ts = lift (tabulate var-right)} {x = z}))
-  lift-∘ʳ (ρ₁ ⊕ ρ₂) τ (var-left x) = {!!}
-  lift-∘ʳ (ρ ⊕ ρ₁) τ (var-right x) = {!!}
+  ʳ∘ˢ-lift-var-right : ∀ {γ δ θ} (ρ : γ →ʳ δ) {a} (x : a ∈ θ) →
+                       ((⇑ʳ {θ = θ} ρ) ʳ∘ˢ lift (tabulate var-right)) ∙ x ≡ lift (tabulate var-right) ∙ x
+  ʳ∘ˢ-lift-var-right ρ x =
+    trans
+      (ʳ∘ˢ-∙ {ρ = ⇑ʳ ρ} {ts = lift (tabulate var-right)})
+      {!!}
 
-  []ʳ-η : ∀ { γ δ } (ρ : γ →ʳ δ) {a} (x : a ∈ γ) → [ ⇑ʳ ρ ]ʳ η x ≡ η (ρ ∙ x)
-  []ʳ-η ρ x =
-    ≡-`
-      (map-∙ {f = var-left} {ps = ρ})
-      λ z →
-        trans
-          (ʳ∘ˢ-∙ {ts = lift (tabulate var-right)} {x = z})
-          (trans
-             {!!}
-             (sym (lift-∙ (tabulate var-right) z)))
+  ʳ∘ˢ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) →
+             (τ ʳ∘ˢ lift ρ) ∙ x ≡ lift (τ ∘ʳ ρ) ∙ x
+  ʳ∘ˢ-lift [ x ] τ var-here = ≡-` ( map-∙ {f = var-left} {ps = τ}) λ z → ʳ∘ˢ-lift-var-right τ z
+  ʳ∘ˢ-lift (ρ₁ ⊕ ρ₂) τ (var-left x) = ʳ∘ˢ-lift ρ₁ τ x
+  ʳ∘ˢ-lift (ρ₁ ⊕ ρ₂) τ (var-right x) = ʳ∘ˢ-lift ρ₂ τ x
+
+  []ʳ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) →
+             lift (τ ∘ʳ ρ) ∙ x ≡  lift τ ∙ (ρ ∙ x)
+  []ʳ-lift [ x ] τ var-here = sym (lift-∙ τ x)
+  []ʳ-lift (ρ₁ ⊕ ρ₂) τ (var-left x) = []ʳ-lift ρ₁ τ x
+  []ʳ-lift (ρ₁ ⊕ ρ₂) τ (var-right y) = []ʳ-lift ρ₂ τ y
+
+  [⇑ʳ]ʳ-η : ∀ {γ δ} (ρ : γ →ʳ δ) {a} (x : a ∈ γ) → [ ⇑ʳ ρ ]ʳ η x ≡ η (ρ ∙ x)
+  [⇑ʳ]ʳ-η [ x ] var-here = {!!}
+  [⇑ʳ]ʳ-η (ρ₁ ⊕ ρ₂) (var-left x) = trans {!!} ([⇑ʳ]ʳ-η ρ₁ x)
+  [⇑ʳ]ʳ-η (ρ₁ ⊕ ρ₂) (var-right x) = {!!}
 
   [⊕]ʳ-η-left : ∀ {γ δ θ} (ρ : γ →ʳ θ) {τ : δ →ʳ θ} {a} (x : a ∈ γ) →
                 [ ⇑ʳ (ρ ⊕ τ) ]ʳ η (var-left x) ≡ [ ⇑ʳ ρ ]ʳ η x
