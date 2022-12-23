@@ -135,12 +135,13 @@ module Substitution (Class : Set) where
   data defined-∘ˢ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) → Set
 
   actˢ : ∀ {γ δ cl} (f : γ →ˢ δ) (e : Expr γ cl) → defined-[]ˢ f e → Expr δ cl
+
   compˢ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) → defined-∘ˢ g f → (γ →ˢ θ)
 
   data defined-[]ˢ where
     def-[]ˢ : ∀ {γ γ' δ cl} {f : γ →ˢ δ} {x : (γ' , cl) ∈ γ} {ts : γ' →ˢ γ} (D : defined-∘ˢ f ts) →
-                defined-[]ˢ (𝟙ˢ ⊕ (compˢ f ts D)) (f ∙ x) →
-                defined-[]ˢ f (x ` ts)
+              defined-[]ˢ (𝟙ˢ ⊕ (compˢ f ts D)) (f ∙ x) →
+              defined-[]ˢ f (x ` ts)
 
   data defined-∘ˢ where
     def-∘ˢ :  ∀ {γ δ θ} {g : δ →ˢ θ} {f : γ →ˢ δ} →
@@ -155,13 +156,21 @@ module Substitution (Class : Set) where
   is-total-[]ˢ : ∀ {γ δ} (f : γ →ˢ δ) → Set
   is-total-[]ˢ {γ = γ} f = ∀ {cl} (e : Expr γ cl) → defined-[]ˢ f e
 
-  -- The lifting of a renaming is total
+  ⊕-total-[]ˢ : ∀ {γ δ θ} {f : γ →ˢ θ} {g : δ →ˢ θ} → is-total-[]ˢ f → is-total-[]ˢ g → is-total-[]ˢ (f ⊕ g)
+
+  ⊕-total-∘ˢ : ∀ {χ γ δ θ} {h : χ →ˢ γ ⊕ δ} {f : γ →ˢ θ} {g : δ →ˢ θ} →
+                 is-total-[]ˢ f → is-total-[]ˢ g → is-total-[]ˢ h → defined-∘ˢ (f ⊕ g) h
+
+  ⊕-total-[]ˢ ft gt (var-left x ` ts) = def-[]ˢ (⊕-total-∘ˢ ft gt {!!}) {!!}
+  ⊕-total-[]ˢ ft gt (var-right y ` ts) = {!!}
+
+  ⊕-total-∘ˢ ft gt ht = {!!}
 
   []ˢ-lift-total : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → defined-[]ˢ (lift ρ) e
-  []ˢ-lift-total ρ (x ` ts) = def-[]ˢ (def-∘ˢ (λ y → subst (λ τ → defined-[]ˢ τ (ts ∙ y)) (sym (⇑ˢ-lift ρ)) {!!})) {!!}
-
-  ⊕-total : ∀ {γ δ θ} (f : γ →ˢ θ) (g : δ →ˢ θ) → is-total-[]ˢ f → is-total-[]ˢ g → is-total-[]ˢ (f ⊕ g)
-  ⊕-total f g fg gt = {!!}
+  []ˢ-lift-total ρ (x ` ts) =
+    def-[]ˢ
+      (def-∘ˢ (λ y → subst (λ τ → defined-[]ˢ τ (ts ∙ y)) (sym (⇑ˢ-lift ρ)) {!!}))
+      {!!}
 
 
   -- The identity substitution is total
