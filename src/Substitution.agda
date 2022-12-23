@@ -57,12 +57,48 @@ module Substitution (Class : Set) where
   lift-∙ (ρ₁ ⊕ ρ₂) (var-left x) = lift-∙ ρ₁ x
   lift-∙ (ρ₁ ⊕ ρ₂) (var-right y) = lift-∙ ρ₂ y
 
+  lift-tabulate : ∀ {γ δ} (f : ∀ {α} → α ∈ γ → α ∈ δ) {a} (x : a ∈ γ) →
+                  lift (tabulate f) ∙ x ≡ η (f x)
+  lift-tabulate f var-here = refl
+  lift-tabulate f (var-left x) = lift-tabulate (λ z → f (var-left z)) x
+  lift-tabulate f (var-right y) = lift-tabulate (λ z → f (var-right z)) y
+
+  ∘ʳ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) →
+             lift (τ ∘ʳ ρ) ∙ x ≡  lift τ ∙ (ρ ∙ x)
+  ∘ʳ-lift [ x ] τ var-here = sym (lift-∙ τ x)
+  ∘ʳ-lift (ρ₁ ⊕ ρ₂) τ (var-left x) = ∘ʳ-lift ρ₁ τ x
+  ∘ʳ-lift (ρ₁ ⊕ ρ₂) τ (var-right y) = ∘ʳ-lift ρ₂ τ y
+
+  []ʳ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) → [ ⇑ʳ τ ]ʳ (lift ρ ∙ x) ≡  lift (τ ∘ʳ ρ) ∙ x
+  []ʳ-η : ∀ {γ δ} (ρ : γ →ʳ δ) {a} (x : a ∈ γ) → [ ⇑ʳ ρ ]ʳ η x ≡ η (ρ ∙ x)
+
+  []ʳ-lift [ x ] τ var-here = []ʳ-η τ x
+  []ʳ-lift (ρ₁ ⊕ ρ₂) τ (var-left x) = []ʳ-lift ρ₁ τ x
+  []ʳ-lift (ρ₁ ⊕ ρ₂) τ (var-right x) = []ʳ-lift ρ₂ τ x
+
+  ⇑ʳ-∘ʳ-tabulate-var-right : ∀ {γ δ θ} (ρ : γ →ʳ δ) →
+                             (⇑ʳ {θ = θ} ρ ∘ʳ tabulate var-right) ≡ tabulate var-right
+  ⇑ʳ-∘ʳ-tabulate-var-right {θ = θ} ρ = shape-≡ ξ
+    where ξ : ∀ {a} (x : a ∈ θ) → (⇑ʳ ρ ∘ʳ tabulate var-right) ∙ x ≡ tabulate var-right ∙ x
+          ξ x = trans
+                  (trans
+                      (∘ʳ-∙  {ρ = ⇑ʳ ρ} {τ = tabulate var-right} {x = x})
+                      (trans (cong (⇑ʳ ρ ∙_) (tabulate-∙ var-right)) (tabulate-∙ var-right)))
+                  (sym (tabulate-∙ var-right))
+
+  [⇑ʳ]-lift-var-right : ∀ {γ δ θ} (ρ : γ →ʳ δ) {a} (x : a ∈ θ) →
+                        [ ⇑ʳ (⇑ʳ ρ) ]ʳ lift (tabulate var-right) ∙ x  ≡ lift (tabulate var-right) ∙ x
+  [⇑ʳ]-lift-var-right ρ x = trans ([]ʳ-lift (tabulate var-right) (⇑ʳ ρ) x) (cong (λ τ → lift τ ∙ x) (⇑ʳ-∘ʳ-tabulate-var-right ρ))
+
   ʳ∘ˢ-lift-var-right : ∀ {γ δ θ} (ρ : γ →ʳ δ) {a} (x : a ∈ θ) →
                        ((⇑ʳ {θ = θ} ρ) ʳ∘ˢ lift (tabulate var-right)) ∙ x ≡ lift (tabulate var-right) ∙ x
   ʳ∘ˢ-lift-var-right ρ x =
     trans
       (ʳ∘ˢ-∙ {ρ = ⇑ʳ ρ} {ts = lift (tabulate var-right)})
-      {!!}
+      ([⇑ʳ]-lift-var-right ρ x)
+
+  []ʳ-η ρ x = ≡-` (map-∙ {f = var-left} {ps = ρ}) (λ z → ʳ∘ˢ-lift-var-right ρ z)
+
 
   ʳ∘ˢ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) →
              (τ ʳ∘ˢ lift ρ) ∙ x ≡ lift (τ ∘ʳ ρ) ∙ x
@@ -70,34 +106,11 @@ module Substitution (Class : Set) where
   ʳ∘ˢ-lift (ρ₁ ⊕ ρ₂) τ (var-left x) = ʳ∘ˢ-lift ρ₁ τ x
   ʳ∘ˢ-lift (ρ₁ ⊕ ρ₂) τ (var-right x) = ʳ∘ˢ-lift ρ₂ τ x
 
-  []ʳ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) →
-             lift (τ ∘ʳ ρ) ∙ x ≡  lift τ ∙ (ρ ∙ x)
-  []ʳ-lift [ x ] τ var-here = sym (lift-∙ τ x)
-  []ʳ-lift (ρ₁ ⊕ ρ₂) τ (var-left x) = []ʳ-lift ρ₁ τ x
-  []ʳ-lift (ρ₁ ⊕ ρ₂) τ (var-right y) = []ʳ-lift ρ₂ τ y
-
-  [⇑ʳ]ʳ-η : ∀ {γ δ} (ρ : γ →ʳ δ) {a} (x : a ∈ γ) → [ ⇑ʳ ρ ]ʳ η x ≡ η (ρ ∙ x)
-  [⇑ʳ]ʳ-η [ x ] var-here = {!!}
-  [⇑ʳ]ʳ-η (ρ₁ ⊕ ρ₂) (var-left x) = trans {!!} ([⇑ʳ]ʳ-η ρ₁ x)
-  [⇑ʳ]ʳ-η (ρ₁ ⊕ ρ₂) (var-right x) = {!!}
-
-  [⊕]ʳ-η-left : ∀ {γ δ θ} (ρ : γ →ʳ θ) {τ : δ →ʳ θ} {a} (x : a ∈ γ) →
-                [ ⇑ʳ (ρ ⊕ τ) ]ʳ η (var-left x) ≡ [ ⇑ʳ ρ ]ʳ η x
-  [⊕]ʳ-η-left ρ x =
-    ≡-` refl
-        λ z → trans {!ʳ∘ˢ-∙!} {!!}
-
-  η-∙ : ∀ {γ δ} (ρ : γ →ʳ δ) {γˣ clˣ} (x : (γˣ , clˣ) ∈ γ) →
-          [ ⇑ʳ ρ ]ʳ η x ≡ η (ρ ∙ x)
-  η-∙ ρ x = {!!}
-
   lift-map : ∀ {γ δ θ} (f : ∀ {α} → α ∈ γ → α ∈ δ) (ρ : θ →ʳ γ) →
              lift (map f ρ) ≡ map [ ⇑ʳ (tabulate f) ]ʳ_ (lift ρ)
   lift-map f 𝟘 = refl
-  lift-map f [ x ] = cong [_] (trans (cong η (sym (tabulate-∙ f))) {! η-∙ (tabulate f) x !})
+  lift-map f [ x ] = cong [_] (trans (cong η (sym (tabulate-∙ f))) (sym ([]ʳ-η (tabulate f) x)))
   lift-map f (ρ₁ ⊕ ρ₂) = cong₂ _⊕_ (lift-map f ρ₁) (lift-map f ρ₂)
-
-  -- ⇑ˢ-⊕ : ∀ {γ₁ γ₂ δ θ} (f : γ₁ →ˢ δ) (g : γ₂ →ˢ δ) → ⇑ˢ {θ = θ} (f ⊕ g) ≡ f ⊕ ⇑ˢ g
 
   ⇑ˢ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) → ⇑ˢ {θ = θ} (lift ρ) ≡ lift (⇑ʳ ρ)
   ⇑ˢ-lift ρ = cong₂ _⊕_ (sym (lift-map var-left ρ)) refl

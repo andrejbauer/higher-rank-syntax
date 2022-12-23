@@ -90,8 +90,8 @@ module Syntax (Class : Set) where
   -- that it is defined at all positions.
   tabulate : ∀ {γ P} → (∀ {α} → α ∈ γ → P α) → All P γ
   tabulate {𝟘} f = 𝟘
-  tabulate {[ δ , cl ]} f = [ f var-here ]
-  tabulate {δ ⊕ δ₁} f = tabulate (f ∘ var-left) ⊕ tabulate (f ∘ var-right)
+  tabulate {[ _ , _ ]} f = [ f var-here ]
+  tabulate {_ ⊕ _} f = tabulate (f ∘ var-left) ⊕ tabulate (f ∘ var-right)
 
   -- Extensionally equal maps give the same tabulations
   tabulate-ext : ∀ {P : Arity → Set} {γ} {f g : ∀ {α} → α ∈ γ → P α} →
