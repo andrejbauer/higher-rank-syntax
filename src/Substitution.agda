@@ -120,20 +120,22 @@ module Substitution (Class : Set) where
   shift γ [] = γ
   shift γ (δ ∷ δs) = (shift γ δs) ⊕ δ
 
-  act : ∀ {γ δ cl} → (f : ∀ {a} → a ∈ γ → Arg δ a) → Expr γ cl → Expr δ cl
-  weaken : ∀ {γ δ cl} (Ξ : List Shape) → (f : ∀ {a} → a ∈ γ → Arg δ a) → Expr (shift γ Ξ) cl → Expr (shift δ Ξ) cl
-  instantiate : ∀ {γ δ cl} (h : ∀ {a} → a ∈ δ → Arg γ a) → Arg γ (δ , cl) → Expr γ cl
+  ⟰ʳ : ∀ {γ δ Ξ} → (γ →ʳ δ) → (shift γ Ξ →ʳ shift δ Ξ)
+  ⟰ʳ {Ξ = []} ρ = ρ
+  ⟰ʳ {Ξ = _ ∷ _} ρ = ⇑ʳ (⟰ʳ ρ)
 
-  act f (x ` ts) = instantiate (λ z → {!!}) (f x)
+  ⟰ˢ : ∀ {γ δ Ξ} → (γ →ˢ δ) → (shift γ Ξ →ˢ shift δ Ξ)
+  ⟰ˢ {Ξ = []} f = f
+  ⟰ˢ {Ξ = _ ∷ _} f = ⇑ˢ (⟰ˢ f)
 
-  instantiate {γ} {δ} {_} h (var-left x ` ts) = x ` tabulate (λ z → act {!!} (ts ∙ z))
-  instantiate h (var-right y ` ts) = {! h y!}
+  data act-defined : ∀ {γ cl} → Expr γ cl → Set where
+    act-sub : ∀ {γ δ} {cl} (x : (δ , cl) ∈ γ) → (ts : δ →ˢ γ) →
+              (∀ {a} (z : a ∈ δ) → act-defined (ts ∙ z)) → act-defined (x ` ts)
+    -- act-∙ : ∀ {γ δ} {cl} (f : γ →ˢ δ) (x : (δ , cl) ∈ γ) → (ts : δ →ˢ γ) →
+    --           (act-defined (f ∙ x)
 
-  weaken [] f e = act f e
-  weaken (ξ ∷ Ξ) f (var-left x ` ts) = {! weaken Ξ !}
-  weaken (ξ ∷ Ξ) f (var-right y ` ts) = var-right y ` {!!}
-
-
+  act : ∀ {γ δ cl} → (γ →ˢ δ) → Expr γ cl → Expr δ cl
+  act f (x ` ts) = act (𝟙ˢ ⊕ tabulate (λ z → act (⇑ˢ f) (ts ∙ z))) (f ∙ x)
 
 
   -- Action of substitution
