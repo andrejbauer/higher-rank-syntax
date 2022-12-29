@@ -2,8 +2,9 @@ open import Agda.Primitive
 open import Relation.Unary hiding (_∈_)
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
-open import Data.Product using (_,_)
+open import Data.Product using (_,_; _×_)
 open import Function using (_∘_)
+open import Data.List hiding ([_]; tabulate; map)
 
 open ≡-Reasoning
 
@@ -115,10 +116,29 @@ module Substitution (Class : Set) where
   ⇑ˢ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) → ⇑ˢ {θ = θ} (lift ρ) ≡ lift (⇑ʳ ρ)
   ⇑ˢ-lift ρ = cong₂ _⊕_ (sym (lift-map var-left ρ)) refl
 
+  shift : Shape → List Shape → Shape
+  shift γ [] = γ
+  shift γ (δ ∷ δs) = (shift γ δs) ⊕ δ
+
+  act : ∀ {γ δ cl} → (f : ∀ {a} → a ∈ γ → Arg δ a) → Expr γ cl → Expr δ cl
+  weaken : ∀ {γ δ cl} (Ξ : List Shape) → (f : ∀ {a} → a ∈ γ → Arg δ a) → Expr (shift γ Ξ) cl → Expr (shift δ Ξ) cl
+  instantiate : ∀ {γ δ cl} (h : ∀ {a} → a ∈ δ → Arg γ a) → Arg γ (δ , cl) → Expr γ cl
+
+  act f (x ` ts) = instantiate (λ z → {!!}) (f x)
+
+  instantiate {γ} {δ} {_} h (var-left x ` ts) = x ` tabulate (λ z → act {!!} (ts ∙ z))
+  instantiate h (var-right y ` ts) = {! h y!}
+
+  weaken [] f e = act f e
+  weaken (ξ ∷ Ξ) f (var-left x ` ts) = {! weaken Ξ !}
+  weaken (ξ ∷ Ξ) f (var-right y ` ts) = var-right y ` {!!}
+
+
+
 
   -- Action of substitution
-  infix 6 [_]ˢ_
-  infix 6 _∘ˢ_
+  -- infix 6 [_]ˢ_
+  -- infix 6 _∘ˢ_
 
   -- -- The naive definition, which Agda does not see as terminating
   -- [_]ˢ_ : ∀ {γ δ cl} (f : γ →ˢ δ) → Expr γ cl → Expr δ cl
@@ -130,66 +150,10 @@ module Substitution (Class : Set) where
   -- as partial maps defined on the support, and finally show that the supports are the entire domains.
   -- See doi:10.1017/S0960129505004822
 
-  data defined-[]ˢ : ∀ {γ δ cl} (f : γ →ˢ δ) → Expr γ cl → Set
-
-  data defined-∘ˢ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) → Set
-
-  actˢ : ∀ {γ δ cl} (f : γ →ˢ δ) (e : Expr γ cl) → defined-[]ˢ f e → Expr δ cl
-
-  compˢ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) → defined-∘ˢ g f → (γ →ˢ θ)
-
-  data defined-[]ˢ where
-    def-[]ˢ : ∀ {γ γ' δ cl} {f : γ →ˢ δ} {x : (γ' , cl) ∈ γ} {ts : γ' →ˢ γ} (D : defined-∘ˢ f ts) →
-              defined-[]ˢ (𝟙ˢ ⊕ (compˢ f ts D)) (f ∙ x) →
-              defined-[]ˢ f (x ` ts)
-
-  data defined-∘ˢ where
-    def-∘ˢ :  ∀ {γ δ θ} {g : δ →ˢ θ} {f : γ →ˢ δ} →
-              (∀ {γ' cl} (x : (γ' , cl) ∈ γ) → defined-[]ˢ (⇑ˢ g) (f ∙ x)) → defined-∘ˢ g f
-
-  actˢ f (x ` ts) (def-[]ˢ D E) = actˢ (𝟙ˢ ⊕ (compˢ f ts D)) (f ∙ x) E
-
-  compˢ g f (def-∘ˢ D) = tabulate (λ x → actˢ (⇑ˢ g) (f ∙ x) (D x))
-
-  -- Showing that actˢ and compˢ are total requires several steps.
-
-  is-total-[]ˢ : ∀ {γ δ} (f : γ →ˢ δ) → Set
-  is-total-[]ˢ {γ = γ} f = ∀ {cl} (e : Expr γ cl) → defined-[]ˢ f e
-
-  ⊕-total-[]ˢ : ∀ {γ δ θ} {f : γ →ˢ θ} {g : δ →ˢ θ} → is-total-[]ˢ f → is-total-[]ˢ g → is-total-[]ˢ (f ⊕ g)
-
-  ⊕-total-∘ˢ : ∀ {χ γ δ θ} {h : χ →ˢ γ ⊕ δ} {f : γ →ˢ θ} {g : δ →ˢ θ} →
-                 is-total-[]ˢ f → is-total-[]ˢ g → is-total-[]ˢ h → defined-∘ˢ (f ⊕ g) h
-
-  ⊕-total-[]ˢ ft gt (var-left x ` ts) = def-[]ˢ (⊕-total-∘ˢ ft gt {!!}) {!!}
-  ⊕-total-[]ˢ ft gt (var-right y ` ts) = {!!}
-
-  ⊕-total-∘ˢ ft gt ht = {!!}
-
-  []ˢ-lift-total : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → defined-[]ˢ (lift ρ) e
-  []ˢ-lift-total ρ (x ` ts) =
-    def-[]ˢ
-      (def-∘ˢ (λ y → subst (λ τ → defined-[]ˢ τ (ts ∙ y)) (sym (⇑ˢ-lift ρ)) {!!}))
-      {!!}
-
-
-  -- The identity substitution is total
-  []-𝟙ˢ-total : ∀ {γ cl} (e : Expr γ cl) → defined-[]ˢ 𝟙ˢ e
-  []-𝟙ˢ-total (x ` ts) = def-[]ˢ (def-∘ˢ (λ y → {!!})) {!!}
-
-
-  total-actˢ : ∀ {γ δ cl} (f : γ →ˢ δ) (e : Expr γ cl) → defined-[]ˢ f e
-  total-compˢ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) → defined-∘ˢ g f
-
-  total-actˢ f (x ` ts) = def-[]ˢ (total-compˢ f ts) {!!}
-
-  total-compˢ {γ = γ} f g = def-∘ˢ λ {γ' cl} (x : (γ' , cl) ∈ γ) → {!!}
-
-
   -- Finally, the definitions we wanted to get
 
-  [_]ˢ_ : ∀ {γ δ cl} (f : γ →ˢ δ) → Expr γ cl → Expr δ cl
-  [ f ]ˢ e = actˢ f e (total-actˢ f e)
+  -- [_]ˢ_ : ∀ {γ δ cl} (f : γ →ˢ δ) → Expr γ cl → Expr δ cl
+  -- [ f ]ˢ e = act f e (total-actˢ f e)
 
-  _∘ˢ_ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) → γ →ˢ θ
-  g ∘ˢ f = compˢ g f (total-compˢ g f)
+  -- _∘ˢ_ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) → γ →ˢ θ
+  -- g ∘ˢ f = compˢ g f (total-compˢ g f)
