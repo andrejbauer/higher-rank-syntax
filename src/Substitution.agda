@@ -153,15 +153,16 @@ module Substitution (Class : Set) where
   rgh f ∙∙ var-left x = [ ⇑ʳ (tabulate var-left) ]ʳ (f ∙∙ x)
   rgh f ∙∙ var-right y = η (var-right y)
   𝟙, f ∙∙ var-left x = η (var-left x)
-  𝟙, f ∙∙ var-right y =  [ ⇑ʳ (tabulate var-right) ]ʳ f ∙∙ y
+  𝟙, f ∙∙ var-right y = f ∙∙ y
 
   act : ∀ {γ δ cl} (f : γ ⇒ˢ δ) → Expr γ cl → Expr δ cl
   act (sbs f) (x ` ts) =  act (𝟙⊕ (sbs (tabulate λ z → act (rgh (sbs f)) (ts ∙ z)))) (f ∙ x)
   act (𝟙⊕ f) (var-left x ` ts) = x ` (tabulate λ z → act (rgh (𝟙⊕ f)) (ts ∙ z) )
-  act (𝟙⊕ f) (var-right y ` ts) =  act (𝟙⊕ (sbs (tabulate λ z → act (rgh (𝟙⊕ f)) (ts ∙ z)))) (f ∙∙ y)
-  act (rgh f) (var-left x ` ts) =   act {! 𝟙,!} (f ∙∙ x)
-  act (rgh f) (var-right y ` ts) = var-right y ` (tabulate λ z → act (rgh (rgh f)) (ts ∙ z))
-  act (𝟙, f) (x Syntax.` ts) = {!!}
+  act (𝟙⊕ f) (var-right y ` ts) = act (𝟙⊕ (sbs (tabulate λ z → act (rgh (𝟙⊕ f)) (ts ∙ z)))) (f ∙∙ y)
+  act (rgh f) (var-left x ` ts) = act (𝟙, (sbs (tabulate (λ z → act (rgh (rgh f))  (ts ∙ z))))) (f ∙∙ x)
+  act (rgh f) (var-right y ` ts) = var-right y ` tabulate λ z → act (rgh (rgh f)) (ts ∙ z)
+  act (𝟙, f) (var-left x ` ts) = var-left x ` tabulate (λ z →  act (rgh (𝟙, f)) (ts ∙ z))
+  act (𝟙, f) (var-right x ` ts) = act (𝟙⊕ (sbs (tabulate (λ z → act (rgh (𝟙, f)) (ts ∙ z))))) (f ∙∙ x)
 
   -- Action of substitution
   -- infix 6 [_]ˢ_
