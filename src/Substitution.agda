@@ -58,6 +58,9 @@ module Substitution (Class : Set) where
   lift-∙ (ρ₁ ⊕ ρ₂) (var-left x) = lift-∙ ρ₁ x
   lift-∙ (ρ₁ ⊕ ρ₂) (var-right y) = lift-∙ ρ₂ y
 
+  𝟙ˢ-∙ : ∀ {γ a} {x : a ∈ γ} → 𝟙ˢ ∙ x ≡ η x
+  𝟙ˢ-∙ {x = x} = trans (lift-∙ 𝟙ʳ x) (cong η 𝟙ʳ-≡)
+
   lift-tabulate : ∀ {γ δ} (f : ∀ {α} → α ∈ γ → α ∈ δ) {a} (x : a ∈ γ) →
                   lift (tabulate f) ∙ x ≡ η (f x)
   lift-tabulate f var-here = refl
@@ -138,7 +141,7 @@ module Substitution (Class : Set) where
   module SubstitutionWithFucus where
     -- An attempt that explicitly deals with all the shifting and weakening
 
-    infix 5 _⇒ˢ_
+    infix 4 _⇒ˢ_
     data _⇒ˢ_ : Shape → Shape → Set where
       sbs : ∀ {γ δ} (f : γ →ˢ δ) → γ ⇒ˢ δ
       𝟙⊕ : ∀ {δ θ} (f : θ ⇒ˢ δ) → δ ⊕ θ ⇒ˢ δ
@@ -169,23 +172,38 @@ module Substitution (Class : Set) where
   module IdealDefintion where
     -- The naive definition, which Agda does not see as terminating
     infix 6 [_]ˢ_
+    infix 6 _∘ˢ_
+
     {-# TERMINATING #-}
     [_]ˢ_ : ∀ {γ δ cl} (f : γ →ˢ δ) → Expr γ cl → Expr δ cl
-    [ f ]ˢ x ` ts = [ 𝟙ˢ ⊕ (tabulate λ z → [ ⇑ˢ f ]ˢ ts ∙ z) ]ˢ (f ∙ x)
 
-    -- Composition
-    infix 6 _∘ˢ_
+    {-# TERMINATING #-}
     _∘ˢ_ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) → γ →ˢ θ
+
+    [ f ]ˢ x ` ts = [ 𝟙ˢ ⊕ (f ∘ˢ ts) ]ˢ (f ∙ x)
     g ∘ˢ f = tabulate (λ x → [ ⇑ˢ g ]ˢ f ∙ x)
 
-  -- Instead we use the Bove-Cappreta method, whereby we define the support of [_]ˢ_ and _∘ˢ_, then we define the maps
-  -- as partial maps defined on the support, and finally show that the supports are the entire domains.
-  -- See doi:10.1017/S0960129505004822
-  module BoveCappreta where
+    [lift]ˢ : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → [ lift ρ ]ˢ e ≡ [ ρ ]ʳ e
+    [lift]ˢ ρ (x ` ts) = trans (cong [ 𝟙ˢ ⊕ lift ρ ∘ˢ ts ]ˢ_ (lift-∙ ρ x)) {!!}
 
+    [𝟙]ˢ : ∀ {γ cl} {e : Expr γ cl} → [ 𝟙ˢ ]ˢ e ≡ e
+    [𝟙]ˢ {e = x ` ts} = trans (cong [ 𝟙ˢ ⊕ (𝟙ˢ ∘ˢ ts) ]ˢ_ 𝟙ˢ-∙) {!!}
+
+
+
+
+  module BoveCappreta where
+    -- Instead we use the Bove-Cappreta method, whereby we define the support of [_]ˢ_ and _∘ˢ_, then we define the maps
+    -- as partial maps defined on the support, and finally show that the supports are the entire domains.
+    -- See doi:10.1017/S0960129505004822
+
+    -- The action of a substitution defined at a given argument
     data defined : ∀ {γ δ cl} (f : γ →ˢ δ) (e : Expr γ cl) → Set
+
+    -- The action of substitution
     act : ∀ {γ δ cl} (f : γ →ˢ δ) (e : Expr γ cl) → defined f e → Expr δ cl
 
+    -- The action is defined when the recursive calls are defined
     data defined where
       df : ∀ {γ δ} {f : γ →ˢ δ} {γˣ clˣ} {x : (γˣ , clˣ) ∈ γ} {ts : γˣ →ˢ γ}
               (D : ∀ {a} (z : a ∈ γˣ) → defined (⇑ˢ f) (ts ∙ z)) →
@@ -194,12 +212,23 @@ module Substitution (Class : Set) where
 
     act f (x ` ts) (df D E) = act (𝟙ˢ ⊕ tabulate (λ z → act (⇑ˢ f) (ts ∙ z) (D z))) (f ∙ x) E
 
+    -- we'll do this later
+    postulate total-D : ∀ {γ δ} {f : γ →ˢ δ} {γˣ clˣ} (x : (γˣ , clˣ) ∈ γ) (ts : γˣ →ˢ γ) →
+                        ∀ {a} (z : a ∈ γˣ) → defined (⇑ˢ f) (ts ∙ z)
+
+    postulate total-E : ∀ {γ δ} {f : γ →ˢ δ} {γˣ clˣ} (x : (γˣ , clˣ) ∈ γ) (ts : γˣ →ˢ γ) →
+                        defined (𝟙ˢ ⊕ tabulate (λ {a} (z : a ∈ γˣ) → act (⇑ˢ f) (ts ∙ z)
+                                        (total-D x ts z))) (f ∙ x)
+
     total-act : ∀ {γ δ cl} (f : γ →ˢ δ) (e : Expr γ cl) → defined f e
-    total-act f (x ` ts) = df {!!} {!!}
+    total-act f (x ` ts) = df (total-D x ts) (total-E x ts)
 
     infix 6 [_]ˢ_
     [_]ˢ_ : ∀ {γ δ cl} (f : γ →ˢ δ) → Expr γ cl → Expr δ cl
     [ f ]ˢ e = act f e (total-act f e)
+
+    [𝟙]ˢ : ∀ {γ cl} {e : Expr γ cl} → [ 𝟙ˢ ]ˢ e ≡ e
+    [𝟙]ˢ {e = x ` ts} = {!!}
 
     [lift]ˢ : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → [ lift ρ ]ˢ e ≡ [ ρ ]ʳ e
     [lift]ˢ ρ (x ` ts) = {! !}

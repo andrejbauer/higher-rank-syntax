@@ -25,7 +25,7 @@ open import Function using (_∘_)
 
 module Syntax (Class : Set) where
 
-  infixl 6 _⊕_
+  infixl 5 _⊕_
 
   {- Shapes are a kind of variable contexts. They assign to each variable its syntactic arity, which is a syntactic
      class and a binding shape. We model shapes as binary trees so that it is easy to concatenate two of them. A more
@@ -61,7 +61,7 @@ module Syntax (Class : Set) where
   -- Π-arity : Shape
   -- Π-arity = [ [ 𝟘 , ty ] ⊕ [ [ 𝟘 , tm ] , ty ] , ty ]
 
-  infix 5 _∈_
+  infix 3 _∈_
 
   {- The de Bruijn indices are binary numbers because shapes are binary trees.
      α ∈ γ is the set of variable indices in γ whose arity is α. -}
@@ -163,13 +163,13 @@ module Syntax (Class : Set) where
   -- We define renamings and substitutions here so that they can be referred to.
 
   -- Renaming
-  infix 5 _→ʳ_
+  infix 4 _→ʳ_
 
   _→ʳ_ : Shape → Shape → Set
   γ →ʳ δ = All (_∈ δ) γ
 
   -- Substitution
-  infix 5 _→ˢ_
+  infix 4 _→ˢ_
 
   _→ˢ_ : Shape → Shape → Set
   γ →ˢ δ = All (Arg δ) γ
