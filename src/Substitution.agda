@@ -134,6 +134,9 @@ module Substitution (Class : Set) where
   g ∘ˢ f = tabulate (λ x → [ ⇑ˢ g ]ˢ f ∙ x)
 
   -- Basic properties of substitution
+  lift-∘ˢ : ∀ {γ δ θ} (ρ : δ →ʳ θ) (f : γ →ˢ δ) → lift ρ ∘ˢ f ≡ ρ ʳ∘ˢ f
+  lift-∘ˢ ρ f = {!!}
+
   [lift]ˢ : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → [ lift ρ ]ˢ e ≡ [ ρ ]ʳ e
   [lift]ˢ ρ (x ` ts) =
      trans
