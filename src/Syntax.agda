@@ -153,8 +153,6 @@ module Syntax (Class : Set) where
   {- Because everything is a variable, even symbols, there is a single expression constructor
      x ` ts which forms and expression by applying the variable x to arguments ts. -}
 
-  infix 9 _`_
-
   data Expr : Shape → Class → Set
 
   Arg : Shape → Arity → Set
@@ -176,8 +174,16 @@ module Syntax (Class : Set) where
 
   -- Expressions
 
+  infix 9 _`_
+
   data Expr where
     _`_ : ∀ {γ δ} {cl} (x : (δ , cl) ∈ γ) → (ts : δ →ˢ γ) → Expr γ cl
+
+  -- A common idiom
+  infix 9 _``_
+
+  _``_ : ∀ {γ δ} {cl} (x : (δ , cl) ∈ γ) → (ts : ∀ {a} (z : a ∈ δ) → Arg γ a) → Expr γ cl
+  x `` ts = x ` tabulate ts
 
   -- Syntactic equality of expressions
 

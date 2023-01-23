@@ -61,6 +61,9 @@ module Substitution (Class : Set) where
   𝟙ˢ-∙ : ∀ {γ a} {x : a ∈ γ} → 𝟙ˢ ∙ x ≡ η x
   𝟙ˢ-∙ {x = x} = trans (lift-∙ 𝟙ʳ x) (cong η 𝟙ʳ-≡)
 
+  𝟙ˢ-tabulate-η : ∀ {γ} → 𝟙ˢ {γ = γ} ≡ tabulate η
+  𝟙ˢ-tabulate-η = shape-≡ (λ x → trans 𝟙ˢ-∙ (sym (tabulate-∙ η)))
+
   lift-tabulate : ∀ {γ δ} (f : ∀ {α} → α ∈ γ → α ∈ δ) {a} (x : a ∈ γ) →
                   lift (tabulate f) ∙ x ≡ η (f x)
   lift-tabulate f var-here = refl
@@ -119,29 +122,70 @@ module Substitution (Class : Set) where
   ⇑ˢ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) → ⇑ˢ {θ = θ} (lift ρ) ≡ lift (⇑ʳ ρ)
   ⇑ˢ-lift ρ = cong₂ _⊕_ (sym (lift-map var-left ρ)) refl
 
-  infix 6 [_]ˢ_
-  infix 6 _∘ˢ_
+  lift-⊕ : ∀ {γ δ θ} (ρ : γ →ʳ θ) (τ : δ →ʳ θ) →
+           lift (ρ ⊕ τ) ≡ lift ρ ⊕ lift τ
+  lift-⊕ ρ τ = refl
 
-  -- We tell Agda to take termination of substutition on faith.
+  -- Auxliliary instantiation of bound variables
   {-# TERMINATING #-}
+  inst : ∀ {γ δ θ} (ρ : γ →ʳ θ) (f : δ →ˢ θ) {cl} → Expr (γ ⊕ δ) cl → Expr θ cl
+  inst ρ f (var-left x ` ts) = ρ ∙ x `` λ z → inst (in-left ∘ʳ ρ) (⇑ˢ f) ([ assoc-right ]ʳ ts ∙ z)
+  inst ρ f (var-right x ` ts) =  inst 𝟙ʳ (tabulate (λ z → inst (in-left ∘ʳ ρ) (⇑ˢ f) ([ assoc-right ]ʳ ts ∙ z))) (f ∙ x)
+
+  -- Auxiliary action of substitution
+  {-# TERMINATING #-}
+  sbs : ∀ {η γ δ θ} (ρ : γ →ʳ θ) (f : δ →ˢ θ) (τ : η →ʳ θ) {cl} → Expr (γ ⊕ δ ⊕ η) cl → Expr θ cl
+  sbs ρ f τ (var-left (var-left x) ` ts) = ρ ∙ x `` λ z → sbs (in-left ∘ʳ ρ) (in-left ʳ∘ˢ f) (⇑ʳ τ) ([ assoc-right ]ʳ ts ∙ z)
+  sbs ρ f τ (var-left (var-right x) ` ts) =  inst 𝟙ʳ (tabulate (λ z → sbs (in-left ∘ʳ ρ) (in-left ʳ∘ˢ f) (⇑ʳ τ) ([ assoc-right ]ʳ ts ∙ z))) (f ∙ x)
+  sbs ρ f τ (var-right x ` ts) = τ ∙ x `` λ z →  sbs (in-left ∘ʳ ρ) (in-left ʳ∘ˢ f) (⇑ʳ τ) ([ assoc-right ]ʳ ts ∙ z)
+
+  -- The action of substitution
+  infixr 6 [_]ˢ_
   [_]ˢ_ : ∀ {γ δ cl} (f : γ →ˢ δ) → Expr γ cl → Expr δ cl
+  [ f ]ˢ e = sbs 𝟘 f 𝟘 ( [ in-left ∘ʳ in-right ]ʳ e)
 
-  -- Composition of substiutions
+  -- Composition of substitutions
+  infixl 6 _∘ˢ_
   _∘ˢ_ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) → γ →ˢ θ
+  g ∘ˢ f = tabulate λ x → [ ⇑ˢ g ]ˢ f ∙ x
 
-  -- Mutual definition of the substitution action and composition
-  [ f ]ˢ x ` ts = [ 𝟙ˢ ⊕ (f ∘ˢ ts) ]ˢ (f ∙ x)
-  g ∘ˢ f = tabulate (λ x → [ ⇑ˢ g ]ˢ f ∙ x)
+  -- -- Basic properties of substitution
+  -- ∘ˢ-∙ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) {α} (x : α ∈ γ) →
+  --        (g ∘ˢ f) ∙ x ≡ [ ⇑ˢ g ]ˢ (f ∙ x)
+  -- ∘ˢ-∙ g f x = tabulate-∙ (λ x → [ ⇑ˢ g ]ˢ f ∙ x)
 
-  -- Basic properties of substitution
-  lift-∘ˢ : ∀ {γ δ θ} (ρ : δ →ʳ θ) (f : γ →ˢ δ) → lift ρ ∘ˢ f ≡ ρ ʳ∘ˢ f
-  lift-∘ˢ ρ f = {!!}
+  -- [∘]ˢ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) {cl} (e : Expr γ cl) →
+  --        [ g ∘ˢ f ]ˢ e ≡ [ g ]ˢ [ f ]ˢ e
+  -- [∘]ˢ f g (x ` ts) = {!!}
 
-  [lift]ˢ : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → [ lift ρ ]ˢ e ≡ [ ρ ]ʳ e
-  [lift]ˢ ρ (x ` ts) =
-     trans
-       (cong [ 𝟙ˢ ⊕ lift ρ ∘ˢ ts ]ˢ_ (lift-∙ ρ x))
-       {!!}
+  -- [lift]ˢ : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → [ lift ρ ]ˢ e ≡ [ ρ ]ʳ e
+  -- [lift]ˢ ρ (x ` ts) =
+  --   let open ≡-Reasoning in
+  --     begin
+  --       [ lift ρ ]ˢ x ` ts
+  --         ≡⟨ cong ([ 𝟙ˢ ⊕ lift ρ ∘ˢ ts ]ˢ_) (lift-∙ ρ x) ⟩
+  --       [ 𝟙ˢ ⊕ lift ρ ∘ˢ ts ]ˢ η (ρ ∙ x)
+  --         ≡⟨ {!!} ⟩
+  --       {!!}
 
-  [𝟙]ˢ : ∀ {γ cl} {e : Expr γ cl} → [ 𝟙ˢ ]ˢ e ≡ e
-  [𝟙]ˢ {e = x ` ts} = trans (cong [ 𝟙ˢ ⊕ (𝟙ˢ ∘ˢ ts) ]ˢ_ 𝟙ˢ-∙) {!!}
+  -- lift-∘ˢ : ∀ {γ δ θ} (ρ : δ →ʳ θ) (f : γ →ˢ δ) → lift ρ ∘ˢ f ≡ ρ ʳ∘ˢ f
+  -- lift-∘ˢ {γ = γ} ρ f = shape-≡ λ x → E x
+  --   where
+  --     open ≡-Reasoning
+  --     E : ∀ {α} (x : α ∈ γ) → (lift ρ ∘ˢ f) ∙ x ≡ (ρ ʳ∘ˢ f) ∙ x
+  --     E x =
+  --       begin
+  --         (lift ρ ∘ˢ f) ∙ x
+  --           ≡⟨ ∘ˢ-∙ (lift ρ) f x ⟩
+  --         [ ⇑ˢ (lift ρ) ]ˢ f ∙ x
+  --           ≡⟨ cong ([_]ˢ f ∙ x) (⇑ˢ-lift ρ) ⟩
+  --         [ lift (⇑ʳ ρ) ]ˢ f ∙ x
+  --           ≡⟨ [lift]ˢ (⇑ʳ ρ) (f ∙ x) ⟩
+  --         [ ⇑ʳ ρ ]ʳ f ∙ x
+  --           ≡⟨ sym (ʳ∘ˢ-∙ {ρ = ρ} {ts = f} {x = x})⟩
+  --         (ρ ʳ∘ˢ f) ∙ x
+  --       ∎
+
+
+  -- [𝟙]ˢ : ∀ {γ cl} {e : Expr γ cl} → [ 𝟙ˢ ]ˢ e ≡ e
+  -- [𝟙]ˢ {e = x ` ts} = trans (cong [ 𝟙ˢ ⊕ (𝟙ˢ ∘ˢ ts) ]ˢ_ 𝟙ˢ-∙) {!!}

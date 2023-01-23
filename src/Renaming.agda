@@ -31,10 +31,31 @@ module Renaming (Sort : Set) where
   ∘ʳ-∙ : ∀ {γ δ θ} {ρ : δ →ʳ θ} {τ : γ →ʳ δ} {α} {x : α ∈ γ} → (ρ ∘ʳ τ) ∙ x ≡ ρ ∙ (τ ∙ x)
   ∘ʳ-∙ {ρ = ρ} {τ = τ} = tabulate-∙ (λ x → ρ ∙ (τ ∙ x))
 
+  -- canonical renamings
+
+  assoc-right : ∀ {γ δ θ} → (γ ⊕ δ) ⊕ θ →ʳ γ ⊕ (δ ⊕ θ)
+  assoc-right = tabulate λ { (var-left (var-left x)) → var-left x ;
+                             (var-left (var-right x)) → var-right (var-left x) ;
+                             (var-right x) → var-right (var-right x)}
+
+  assoc-left : ∀ {γ δ θ} → γ ⊕ (δ ⊕ θ) →ʳ (γ ⊕ δ) ⊕ θ
+  assoc-left = tabulate λ { (var-left x) → var-left (var-left x) ;
+                            (var-right (var-left x)) → var-left (var-right x) ;
+                            (var-right (var-right x)) → var-right x}
+
+  in-left : ∀ {γ δ} → γ →ʳ γ ⊕ δ
+  in-left = tabulate var-left
+
+  in-right : ∀ {γ δ} → δ →ʳ γ ⊕ δ
+  in-right = tabulate var-right
+
+  in-𝟘 : ∀ {γ} → 𝟘 →ʳ γ
+  in-𝟘 = 𝟘
+
   -- renaming extension
 
   ⇑ʳ : ∀ {γ} {δ} {θ} → (γ →ʳ δ) → (γ ⊕ θ →ʳ δ ⊕ θ)
-  ⇑ʳ ρ = map var-left ρ ⊕ tabulate var-right
+  ⇑ʳ ρ = map var-left ρ ⊕ in-right
 
   -- extension respects identity
 
@@ -61,14 +82,14 @@ module Renaming (Sort : Set) where
           ⇑ʳ τ ∙ (map var-left ρ ∙ x)
           ∎
 
-      ξ₂ : ∀ {α : Arity} {x : α ∈ θ} → var-right x ≡ ⇑ʳ τ ∙ (tabulate var-right ∙ x)
+      ξ₂ : ∀ {α : Arity} {x : α ∈ θ} → var-right x ≡ ⇑ʳ τ ∙ (in-right ∙ x)
       ξ₂ {x = x} =
         begin
           var-right x
             ≡⟨ sym (tabulate-∙ var-right) ⟩
           ⇑ʳ τ ∙ var-right x
             ≡⟨  sym (cong (⇑ʳ τ ∙_) (tabulate-∙ var-right)) ⟩
-          ⇑ʳ τ ∙ (tabulate var-right ∙ x)
+          ⇑ʳ τ ∙ (in-right ∙ x)
           ∎
 
   -- the action of a renaming on an expression
@@ -143,13 +164,3 @@ module Renaming (Sort : Set) where
        ; equiv = record { refl = refl ; sym = sym ; trans = trans }
        ; ∘-resp-≈ = λ ζ ξ → cong₂ _∘ʳ_ ζ ξ
        }
-
-  -- assoc-right : ∀ {γ δ η} → (γ ⊕ δ) ⊕ η →ʳ γ ⊕ (δ ⊕ η)
-  -- assoc-right (var-left (var-left x)) = var-left x
-  -- assoc-right (var-left (var-right y)) = var-right (var-left y)
-  -- assoc-right (var-right z) = var-right (var-right z)
-
-  -- assoc-left : ∀ {γ δ η} → γ ⊕ (δ ⊕ η) →ʳ (γ ⊕ δ) ⊕ η
-  -- assoc-left (var-left x) = var-left (var-left x)
-  -- assoc-left (var-right (var-left y)) = var-left (var-right y)
-  -- assoc-left (var-right (var-right z)) = var-right z
