@@ -92,6 +92,19 @@ module Renaming (Sort : Set) where
           ⇑ʳ τ ∙ (in-right ∙ x)
           ∎
 
+  -- composition of a substitution and a renaming
+  infixr 7 _ˢ∘ʳ_
+  _ˢ∘ʳ_ : ∀ {γ δ η} → (δ →ˢ η) → (γ →ʳ δ) → (γ →ˢ η)
+  f ˢ∘ʳ 𝟘 = 𝟘
+  f ˢ∘ʳ [ x ] = [ f ∙ x ]
+  f ˢ∘ʳ (ρ₁ ⊕ ρ₂) = (f ˢ∘ʳ ρ₁) ⊕ (f ˢ∘ʳ ρ₂)
+
+  ˢ∘ʳ-∙ : ∀ {γ δ η} (f : δ →ˢ η) (ρ : γ →ʳ δ) {a} (x : a ∈ γ) →
+             (f ˢ∘ʳ ρ) ∙ x ≡ f ∙ (ρ ∙ x)
+  ˢ∘ʳ-∙ f [ y ] var-here = refl
+  ˢ∘ʳ-∙ f (ρ₁ ⊕ ρ₂) (var-left x) = ˢ∘ʳ-∙ f ρ₁ x
+  ˢ∘ʳ-∙ f (ρ₁ ⊕ ρ₂) (var-right y) = ˢ∘ʳ-∙ f ρ₂ y
+
   -- the action of a renaming on an expression
 
   infixr 6 [_]ʳ_
