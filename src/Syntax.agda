@@ -16,31 +16,27 @@ open import Function using (_∘_)
    * rank 2: meta-variables and their instantiations
    * rank 3: symbols (term formers) in dependent type theory, such as Π, Σ, W, and syntactic transformations between theories
 
-   The syntax is parameterized by a type Class of syntactic classes. For example, in dependent type theory there might
-   be two syntactic classes, ty and tm, corresponding to type and term expressions. In the futre we would prefer to
-   generalize the situation to any number of proof-relevant and proof-irrelevant judgements.
+   This version has a single notion of syntactic entity. A generalization would have an additional parameter
+   specifying a set of type classes.
 
 -}
 
 
-module Syntax (Class : Set) where
+module Syntax where
 
   infixl 5 _⊕_
 
-  {- Shapes are a kind of variable contexts. They assign to each variable its syntactic arity, which is a syntactic
-     class and a binding shape. We model shapes as binary trees so that it is easy to concatenate two of them. A more
+  {- Shapes are a kind of variable contexts. They assign to each variable its syntactic arity, which is a binding shape.
+     We model shapes as binary trees so that it is easy to concatenate two of them. A more
      traditional approach models shapes as lists, in which case one has to append lists. -}
 
   data Shape : Set
 
   Arity : Set
-  Arity = Shape × Class
+  Arity = Shape
 
   arg : Arity → Shape
-  arg (γ  , _) = γ
-
-  class : Arity → Class
-  class (_  , cl) = cl
+  arg γ = γ
 
   data Shape where
     𝟘 : Shape -- the empty shape
@@ -90,7 +86,7 @@ module Syntax (Class : Set) where
   -- that it is defined at all positions.
   tabulate : ∀ {γ P} → (∀ {α} → α ∈ γ → P α) → All P γ
   tabulate {𝟘} f = 𝟘
-  tabulate {[ _ , _ ]} f = [ f var-here ]
+  tabulate {[ _ ]} f = [ f var-here ]
   tabulate {_ ⊕ _} f = tabulate (f ∘ var-left) ⊕ tabulate (f ∘ var-right)
 
   -- Extensionally equal maps give the same tabulations
@@ -153,10 +149,10 @@ module Syntax (Class : Set) where
   {- Because everything is a variable, even symbols, there is a single expression constructor
      x ` ts which forms and expression by applying the variable x to arguments ts. -}
 
-  data Expr : Shape → Class → Set
+  data Expr : Shape → Set
 
   Arg : Shape → Arity → Set
-  Arg γ (δ , cl) = Expr (γ ⊕ δ) cl
+  Arg γ δ = Expr (γ ⊕ δ)
 
   -- We define renamings and substitutions here so that they can be referred to.
 
@@ -177,16 +173,16 @@ module Syntax (Class : Set) where
   infix 9 _`_
 
   data Expr where
-    _`_ : ∀ {γ δ} {cl} (x : (δ , cl) ∈ γ) → (ts : δ →ˢ γ) → Expr γ cl
+    _`_ : ∀ {γ δ} (x : δ ∈ γ) → (ts : δ →ˢ γ) → Expr γ
 
   -- A common idiom
   infix 9 _``_
 
-  _``_ : ∀ {γ δ} {cl} (x : (δ , cl) ∈ γ) → (ts : ∀ {a} (z : a ∈ δ) → Arg γ a) → Expr γ cl
+  _``_ : ∀ {γ δ} (x : δ ∈ γ) → (ts : ∀ {a} (z : a ∈ δ) → Arg γ a) → Expr γ
   x `` ts = x ` tabulate ts
 
   -- Syntactic equality of expressions
 
-  ≡-` : ∀ {α} {γ} {x y : (γ , class α) ∈ arg α} {ts us : γ →ˢ arg α} →
+  ≡-` : ∀ {α} {γ} {x y : γ ∈ arg α} {ts us : γ →ˢ arg α} →
           x ≡ y → (∀ {αᶻ} (z : αᶻ ∈ γ) → ts ∙ z ≡ us ∙ z) → x ` ts ≡ y ` us
   ≡-` ζ ξ = cong₂ (_`_) ζ (shape-≡ ξ)
