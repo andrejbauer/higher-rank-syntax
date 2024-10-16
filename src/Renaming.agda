@@ -8,9 +8,9 @@ import Categories.Category
 import Syntax
 
 
-module Renaming (Sort : Set) where
+module Renaming where
 
-  open Syntax Sort
+  open Syntax
 
   -- identity renaming
 
@@ -110,7 +110,7 @@ module Renaming (Sort : Set) where
   infixr 6 [_]ʳ_
   infixl 7 _ʳ∘ˢ_
 
-  [_]ʳ_ : ∀ {γ δ cl} → γ →ʳ δ → Expr γ cl → Expr δ cl
+  [_]ʳ_ : ∀ {γ δ} → γ →ʳ δ → Expr γ → Expr δ
   _ʳ∘ˢ_ : ∀ {γ δ η} → δ →ʳ η → γ →ˢ δ → γ →ˢ η
 
   [ ρ ]ʳ (x ` ts) = ρ ∙ x ` (ρ ʳ∘ˢ ts)
@@ -126,7 +126,7 @@ module Renaming (Sort : Set) where
   ʳ∘ˢ-∙ {ts = ts₁ ⊕ ts₂} {x = var-right x₂} = ʳ∘ˢ-∙ {ts = ts₂}
 
   𝟙ʳ-ʳ∘ˢ : ∀ {γ δ} → {ts : γ →ˢ δ} → 𝟙ʳ ʳ∘ˢ ts ≡ ts
-  [𝟙ʳ] : ∀ {γ cl} {t : Expr γ cl} → [ 𝟙ʳ ]ʳ t ≡ t
+  [𝟙ʳ] : ∀ {γ} {t : Expr γ} → [ 𝟙ʳ ]ʳ t ≡ t
 
   𝟙ʳ-ʳ∘ˢ {ts = 𝟘} = refl
   𝟙ʳ-ʳ∘ˢ {ts = [ x ]} = cong [_] (trans (cong₂ [_]ʳ_ (cong₂ _⊕_ map-tabulate refl) refl) [𝟙ʳ])
@@ -142,7 +142,7 @@ module Renaming (Sort : Set) where
   -- the action is functorial
 
   ∘ʳ-ʳ∘ˢ : ∀ {γ δ θ η} {ρ : γ →ʳ δ} {τ : δ →ʳ θ} {σ : η →ˢ γ}  → τ ∘ʳ ρ ʳ∘ˢ σ ≡ τ ʳ∘ˢ (ρ ʳ∘ˢ σ)
-  [∘ʳ] : ∀ {γ δ θ cl} {ρ : γ →ʳ δ} {τ : δ →ʳ θ} (t : Expr γ cl) → [ τ ∘ʳ ρ ]ʳ t ≡ [ τ ]ʳ [ ρ ]ʳ t
+  [∘ʳ] : ∀ {γ δ θ} {ρ : γ →ʳ δ} {τ : δ →ʳ θ} (t : Expr γ) → [ τ ∘ʳ ρ ]ʳ t ≡ [ τ ]ʳ [ ρ ]ʳ t
 
   ∘ʳ-ʳ∘ˢ {σ = 𝟘} = refl
   ∘ʳ-ʳ∘ˢ {ρ = ρ} {τ = τ} {σ = [ t ]} = cong [_] (trans (cong (λ η → [ η ]ʳ t) (⇑ʳ-resp-∘ʳ {ρ = ρ} {τ = τ})) ([∘ʳ] t))

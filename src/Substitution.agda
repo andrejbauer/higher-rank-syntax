@@ -11,11 +11,10 @@ open ≡-Reasoning
 import Syntax
 import Renaming
 
+module Substitution where
 
-module Substitution (Class : Set) where
-
-  open Syntax Class
-  open Renaming Class
+  open Syntax
+  open Renaming
 
   -- Lifting of renamings to substitutions, and of variables to expressions
 
@@ -28,9 +27,6 @@ module Substitution (Class : Set) where
   lift (ρ₁ ⊕ ρ₂) = lift ρ₁ ⊕ lift ρ₂
 
   η x = var-left x ` lift (tabulate var-right)
-
-  -- Ideally we would like the following to be the definition of lift,
-  -- but Agda termination gets in the way
 
   lift-map-η : ∀ {γ δ} (ρ : γ →ʳ δ) → lift ρ ≡ map η ρ
   lift-map-η 𝟘 = refl
@@ -128,13 +124,13 @@ module Substitution (Class : Set) where
 
   -- Auxiliary substitution function
   {-# TERMINATING #-}
-  sbs : ∀ {γ δ θ} (ρ : γ →ʳ θ) (f : δ →ˢ θ) {cl} → Expr (γ ⊕ δ) cl → Expr θ cl
+  sbs : ∀ {γ δ θ} (ρ : γ →ʳ θ) (f : δ →ˢ θ) → Expr (γ ⊕ δ) → Expr θ
   sbs ρ f (var-left x ` ts) = ρ ∙ x `` λ z → sbs (in-left ∘ʳ ρ) (⇑ˢ f) ([ assoc-right ]ʳ ts ∙ z)
   sbs ρ f (var-right x ` ts) = sbs 𝟙ʳ (tabulate (λ z → sbs (in-left ∘ʳ ρ) (⇑ˢ f) ([ assoc-right ]ʳ ts ∙ z))) (f ∙ x)
 
   -- The action of substitution
   infixr 6 [_]ˢ_
-  [_]ˢ_ : ∀ {γ δ cl} (f : γ →ˢ δ) → Expr γ cl → Expr δ cl
+  [_]ˢ_ : ∀ {γ δ} (f : γ →ˢ δ) → Expr γ → Expr δ
   [ f ]ˢ e = sbs 𝟙ʳ f ([ in-right ]ʳ e)
 
   -- Composition of substitutions
@@ -151,7 +147,7 @@ module Substitution (Class : Set) where
   --        [ g ∘ˢ f ]ˢ e ≡ [ g ]ˢ [ f ]ˢ e
   -- [∘]ˢ f g (x ` ts) = {!!}
 
-  sbs-lift : ∀ {γ δ θ} (ρ : γ →ʳ θ) (τ : δ →ʳ θ) {cl} (e : Expr (γ ⊕ δ) cl) →
+  sbs-lift : ∀ {γ δ θ} (ρ : γ →ʳ θ) (τ : δ →ʳ θ) (e : Expr (γ ⊕ δ)) →
               sbs ρ (lift τ) e ≡ [ ρ ⊕ τ ]ʳ e
   sbs-lift ρ τ (var-left x ` ts) =
     ≡-`
@@ -164,16 +160,10 @@ module Substitution (Class : Set) where
   sbs-lift ρ τ (var-right x ` ts) =
     trans
       (cong (sbs 𝟙ʳ _) (lift-∙ τ x))
-      (≡-` 𝟙ʳ-≡ λ z → trans {!!} {!!})
+      (≡-` 𝟙ʳ-≡ λ z → {!!})
 
-  [lift]ˢ : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → [ lift ρ ]ˢ e ≡ [ ρ ]ʳ e
-  [lift]ˢ ρ (x ` ts) =
-    let open ≡-Reasoning in
-      begin
-        [ lift ρ ]ˢ x ` ts
-          ≡⟨ {!!} ⟩
-        {!!}
-
+  [lift]ˢ : ∀ {γ δ} (ρ : γ →ʳ δ) (e : Expr γ) → [ lift ρ ]ˢ e ≡ [ ρ ]ʳ e
+  [lift]ˢ ρ (x ` ts) = {!!}
 
   -- lift-∘ˢ : ∀ {γ δ θ} (ρ : δ →ʳ θ) (f : γ →ˢ δ) → lift ρ ∘ˢ f ≡ ρ ʳ∘ˢ f
   -- lift-∘ˢ {γ = γ} ρ f = shape-≡ λ x → E x

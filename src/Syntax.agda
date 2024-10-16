@@ -27,8 +27,12 @@ module Syntax where
   infixl 5 _⊕_
 
   {- Shapes are a kind of variable contexts. They assign to each variable its syntactic arity, which is a binding shape.
-     We model shapes as binary trees so that it is easy to concatenate two of them. A more
-     traditional approach models shapes as lists, in which case one has to append lists. -}
+     We model shapes as binary trees so that it is easy to concatenate two of them. A more traditional approach models
+     shapes as lists, in which case one has to append lists. -}
+
+  -- We refer to a Shape when we have in mind an entity that describes available variables,
+  -- and to an Arity when we think of the description of the arguments that a variable/symbol accepts.
+  -- Formally, they are the same thing, though.
 
   data Shape : Set
 
@@ -45,17 +49,14 @@ module Syntax where
 
   -- -- Examples:
 
-  -- postulate ty : Class -- type class
-  -- postulate tm : Class -- term class
+  ordinary-variable-arity : Shape
+  ordinary-variable-arity = 𝟘
 
-  -- ordinary-variable-arity : Class → Shape
-  -- ordinary-variable-arity c = [ 𝟘 , c ]
+  binary-type-metavariable-arity : Shape
+  binary-type-metavariable-arity = [ [ 𝟘 ] ⊕ [ 𝟘 ] ]
 
-  -- binary-type-metavariable-arity : Shape
-  -- binary-type-metavariable-arity = [ [ 𝟘 , tm ] ⊕ [ 𝟘 , tm ] , ty ]
-
-  -- Π-arity : Shape
-  -- Π-arity = [ [ 𝟘 , ty ] ⊕ [ [ 𝟘 , tm ] , ty ] , ty ]
+  Π-arity : Shape
+  Π-arity = [ [ 𝟘 ] ⊕ [ [ 𝟘 ] ] ]
 
   infix 3 _∈_
 
@@ -75,31 +76,37 @@ module Syntax where
   -- The definition of All, tabulate, lookup and map is taken from
   -- https://github.com/gallais/potpourri/blob/349d2f282a100ea5d82a548455b040939b04e67e/agda/poc/Syntax.agda
 
-  -- A “predicate” witnessing that P is inhabited at all positions
-  -- of a shape.
-  data All (P : Arity → Set) : Shape → Set where
-    𝟘 : All P 𝟘
-    [_] : ∀ {α} → P α → All P [ α ]
-    _⊕_ : ∀ {γ δ} → All P γ → All P δ → All P (γ ⊕ δ)
+  -- A shape has positions, as detailed by _∈_ above. Often we want a map
+  -- that for each positions  α ∈ γ returns an element of P α, where P
+  -- is a type family indexed by arities. Such a map has the type
+  -- ∀ γ {α} → α ∈ γ → P α. However, it is often easier to work
+  -- with an equivalent representation of such a map, one that closely
+  -- follows the structure of shapes.
+  --
+  -- The following definition accomplishes the idea. Given a type family
+  -- P : Arity → Set and a shape γ, an element of Map P γ represents a
+  -- map taking each α ∈ γ to an element of P α.
+  data ShapeMap (P : Arity → Set) : Shape → Set where
+    𝟘 : ShapeMap P 𝟘
+    [_] : ∀ {α} → P α → ShapeMap P [ α ]
+    _⊕_ : ∀ {γ δ} → ShapeMap P γ → ShapeMap P δ → ShapeMap P (γ ⊕ δ)
 
-  -- Given a map on positions of a shape, we can produce evidence
-  -- that it is defined at all positions.
-  tabulate : ∀ {γ P} → (∀ {α} → α ∈ γ → P α) → All P γ
+  -- Given a map on positions of a shape, we can produce the corresponding ShapeMap
+  tabulate : ∀ {γ P} → (∀ {α} → α ∈ γ → P α) → ShapeMap P γ
   tabulate {𝟘} f = 𝟘
   tabulate {[ _ ]} f = [ f var-here ]
   tabulate {_ ⊕ _} f = tabulate (f ∘ var-left) ⊕ tabulate (f ∘ var-right)
 
-  -- Extensionally equal maps give the same tabulations
+  -- Extensionally equal maps give the same ShapeMap's
   tabulate-ext : ∀ {P : Arity → Set} {γ} {f g : ∀ {α} → α ∈ γ → P α} →
                  (∀ {α} {x : α ∈ γ} → f x ≡ g x) → tabulate f ≡ tabulate g
   tabulate-ext {γ = 𝟘} ξ = refl
   tabulate-ext {γ = [ x ]} ξ = cong [_] ξ
   tabulate-ext {γ = γ ⊕ δ} ξ = cong₂ _⊕_ (tabulate-ext ξ) (tabulate-ext ξ)
 
-  -- Given evidence that a map is defined at all positions of a shape,
-  -- we can lookup one of its values.
+  -- In reverse direction, we can convert a ShapeMap to the map it represents
   infixl 12 _∙_
-  _∙_ : ∀ {γ P} → All P γ → (∀ {α} → α ∈ γ → P α)
+  _∙_ : ∀ {γ P} → ShapeMap P γ → (∀ {α} → α ∈ γ → P α)
   [ p ] ∙ var-here = p
   (ps ⊕ _) ∙ (var-left x) = ps ∙ x
   (_ ⊕ qs) ∙ (var-right y) = qs ∙ y
@@ -110,23 +117,26 @@ module Syntax where
   tabulate-∙ f {x = var-left x} = tabulate-∙ (f ∘ var-left)
   tabulate-∙ f {x = var-right y} = tabulate-∙ (f ∘ var-right)
 
-  cong-∙ : ∀ {γ P} {f g : All P γ} {α} {x y : α ∈ γ} → f ≡ g → x ≡ y → f ∙ x ≡ g ∙ y
+  -- The operation _∙_ preserves equality (every operation does, but we will need this
+  -- specific fact later).
+  cong-∙ : ∀ {γ P} {f g : ShapeMap P γ} {α} {x y : α ∈ γ} → f ≡ g → x ≡ y → f ∙ x ≡ g ∙ y
   cong-∙ refl refl = refl
 
-  map : ∀ {γ P Q} → (∀ {α} → P α → Q α) → All P γ → All Q γ
+  -- Map the values stored in a ShapeMap
+  map : ∀ {γ P Q} → (∀ {α} → P α → Q α) → ShapeMap P γ → ShapeMap Q γ
   map f 𝟘 = 𝟘
   map f [ x ] = [ f x ]
   map f (ps ⊕ qs) = map f ps ⊕ map f qs
 
-  map-map : ∀ {γ} {P Q R : Arity → Set} (f : ∀ {α} → P α → Q α) (g : ∀ {α} → Q α → R α) {p : All P γ} →
+  -- Mapping g ∘ f is the same as mapping f followed by mapping g
+  map-map : ∀ {γ} {P Q R : Arity → Set} (f : ∀ {α} → P α → Q α) (g : ∀ {α} → Q α → R α) {p : ShapeMap P γ} →
               map (g ∘ f) p ≡ map g (map f p)
   map-map f g {p = 𝟘} = refl
   map-map f g {p = [ x ]} = refl
   map-map f g {p = p₁ ⊕ p₂} = cong₂ _⊕_ (map-map f g) (map-map f g)
 
-  -- map-ext : ∀ {γ P Q} (f g : ∀ {a} → P a → Q a) →
-
-  shape-≡ : ∀ {γ P} {ps qs : All P γ} → (∀ {α} (x : α ∈ γ) → ps ∙ x ≡ qs ∙ x)
+  -- If two ShapeMaps store the same values then they are equal
+  shape-≡ : ∀ {γ P} {ps qs : ShapeMap P γ} → (∀ {α} (x : α ∈ γ) → ps ∙ x ≡ qs ∙ x)
             → ps ≡ qs
   shape-≡ {ps = 𝟘} {qs = 𝟘} ξ = refl
   shape-≡ {ps = [ x ]} {qs = [ y ]} ξ = cong [_] (ξ var-here)
@@ -141,16 +151,20 @@ module Syntax where
   map-tabulate {γ = _ ⊕ _} = cong₂ _⊕_ map-tabulate map-tabulate
 
   -- the interaction of map and ∙
-  map-∙ : ∀ {γ P} {Q : Arity → Set} → {f : ∀ {α} → P α → Q α} {ps : All P γ} {α : Arity} {x : α ∈ γ} → map f ps ∙ x  ≡ f (ps ∙ x)
+  map-∙ : ∀ {γ P} {Q : Arity → Set} → {f : ∀ {α} → P α → Q α} {ps : ShapeMap P γ} {α : Arity} {x : α ∈ γ} → map f ps ∙ x  ≡ f (ps ∙ x)
   map-∙ {ps = [ _ ]} {x = var-here} = refl
   map-∙ {ps = ps₁ ⊕ ps₂} {x = var-left x} = map-∙ {ps = ps₁}
   map-∙ {ps = ps₁ ⊕ ps₂} {x = var-right x} = map-∙ {ps = ps₂}
 
-  {- Because everything is a variable, even symbols, there is a single expression constructor
-     x ` ts which forms and expression by applying the variable x to arguments ts. -}
+  {- We now proceed with the definition of expressions. Because everything is a variable, even symbols, there is a
+     single expression constructor x ` ts which forms and expression by applying the variable x to arguments ts. -}
 
+  -- The expressions over a given shape
   data Expr : Shape → Set
 
+  -- Auxiliary definition, think of Arg γ δ as the set of expressions that may refer to free
+  -- variables in γ and bound variables in δ. The name arises because Arg γ δ is also the
+  -- set of possible arguments of a variable of arity δ in shape γ.
   Arg : Shape → Arity → Set
   Arg γ δ = Expr (γ ⊕ δ)
 
@@ -159,19 +173,19 @@ module Syntax where
   -- Renaming
   infix 4 _→ʳ_
 
+  -- A renaming from γ to δ  maps every position in γ to a position in δ, while preserving
+  -- the arity.
   _→ʳ_ : Shape → Shape → Set
-  γ →ʳ δ = All (_∈ δ) γ
+  γ →ʳ δ = ShapeMap (_∈ δ) γ
 
-  -- Substitution
+  -- A substitution from γ to δ maps every position in γ of arity α to an expression
+  -- with free variables δ and bound variables α
   infix 4 _→ˢ_
-
   _→ˢ_ : Shape → Shape → Set
-  γ →ˢ δ = All (Arg δ) γ
+  γ →ˢ δ = ShapeMap (Arg δ) γ
 
   -- Expressions
-
   infix 9 _`_
-
   data Expr where
     _`_ : ∀ {γ δ} (x : δ ∈ γ) → (ts : δ →ˢ γ) → Expr γ
 
@@ -182,7 +196,6 @@ module Syntax where
   x `` ts = x ` tabulate ts
 
   -- Syntactic equality of expressions
-
   ≡-` : ∀ {α} {γ} {x y : γ ∈ arg α} {ts us : γ →ˢ arg α} →
           x ≡ y → (∀ {αᶻ} (z : αᶻ ∈ γ) → ts ∙ z ≡ us ∙ z) → x ` ts ≡ y ` us
   ≡-` ζ ξ = cong₂ (_`_) ζ (shape-≡ ξ)
