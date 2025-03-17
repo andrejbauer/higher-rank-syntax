@@ -6,6 +6,14 @@ import Mathlib.CategoryTheory.Monad.Basic
 
 import HigherRankSyntax.RelativeMonads.RelativeMonad
 
+open CategoryTheory
+
+section
+  universe u₁ u₂ v₁ v₂
+
+  variable {A : Type u₁} [Category.{v₁} A]
+  variable {E : Type u₂} [Category.{v₂} E]
+  variable (J : A ⥤ E)
 
 
 /- This one might be the idenitity Klesili triple (as a relative monad), precomposed with J,
@@ -21,10 +29,16 @@ def RelativeMonad.Id : RelativeMonad J :=
 def RelativeMonad.precompose.{u₃, v₃} {B : Type u₃} [Category.{v₃} B] (G : B ⥤ A) (M : RelativeMonad J) :
   RelativeMonad (G ⋙ J) :=
   { map := fun X => M.map (G.obj X)
-    η := sorry
-    lift := sorry
-    unit_left := sorry
-    unit_right := sorry
-    comp_lift := sorry
+    η := fun X => M.η (G.obj X)
+    lift := fun f => M.lift f
+    unit_right := fun X => by
+      simp
+      apply unit_right
+    unit_left := fun f => by
+      simp
+      sorry
+    comp_lift := fun f g => by
+      simp
+      apply comp_lift
   }
 end

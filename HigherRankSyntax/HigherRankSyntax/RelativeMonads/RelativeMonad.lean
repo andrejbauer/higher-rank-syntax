@@ -27,7 +27,8 @@ section
     unit_right : ∀ (X : A), lift (η X) = 𝟙 (map X)
     unit_left : forall {X Y : A} (f : (J.obj X) ⟶ (map Y)),
       f =  η X ≫ lift f
-    comp_lift : forall (X Y Z : A)
+    comp_lift : forall {X Y Z : A}
       (f : (J.obj X) ⟶ (map Y))
       (g : (J.obj Y) ⟶ (map Z)),
       lift (f ≫ (lift g)) = (lift f) ≫ (lift g)
+end
