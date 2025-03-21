@@ -42,16 +42,12 @@ section
       η := fun X => T.η.app X
       lift := fun {X Y} f => (T.map f) ≫ (T.μ.app Y)
       unit_right := fun x => by simp
-      unit_left := fun {X Y} f => sorry
-      comp_lift := fun {X Y Z} f g => sorry
-
+      unit_left := fun {X Y} f => by simp [←Category.assoc, ←T.η.naturality f, Category.assoc, T.left_unit]
+      comp_lift := fun {X Y Z} f g => by
+        have nat_g := T.μ.naturality g
+        simp at nat_g
+        simp [T.assoc, ←Category.assoc (T.map (T.map g)), nat_g]
 end
-
-
-        /-- by
-        simp
-        sorry -/
-        /-- rewrite [<-T.η.naturality f] -/
 
 section FromKlesiliTripleToRelativeMonad
 
