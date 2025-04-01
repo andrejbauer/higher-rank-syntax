@@ -26,19 +26,21 @@ def RelativeMonad.Id : RelativeMonad J :=
     unit_left := by aesop_cat
     comp_lift := by aesop_cat }
 
-def RelativeMonad.precompose.{u₃, v₃} {B : Type u₃} [Category.{v₃} B] (G : B ⥤ A) (M : RelativeMonad J) :
+def RelativeMonad.precompose.{u₃, v₃} {B : Type u₃} [Category.{v₃} B] (G : B ⥤ A) (T : RelativeMonad J) :
   RelativeMonad (G ⋙ J) :=
-  { map := fun X => M.map (G.obj X)
-    η := fun X => M.η (G.obj X)
-    lift := fun f => M.lift f
-    unit_right := fun X => by
+  { map := fun X => T.map (G.obj X)
+    η := fun X => T.η (G.obj X)
+    lift := T.lift
+    unit_right := by
+      intro X
+      apply T.unit_right
+    unit_left := by
+      intro X Y f
+      apply T.unit_left
+
+    comp_lift := by
       simp
-      apply unit_right
-    unit_left := fun f => by
-      simp
-      sorry
-    comp_lift := fun f g => by
-      simp
-      apply comp_lift
+      intro X Y Z f g
+      apply T.comp_lift
   }
 end

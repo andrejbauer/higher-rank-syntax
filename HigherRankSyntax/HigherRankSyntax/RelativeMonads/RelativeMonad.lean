@@ -32,3 +32,19 @@ section
       (g : (J.obj Y) ⟶ (map Z)),
       lift (f ≫ (lift g)) = (lift f) ≫ (lift g)
 end
+
+section
+  universe u₁ u₂ v₁ v₂
+  variable {A : Type u₁} [Category.{v₁} A]
+  variable {E : Type u₂} [Category.{v₂} E]
+  variable (J : A ⥤ E)
+  variable (T T' : RelativeMonad J)
+
+/-- Tentative definition for relative monad morphisms
+  (where both monads have the same root J)-/
+  structure RelMonHom where
+    map_hom {X : A} : (T.map X) ⟶ (T'.map X)
+    hom_unit {X : A} : (T.η X) ≫ map_hom = (T'.η X)
+    hom_lift {X Y} : ∀ (f : (J.obj X)  ⟶ (T.map Y)),
+      (T.lift f) ≫ map_hom = map_hom (X := X) ≫ (T'.lift (f ≫ map_hom))
+end
