@@ -48,3 +48,8 @@ section
     hom_lift {X Y} : ∀ (f : (J.obj X)  ⟶ (T.map Y)),
       (T.lift f) ≫ map_hom = map_hom (X := X) ≫ (T'.lift (f ≫ map_hom))
 end
+
+/- I sould add proofs that :
+  - T can be equiupped with a functor structure
+  - η and lift are then natural transformations
+-/
