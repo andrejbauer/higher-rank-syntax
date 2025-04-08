@@ -43,4 +43,8 @@ end
 
 /- Add proofs that :
   - χ is natural
+  - We can define an identity map for relative algebras
+  - We can define composition for these maps
+  - We can form a category with these algebras and morphisms
+
 -/
