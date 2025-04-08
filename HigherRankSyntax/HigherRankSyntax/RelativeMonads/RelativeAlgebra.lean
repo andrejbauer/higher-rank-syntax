@@ -24,21 +24,15 @@ universe u₁ u₂ v₁ v₂
       (k : J.obj Z ⟶ T.map W)
       (f : J.obj W ⟶ carr),
       (T.lift k) ≫ (χ f) = χ (k ≫ (χ f))
-end
 
-section
-universe u₁ u₂ v₁ v₂
-
-  variable {A : Type u₁} [Category.{v₁} A]
-  variable {E : Type u₂} [Category.{v₂} E]
-  variable {J : A ⥤ E}
-  variable {T : RelativeMonad J}
-  variable (X X' : RelativeAlgebra T)
-
-  structure RelAlgebraHom where
-    carr_map : X.carr ⟶ X'.carr
+  structure RelativeAlgebraHom (X Y : RelativeAlgebra T) where
+    carr_map : X.carr ⟶ Y.carr
     struct_comm : ∀ {Z : A} (f : J.obj Z ⟶ X.carr),
-      (X.χ f) ≫ carr_map  = X'.χ (f ≫ carr_map)
+      (X.χ f) ≫ carr_map  = Y.χ (f ≫ carr_map)
+
+  instance cow : Category (RelativeAlgebra T) where
+    Hom := RelativeAlgebraHom T
+
 end
 
 /- Add proofs that :
