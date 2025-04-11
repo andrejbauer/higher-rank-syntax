@@ -31,7 +31,19 @@ universe u₁ u₂ u₃ v₁ v₂
   (Altenkirch, Chapman & Uustalu). -/
 
 
-  structure RelativeAdjunction where
+  /-- This version uses isomorphisms already defined in
+ Mathlib.CategoryTheory.Iso so it may be more practical
+ to work with this one. -/
+
+  -- def IsoLeftFunctor : Aᵒᵖ × C ⥤ Type v₂ := L.op.prod (𝟭 C) ⋙ Functor.hom C
+  -- def IsoRightFunctor : Aᵒᵖ × C ⥤ Type v₂  := J.op.prod R ⋙ Functor.hom E
+
+  def RelativeAdjunction :=
+    L.op.prod (𝟭 C) ⋙ Functor.hom C
+     ≅ J.op.prod R ⋙ Functor.hom E
+  -- infixl:15 " ⊣ʳ " => RelativeAdjunction
+
+  structure RelativeAdjunction_alt where
     /- Natural transformation α : () ⟶ ()-/
     α : (L.op.prod (𝟭 _) ⋙ .hom C) ⟶ (J.op.prod R ⋙ .hom E)
     /- Inverse(candidate) α⁻ : () ⟶ ()-/
@@ -41,22 +53,8 @@ universe u₁ u₂ u₃ v₁ v₂
     /- Proof that β is right inverse to α -/
     αβ_inverse : β ≫ α = 𝟙 _
 
-  -- infixl:15 " ⊣ʳ " => RelativeAdjunction
 
-  /-- This version uses isomorphisms already defined in
- Mathlib.CategoryTheory.Iso so it may be more practical
- to work with this one. -/
-
-  -- def IsoLeftFunctor : Aᵒᵖ × C ⥤ Type v₂ := L.op.prod (𝟭 C) ⋙ Functor.hom C
-  -- def IsoRightFunctor : Aᵒᵖ × C ⥤ Type v₂  := J.op.prod R ⋙ Functor.hom E
-
-  def RelativeAdjunction_alt :=
-    L.op.prod (𝟭 C) ⋙ Functor.hom C
-     ≅ J.op.prod R ⋙ Functor.hom E
-
-
-
-  -- Possible progress:
+-- Possible progress:
   -- 1. every adjunction gives a relative adjunction
   -- 2. every relative adjunction gives a relative monad (Theorem 2.10)
   -- 3. every relative monad gives a Kleisli relative adjunction (paragraph 3 of section 2.3)
@@ -107,8 +105,8 @@ def invNatTrans :
       rw[homEquiv_naturality_left_symm, homEquiv_naturality_right_symm]
 
 
-  def Adjunction.toRelativeAdjunction_alt :
-    RelativeAdjunction_alt (𝟭 C) F G where
+  def Adjunction.toRelativeAdjunction :
+    RelativeAdjunction (𝟭 C) F G where
       hom := homNatTrans F G adj
       inv := invNatTrans F G adj
       hom_inv_id := sorry
@@ -116,15 +114,49 @@ def invNatTrans :
 
 
 
-  /- I may remove the following piece of code later,
+/- I may remove the following piece of code later,
   if I choose to continue with the "_alt" version
   of relative adjunctions. -/
 
-  def Adjunction.toRelativeAdjunction  :
-    RelativeAdjunction (𝟭 C) F G where
+  def Adjunction.toRelativeAdjunction_alt  :
+    RelativeAdjunction_alt (𝟭 C) F G where
       α := sorry
       β := sorry
       βα_inverse := sorry
       αβ_inverse := sorry
 
 end FromAdjunctionToRelativeAdjunction
+
+section FromRelativeAdjunctionToRelativeMonad
+universe u₁ u₂ u₃ v₁ v₂
+
+  variable {A : Type u₁} [Category.{v₁} A]
+  variable {E : Type u₂} [Category.{v₂} E]
+  variable (J : A ⥤ E)
+  variable {C : Type u₃} [Category.{v₂} C]
+
+  variable (L : A ⥤ C)
+  variable (R : C ⥤ E)
+
+  def RelativeAdjunction.toRelativeMonad (rel_adj : RelativeAdjunction J L R) :
+    (RelativeMonad J) where
+    -- objects
+    map X := R.obj (L.obj X)
+    η X := by
+      have id_LX := 𝟙 (L.obj X)
+      have Φ_LX := (rel_adj.hom.app ((op X) , L.obj X))
+      simp at Φ_LX
+      exact (Φ_LX id_LX)
+    lift {X Y} f := by
+      simp
+      have Φinv_XLY := (rel_adj.inv.app (op X, L.obj Y))
+      simp at Φinv_XLY
+      exact (R.map (Φinv_XLY f))
+    -- laws
+    unit_left := sorry
+    unit_right := sorry
+    comp_lift := sorry
+
+
+
+end FromRelativeAdjunctionToRelativeMonad
