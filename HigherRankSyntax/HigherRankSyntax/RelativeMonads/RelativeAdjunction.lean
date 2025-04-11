@@ -75,7 +75,7 @@ section FromAdjunctionToRelativeAdjunction
   variable (G : D ⥤ C)
   variable (adj : F ⊣ G)
 
-
+  @[reducible]
   def homNatTrans :
     F.op.prod (𝟭 D) ⋙ Functor.hom D
     ⟶ (𝟭 C).op.prod G ⋙ Functor.hom C where
@@ -84,34 +84,29 @@ section FromAdjunctionToRelativeAdjunction
       intro φ
       exact (adj.homEquiv (unop f.1) f.2) φ
     naturality f g h := by
-      simp
-      apply funext
-      intro φ
+      funext φ
       simp
       rw[homEquiv_naturality_left, homEquiv_naturality_right]
 
+@[reducible]
 def invNatTrans :
   (𝟭 C).op.prod G ⋙ Functor.hom C
   ⟶  F.op.prod (𝟭 D) ⋙ Functor.hom D where
     app f := by
-      simp
       intro φ
       exact (adj.homEquiv (unop f.1) f.2).symm φ
     naturality g f h := by
+      funext φ
       simp
-      apply funext
-      intro φ
-      simp
-      rw[homEquiv_naturality_left_symm, homEquiv_naturality_right_symm]
+      rw [homEquiv_naturality_left_symm, homEquiv_naturality_right_symm]
 
 
   def Adjunction.toRelativeAdjunction :
     RelativeAdjunction (𝟭 C) F G where
       hom := homNatTrans F G adj
       inv := invNatTrans F G adj
-      hom_inv_id := sorry
-      inv_hom_id := sorry
-
+      hom_inv_id := by aesop_cat
+      inv_hom_id := by aesop_cat
 
 
 /- I may remove the following piece of code later,
@@ -158,7 +153,6 @@ universe u₁ u₂ u₃ v₁ v₂
     unit_left := sorry
     unit_right := sorry
     comp_lift := sorry
-
 
 
 end FromRelativeAdjunctionToRelativeMonad
