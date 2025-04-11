@@ -15,20 +15,20 @@ universe u₁ u₂ v₁ v₂
   variable (T : RelativeMonad J)
 
   structure RelativeAlgebra where
-    carr : E
-    χ : ∀ {Z : A},
-      (J.obj Z ⟶ carr) → (T.map Z ⟶ carr)
-    unit_law : ∀ {Z : A} (f : J.obj Z ⟶ carr),
-      f = (T.η Z)≫ (χ f)
+    carrier : E
+    struct : ∀ {Z : A},
+      (J.obj Z ⟶ carrier) → (T.map Z ⟶ carrier)
+    unit_law : ∀ {Z : A} (f : J.obj Z ⟶ carrier),
+      f = (T.η Z)≫ (struct f)
     bind_law : ∀ {Z W: A}
       (k : J.obj Z ⟶ T.map W)
-      (f : J.obj W ⟶ carr),
-      (T.lift k) ≫ (χ f) = χ (k ≫ (χ f))
+      (f : J.obj W ⟶ carrier),
+      (T.lift k) ≫ (struct f) = struct (k ≫ (struct f))
 
   structure RelativeAlgebraHom (X Y : RelativeAlgebra T) where
-    carr_map : X.carr ⟶ Y.carr
-    struct_comm : ∀ {Z : A} (f : J.obj Z ⟶ X.carr),
-      (X.χ f) ≫ carr_map  = Y.χ (f ≫ carr_map)
+    carrier_map : X.carrier ⟶ Y.carrier
+    struct_commute : ∀ {Z : A} (f : J.obj Z ⟶ X.carrier),
+      (X.struct f) ≫ carrier_map  = Y.struct (f ≫ carrier_map)
 
   instance cow : Category (RelativeAlgebra T) where
     Hom := RelativeAlgebraHom T

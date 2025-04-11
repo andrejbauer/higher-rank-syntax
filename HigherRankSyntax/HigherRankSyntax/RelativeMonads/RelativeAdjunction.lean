@@ -4,17 +4,23 @@ import Lean.Level
 import Mathlib.CategoryTheory.Monad.Basic
 import Mathlib.CategoryTheory.Products.Basic
 import Mathlib.CategoryTheory.Types
+import Mathlib.CategoryTheory.NatIso
+import Mathlib.CategoryTheory.Adjunction.Basic
+
+
 import HigherRankSyntax.RelativeMonads.RelativeMonad
 
 open CategoryTheory
 open Opposite
+open NatIso
+open Adjunction
 
 section
-universe u₁ u₂ u₃ v₁ v₂ v₃ w₁ w₂
+universe u₁ u₂ u₃ v₁ v₂
 
   variable {A : Type u₁} [Category.{v₁} A]
   variable {E : Type u₂} [Category.{v₂} E]
-  variable {J : A ⥤ E}
+  variable (J : A ⥤ E)
   variable {C : Type u₃} [Category.{v₂} C]
 
   variable (L : A ⥤ C)
@@ -24,8 +30,6 @@ universe u₁ u₂ u₃ v₁ v₂ v₃ w₁ w₂
   is based on the paper "Monads need not be endofunctors"
   (Altenkirch, Chapman & Uustalu). -/
 
-  -- def cow : Aᵒᵖ × C ⥤ Type v₂  := J.op.prod R ⋙ Functor.hom E
-  -- def dog : Aᵒᵖ × C ⥤ Type v₂ := L.op.prod (𝟭 C) ⋙ Functor.hom C
 
   structure RelativeAdjunction where
     /- Natural transformation α : () ⟶ ()-/
@@ -37,7 +41,20 @@ universe u₁ u₂ u₃ v₁ v₂ v₃ w₁ w₂
     /- Proof that β is right inverse to α -/
     αβ_inverse : β ≫ α = 𝟙 _
 
-  /-infixl:15 " ⊣ʳ " => RelativeAdjunction-/
+  -- infixl:15 " ⊣ʳ " => RelativeAdjunction
+
+  /-- This version uses isomorphisms already defined in
+ Mathlib.CategoryTheory.Iso so it may be more practical
+ to work with this one. -/
+
+  -- def IsoLeftFunctor : Aᵒᵖ × C ⥤ Type v₂ := L.op.prod (𝟭 C) ⋙ Functor.hom C
+  -- def IsoRightFunctor : Aᵒᵖ × C ⥤ Type v₂  := J.op.prod R ⋙ Functor.hom E
+
+  def RelativeAdjunction_alt :=
+    L.op.prod (𝟭 C) ⋙ Functor.hom C
+     ≅ J.op.prod R ⋙ Functor.hom E
+
+
 
   -- Possible progress:
   -- 1. every adjunction gives a relative adjunction
@@ -48,3 +65,66 @@ universe u₁ u₂ u₃ v₁ v₂ v₃ w₁ w₂
   --    (first requires the definition of the Elienberg-Moore category of a relative monad)
 
 end
+
+section FromAdjunctionToRelativeAdjunction
+
+  universe v v₂ u₁ u₂
+
+  variable {C : Type u₁} [Category.{v} C]
+  variable {D : Type u₂} [Category.{v} D]
+
+  variable (F : C ⥤ D)
+  variable (G : D ⥤ C)
+  variable (adj : F ⊣ G)
+
+
+  def homNatTrans :
+    F.op.prod (𝟭 D) ⋙ Functor.hom D
+    ⟶ (𝟭 C).op.prod G ⋙ Functor.hom C where
+    app f := by
+      simp
+      intro φ
+      exact (adj.homEquiv (unop f.1) f.2) φ
+    naturality f g h := by
+      simp
+      apply funext
+      intro φ
+      simp
+      rw[homEquiv_naturality_left, homEquiv_naturality_right]
+
+def invNatTrans :
+  (𝟭 C).op.prod G ⋙ Functor.hom C
+  ⟶  F.op.prod (𝟭 D) ⋙ Functor.hom D where
+    app f := by
+      simp
+      intro φ
+      exact (adj.homEquiv (unop f.1) f.2).symm φ
+    naturality g f h := by
+      simp
+      apply funext
+      intro φ
+      simp
+      rw[homEquiv_naturality_left_symm, homEquiv_naturality_right_symm]
+
+
+  def Adjunction.toRelativeAdjunction_alt :
+    RelativeAdjunction_alt (𝟭 C) F G where
+      hom := homNatTrans F G adj
+      inv := invNatTrans F G adj
+      hom_inv_id := sorry
+      inv_hom_id := sorry
+
+
+
+  /- I may remove the following piece of code later,
+  if I choose to continue with the "_alt" version
+  of relative adjunctions. -/
+
+  def Adjunction.toRelativeAdjunction  :
+    RelativeAdjunction (𝟭 C) F G where
+      α := sorry
+      β := sorry
+      βα_inverse := sorry
+      αβ_inverse := sorry
+
+end FromAdjunctionToRelativeAdjunction
