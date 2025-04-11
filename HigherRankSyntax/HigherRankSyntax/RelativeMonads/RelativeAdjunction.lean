@@ -118,12 +118,12 @@ def invNatTrans :
   if I choose to continue with the "_alt" version
   of relative adjunctions. -/
 
-  def Adjunction.toRelativeAdjunction_alt  :
+  /- def Adjunction.toRelativeAdjunction_alt  :
     RelativeAdjunction_alt (𝟭 C) F G where
       α := sorry
       β := sorry
       βα_inverse := sorry
-      αβ_inverse := sorry
+      αβ_inverse := sorry -/
 
 end FromAdjunctionToRelativeAdjunction
 
@@ -138,21 +138,23 @@ universe u₁ u₂ u₃ v₁ v₂
   variable (L : A ⥤ C)
   variable (R : C ⥤ E)
 
-  def RelativeAdjunction.toRelativeMonad (rel_adj : RelativeAdjunction J L R) :
+  def RelativeAdjunction.toRelativeMonad (Φ : RelativeAdjunction J L R) :
     (RelativeMonad J) where
-    -- objects
+    /- Objects -/
     map X := R.obj (L.obj X)
-    η X := by
-      have id_LX := 𝟙 (L.obj X)
-      have Φ_LX := (rel_adj.hom.app ((op X) , L.obj X))
-      simp at Φ_LX
-      exact (Φ_LX id_LX)
-    lift {X Y} f := by
-      simp
-      have Φinv_XLY := (rel_adj.inv.app (op X, L.obj Y))
-      simp at Φinv_XLY
-      exact (R.map (Φinv_XLY f))
-    -- laws
+    η X := (((Φ.hom.app ((op X) , L.obj X))) (𝟙 (L.obj X)))
+    --  by
+    --   have id_LX := 𝟙 (L.obj X)
+    --   have Φ_LX := (Φ.hom.app ((op X) , L.obj X))
+    --   simp at Φ_LX
+    --   exact (Φ_LX id_LX)
+    lift {X Y} f := (R.map ((Φ.inv.app (op X, L.obj Y)) f))
+    -- by
+    --   simp
+    --   have Φinv_XLY := (Φ.inv.app (op X, L.obj Y))
+    --   exact (R.map (Φinv_XLY f))
+
+    /- Laws -/
     unit_left := sorry
     unit_right := sorry
     comp_lift := sorry
