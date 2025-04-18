@@ -167,23 +167,35 @@ universe u₁ u₂ u₃ v₁ v₂
       simp at nat_inst
       unfold Functor.hom at nat_inst
       simp at nat_inst
-      -- have temp1 := reassoc_of% nat_inst
-      have nat_inst_eltwise := elementwise_of% nat_inst
+      have temp1 := (reassoc_of% nat_inst) (Φ.hom.app (op X, L.obj Y))
+      rw[Φ.inv_hom_id_app] at temp1
+      simp at temp1
       have h₁ := (Φ.hom.app (op X, L.obj X) (𝟙 L.obj X))
+
+      -- specialize temp1 h₁
+
+
+      /- have nat_inst_eltwise := elementwise_of% nat_inst
       have temp := nat_inst_eltwise h₁
       apply_fun (Φ.hom.app (op X, L.obj Y)) at temp
 
-      have test1 := elementwise_of% (Φ.inv_hom_id_app (op X, L.obj Y))
-      rw [test1] at temp
+      have test1 := (elementwise_of% (Φ.inv_hom_id_app (op X, L.obj Y))) ((h₁ ≫ R.map (Φ.inv.app (op X, L.obj Y) k)))
+      rw[test1] at temp -/
+
 
       -- rw [Φ.hom_inv_id_app] at temp
-
-
+      -- test1 : Φ.hom.app (op X, L.obj Y) (Φ.inv.app (op X, L.obj Y) (h₁ ≫ R.map (Φ.inv.app (op X, L.obj Y) k))) = h₁ ≫ R.map (Φ.inv.app (op X, L.obj Y) k)
+      -- temp : Φ.hom.app (op X, L.obj Y) ((Φ.inv.app (op X, L.obj Y)) (h₁ ≫ R.map (Φ.inv.app (op X, L.obj Y) k))) = Φ.hom.app (op X, L.obj Y) ((Φ.inv.app (op X, L.obj X)) h₁ ≫ Φ.inv.app (op X, L.obj Y) k)
 
 
       sorry
     unit_right := by simp
-    comp_lift := sorry
+    comp_lift {X Y Z} f g := by
+      simp
+      have Φinv_nat := Φ.inv.naturality (X := (op X, L.obj Y)) (Y := (op X, L.obj Y))
+      sorry
+
+
 
 
 end FromRelativeAdjunctionToRelativeMonad
