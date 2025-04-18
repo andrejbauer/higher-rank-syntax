@@ -1,5 +1,6 @@
 import Mathlib.CategoryTheory.Category.Basic
 import Mathlib.CategoryTheory.Comma.Presheaf.Basic
+import Mathlib.Tactic.ApplyFun
 import Lean.Level
 import Mathlib.CategoryTheory.Monad.Basic
 import Mathlib.CategoryTheory.Products.Basic
@@ -133,6 +134,12 @@ universe u₁ u₂ u₃ v₁ v₂
   variable (L : A ⥤ C)
   variable (R : C ⥤ E)
 
+/-   def cancel_inv (Φ : RelativeAdjunction J L R) {a b} {X : A} {Y : A} (eq : a ≫ Φ.inv.app (op X, L.obj Y) = b)  :
+    (a = b ≫ Φ.hom.app (op X, L.obj Y))
+    := sorry -/
+
+
+
   def RelativeAdjunction.toRelativeMonad (Φ : RelativeAdjunction J L R) :
     (RelativeMonad J) where
     /- Objects -/
@@ -150,8 +157,32 @@ universe u₁ u₂ u₃ v₁ v₂
     --   exact (R.map (Φinv_XLY f))
 
     /- Laws -/
-    unit_left := sorry
-    unit_right := sorry
+    unit_left {X Y} k := by
+      simp
+      simp at k
+      have Φinv_nat := Φ.inv.naturality (X := (op X, L.obj X)) (Y := (op X, L.obj Y))
+      have φ : (op X, L.obj X) ⟶ (op X, L.obj Y)
+        := (𝟙 (op X), Φ.inv.app (op X, L.obj Y) k)
+      have nat_inst := Φinv_nat (𝟙 (op X), Φ.inv.app (op X, L.obj Y) k)
+      simp at nat_inst
+      unfold Functor.hom at nat_inst
+      simp at nat_inst
+      -- have temp1 := reassoc_of% nat_inst
+      have nat_inst_eltwise := elementwise_of% nat_inst
+      have h₁ := (Φ.hom.app (op X, L.obj X) (𝟙 L.obj X))
+      have temp := nat_inst_eltwise h₁
+      apply_fun (Φ.hom.app (op X, L.obj Y)) at temp
+
+      have test1 := elementwise_of% (Φ.inv_hom_id_app (op X, L.obj Y))
+      rw [test1] at temp
+
+      -- rw [Φ.hom_inv_id_app] at temp
+
+
+
+
+      sorry
+    unit_right := by simp
     comp_lift := sorry
 
 
