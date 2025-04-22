@@ -30,8 +30,22 @@ universe u₁ u₂ v₁ v₂
     struct_commute : ∀ {Z : A} (f : J.obj Z ⟶ X.carrier),
       (X.struct f) ≫ carrier_map  = Y.struct (f ≫ carrier_map)
 
+  def RelativeAlgebraHomId (X : RelativeAlgebra T) :
+    RelativeAlgebraHom T X X where
+    carrier_map := 𝟙 X.carrier
+    struct_commute {ζ} f := by aesop_cat
+
+  def RelativeAlgebraHomComp {X Y Z : RelativeAlgebra T}
+    (Φ : RelativeAlgebraHom T X Y) (Ψ : RelativeAlgebraHom T Y Z) :
+    RelativeAlgebraHom T X Z  where
+    carrier_map := Φ.carrier_map ≫ Ψ.carrier_map
+    struct_commute {ζ} f := by
+      -- rw[<-E.assoc, Φ.struct_commute]
+      sorry
+
   instance cow : Category (RelativeAlgebra T) where
     Hom := RelativeAlgebraHom T
+    id X := RelativeAlgebraHomId T X
 
 end
 
