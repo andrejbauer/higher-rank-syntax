@@ -40,13 +40,29 @@ universe u₁ u₂ v₁ v₂
     RelativeAlgebraHom T X Z  where
     carrier_map := Φ.carrier_map ≫ Ψ.carrier_map
     struct_commute {ζ} f := by
-      -- rw[<-E.assoc, Φ.struct_commute]
-      sorry
+      rw[<-Category.assoc, Φ.struct_commute, Ψ.struct_commute, Category.assoc]
 
-  instance cow : Category (RelativeAlgebra T) where
+
+  instance RelativeAlgebraCategory : Category (RelativeAlgebra T) where
     Hom := RelativeAlgebraHom T
     id X := RelativeAlgebraHomId T X
-
+    comp Φ Ψ := RelativeAlgebraHomComp T Φ Ψ
+    id_comp {X Y} Ψ := by
+      simp
+      unfold RelativeAlgebraHomComp
+      congr
+      unfold RelativeAlgebraHomId
+      simp
+    comp_id {X Y} Φ := by
+      simp
+      unfold RelativeAlgebraHomComp
+      congr
+      unfold RelativeAlgebraHomId
+      simp
+    assoc {X Y Z W} Φ Ψ Ξ := by
+      simp
+      unfold RelativeAlgebraHomComp
+      simp
 end
 
 /- Add proofs that :
