@@ -32,27 +32,12 @@ universe u₁ u₂ u₃ v₁ v₂
   (Altenkirch, Chapman & Uustalu). -/
 
 
-  /-- This version uses isomorphisms already defined in
- Mathlib.CategoryTheory.Iso so it may be more practical
- to work with this one. -/
-
-  -- def IsoLeftFunctor : Aᵒᵖ × C ⥤ Type v₂ := L.op.prod (𝟭 C) ⋙ Functor.hom C
-  -- def IsoRightFunctor : Aᵒᵖ × C ⥤ Type v₂  := J.op.prod R ⋙ Functor.hom E
-
+  /-- This version uses (natural) isomorphisms,
+  which defined in Mathlib.CategoryTheory.NatIso. -/
   def RelativeAdjunction :=
     L.op.prod (𝟭 C) ⋙ Functor.hom C
      ≅ J.op.prod R ⋙ Functor.hom E
   -- infixl:15 " ⊣ʳ " => RelativeAdjunction
-
-  structure RelativeAdjunction_alt where
-    /- Natural transformation α : () ⟶ ()-/
-    α : (L.op.prod (𝟭 _) ⋙ .hom C) ⟶ (J.op.prod R ⋙ .hom E)
-    /- Inverse(candidate) α⁻ : () ⟶ ()-/
-    β : (J.op.prod R ⋙ .hom E) ⟶ (L.op.prod (𝟭 _) ⋙ .hom C)
-    /- Proof that β is left inverse to α -/
-    βα_inverse : α ≫ β = 𝟙 _
-    /- Proof that β is right inverse to α -/
-    αβ_inverse : β ≫ α = 𝟙 _
 
 
 -- Possible progress:
@@ -65,6 +50,8 @@ universe u₁ u₂ u₃ v₁ v₂
 
 end
 
+
+/- From any adjunction we get a relative adjunction. -/
 section FromAdjunctionToRelativeAdjunction
 
   universe v v₂ u₁ u₂
@@ -76,6 +63,7 @@ section FromAdjunctionToRelativeAdjunction
   variable (G : D ⥤ C)
   variable (adj : F ⊣ G)
 
+  /- We first define the two inverse natural transformations separately.-/
   @[reducible]
   def homNatTrans :
     F.op.prod (𝟭 D) ⋙ Functor.hom D
@@ -90,7 +78,7 @@ section FromAdjunctionToRelativeAdjunction
       rw[homEquiv_naturality_left, homEquiv_naturality_right]
 
 @[reducible]
-def invNatTrans :
+  def invNatTrans :
   (𝟭 C).op.prod G ⋙ Functor.hom C
   ⟶  F.op.prod (𝟭 D) ⋙ Functor.hom D where
     app f := by
@@ -101,7 +89,7 @@ def invNatTrans :
       simp
       rw [homEquiv_naturality_left_symm, homEquiv_naturality_right_symm]
 
-
+  /- The resulting relqtive adjunction. -/
   def Adjunction.toRelativeAdjunction :
     RelativeAdjunction (𝟭 C) F G where
       hom := homNatTrans F G adj
@@ -110,19 +98,10 @@ def invNatTrans :
       inv_hom_id := by aesop_cat
 
 
-/- I may remove the following piece of code later,
-  if I choose to continue with the "_alt" version
-  of relative adjunctions. -/
-
-  /- def Adjunction.toRelativeAdjunction_alt  :
-    RelativeAdjunction_alt (𝟭 C) F G where
-      α := sorry
-      β := sorry
-      βα_inverse := sorry
-      αβ_inverse := sorry -/
-
 end FromAdjunctionToRelativeAdjunction
 
+
+/- From any relative adjunction we get a relative monad. -/
 section FromRelativeAdjunctionToRelativeMonad
 universe u₁ u₂ u₃ v₁ v₂
 
@@ -134,26 +113,13 @@ universe u₁ u₂ u₃ v₁ v₂
   variable (L : A ⥤ C)
   variable (R : C ⥤ E)
 
-/-   def cancel_inv (Φ : RelativeAdjunction J L R) {a b} {X : A} {Y : A} (eq : a ≫ Φ.inv.app (op X, L.obj Y) = b)  :
-    (a = b ≫ Φ.hom.app (op X, L.obj Y))
-    := sorry -/
 
   def RelativeAdjunction.toRelativeMonad (Φ : RelativeAdjunction J L R) :
     (RelativeMonad J) where
     /- Objects -/
     map X := R.obj (L.obj X)
     η X := (((Φ.hom.app ((op X) , L.obj X))) (𝟙 (L.obj X)))
-    --  by
-    --   have id_LX := 𝟙 (L.obj X)
-    --   have Φ_LX := (Φ.hom.app ((op X) , L.obj X))
-    --   simp at Φ_LX
-    --   exact (Φ_LX id_LX)
     lift {X Y} f := (R.map ((Φ.inv.app (op X, L.obj Y)) f))
-    -- by
-    --   simp
-    --   have Φinv_XLY := (Φ.inv.app (op X, L.obj Y))
-    --   exact (R.map (Φinv_XLY f))
-
     /- Laws -/
     unit_left {X Y} k := by
       have square := Φ.inv.naturality (X := (op X, L.obj X)) (Y := (op X, L.obj Y)) (𝟙 (op X), Φ.inv.app (op X, L.obj Y) k)
@@ -165,7 +131,6 @@ universe u₁ u₂ u₃ v₁ v₂
       exact Φ_square_applied
 
     unit_right := by simp
-
     comp_lift {X Y Z} f g := by
       simp
       have square := Φ.inv.naturality (X := (op X, L.obj Y)) (Y := (op X, L.obj Z)) (𝟙 (op X), Φ.inv.app (_, _) g)

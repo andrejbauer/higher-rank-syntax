@@ -8,7 +8,6 @@ import HigherRankSyntax.RelativeMonads.RelativeMonad
 
 open CategoryTheory
 
-/- Actually, Kleisli triples should also be in their own file. -/
 section
   universe u v
 
@@ -18,7 +17,6 @@ section
     map : C → C
     η : ∀ X, X ⟶ map X
     lift {X Y} (f : X ⟶ map Y) : map X ⟶ map Y
-    /- missing fields: unit_rihgt, unit_left, comp_lift -/
     unit_right : ∀ (X : C), lift (η X) = 𝟙 (map X)
     unit_left : forall {X Y : C} (f : X ⟶ (map Y)),
       f =  η X ≫ lift f
@@ -56,9 +54,7 @@ section FromKlesiliTripleToRelativeMonad
   variable {C : Type u} [Category.{v} C]
   variable (T : KleisliTriple C)
 
-  /- It is probably better to first define Kleisli triples and then
-     to show how to go from a CategoryTheory.Monad to a Kleisli triple,
-     and from a Kleisli triple to a relative monad. -/
+  /- From every Kleisli triple we get a relative monad. -/
 
   def KleisliTriple.toRelativeMonad : RelativeMonad (𝟭 C) :=
   { map := T.map
