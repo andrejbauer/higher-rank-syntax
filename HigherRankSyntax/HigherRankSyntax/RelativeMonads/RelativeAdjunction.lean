@@ -131,6 +131,7 @@ universe u₁ u₂ u₃ v₁ v₂
       exact Φ_square_applied
 
     unit_right := by simp
+
     comp_lift {X Y Z} f g := by
       simp
       have square := Φ.inv.naturality (X := (op X, L.obj Y)) (Y := (op X, L.obj Z)) (𝟙 (op X), Φ.inv.app (_, _) g)
