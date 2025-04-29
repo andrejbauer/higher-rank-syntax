@@ -47,41 +47,33 @@ universe u₁ u₂ v₁ v₂
   variable {T : RelativeMonad J}
 
   @[ext]
-  structure RelativeAlgebraHom (X Y : RelativeAlgebra T) where
+  structure RelativeAlgebra.hom (X Y : RelativeAlgebra T) where
     carrier_map : X.carrier ⟶ Y.carrier
     struct_commute : ∀ {ζ : A} (f : J.obj ζ ⟶ X.carrier),
       (X.struct f) ≫ carrier_map  = Y.struct (f ≫ carrier_map)
 
   /- Identity morphism for relative algebra. -/
   @[reducible]
-  def RelativeAlgebraHomId (X : RelativeAlgebra T) :
-    RelativeAlgebraHom X X where
+  def RelativeAlgebra.homId (X : RelativeAlgebra T) :
+    RelativeAlgebra.hom X X where
     carrier_map := 𝟙 X.carrier
     struct_commute {ζ} f := by simp
 
   /- Composition of relative algebra morphisms. -/
   @[reducible]
-  def RelativeAlgebraHomComp {X Y Z : RelativeAlgebra T}
-    (Φ : RelativeAlgebraHom X Y) (Ψ : RelativeAlgebraHom Y Z) :
-    RelativeAlgebraHom X Z  where
+  def RelativeAlgebra.homComp {X Y Z : RelativeAlgebra T}
+    (Φ : RelativeAlgebra.hom X Y) (Ψ : RelativeAlgebra.hom Y Z) :
+    RelativeAlgebra.hom X Z  where
     carrier_map := Φ.carrier_map ≫ Ψ.carrier_map
     struct_commute {ζ} f := by
       rw[←Category.assoc, Φ.struct_commute, Ψ.struct_commute, Category.assoc]
 
  /- Category of relative algebras. -/
-  instance RelativeAlgebraCategory : Category (RelativeAlgebra T) where
-    Hom := RelativeAlgebraHom
-    id X := RelativeAlgebraHomId X
-    comp Φ Ψ := RelativeAlgebraHomComp Φ Ψ
+  instance RelativeAlgebra.instCategory : Category (RelativeAlgebra T) where
+    Hom := RelativeAlgebra.hom
+    id X := RelativeAlgebra.homId X
+    comp Φ Ψ := RelativeAlgebra.homComp Φ Ψ
     id_comp {X Y} Ψ := by simp ; ext ; simp
     comp_id {X Y} Φ := by simp ; ext ; simp
     assoc {X Y Z W} Φ Ψ Ξ := by simp
 end
-
-/- Add proofs that :
-  - χ is natural
-  - We can define an identity map for relative algebras
-  - We can define composition for these maps
-  - We can form a category with these algebras and morphisms
-
--/
