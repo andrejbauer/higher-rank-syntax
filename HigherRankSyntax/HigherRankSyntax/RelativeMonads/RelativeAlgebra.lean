@@ -14,6 +14,15 @@ universe u₁ u₂ v₁ v₂
   variable {J : A ⥤ E}
   variable (T : RelativeMonad J)
 
+/-- The data for an algebra of a relative monad T over a functor J : A ⥤ E consists of
+- A carrier object X in E ;
+- A structure that, given an object ζ of A and a map f : Jζ ⟶ X in E, returns a map χf : Tζ ⟶ X ;
+
+and satisfies the following rules :
+
+- ∀ f : Jζ ⟶ X, f = (χf)∘(ηζ)  (unit_law)
+- ∀ k : Jζ ⟶ Tξ, ∀ f : Jξ ⟶ X, (χf)∘k⁺ = χ((χf)∘k) (bind_law)
+-/
   structure RelativeAlgebra where
     carrier : E
     struct : ∀ {ζ : A},

@@ -18,7 +18,18 @@ section
   variable {A : Type u₁} [Category.{v₁} A]
   variable {E : Type u₂} [Category.{v₂} E]
   variable (J : A ⥤ E)
+/-- The data of a Relative Monad over a functor (J : A ⥤ E) consists of
+  - An object mapping T : A ⟶ E ;
+  - For any object X in A, a morphism ηₓ : JX ⟶  TX ;
+  - For any pair X, Y of object of A, and morphism f : JX ⟶ TY in E, a lifting f⁺ : TX ⟶ TY ;
 
+  and satisfies the following properties :
+  - ∀ X : A,
+  (ηₓ)⁺ = 𝟙ₓ  (unit_right)
+  - ∀ X, Y : A,  ∀ f : JX ⟶ TY,
+  f = f⁺∘(ηₓ) (unit_left)
+  - ∀ X, Y, Z : A, ∀ f : JX ⟶ TY, ∀ g : JY ⟶ TZ,
+  (g⁺∘f)⁺ = g⁺∘f⁺ (comp_lift)-/
   structure RelativeMonad where
     map : A → E
     η (X) : J.obj X ⟶ map X
@@ -40,8 +51,7 @@ section
   variable (J : A ⥤ E)
   variable (T T' : RelativeMonad J)
 
-/-- Tentative definition for relative monad morphisms
-  (where both monads have the same root J)-/
+/- A morphism between two relative monads over a given functor J : A ⥤ E-/
   structure RelMonHom where
     map_hom {X : A} : (T.map X) ⟶ (T'.map X)
     hom_unit {X : A} : (T.η X) ≫ map_hom = (T'.η X)

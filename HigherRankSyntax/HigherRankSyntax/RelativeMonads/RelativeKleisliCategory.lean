@@ -14,8 +14,8 @@ universe u₁ u₂ v₁ v₂ u v
   variable {J : A ⥤ E}
   variable (T : RelativeMonad J)
 
--- The definition still has level issues
-  instance RelativeKleisliCategory : Category.{(max v₁ v₂ u₁ u₂) + 1, u₁} A where
+-- This attempt currently does not work (level issues ?)
+  instance RelativeKleisliCategory : Category A where
     Hom {X Y} :=  (J.obj X) ⟶ (T.map Y)
     id X := (T.η X)
     comp {X Y Z} f g := f ≫ (T.lift g)
