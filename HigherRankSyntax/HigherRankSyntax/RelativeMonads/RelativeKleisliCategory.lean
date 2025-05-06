@@ -18,7 +18,11 @@ universe u₁ u₂ v₁ v₂ u v
 @[nolint unusedArguments]
 def RelativeKleisli (_T : RelativeMonad J) := A
 
--- This attempt currently does not work (level issues ?)
+/-- The Kleisli category associated to a relative monad `T` over a root functor `J : A ⥤ E`, whose
+- objects are the same as the objects of `A` ;
+- morphisms are defined as corresponding to
+the morphisms of the form `JX ⟶ TY` (in `E`).
+-/
   instance RelativeKleisli.instCategory : Category (RelativeKleisli T) where
     Hom {X Y} :=  (J.obj X) ⟶ (T.map Y)
     id X := (T.η X)

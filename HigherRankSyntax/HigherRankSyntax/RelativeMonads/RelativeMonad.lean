@@ -6,30 +6,23 @@ import Mathlib.CategoryTheory.Monad.Basic
 open CategoryTheory
 
 
-/- General definitions pertaining to relative monads. This should
-   probably be the main part of this file, and the stuff above
-   pertaining to syntax should go elsewhere. -/
-
-
-
 section
   universe u₁ u₂ v₁ v₂
 
   variable {A : Type u₁} [Category.{v₁} A]
   variable {E : Type u₂} [Category.{v₂} E]
   variable (J : A ⥤ E)
-/-- The data of a Relative Monad over a functor (J : A ⥤ E) consists of
-  - An object mapping T : A ⟶ E ;
-  - For any object X in A, a morphism ηₓ : JX ⟶  TX ;
-  - For any pair X, Y of object of A, and morphism f : JX ⟶ TY in E, a lifting f⁺ : TX ⟶ TY ;
+
+
+/-- The data of a Relative Monad over a relative functor `J : A ⥤ E` consists of
+  - An object mapping `T : A ⟶ E` ;
+  - For any object `X` in `A`, a morphism `ηₓ : JX ⟶  TX` ;
+  - For any pair `X, Y` of objects of `A`, and morphism `f : JX ⟶ TY` in `E`, a lifted morphism `f⁺ : TX ⟶ TY`;
 
   and satisfies the following properties :
-  - ∀ X : A,
-  (ηₓ)⁺ = 𝟙ₓ  (unit_right)
-  - ∀ X, Y : A,  ∀ f : JX ⟶ TY,
-  f = f⁺∘(ηₓ) (unit_left)
-  - ∀ X, Y, Z : A, ∀ f : JX ⟶ TY, ∀ g : JY ⟶ TZ,
-  (g⁺∘f)⁺ = g⁺∘f⁺ (comp_lift)-/
+  - `∀ X : A, (ηₓ)⁺ = 𝟙ₓ`  (unit_right)
+  - `∀ X, Y : A,  ∀ f : JX ⟶ TY, f = f⁺∘(ηₓ)` (unit_left)
+  - `∀ X, Y, Z : A, ∀ f : JX ⟶ TY, ∀ g : JY ⟶ TZ, (g⁺∘f)⁺ = g⁺∘f⁺` (comp_lift)-/
   structure RelativeMonad where
     map : A → E
     η (X) : J.obj X ⟶ map X
@@ -43,6 +36,7 @@ section
       (g : (J.obj Y) ⟶ (map Z)),
       lift (f ≫ (lift g)) = (lift f) ≫ (lift g)
 end
+
 
 section
   universe u₁ u₂ v₁ v₂

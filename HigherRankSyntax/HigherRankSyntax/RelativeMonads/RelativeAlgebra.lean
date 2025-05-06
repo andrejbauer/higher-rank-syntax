@@ -14,15 +14,17 @@ universe u₁ u₂ v₁ v₂
   variable {J : A ⥤ E}
   variable (T : RelativeMonad J)
 
-/-- The data for an algebra of a relative monad T over a functor J : A ⥤ E consists of
-- A carrier object X in E ;
-- A structure that, given an object ζ of A and a map f : Jζ ⟶ X in E, returns a map χf : Tζ ⟶ X ;
 
-and satisfies the following rules :
 
-- ∀ f : Jζ ⟶ X, f = (χf)∘(ηζ)  (unit_law)
-- ∀ k : Jζ ⟶ Tξ, ∀ f : Jξ ⟶ X, (χf)∘k⁺ = χ((χf)∘k) (bind_law)
--/
+  /-- The data for an algebra of a relative monad `T` over a functor `J : A ⥤ E` consists of
+  - A carrier object `X` in `E` ;
+  - A structure `σ` that, given an object `ζ` of `A` and a map `f : Jζ ⟶ X` in `E`, returns a map `σf : Tζ ⟶ X`;
+
+  and satisfies the following rules :
+
+  - `∀ f : Jζ ⟶ X, f = (σf)∘(ηζ)`  (unit_law)
+  - `∀ k : Jζ ⟶ Tξ, ∀ f : Jξ ⟶ X, (σf)∘k⁺ = σ((σf)∘k)` (bind_law)
+  -/
   structure RelativeAlgebra where
     carrier : E
     struct : ∀ {ζ : A},
@@ -52,14 +54,14 @@ universe u₁ u₂ v₁ v₂
     struct_commute : ∀ {ζ : A} (f : J.obj ζ ⟶ X.carrier),
       (X.struct f) ≫ carrier_map  = Y.struct (f ≫ carrier_map)
 
-  /- Identity morphism for relative algebra. -/
+  /-- Identity morphism for relative algebras. -/
   @[reducible]
   def RelativeAlgebra.homId (X : RelativeAlgebra T) :
     RelativeAlgebra.hom X X where
     carrier_map := 𝟙 X.carrier
     struct_commute {ζ} f := by simp
 
-  /- Composition of relative algebra morphisms. -/
+  /-- Composition of relative algebra morphisms. -/
   @[reducible]
   def RelativeAlgebra.homComp {X Y Z : RelativeAlgebra T}
     (Φ : RelativeAlgebra.hom X Y) (Ψ : RelativeAlgebra.hom Y Z) :
@@ -68,7 +70,9 @@ universe u₁ u₂ v₁ v₂
     struct_commute {ζ} f := by
       rw[←Category.assoc, Φ.struct_commute, Ψ.struct_commute, Category.assoc]
 
- /- Category of relative algebras. -/
+/-- The Eilenberg-Moore category associated to a relative monad `T` over the root functor `J : A ⥤ E`.
+
+Its objects are the relative algebras for `T`.-/
   instance RelativeAlgebra.instCategory : Category (RelativeAlgebra T) where
     Hom := RelativeAlgebra.hom
     id X := RelativeAlgebra.homId X

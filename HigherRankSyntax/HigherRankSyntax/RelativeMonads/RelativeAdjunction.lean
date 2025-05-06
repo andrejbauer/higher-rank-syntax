@@ -32,12 +32,14 @@ universe u₁ u₂ u₃ v₁ v₂
   (Altenkirch, Chapman & Uustalu). -/
 
 
-  /-- This version uses (natural) isomorphisms,
-  which defined in Mathlib.CategoryTheory.NatIso. -/
+  /-- Adjunction of two functors `L : A ⥤ C` and `R : C ⥤ E`, relative to a root functor `J : A ⥤ E`,
+ following the definition of the paper "Monads need not be endofunctors" (Altenkirch, Chapman & Uustalu).
+
+  The adjunction is defined as a natural isomorphism
+  `Φ : Hom C (L _, 𝟙 _) ≅ Hom E (J _, R _)`. -/
   def RelativeAdjunction :=
     L.op.prod (𝟭 C) ⋙ Functor.hom C
      ≅ J.op.prod R ⋙ Functor.hom E
-  -- infixl:15 " ⊣ʳ " => RelativeAdjunction
 
 
 -- Possible progress:
@@ -63,7 +65,7 @@ section FromAdjunctionToRelativeAdjunction
   variable (G : D ⥤ C)
   variable (adj : F ⊣ G)
 
-  /- We first define the two inverse natural transformations separately.-/
+  -- We first define the two inverse natural transformations separately.
   @[reducible]
   def homNatTrans :
     F.op.prod (𝟭 D) ⋙ Functor.hom D
@@ -89,7 +91,8 @@ section FromAdjunctionToRelativeAdjunction
       simp
       rw [homEquiv_naturality_left_symm, homEquiv_naturality_right_symm]
 
-  /- The resulting relqtive adjunction. -/
+  /-- The relative adjunction canonically associated to
+  an adjunction `F ⊣ G`. -/
   def Adjunction.toRelativeAdjunction :
     RelativeAdjunction (𝟭 C) F G where
       hom := homNatTrans F G adj
@@ -113,14 +116,15 @@ universe u₁ u₂ u₃ v₁ v₂
   variable (L : A ⥤ C)
   variable (R : C ⥤ E)
 
-
+  /-- The relative monad canonically associated to
+  a relative adjunction `Φ : Hom C (L _, 𝟙 _) ≅ Hom E (J _, R _)`-/
   def RelativeAdjunction.toRelativeMonad (Φ : RelativeAdjunction J L R) :
     (RelativeMonad J) where
-    /- Objects -/
+    -- Objects
     map X := R.obj (L.obj X)
     η X := (((Φ.hom.app ((op X) , L.obj X))) (𝟙 (L.obj X)))
     lift {X Y} f := (R.map ((Φ.inv.app (op X, L.obj Y)) f))
-    /- Laws -/
+    -- Laws
     unit_left {X Y} k := by
       have square := Φ.inv.naturality (X := (op X, L.obj X)) (Y := (op X, L.obj Y)) (𝟙 (op X), Φ.inv.app (op X, L.obj Y) k)
       have Φ_square := (reassoc_of% square) (Φ.hom.app (op X, L.obj Y))
