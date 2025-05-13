@@ -13,12 +13,12 @@ def ArityCat := ShapeCat
 
 open CategoryTheory
 
-structure VarRen (γ δ : Shape) : Type where
+structure Var (γ δ : Shape) : Type where
   arity : Arity
-  var : Var arity γ
+  var : var_in arity γ
   ren : arity →ʳ δ
 
-def VartoVarRen {γ α} (x : Var α γ) : VarRen γ α where
+def var_in.toVar {γ α} (x : var_in α γ) : Var γ α where
   arity := α
   var := x
   ren := 𝟙ʳ
@@ -26,7 +26,7 @@ def VartoVarRen {γ α} (x : Var α γ) : VarRen γ α where
 /-- The object part of the variables functor -/
 @[reducible]
 def 𝕁ₒ (γ : Shape) : Arity ⥤ Type 0 where
-  obj := VarRen γ
+  obj := Var γ
   map := fun ρ xσ => { arity := xσ.arity, var := xσ.var, ren := ρ ∘ʳ xσ.ren }
 
 /-- The variables functor -/
@@ -92,7 +92,7 @@ def η_val (γ : Shape) :  𝕁ₒ γ ⟶ 𝕋ₒ γ where
     have temp1 β := (η_val x.arity).app β
     simp [𝕁ₒ, 𝕋ₒ] at temp1
     have ren_subterms : x.arity →ʳ γ ⊕ δ := ((γ ⇑ʳ x.ren) ∘ʳ .varRight)
-    have temp2 := x.var ◃ (fun β y => ⟦ren_subterms⟧ʳ (temp1 β (VartoVarRen y)))
+    have temp2 := x.var ◃ (fun β y => ⟦ren_subterms⟧ʳ (temp1 β (var_in.toVar y)))
     exact temp2
   naturality {δ δ'} r := by
     simp
@@ -103,20 +103,25 @@ def η_val (γ : Shape) :  𝕁ₒ γ ⟶ 𝕋ₒ γ where
     funext β y
     rw [<-Renaming.actFree.map_comp]
     congr
-
 -- prove termination
 
---   ⦃β : Arity⦄ → Var β ρ.arity → Expr (γ ⊕ ?m.5168) β : TypeLean 4
+def lift_val {γ γ'} (f : 𝕁ₒ γ ⟶ 𝕋ₒ γ') :
+  (𝕋ₒ γ ⟶ 𝕋ₒ γ') where
+  app δ := by
+    simp
+    intro t
+    /- first I need to define (mutually inductive)
+    action of a substitution and instanciation of bound variables. -/
+    sorry
+  naturality := sorry
 
 
 /-- The main goal is to define the relative monad for syntax.
     This should be in the same file as the first part of this file.  -/
 def SyntaxRelativeMonad : RelativeMonad 𝕁 := {
   map := 𝕋ₒ
-  η := fun γ => by
-    unfold 𝕁 ; simp
-    exact (η_val γ)
-  lift := sorry
+  η := η_val
+  lift := lift_val
   unit_left := sorry
   unit_right := sorry
   comp_lift := sorry

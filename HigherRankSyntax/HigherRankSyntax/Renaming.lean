@@ -1,7 +1,7 @@
 import HigherRankSyntax.Syntax
 import Mathlib.CategoryTheory.Category.Basic
 
-def Renaming (γ δ : Shape) := ∀ {{α}}, Var α γ → Var α δ
+def Renaming (γ δ : Shape) := ∀ {{α}}, var_in α γ → var_in α δ
 infix:25 " →ʳ " => Renaming
 
 namespace Renaming

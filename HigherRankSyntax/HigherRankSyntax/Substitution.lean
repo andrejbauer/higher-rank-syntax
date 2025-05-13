@@ -2,14 +2,14 @@
 import HigherRankSyntax.Syntax
 import HigherRankSyntax.Renaming
 
-def Substitution γ δ := ∀ {{α}}, Var α γ → Expr δ α
+def Substitution γ δ := ∀ {{α}}, var_in α γ → Expr δ α
 infix:25 " →ˢ " => Substitution
 
 namespace Substitution
 
 /-- The identity substutition -/
 def id {γ} : γ →ˢ γ :=
-  fun {α} x => x ◃ (fun {β} (y : Var β α) => (id (.varRight y)))
+  fun {α} x => x ◃ (fun {β} (y : var_in β α) => (id (.varRight y)))
 termination_by γ.rank
 decreasing_by apply rank_Var_lt ; sorry
 
@@ -113,12 +113,29 @@ mutual
 
 
 /-- The action of a substutition on an expression -/
-def act {α β δ} (u : α →ˢ β) : (Expr α δ) → (Expr β δ)
-| x ◃ ts => sorry
+def act {γ γ' δ} (u : γ →ˢ γ') : (Expr γ δ) → (Expr γ' δ)
+| x ◃ ts => by
+  have u_x := (u x)
+  exact (inst_subsituted u_x ts u)
+  -- termination proof needed
   -- inst (fun ⦃_⦄ y => act_left u (ts y)) (u x)
-| x ◂ ts => sorry
+| x ◂ ts => by
+    have u_ts {{β}} (y : var_in β _) := act (extend u δ) (ts y)
+    exact x ◂ u_ts
 
+-- I am unsure about the following, the type may be wrong.
+def inst {γ δ α} (tx : Expr γ α)
+  (ts : forall {{β}} (y : var_in β α), Expr (γ ⊕ δ) β)
+  : Expr γ δ := by
 
+    sorry
+
+def inst_subsituted {γ γ' α δ} (u_x : Expr γ' α)
+  (ts : ∀ {{β}} (y : var_in β α), Expr (γ ⊕ δ) β)
+  (u : γ →ˢ γ') : Expr γ' δ := by
+    have u_ts {{β}} (y : var_in β α) : Expr (γ' ⊕ δ) β := act (extend u δ) (ts y)
+    have inst_ux := inst u_x u_ts
+    exact inst_ux
 end -- mutual
 
 @[inherit_doc]

@@ -27,19 +27,19 @@ def Shape.rank : Shape → Nat
 | γ ⊕ δ => max (rank γ) (rank δ)
 
 /-- Variables of given arity in a given shape -/
-inductive Var : Arity → Shape → Type where
-| varHere : ∀ {α : Shape}, Var α α.slot
-| varLeft : ∀ {γ δ} {{α}}, Var α γ → Var α (γ ⊕ δ)
-| varRight : ∀ {γ δ} {{α}}, Var α δ → Var α (γ ⊕ δ)
+inductive var_in  : Arity → Shape → Type where
+| varHere : ∀ {α : Shape}, var_in α α.slot
+| varLeft : ∀ {γ δ} {{α}}, var_in α γ → var_in α (γ ⊕ δ)
+| varRight : ∀ {γ δ} {{α}}, var_in α δ → var_in α (γ ⊕ δ)
 
 /-- Fold on all variables in a given shape -/
-def Shape.fold.{u} (γ : Shape) {A : Type u} (a : A) (f : A → ∀ ⦃α⦄, Var α γ → A) : A :=
+def Shape.fold.{u} (γ : Shape) {A : Type u} (a : A) (f : A → ∀ ⦃α⦄, var_in α γ → A) : A :=
   match γ with
   | 𝟘 => a
   | .slot _ => f a .varHere
   | γ₁ ⊕ γ₂ => γ₂.fold (γ₁.fold a (fun b _ x => f b x.varLeft)) (fun b _ x => f b x.varRight)
 
-theorem rank_Var_lt {α γ} (x : Var α γ) : α.rank < γ.rank := by
+theorem rank_Var_lt {α γ} (x : var_in α γ) : α.rank < γ.rank := by
   induction x
   case varHere => simp
   case varLeft δ β α _ _ =>
@@ -56,9 +56,9 @@ theorem rank_Var_lt {α γ} (x : Var α γ) : α.rank < γ.rank := by
 /-- Expressions over a given shape -/
 inductive Expr : Shape → Arity → Type where
 /-- Apply a free variable to arguments -/
-| applyFree  : ∀ {γ δ α}, Var α γ → (∀ ⦃β⦄, Var β α → Expr (γ ⊕ δ) β) →  Expr γ δ
+| applyFree  : ∀ {γ δ α}, var_in α γ → (∀ ⦃β⦄, var_in β α → Expr (γ ⊕ δ) β) →  Expr γ δ
 /-- Apply a bound variable to arguments -/
-| applyBound : ∀ {γ δ α}, Var α δ → (∀ ⦃β⦄, Var β α → Expr (γ ⊕ δ) β) →  Expr γ δ
+| applyBound : ∀ {γ δ α}, var_in α δ → (∀ ⦃β⦄, var_in β α → Expr (γ ⊕ δ) β) →  Expr γ δ
 
 @[inherit_doc]
 infix:80 " ◃ " => Expr.applyFree
@@ -71,10 +71,10 @@ def Expr.sizeOf {γ δ} : Expr γ δ → Nat
 | @Expr.applyFree _ _ α _ ts => 1 + α.fold 0 (fun n _ y => n + (ts y).sizeOf)
 | @Expr.applyBound _ _ α _ ts => 1 + α.fold 0 (fun n _ y => n + (ts y).sizeOf)
 
-theorem Expr.sizeOfFreeArg {γ δ α} (x : Var α γ) (ts : ∀ ⦃β⦄, Var β α → Expr (γ ⊕ δ) β) {θ} (y : Var θ α) :
+theorem Expr.sizeOfFreeArg {γ δ α} (x : var_in α γ) (ts : ∀ ⦃β⦄, var_in β α → Expr (γ ⊕ δ) β) {θ} (y : var_in θ α) :
   (ts y).sizeOf < (x ◃ ts).sizeOf := sorry
 
-theorem Expr.sizeOfBoundArg {γ δ α} (x : Var α δ) (ts : ∀ ⦃β⦄, Var β α → Expr (γ ⊕ δ) β) {θ} (y : Var θ α) :
+theorem Expr.sizeOfBoundArg {γ δ α} (x : var_in α δ) (ts : ∀ ⦃β⦄, var_in β α → Expr (γ ⊕ δ) β) {θ} (y : var_in θ α) :
   (ts y).sizeOf < (x ◂ ts).sizeOf := sorry
 
 instance {γ δ} : SizeOf (Expr γ δ) where sizeOf := Expr.sizeOf
