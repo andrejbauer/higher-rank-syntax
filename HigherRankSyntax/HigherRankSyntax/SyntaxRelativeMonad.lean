@@ -96,11 +96,16 @@ def η_val (γ : Shape) :  𝕁ₒ γ ⟶ 𝕋ₒ γ where
     exact temp2
   naturality {δ δ'} r := by
     simp
+    funext x
+    simp
     unfold Renaming.actBound
+    simp
+    funext β y
+    rw [<-Renaming.actFree.map_comp]
+    congr
 
-
-    sorry
 -- prove termination
+
 --   ⦃β : Arity⦄ → Var β ρ.arity → Expr (γ ⊕ ?m.5168) β : TypeLean 4
 
 
@@ -108,9 +113,9 @@ def η_val (γ : Shape) :  𝕁ₒ γ ⟶ 𝕋ₒ γ where
     This should be in the same file as the first part of this file.  -/
 def SyntaxRelativeMonad : RelativeMonad 𝕁 := {
   map := 𝕋ₒ
-  η := fun X => by
+  η := fun γ => by
     unfold 𝕁 ; simp
-    sorry
+    exact (η_val γ)
   lift := sorry
   unit_left := sorry
   unit_right := sorry
