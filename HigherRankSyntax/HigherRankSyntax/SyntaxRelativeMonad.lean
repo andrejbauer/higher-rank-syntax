@@ -84,8 +84,9 @@ def 𝕋 : Shape ⥤ (Arity ⥤ Type 0) where
     apply Renaming.actFree.map_comp
 
 
-def η_val (γ : Shape) :  𝕁ₒ γ ⟶ 𝕋ₒ γ where
-  app δ := by
+def η_val (γ : Shape) :  𝕁ₒ γ ⟶ 𝕋ₒ γ := {
+  app := by
+    intro δ
     -- unfold 𝕁ₒ ; simp
     -- unfold 𝕋ₒ ; simp
     intro x
@@ -94,16 +95,19 @@ def η_val (γ : Shape) :  𝕁ₒ γ ⟶ 𝕋ₒ γ where
     have ren_subterms : x.arity →ʳ γ ⊕ δ := ((γ ⇑ʳ x.ren) ∘ʳ .varRight)
     have temp2 := x.var ◃ (fun β y => ⟦ren_subterms⟧ʳ (temp1 β (var_in.toVar y)))
     exact temp2
-  naturality {δ δ'} r := by
+  naturality := by
+    intro δ δ' r
     simp
     funext x
     simp
     unfold Renaming.actBound
     simp
     funext β y
-    rw [<-Renaming.actFree.map_comp]
+    rw [←Renaming.actFree.map_comp]
     congr
--- prove termination
+  }
+  termination_by γ.rank
+  decreasing_by repeat apply rank_Var_lt x.var
 
 def lift_val {γ γ'} (f : 𝕁ₒ γ ⟶ 𝕋ₒ γ') :
   (𝕋ₒ γ ⟶ 𝕋ₒ γ') where

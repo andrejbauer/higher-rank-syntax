@@ -125,10 +125,11 @@ def act {γ γ' δ} (u : γ →ˢ γ') : (Expr γ δ) → (Expr γ' δ)
 
 -- I am unsure about the following, the type may be wrong.
 def inst {γ δ α} (tx : Expr γ α)
-  (ts : forall {{β}} (y : var_in β α), Expr (γ ⊕ δ) β)
-  : Expr γ δ := by
-
-    sorry
+  (ts : ∀ ⦃β⦄ (y : var_in β α), Expr (γ ⊕ δ) β)
+  : Expr γ δ :=
+  match tx with
+  | x ◃ us => x ◃ (by sorry)
+  | Expr.applyBound (α := θ) x us => by sorry
 
 def inst_subsituted {γ γ' α δ} (u_x : Expr γ' α)
   (ts : ∀ {{β}} (y : var_in β α), Expr (γ ⊕ δ) β)
