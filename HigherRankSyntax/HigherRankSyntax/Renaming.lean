@@ -71,15 +71,10 @@ def extendLeft_comp {γ δ₁ δ₂ δ₃} {g : δ₂ →ʳ δ₃} {f : δ₁ �
   funext _ x
   cases x <;> rfl
 
-def actFree {γ γ' δ} (f : γ →ʳ γ') : Expr γ δ → Expr γ' δ
-  | x ◃ ts => f x ◃ (fun ⦃_⦄ y => actFree (f ʳ⇑ _) (ts y))
-  | x ◂ ts => x ◂ (fun ⦃_⦄ y => actFree (f ʳ⇑ _) (ts y))
+def act {γ δ} (f : γ →ʳ δ) : Expr γ → Expr δ
+  | x ◃ ts => f x ◃ (fun ⦃_⦄ y => act (f ʳ⇑ _) (ts y))
 
-def actBound {γ δ δ'} (f : δ →ʳ δ') : Expr γ δ → Expr γ δ'
-  | x ◃ ts => x ◃ (fun ⦃_⦄ y => actFree (_ ⇑ʳ f) (ts y))
-  | x ◂ ts => f x ◂ (fun ⦃_⦄ y => actFree (_ ⇑ʳ f) (ts y))
-
-notation:60 " ⟦" f "⟧ʳ " e:61 => Renaming.actFree f e
+notation:60 " ⟦" f "⟧ʳ " e:61 => Renaming.act f e
 
 theorem extend_comp {γ γ' δ δ'} (f : γ →ʳ γ') (g : δ →ʳ δ') :
   (γ' ⇑ʳ g) ∘ʳ (f ʳ⇑ δ)  = (f ʳ⇑ δ') ∘ʳ (γ ⇑ʳ g) := by
@@ -87,28 +82,21 @@ theorem extend_comp {γ γ' δ δ'} (f : γ →ʳ γ') (g : δ →ʳ δ') :
   cases x <;> simp [comp, extendLeft, extendRight]
 
 /-- `actFree` distributes over composition -/
-theorem actFree.map_comp {γ δ} {e : Expr γ δ} :
+theorem actFree.map_comp {γ} {e : Expr γ} :
   ∀ {δ η} {f : γ →ʳ δ} {g : δ →ʳ η}, ⟦ g ∘ʳ f ⟧ʳ e = ⟦ g ⟧ʳ (⟦ f ⟧ʳ e) := by
   induction e
-  case applyFree ih =>
+  case apply ih =>
     intros _ _ f g
-    simp [actFree, comp, extendRight_comp]
-    funext
-    apply ih
-  case applyBound ih =>
-    intros _ _ f g
-    simp [actFree, comp, extendRight_comp]
+    simp [act, comp, extendRight_comp]
     funext
     apply ih
 
 theorem comp_assoc {γ δ η θ} {f : γ →ʳ δ} {g : δ →ʳ η} {h : η →ʳ θ} :
   (h ∘ʳ g) ∘ʳ f = h ∘ʳ (g ∘ʳ f) := by rfl
 
-theorem eq_size {γ γ' δ} (f : γ →ʳ γ') (e : Expr γ δ) : (⟦ f ⟧ʳ e).sizeOf = e.sizeOf := by
+theorem eq_size {γ δ} (f : γ →ʳ δ) (e : Expr γ) : (⟦ f ⟧ʳ e).sizeOf = e.sizeOf := by
   induction e
-  case applyFree ih =>
-    sorry
-  case applyBound ih =>
+  case apply ih =>
     sorry
 
 /-- Extending the identity renaming on the left gives the identity renaming. -/
@@ -121,69 +109,14 @@ theorem extendRight.id {γ δ} : @id γ ʳ⇑ δ = 𝟙ʳ := by
   funext α x
   cases x <;> simp [extendRight]
 
-/-- `actFree` acts trivially with the identity morphism -/
-theorem actFree.map_id {γ δ} (e : Expr γ δ) : 𝟙ʳ.actFree e = e := by
+/-- `act` acts trivially with the identity renaming -/
+theorem act.map_id {γ} (e : Expr γ) : 𝟙ʳ.act e = e := by
   induction e
-  case applyFree γ δ α x ts ih =>
-    simp [actFree]
+  case apply γ α x ts ih =>
+    simp [act]
     funext α x
     rw [extendRight.id]
     apply ih
-  case applyBound γ δ α x ts ih =>
-    simp [actFree]
-    funext α x
-    rw [extendRight.id]
-    apply ih
-
-/-- `actBound` acts trivially with the identity morphism -/
-theorem actBound.map_id {γ δ} (e : Expr γ δ) : 𝟙ʳ.actBound e = e := by
-  cases e
-  case applyFree α x ts =>
-    simp [actBound]
-    funext
-    rw [extendLeft.id]
-    apply actFree.map_id
-  case applyBound α x ts =>
-    simp [actBound]
-    funext
-    rw [extendLeft.id]
-    apply actFree.map_id
-
-/-- `actBound` distributes over composition -/
-theorem actBound.map_comp {γ δ₁} {e : Expr γ δ₁} :
-  ∀ {δ₂ δ₃} {f : δ₁ →ʳ δ₂} {g : δ₂ →ʳ δ₃}, (g ∘ʳ f).actBound e = g.actBound (f.actBound e) := by
-    cases e
-    case applyFree α x ts =>
-      intros δ₂ δ₃ f g
-      simp [actBound]
-      funext θ y
-      rw [extendLeft_comp]
-      apply actFree.map_comp
-    case applyBound α x ts =>
-      intros δ₂ δ₃ f g
-      simp [actBound]
-      constructor
-      · rfl
-      · funext β y
-        rw [extendLeft_comp]
-        apply actFree.map_comp
-
-/-- `actFree` and `actBound` commute. -/
-theorem actFree_actBound {γ γ' δ δ'} (f : γ →ʳ γ') (g : δ →ʳ δ') (e : Expr γ δ) :
-  f.actFree (g.actBound e) = g.actBound (f.actFree e) := by
-  cases e
-  case applyFree α x ts =>
-    simp [actFree, actBound]
-    funext β y
-    rw [←actFree.map_comp, ←actFree.map_comp]
-    congr
-    symm ; apply extend_comp
-  case applyBound α x ts =>
-    simp [actFree, actBound]
-    funext β y
-    rw [←actFree.map_comp, ←actFree.map_comp]
-    congr
-    symm ; apply extend_comp
 
 end Renaming
 

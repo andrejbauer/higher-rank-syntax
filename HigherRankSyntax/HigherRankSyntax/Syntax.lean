@@ -32,6 +32,8 @@ inductive var_in  : Arity → Shape → Type where
 | varLeft : ∀ {γ δ} {{α}}, var_in α γ → var_in α (γ ⊕ δ)
 | varRight : ∀ {γ δ} {{α}}, var_in α δ → var_in α (γ ⊕ δ)
 
+infix:50 " ∈ " => var_in
+
 /-- Fold on all variables in a given shape -/
 def Shape.fold.{u} (γ : Shape) {A : Type u} (a : A) (f : A → ∀ ⦃α⦄, var_in α γ → A) : A :=
   match γ with
@@ -54,27 +56,18 @@ theorem rank_Var_lt {α γ} (x : var_in α γ) : α.rank < γ.rank := by
            _ ≤ max δ.rank β.rank := by exact Nat.le_max_right δ.rank β.rank
 
 /-- Expressions over a given shape -/
-inductive Expr : Shape → Arity → Type where
-/-- Apply a free variable to arguments -/
-| applyFree  : ∀ {γ δ α}, var_in α γ → (∀ ⦃β⦄, var_in β α → Expr (γ ⊕ δ) β) →  Expr γ δ
-/-- Apply a bound variable to arguments -/
-| applyBound : ∀ {γ δ α}, var_in α δ → (∀ ⦃β⦄, var_in β α → Expr (γ ⊕ δ) β) →  Expr γ δ
+inductive Expr : Shape → Type where
+/-- Apply a variable to arguments -/
+| apply  : ∀ {γ α}, α ∈ γ → (∀ ⦃β⦄, β ∈ α → Expr (γ ⊕ β)) →  Expr γ
 
 @[inherit_doc]
-infix:80 " ◃ " => Expr.applyFree
-
-@[inherit_doc]
-infix:80 " ◂ " => Expr.applyBound
+infix:80 " ◃ " => Expr.apply
 
 @[reducible]
-def Expr.sizeOf {γ δ} : Expr γ δ → Nat
-| @Expr.applyFree _ _ α _ ts => 1 + α.fold 0 (fun n _ y => n + (ts y).sizeOf)
-| @Expr.applyBound _ _ α _ ts => 1 + α.fold 0 (fun n _ y => n + (ts y).sizeOf)
+def Expr.sizeOf {γ} : Expr γ → Nat
+| @Expr.apply _ α _ ts => 1 + α.fold 0 (fun n _ y => n + (ts y).sizeOf)
 
-theorem Expr.sizeOfFreeArg {γ δ α} (x : var_in α γ) (ts : ∀ ⦃β⦄, var_in β α → Expr (γ ⊕ δ) β) {θ} (y : var_in θ α) :
+instance {γ} : SizeOf (Expr γ) where sizeOf := Expr.sizeOf
+
+theorem Expr.sizeOfArg {γ α} (x : α ∈ γ) (ts : ∀ ⦃β⦄, β ∈ α → Expr (γ ⊕ β)) {θ} (y : θ ∈ α) :
   (ts y).sizeOf < (x ◃ ts).sizeOf := sorry
-
-theorem Expr.sizeOfBoundArg {γ δ α} (x : var_in α δ) (ts : ∀ ⦃β⦄, var_in β α → Expr (γ ⊕ δ) β) {θ} (y : var_in θ α) :
-  (ts y).sizeOf < (x ◂ ts).sizeOf := sorry
-
-instance {γ δ} : SizeOf (Expr γ δ) where sizeOf := Expr.sizeOf

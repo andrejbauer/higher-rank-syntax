@@ -2,16 +2,16 @@
 import HigherRankSyntax.Syntax
 import HigherRankSyntax.Renaming
 
-def Substitution γ δ := ∀ {{α}}, var_in α γ → Expr δ α
+def Substitution γ δ := ∀ ⦃α⦄, α ∈ γ → Expr (δ ⊕ α)
 infix:25 " →ˢ " => Substitution
 
 namespace Substitution
 
 /-- The identity substutition -/
 def id {γ} : γ →ˢ γ :=
-  fun {α} x => x ◃ (fun {β} (y : var_in β α) => (id (.varRight y)))
+  fun {α} x => .varLeft x ◃ (fun {β} (y : β ∈ α) => (⟦ .varRight ʳ⇑ β ⟧ʳ (id y)))
 termination_by γ.rank
-decreasing_by apply rank_Var_lt ; sorry
+decreasing_by apply rank_Var_lt ; assumption
 
 @[inherit_doc]
 notation " 𝟙ˢ " => Substitution.id
@@ -20,18 +20,18 @@ notation " 𝟙ˢ " => Substitution.id
 def lift {γ δ} (f : γ →ʳ δ) : γ →ˢ δ :=
   fun {_} x => 𝟙ˢ (f x)
 
-/-- Extend a substutution on the right. This is generally used when
-    a substitution needs to be used under a binder. -/
-def extend {γ δ} (u : γ →ˢ δ) η : γ ⊕ η →ˢ δ ⊕ η
-| _, .varLeft x =>  ⟦.varLeft ⟧ʳ (u x)
-| _, .varRight y => 𝟙ˢ y.varRight
+-- /-- Extend a substutution on the right. This is generally used when
+--     a substitution needs to be used under a binder. -/
+-- def extend {γ δ} (u : γ →ˢ δ) η : γ ⊕ η →ˢ δ ⊕ η
+-- | _, .varLeft x =>  ⟦.varLeft ⟧ʳ (u x)
+-- | _, .varRight y => 𝟙ˢ y.varRight
 
-@[inherit_doc]
-infixl:95 " ⇑ˢ " => Substitution.extend
+-- @[inherit_doc]
+-- infixl:95 " ⇑ˢ " => Substitution.extend
 
 /-- Compose a renaming and a substutition. -/
 def renaming_comp {α β γ} (f : β →ʳ γ) (u : α →ˢ β) : α →ˢ γ :=
-  fun ⦃δ⦄ x => ⟦ f ⟧ʳ u x
+  fun ⦃δ⦄ x => ⟦ f ʳ⇑ δ ⟧ʳ u x
 
 @[inherit_doc]
 infixr:95 " ʳ∘ˢ " => Substitution.renaming_comp
@@ -50,12 +50,6 @@ def sum {α β γ} (u : α →ˢ γ) (v : β →ˢ γ) : α ⊕ β →ˢ γ
 
 @[inherit_doc]
 infix:30 " ⊕ˢ " => Substitution.sum
-
-/- The following definitions are obsolete because the definition of Expr was changed,
-`act_left` and `act_right` had essencially the same role as
-`actFree` and `actBound` (which are now the ones in use). -/
-
-mutual
 
 -- def act_middle {α β γ δ : Shape} (u : β →ˢ α ⊕ γ) : Expr ((α ⊕ β) ⊕ δ) → Expr ((α ⊕ γ) ⊕ δ)
 --   | .varLeft (.varLeft x) ◃ ts => .varLeft (.varLeft x) ◃ (fun ⦃_⦄ y => ⟦ .assocLeft ⟧ʳ act_middle u (⟦ .assocRight ⟧ʳ ts y))
@@ -86,8 +80,6 @@ mutual
 --   · apply Prod.Lex.left ; apply rank_Var_lt x
 
 
-
-
 /- To do : Adapt the instanciation functions, as they are needed to define act.-/
 
 -- def inst_left {α β γ} (u : β →ˢ α) : Expr ((α ⊕ β) ⊕ γ) → Expr (α ⊕ γ)
@@ -110,34 +102,29 @@ mutual
 --   · apply Prod.Lex.right ; apply Expr.sizeOfArg
 --   · apply Prod.Lex.left ; apply rank_Var_lt x
 
+def extendL {α γ' β γ} {θ} (f : γ →ʳ α ⊕ γ' ⊕ β) : γ ⊕ θ →ʳ α ⊕ γ' ⊕ (β ⊕ θ)
+| _, .varLeft x => (_ ⇑ʳ (_ ⇑ʳ .varLeft) ) (f x)
+| _, .varRight x => .varRight (.varRight (.varRight x))
 
+def extendR {α δ' β δ} {θ} (g : α ⊕ δ' ⊕ β →ʳ δ) : α ⊕ δ' ⊕ (β ⊕ θ) →ʳ δ ⊕ θ
+| _, .varLeft x => .varLeft (g (.varLeft x))
+| _, .varRight (.varLeft x) => .varLeft (g (.varRight (.varLeft x)))
+| _, .varRight (.varRight (.varLeft x)) => .varLeft (g (.varRight (.varRight x)))
+| _, .varRight (.varRight (.varRight x)) => .varRight x
 
-/-- The action of a substutition on an expression -/
-def act {γ γ' δ} (u : γ →ˢ γ') : (Expr γ δ) → (Expr γ' δ)
-| x ◃ ts => by
-  have u_x := (u x)
-  exact (inst_subsituted u_x ts u)
-  -- termination proof needed
-  -- inst (fun ⦃_⦄ y => act_left u (ts y)) (u x)
-| x ◂ ts => by
-    have u_ts {{β}} (y : var_in β _) := act (extend u δ) (ts y)
-    exact x ◂ u_ts
+-- def viewR {α β γ δ} : α ⊕ β ⊕ γ ⊕ δ →ʳ (α ⊕ β ⊕ γ) ⊕ δ
+-- | _, .varLeft x => .varLeft (.varLeft x)
+-- | _, .varRight (.varLeft x) => .varLeft (.varRight (.varLeft x))
+-- | _, .varRight (.varRight (.varLeft x)) => .varLeft (.varRight (.varRight x))
+-- | _, .varRight (.varRight (.varRight x)) => .varRight x
 
--- I am unsure about the following, the type may be wrong.
-def inst {γ δ α} (tx : Expr γ α)
-  (ts : ∀ ⦃β⦄ (y : var_in β α), Expr (γ ⊕ δ) β)
-  : Expr γ δ :=
-  match tx with
-  | x ◃ us => x ◃ (by sorry)
-  | Expr.applyBound (α := θ) x us => by sorry
-
-def inst_subsituted {γ γ' α δ} (u_x : Expr γ' α)
-  (ts : ∀ {{β}} (y : var_in β α), Expr (γ ⊕ δ) β)
-  (u : γ →ˢ γ') : Expr γ' δ := by
-    have u_ts {{β}} (y : var_in β α) : Expr (γ' ⊕ δ) β := act (extend u δ) (ts y)
-    have inst_ux := inst u_x u_ts
-    exact inst_ux
-end -- mutual
+@[reducible]
+def act' {α γ' δ' β} {γ δ} (f : γ →ʳ α ⊕ γ' ⊕ β) (u : γ' →ˢ δ') (g : α ⊕ δ' ⊕ β →ʳ δ) : Expr γ → Expr δ
+| x ◃ ts =>
+  match f x with
+  | .varLeft y => g (.varLeft y) ◃ (fun ⦃β⦄ i => act' (extendL f) u (extendR g) (ts i))
+  | .varRight (.varLeft x) => sorry
+  | .varRight (.varRight x) => g (.varRight (.varRight x)) ◃ (fun ⦃θ⦄ i => act' (extendL f) u (extendR g) (ts i))
 
 @[inherit_doc]
 notation:60 " ⟦" u "⟧ˢ " e:61 => Substitution.act u e
@@ -149,17 +136,17 @@ def comp {γ δ θ} (u : γ →ˢ δ) (v : δ →ˢ θ) : γ →ˢ θ
 @[inherit_doc]
 notation:90 g:90 " ∘ˢ " f:91 => Substitution.comp f g
 
-/-- The extension of identity is identity -/
-def extend_id (γ δ) : @id γ ⇑ˢ δ = 𝟙ˢ := by
-  funext α x
-  cases x
-  case varRight => simp!
-  case varLeft x =>
-    dsimp! ; unfold id ; simp!
-    funext β y
-    rw [← Renaming.act_comp]
-    congr
-    funext δ z
-    cases z <;> simp! [Renaming.comp]
+-- /-- The extension of identity is identity -/
+-- def extend_id (γ δ) : @id γ ⇑ˢ δ = 𝟙ˢ := by
+--   funext α x
+--   cases x
+--   case varRight => simp!
+--   case varLeft x =>
+--     dsimp! ; unfold id ; simp!
+--     funext β y
+--     rw [← Renaming.act_comp]
+--     congr
+--     funext δ z
+--     cases z <;> simp! [Renaming.comp]
 
 end Substitution
