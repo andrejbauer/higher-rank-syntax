@@ -4,7 +4,7 @@ type index = int
 
 type shape = Shape of arity list
 
-and arity = Arity of shape list
+and arity = Arity of arity list
 
 type expr = Apply of index * expr list
 
@@ -24,9 +24,9 @@ let error msg = raise (Error msg)
 
 let (++) (Shape gamma) (Shape delta) = Shape (gamma @ delta)
 
-let width (Shape gamma) = List.length gamma
+let (+*) (Shape gamma) (Arity ar) = Shape (gamma @ ar)
 
-let (&) k gamma = k + width gamma
+let width (Shape gamma) = List.length gamma
 
 let get i (Shape lst) =
   try
@@ -41,11 +41,11 @@ let rec validate gamma (Apply (x, ts)) =
   if List.length ar <> List.length ts then
     error "Wrong number of arguments"
   else
-    List.iter2 (fun beta e -> validate (gamma ++ beta) e) ar ts
+    List.iter2 (fun a e -> validate (gamma +* a) e) ar ts
 
-let var = Shape []
+let var = Arity []
 
-let bind1_var = Shape [Arity []]
+let bind1_var = Arity [Arity []]
 
 let sym x = Apply (x, [])
 
@@ -95,12 +95,16 @@ struct
 end
 
 (* [shift gamma delta theta e] takes an expression [e] in shape [gamma ++ theta] and
-   converts it to a valid expression in [gamma ++ delta ++ delta]. *)
+   converts it to a valid expression in [gamma ++ delta ++ delta].
+
+   This is probably not correct. The idea is that this will be used as
+   necessary to insert e into a wider context.
+*)
 let rec shift gamma delta theta (Apply (x, ts)) : expr =
   let y = if x < width theta then x else x + width delta in
   let Arity ar = get x gamma in
   let ts = List.map2
-      (fun eta t -> shift gamma delta (theta ++ eta) t)
+      (fun eta t -> shift gamma delta (theta +* eta) t)
       ar ts
   in
   Apply (y, ts)
@@ -108,19 +112,27 @@ let rec shift gamma delta theta (Apply (x, ts)) : expr =
 type substitution = {
   dom : shape ;
   cod : shape ;
-  sub : expr list (* for each x of arity αr in dom, an expression in cod ++ αr *)
+  sub : expr list (* for each x of arity ar in dom, an expression in cod +* ar *)
 }
 
-(* [subst f gamma e] takes an expression [e] valid in [f.dom ++ gamma]
-   and applies [f] to it to obtain an expression in [f.cod ++ gamma] *)
-let rec subst f gamma (Apply (x, ts)) : expr =
-  let Arity ar = get x (f.dom ++ gamma) in
-  if x < width gamma then
-    let ts' = List.map2 (fun delta e -> subst f (gamma ++ delta) e) ar ts in
-    Apply (x, ts')
+(* Access the x-th item in substitution f, but take into account the fact
+   that x got shifted by the bound variables in gamma. *)
+let get_subst f x gamma =
+  List.nth f.sub (List.length f.sub - x - width gamma - 1)
+
+(* [subst alpha f gamma e] takes an expression [e] valid in [alpha ++ f.dom ++ gamma]
+   and applies [f] to it to obtain an expression in [alpha + f.cod ++ gamma] *)
+let rec subst alpha f gamma (Apply (x, ts)) : expr =
+  validate (alpha ++ f.dom ++ gamma) (Apply (x, ts)) ;
+  let Arity ar = get x (alpha ++ f.dom ++ gamma) in
+  if width gamma < x && x < width f.dom + width gamma then
+   (* x is in f.dom *)
+    let e = get_subst f x gamma (* in f.cod +* αr *) in
+    (* we might have to bring e into correct context using shift,
+       construct a substitution from ts, and apply it to e with
+       correct focus *)
+    failwith "not implemented"
   else
-    let e = List.nth f.sub (x - width gamma) (* in f.cod ++ αr *) in
-    let e = shift f.cod gamma ar e (* in f.cod ++ gamma ++ ar *) in
-    let g = { dom = ar ; cod = f.cod ++ gamma ; sub = _ } in
- in
-    subst ~lvl (Shape gamma) g e
+    (* x is in alpha or gamma *)
+    let ts' = List.map2 (fun a e -> subst alpha f (gamma +* a) e) ar ts in
+    Apply (x, ts')
