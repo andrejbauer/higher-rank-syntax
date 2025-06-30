@@ -1,13 +1,35 @@
 
-inductive Shape where
+
+inductive Arity where
+| Ar : (List Arity) →  Arity
+
+inductive Shape  where
+| Sh : (List Arity) → Shape
+
+def Arity.toShape : Arity → Shape
+| Ar l => .Sh l
+
+def Shape.concat : Shape → Shape → Shape
+| Sh l, Sh l' => Sh (List.append l l')
+
+def mixed_concat : Shape  → Arity → Shape
+| γ, α   => Shape.concat γ (α.toShape)
+
+
+/- inductive Shape where
   /-- the empty shape -/
 | empty : Shape
   /-- the shape containing precisely one item -/
 | slot : Shape → Shape
   /-- shape extension -/
 | oplus : Shape → Shape → Shape
-deriving Repr
+deriving Repr -/
 -- TODO: implement better Repr instance for shapes
+
+
+def var_in  : Arity → Shape →  Type
+| α, Sh l => List.find? (fun β => β = α) l
+
 
 @[inherit_doc]
 notation "𝟘" => Shape.empty
@@ -27,10 +49,10 @@ def Shape.rank : Shape → Nat
 | γ ⊕ δ => max (rank γ) (rank δ)
 
 /-- Variables of given arity in a given shape -/
-inductive var_in  : Arity → Shape → Type where
+/- inductive var_in  : Arity → Shape → Type where
 | varHere : ∀ {α : Shape}, var_in α α.slot
 | varLeft : ∀ {γ δ} {{α}}, var_in α γ → var_in α (γ ⊕ δ)
-| varRight : ∀ {γ δ} {{α}}, var_in α δ → var_in α (γ ⊕ δ)
+| varRight : ∀ {γ δ} {{α}}, var_in α δ → var_in α (γ ⊕ δ) -/
 
 infix:50 " ∈ " => var_in
 
