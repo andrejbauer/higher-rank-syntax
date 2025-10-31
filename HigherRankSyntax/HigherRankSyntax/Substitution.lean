@@ -118,20 +118,43 @@ def extendR {α δ' β δ} {θ} (g : α ⊕ δ' ⊕ β →ʳ δ) : α ⊕ δ' �
 -- | _, .varRight (.varRight (.varLeft x)) => .varLeft (.varRight (.varRight x))
 -- | _, .varRight (.varRight (.varRight x)) => .varRight x
 
+mutual
+
 @[reducible]
 def act' {α γ' δ' β} {γ δ} (f : γ →ʳ α ⊕ γ' ⊕ β) (u : γ' →ˢ δ') (g : α ⊕ δ' ⊕ β →ʳ δ) : Expr γ → Expr δ
 | x ◃ ts =>
   match f x with
   | .varLeft y => g (.varLeft y) ◃ (fun ⦃β⦄ i => act' (extendL f) u (extendR g) (ts i))
-  | .varRight (.varLeft x) => sorry
-  | .varRight (.varRight x) => g (.varRight (.varRight x)) ◃ (fun ⦃θ⦄ i => act' (extendL f) u (extendR g) (ts i))
+  | .varRight (.varLeft (α := χ) y) => ⟦ g ⟧ʳ _
+  | .varRight (.varRight y) => g (.varRight (.varRight y)) ◃ (fun ⦃θ⦄ i => act' (extendL f) u (extendR g) (ts i))
+
+def inst' {α γ' β} {γ δ} (f : γ →ʳ (α ⊕ γ') ⊕ β) (u : γ' →ˢ α) (g : α ⊕ β →ʳ δ) : Expr γ → Expr δ
+| x ◃ ts =>
+  match f x with
+  | .varLeft (.varLeft y) => sorry
+  | .varLeft (.varRight y) => sorry
+  | .varRight y => sorry
+
+end
+
+-- mutual
+
+--   def act {γ δ} (u : γ →ˢ δ) : Expr γ → Expr δ
+--   | x ◃ ts => inst (comp ts u) (u x)
+
+--   def inst {δ α} (u : α →ˢ δ) : Expr (δ ⊕ α) → Expr δ
+--   | .varLeft x ◃ ts => _
+--   | .varRight x ◃ ts => _
+
+--   /-- Composition of substitutions -/
+--   def comp {γ δ θ} (u : γ →ˢ δ) (v : δ →ˢ θ) : γ →ˢ θ
+--   | _, x => act _ (u x)
+
+-- end
 
 @[inherit_doc]
 notation:60 " ⟦" u "⟧ˢ " e:61 => Substitution.act u e
 
-/-- Composition of substitutions -/
-def comp {γ δ θ} (u : γ →ˢ δ) (v : δ →ˢ θ) : γ →ˢ θ
-| _, x => act v (u x)
 
 @[inherit_doc]
 notation:90 g:90 " ∘ˢ " f:91 => Substitution.comp f g
