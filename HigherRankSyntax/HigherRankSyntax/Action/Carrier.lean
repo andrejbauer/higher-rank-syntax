@@ -1,4 +1,5 @@
 import Mathlib.Logic.Equiv.Defs
+import Batteries.Data.Sum.Basic
 
 /-!
 # Carrier of a higher-rank binding signature
@@ -104,19 +105,19 @@ scoped infixl:67 " ⋈* " => Carrier.extList
 /-- One-step sub-arity relation: `α' ≺ α` when `α'` is the sub-arity
 attached to some binder position of `α`.  Termination of the
 substitution and η-expansion algorithms descends along this
-relation; the carrier asserts it is well-founded via `aritySubWf`. -/
-def AritySub (α' α : Arity) : Prop :=
-  ∃ y : AritySlots α, arityArity α y = α'
+relation; the carrier asserts it is well-founded via `aritySubWf`.
 
-theorem AritySub.wf : WellFounded (α' := Arity) AritySub :=
-  aritySubWf
+Defined as `abbrev` so it unfolds for the `WellFoundedRelation`
+instance below to match `aritySubWf`. -/
+abbrev AritySub (α' α : Arity) : Prop :=
+  ∃ y : AritySlots α, arityArity α y = α'
 
 /-- The carrier's sub-arity well-foundedness packaged as a
 `WellFoundedRelation` instance, so that Lean's well-founded
 recursion machinery can find it automatically. -/
 instance : WellFoundedRelation Arity where
   rel := AritySub
-  wf := AritySub.wf
+  wf := aritySubWf
 
 end Carrier
 
