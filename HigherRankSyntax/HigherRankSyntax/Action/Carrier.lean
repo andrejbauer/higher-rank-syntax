@@ -39,7 +39,7 @@ namespace Action
 
 /-- A carrier of a higher-rank binding signature: two indexed
 containers, coupled by an action on shapes. -/
-class Carrier where
+structure Carrier where
   /-- Shapes are the contexts in which expressions live. -/
   Shape : Type
   /-- Arities describe the binder structure of a variable. -/
@@ -76,10 +76,9 @@ class Carrier where
 
 namespace Carrier
 
-/-- Action of an arity on a shape. -/
-scoped infixl:65 " ⋈ " => Carrier.ext
-
-variable [Carrier]
+/-- Action of an arity on a shape.  The carrier `C` is left implicit
+and is inferred from the type of `γ`. -/
+scoped notation:65 γ:65 " ⋈ " α:66 => Carrier.ext _ γ α
 
 /-- Iterated action of a list of arities on a shape, in
 **cons-as-snoc** order: the head of the list is the **outermost**
@@ -90,34 +89,33 @@ This convention makes the recursive step of the substitution
 algorithm definitional: going under a binder of arity `β` prepends
 `β` to the running list `τ`, and the resulting shape
 `γ ⋈* (β :: τ)` reduces by `rfl` to `(γ ⋈* τ) ⋈ β`. -/
-def extList (γ : Shape) : List Arity → Shape
+def extList (C : Carrier) (γ : C.Shape) : List C.Arity → C.Shape
   | [] => γ
-  | α :: rest => extList γ rest ⋈ α
+  | α :: rest => C.ext (extList C γ rest) α
 
-scoped infixl:67 " ⋈* " => Carrier.extList
+/-- Iterated action of a list of arities; `C` inferred from `γ`. -/
+scoped notation:67 γ:67 " ⋈* " δ:68 => Carrier.extList _ γ δ
 
-@[simp] theorem extList_nil (γ : Shape) :
-    γ ⋈* ([] : List Arity) = γ := rfl
+@[simp] theorem extList_nil (C : Carrier) (γ : C.Shape) :
+    extList C γ [] = γ := rfl
 
-@[simp] theorem extList_cons (γ : Shape) (α : Arity) (rest : List Arity) :
-    γ ⋈* (α :: rest) = (γ ⋈* rest) ⋈ α := rfl
+@[simp] theorem extList_cons (C : Carrier) (γ : C.Shape)
+    (α : C.Arity) (rest : List C.Arity) :
+    extList C γ (α :: rest) = C.ext (extList C γ rest) α := rfl
 
 /-- One-step sub-arity relation: `α' ≺ α` when `α'` is the sub-arity
 attached to some binder position of `α`.  Termination of the
 substitution and η-expansion algorithms descends along this
-relation; the carrier asserts it is well-founded via `aritySubWf`.
+relation; the carrier asserts it is well-founded via `aritySubWf`. -/
+abbrev AritySub (C : Carrier) (α' α : C.Arity) : Prop :=
+  ∃ y : C.AritySlots α, C.arityArity α y = α'
 
-Defined as `abbrev` so it unfolds for the `WellFoundedRelation`
-instance below to match `aritySubWf`. -/
-abbrev AritySub (α' α : Arity) : Prop :=
-  ∃ y : AritySlots α, arityArity α y = α'
-
-/-- The carrier's sub-arity well-foundedness packaged as a
-`WellFoundedRelation` instance, so that Lean's well-founded
-recursion machinery can find it automatically. -/
-instance : WellFoundedRelation Arity where
-  rel := AritySub
-  wf := aritySubWf
+/-- The carrier's sub-arity well-founded relation, packaged as a
+`WellFoundedRelation` instance.  Instance resolution can locate it
+when the underlying `C` is known from context. -/
+instance (C : Carrier) : WellFoundedRelation C.Arity where
+  rel := AritySub C
+  wf := C.aritySubWf
 
 end Carrier
 
