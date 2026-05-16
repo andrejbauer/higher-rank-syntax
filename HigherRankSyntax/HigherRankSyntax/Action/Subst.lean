@@ -14,8 +14,6 @@ introduced once the relative-monad lift is set up.
 
 namespace Action
 
-open scoped Carrier
-
 /-- Lift a slot of `base` to a slot of `base ⋈* δ` via the iterated
 left-injection of the slot equivalence: each cons of `δ` adds one
 layer that the slot passes through on its `γ`-side. -/
@@ -23,8 +21,7 @@ def shiftThrough {C : Carrier} (base : C.Shape) :
     (δ : List C.Arity) → C.ShapeSlots base →
     C.ShapeSlots (base ⋈* δ)
   | [], p => p
-  | _ :: rest, p =>
-    (C.slotsExt _ _).symm (.inl (shiftThrough base rest p))
+  | β :: rest, p => Carrier.inlSlot (base ⋈* rest) β (shiftThrough base rest p)
 
 /-- `shiftThrough` preserves the slot's arity: lifting through the
 δ-extensions does not change `shapeArity`.
@@ -38,12 +35,11 @@ theorem shiftThrough_shapeArity {C : Carrier} (base : C.Shape) :
         C.shapeArity base p
   | [], _ => rfl
   | β :: rest, p => by
-    show C.shapeArity (C.ext (Carrier.extList base rest) β)
-           ((C.slotsExt (Carrier.extList base rest) β).symm
-              (.inl (shiftThrough base rest p)))
+    show C.shapeArity (Carrier.extList base rest ⋈ β)
+           (Carrier.inlSlot (Carrier.extList base rest) β
+              (shiftThrough base rest p))
          = C.shapeArity base p
-    rw [C.slotsExtCompat]
-    simp
+    rw [Carrier.shapeArity_inlSlot]
     exact shiftThrough_shapeArity base rest p
 
 end Action

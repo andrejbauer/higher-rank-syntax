@@ -10,11 +10,21 @@ the relative-monad picture.
 
 Arities form a **discrete** category — only identities — so no
 separate notion of renaming on arities is needed.
+
+## Notations
+
+  - `γ →ʳ δ` is the type of renamings from γ to δ.
+  - `𝟙ʳ` is the identity renaming.
+  - `g ∘ʳ f` is the composition; the textual order reverses
+    `Renaming.comp` so it reads "g after f", matching the
+    mathematical `g ∘ f`.
+  - `f ⇑ʳ β` extends a renaming `f` through a fresh binder of
+    arity `β`.
+
+The `ʳ` suffix is consistently on the right.
 -/
 
 namespace Action
-
-open scoped Carrier
 
 /-- A renaming of shapes from `γ` to `δ`: an arity-respecting slot
 map. -/
@@ -27,112 +37,113 @@ structure Renaming {C : Carrier} (γ δ : C.Shape) : Type where
 /-- Notation `γ →ʳ δ` for renamings from `γ` to `δ`. -/
 scoped infixr:25 " →ʳ " => Renaming
 
-namespace Renaming
-
-variable {C : Carrier}
-
-instance {γ δ : C.Shape} :
+instance {C : Carrier} {γ δ : C.Shape} :
     CoeFun (γ →ʳ δ) (fun _ => C.ShapeSlots γ → C.ShapeSlots δ) :=
-  ⟨toFun⟩
+  ⟨Renaming.toFun⟩
 
 /-- The identity renaming. -/
-def id (γ : C.Shape) : γ →ʳ γ where
+def Renaming.id {C : Carrier} (γ : C.Shape) : γ →ʳ γ where
   toFun := _root_.id
   arity_preserving _ := rfl
 
+/-- The identity renaming on a context. -/
+scoped notation "𝟙ʳ" => Renaming.id _
+
 /-- Composition of renamings: `comp f g` sends a slot through `f`,
-then through `g`.  Order matches the categorical convention
-`f ≫ g`. -/
-def comp {γ δ ε : C.Shape} (f : γ →ʳ δ) (g : δ →ʳ ε) : γ →ʳ ε where
-  toFun := g.toFun ∘ f.toFun
+then through `g`. -/
+def Renaming.comp {C : Carrier} {γ δ ε : C.Shape}
+    (f : γ →ʳ δ) (g : δ →ʳ ε) : γ →ʳ ε where
+  toFun x := g (f x)
   arity_preserving s :=
-    (g.arity_preserving (f.toFun s)).trans (f.arity_preserving s)
+    (g.arity_preserving (f s)).trans (f.arity_preserving s)
 
-/-- Extend a renaming through a fresh binder of arity `β`.
-
-`f.extend β : γ ⋈ β →ʳ δ ⋈ β` acts as `f` on the γ-side of the
-slot equivalence and as the identity on the β-binder slots.
-Categorically: `extend (- , β) : Shape ⥤ Shape` is a functor for
-each fixed `β`. -/
-def extend {γ δ : C.Shape} (f : γ →ʳ δ) (β : C.Arity) :
-    γ ⋈ β →ʳ δ ⋈ β where
-  toFun s :=
-    match C.slotsExt γ β s with
-    | .inl p => (C.slotsExt δ β).symm (.inl (f.toFun p))
-    | .inr y => (C.slotsExt δ β).symm (.inr y)
-  arity_preserving s := by
-    rw [C.slotsExtCompat δ β, C.slotsExtCompat γ β]
-    rcases h : C.slotsExt γ β s with p | y
-    · simp only [h, Equiv.apply_symm_apply, Sum.elim_inl]
-      exact f.arity_preserving p
-    · simp only [h, Equiv.apply_symm_apply, Sum.elim_inr]
+/-- `g ∘ʳ f` is the composition "g after f" (= `Renaming.comp f g`).
+The textual order matches the mathematical `g ∘ f`. -/
+scoped notation:90 g:90 " ∘ʳ " f:91 => Renaming.comp f g
 
 /-- Two renamings are equal when their underlying slot maps agree
 pointwise.  Their arity-preservation proofs are propositions and
 agree by `proof_irrel`. -/
 @[ext]
-theorem ext {γ δ : C.Shape} {f g : γ →ʳ δ}
-    (h : ∀ s, f.toFun s = g.toFun s) : f = g := by
+theorem Renaming.ext {C : Carrier} {γ δ : C.Shape} {f g : γ →ʳ δ}
+    (h : ∀ s, f s = g s) : f = g := by
   cases f; cases g
   congr
   funext s
   exact h s
 
-/-! ## Category laws
+/-! ## Category laws -/
 
-Shapes with renamings form a category.  Identity and composition
-satisfy the unit and associativity laws by direct unfolding. -/
-
-theorem id_comp {γ δ : C.Shape} (f : γ →ʳ δ) :
-    comp (id γ) f = f := by
+theorem Renaming.id_comp {C : Carrier} {γ δ : C.Shape} (f : γ →ʳ δ) :
+    Renaming.comp (Renaming.id γ) f = f := by
   ext; rfl
 
-theorem comp_id {γ δ : C.Shape} (f : γ →ʳ δ) :
-    comp f (id δ) = f := by
+theorem Renaming.comp_id {C : Carrier} {γ δ : C.Shape} (f : γ →ʳ δ) :
+    Renaming.comp f (Renaming.id δ) = f := by
   ext; rfl
 
-theorem comp_assoc {γ δ ε ζ : C.Shape}
+theorem Renaming.comp_assoc {C : Carrier} {γ δ ε ζ : C.Shape}
     (f : γ →ʳ δ) (g : δ →ʳ ε) (h : ε →ʳ ζ) :
-    comp (comp f g) h = comp f (comp g h) := by
+    Renaming.comp (Renaming.comp f g) h = Renaming.comp f (Renaming.comp g h) := by
   ext; rfl
+
+/-! ## Extending through a binder -/
+
+/-- Extend a renaming through a fresh binder of arity `β`.
+
+`f.extend β : γ ⋈ β →ʳ δ ⋈ β` acts as `f` on the γ-side of the
+slot equivalence and as the identity on the β-binder slots. -/
+def Renaming.extend {C : Carrier} {γ δ : C.Shape}
+    (f : γ →ʳ δ) (β : C.Arity) : γ ⋈ β →ʳ δ ⋈ β where
+  toFun s :=
+    match C.slotsExt γ β s with
+    | .inl p => Carrier.inlSlot δ β (f p)
+    | .inr y => Carrier.inrSlot δ β y
+  arity_preserving s := by
+    rw [C.slotsExtCompat γ β]
+    rcases h : C.slotsExt γ β s with p | y
+    · simp only [h, Sum.elim_inl, Carrier.shapeArity_inlSlot]
+      exact f.arity_preserving p
+    · simp only [h, Sum.elim_inr, Carrier.shapeArity_inrSlot]
+
+/-- `f ⇑ʳ β` is `f` extended through a fresh binder of arity `β`. -/
+scoped infixl:95 " ⇑ʳ " => Renaming.extend
 
 /-! ## Functoriality of `extend`
 
-For each fixed arity `β`, `(- ).extend β : Shape ⥤ Shape` is a
-functor: it preserves identities and composition. -/
+For each fixed arity `β`, `(- ⇑ʳ β) : Shape ⥤ Shape` is a functor:
+it preserves identities and composition. -/
 
 @[simp]
-theorem extend_id (γ : C.Shape) (β : C.Arity) :
-    (id γ).extend β = id (γ ⋈ β) := by
+theorem Renaming.extend_id {C : Carrier} (γ : C.Shape) (β : C.Arity) :
+    (Renaming.id γ) ⇑ʳ β = Renaming.id (γ ⋈ β) := by
   ext s
   show (match C.slotsExt γ β s with
-        | .inl p => (C.slotsExt γ β).symm (.inl p)
-        | .inr y => (C.slotsExt γ β).symm (.inr y)) = s
+        | .inl p => Carrier.inlSlot γ β p
+        | .inr y => Carrier.inrSlot γ β y) = s
   rw [show (match C.slotsExt γ β s with
-            | .inl p => (C.slotsExt γ β).symm (.inl p)
-            | .inr y => (C.slotsExt γ β).symm (.inr y))
+            | .inl p => Carrier.inlSlot γ β p
+            | .inr y => Carrier.inrSlot γ β y)
           = (C.slotsExt γ β).symm ((C.slotsExt γ β) s)
        by cases C.slotsExt γ β s <;> rfl]
   exact (C.slotsExt γ β).symm_apply_apply s
 
 @[simp]
-theorem extend_comp {γ δ ε : C.Shape}
+theorem Renaming.extend_comp {C : Carrier} {γ δ ε : C.Shape}
     (f : γ →ʳ δ) (g : δ →ʳ ε) (β : C.Arity) :
-    (comp f g).extend β = comp (f.extend β) (g.extend β) := by
+    (f.comp g) ⇑ʳ β = (f ⇑ʳ β).comp (g ⇑ʳ β) := by
   ext s
   show (match C.slotsExt γ β s with
-        | .inl p => (C.slotsExt ε β).symm (.inl (g.toFun (f.toFun p)))
-        | .inr y => (C.slotsExt ε β).symm (.inr y))
+        | .inl p => Carrier.inlSlot ε β (g (f p))
+        | .inr y => Carrier.inrSlot ε β y)
        = (match C.slotsExt δ β
              (match C.slotsExt γ β s with
-              | .inl p => (C.slotsExt δ β).symm (.inl (f.toFun p))
-              | .inr y => (C.slotsExt δ β).symm (.inr y)) with
-          | .inl q => (C.slotsExt ε β).symm (.inl (g.toFun q))
-          | .inr z => (C.slotsExt ε β).symm (.inr z))
+              | .inl p => Carrier.inlSlot δ β (f p)
+              | .inr y => Carrier.inrSlot δ β y) with
+          | .inl q => Carrier.inlSlot ε β (g q)
+          | .inr z => Carrier.inrSlot ε β z)
   cases C.slotsExt γ β s with
-  | inl p => simp [Equiv.apply_symm_apply]
-  | inr y => simp [Equiv.apply_symm_apply]
-
-end Renaming
+  | inl p => simp [Carrier.inlSlot, Equiv.apply_symm_apply]
+  | inr y => simp [Carrier.inrSlot, Equiv.apply_symm_apply]
 
 end Action
