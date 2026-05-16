@@ -5,10 +5,10 @@ import HigherRankSyntax.Action.Renaming
 # Expressions of a higher-rank binding signature
 
 `Expr γ` is the type of expressions in shape γ over a carrier `C`.
-The single constructor `apply` has a head slot `x` of `γ` and a
-dependent family of children, one per binder position of `x`'s
-arity.  The child at position `y` lives in the shape extended by
-the binder's arity.
+The primary constructor `apply'` takes a head slot `x` and a
+propositional witness `hα` that `x` has arity `α`, with the
+children typed in terms of `α`.  The smart constructor `apply`
+specialises to `α = shapeArity γ x` with a reflexive proof.
 
 Container view: `Expr` is the W-type of the shape container
 `Shape ◅ ShapeSlots` decorated by `shapeArity`, with the recursive
@@ -25,14 +25,32 @@ bound shape `α` via the action, not by adding a second index to
 
 namespace Action
 
-/-- Expressions in shape `γ` over a carrier `C`. -/
+/-- Expressions in shape `γ` over a carrier `C`.
+
+The primary constructor `apply'` carries the head's arity `α` and
+a propositional proof `hα` that `x` has that arity.  Carrying the
+arity explicitly lets callers describe children in terms of `α`
+rather than `shapeArity γ x`, so consumers that already know
+`α` (e.g. `Renaming.actExpr`, `Expr.η`) can build expressions
+directly without an arity-transport. -/
 inductive Expr {C : Carrier} : C.Shape → Type where
-  /-- An application of a head slot `x` of `γ` to a dependent family
-      of children, one per binder position of `x`'s arity. -/
-  | apply {γ : C.Shape} (x : C.ShapeSlots γ)
-      (args : (y : C.AritySlots (C.shapeArity γ x)) →
-              Expr (γ ⋈ C.arityArity (C.shapeArity γ x) y)) :
+  /-- An application of a head slot `x` of `γ` (with propositional
+      arity `α`) to a dependent family of children, one per binder
+      position of `α`. -/
+  | apply' {γ : C.Shape} (x : C.ShapeSlots γ) (α : C.Arity)
+      (hα : C.shapeArity γ x = α)
+      (args : (y : C.AritySlots α) →
+              Expr (γ ⋈ C.arityArity α y)) :
       Expr γ
+
+/-- Smart constructor: when the head's arity is intended to be its
+own `shapeArity`, no propositional proof is needed. -/
+@[reducible]
+def Expr.apply {C : Carrier} {γ : C.Shape} (x : C.ShapeSlots γ)
+    (args : (y : C.AritySlots (C.shapeArity γ x)) →
+            Expr (γ ⋈ C.arityArity (C.shapeArity γ x) y)) :
+    Expr γ :=
+  Expr.apply' x (C.shapeArity γ x) rfl args
 
 /-! ## The relative-monad functors
 
@@ -60,52 +78,13 @@ def Expr.J {C : Carrier} (γ : C.Shape) (α : C.Arity) : Type :=
 abbrev Expr.T {C : Carrier} (γ : C.Shape) (α : C.Arity) : Type :=
   Expr (γ ⋈ α)
 
-/-! ## Transport helper -/
-
-/-- Transport preservation for `arityArity`: applying `arityArity`
-to a value that has been transported along an arity equality yields
-the same arity as before the transport. -/
-private theorem arityArity_eq_rec {C : Carrier}
-    {a b : C.Arity} (h : a = b) (y : C.AritySlots a) :
-    C.arityArity b (h ▸ y) = C.arityArity a y := by
-  cases h
-  rfl
-
-/-! ## `Expr.apply'`: applying with a propositional arity
-
-When the head's arity is known propositionally (not definitionally)
-to equal some target arity, `Expr.apply'` performs the implicit
-transport so the children can be supplied with their type stated in
-terms of the target arity directly. -/
-
-/-- Construct an `Expr.apply` when the head's arity is known
-propositionally rather than definitionally. -/
-def Expr.apply' {C : Carrier} {γ : C.Shape}
-    (x : C.ShapeSlots γ) (α : C.Arity)
-    (hα : C.shapeArity γ x = α)
-    (children : (y : C.AritySlots α) →
-                Expr (γ ⋈ C.arityArity α y)) :
-    Expr γ :=
-  Expr.apply x (fun y =>
-    (arityArity_eq_rec hα y) ▸ children (hα ▸ y))
-
-/-- `Expr.apply'` at a reflexive arity proof reduces to a plain
-`Expr.apply`. -/
-@[simp]
-theorem Expr.apply'_rfl {C : Carrier} {γ : C.Shape}
-    (x : C.ShapeSlots γ)
-    (children : (y : C.AritySlots (C.shapeArity γ x)) →
-                Expr (γ ⋈ C.arityArity (C.shapeArity γ x) y)) :
-    Expr.apply' x (C.shapeArity γ x) rfl children = Expr.apply x children :=
-  rfl
-
 /-! ## The unit `η`
 
 `Expr.η γ α : J γ α → T γ α = Expr (γ ⋈ α)` η-expands a variable
 into a fully-applied expression.
 
 A variable `⟨x, hx⟩` of arity `α` in `γ` becomes
-`Expr.apply' xHead α hHead children`, where
+`apply' xHead α hHead children`, where
 * `xHead := Carrier.inlSlot γ α x` views `x` as the γ-side slot of
   `γ ⋈ α`, with arity `α` by `shapeArity_inlSlot`;
 * for each binder `y` of α, the child is the η-expansion of "the
@@ -122,9 +101,8 @@ def Expr.η {C : Carrier} :
     have hHead : C.shapeArity (γ ⋈ α) xHead = α :=
       (Carrier.shapeArity_inlSlot γ α x).trans hx
     Expr.apply' xHead α hHead fun y =>
-      let bound := Carrier.inrSlot γ α y
       Expr.η (γ ⋈ α) (C.arityArity α y)
-        ⟨bound, Carrier.shapeArity_inrSlot γ α y⟩
+        ⟨Carrier.inrSlot γ α y, Carrier.shapeArity_inrSlot γ α y⟩
 termination_by γ α _ => α
 decreasing_by exact ⟨_, rfl⟩
 
@@ -132,18 +110,17 @@ decreasing_by exact ⟨_, rfl⟩
 
 The action of a renaming `f : γ →ʳ δ` on an expression sends each
 slot through `f`; under each binder of arity `β_y`, the renaming
-extends via `f.extend` to handle the new bound variables.
+extends via `f ⇑ʳ β_y` to handle the new bound variables.
 
-This is the functorial action of the `T` functor in its Shape
-argument: `T γ α = Expr (γ ⋈ α)` becomes a functor `Shape ⥤ Type`
-once `actExpr` is in place. -/
+With `apply'` as the primary constructor the action is a plain
+structural recursion: no arity-transport at the call site. -/
 
 /-- Action of a renaming on an expression. -/
 def Renaming.actExpr {C : Carrier} :
     {γ δ : C.Shape} → (γ →ʳ δ) → Expr γ → Expr δ
-  | _, _, f, .apply x args =>
-    Expr.apply' (f x) (C.shapeArity _ x) (f.arity_preserving x)
-      fun y => Renaming.actExpr (f ⇑ʳ C.arityArity _ y) (args y)
+  | _, _, f, .apply' x α hα args =>
+    Expr.apply' (f x) α ((f.arity_preserving x).trans hα)
+      fun y => Renaming.actExpr (f ⇑ʳ C.arityArity α y) (args y)
 
 /-- Action of a renaming on an expression: `⟦ f ⟧ʳ e`. -/
 scoped notation:60 "⟦" f "⟧ʳ " e:61 => Renaming.actExpr f e
@@ -153,51 +130,31 @@ scoped notation:60 "⟦" f "⟧ʳ " e:61 => Renaming.actExpr f e
 `actExpr` preserves identity and composition, making
 `T γ α = Expr (γ ⋈ α)` a functor in its Shape argument. -/
 
-/-- `actExpr` commutes with `Expr.apply'`: the arity proof at the
-combined arity is the renaming's `arity_preserving` chained with
-the original proof. -/
-theorem Renaming.actExpr_apply' {C : Carrier} {γ' δ : C.Shape}
-    (g : γ' →ʳ δ)
-    (x : C.ShapeSlots γ') (α : C.Arity) (hα : C.shapeArity γ' x = α)
-    (children : (y : C.AritySlots α) →
-                Expr (γ' ⋈ C.arityArity α y)) :
-    ⟦ g ⟧ʳ (Expr.apply' x α hα children) =
-    Expr.apply' (g x) α ((g.arity_preserving x).trans hα)
-                (fun y => ⟦ g ⇑ʳ C.arityArity α y ⟧ʳ (children y)) := by
-  subst hα
-  rfl
-
 @[simp]
 theorem Renaming.actExpr.map_id {C : Carrier} :
     ∀ {γ : C.Shape} (e : Expr γ), ⟦ 𝟙ʳ ⟧ʳ e = e
-  | _, .apply x args => by
-    show Expr.apply' x (C.shapeArity _ x) rfl
-           (fun y => ⟦ 𝟙ʳ ⇑ʳ C.arityArity _ y ⟧ʳ (args y))
-         = Expr.apply x args
-    have h : (fun y => ⟦ (𝟙ʳ : _ →ʳ _) ⇑ʳ C.arityArity _ y ⟧ʳ (args y))
+  | _, .apply' x α hα args => by
+    show Expr.apply' x α hα
+           (fun y => ⟦ (𝟙ʳ : _ →ʳ _) ⇑ʳ C.arityArity α y ⟧ʳ (args y))
+       = Expr.apply' x α hα args
+    have h : (fun y => ⟦ (𝟙ʳ : _ →ʳ _) ⇑ʳ C.arityArity α y ⟧ʳ (args y))
              = args := by
       funext y
       rw [Renaming.extend_id]
       exact Renaming.actExpr.map_id (args y)
     rw [h]
-    rfl
 
 @[simp]
 theorem Renaming.actExpr.map_comp {C : Carrier} :
     ∀ {γ δ ε : C.Shape} (f : γ →ʳ δ) (g : δ →ʳ ε) (e : Expr γ),
       ⟦ g ∘ʳ f ⟧ʳ e = ⟦ g ⟧ʳ (⟦ f ⟧ʳ e)
-  | _, _, _, f, g, .apply x args => by
-    -- Unfold both sides into a common `Expr.apply'` form, then peel off
-    -- the head/arity/arity-proof (all definitionally equal) and prove the
-    -- children equal pointwise via `extend_comp` and the IH.
-    show Expr.apply' ((g ∘ʳ f) x) (C.shapeArity _ x)
-            ((g ∘ʳ f).arity_preserving x)
-            (fun y => ⟦ (g ∘ʳ f) ⇑ʳ C.arityArity _ y ⟧ʳ (args y))
-       = ⟦ g ⟧ʳ (⟦ f ⟧ʳ (Expr.apply x args))
-    rw [show ⟦ f ⟧ʳ (Expr.apply x args)
-          = Expr.apply' (f x) (C.shapeArity _ x) (f.arity_preserving x)
-              (fun y => ⟦ f ⇑ʳ C.arityArity _ y ⟧ʳ (args y)) from rfl,
-        Renaming.actExpr_apply']
+  | _, _, _, f, g, .apply' x α hα args => by
+    show Expr.apply' (g (f x)) α
+           (((g.arity_preserving (f x)).trans (f.arity_preserving x)).trans hα)
+           (fun y => ⟦ (g ∘ʳ f) ⇑ʳ C.arityArity α y ⟧ʳ (args y))
+       = Expr.apply' (g (f x)) α
+           ((g.arity_preserving (f x)).trans ((f.arity_preserving x).trans hα))
+           (fun y => ⟦ g ⇑ʳ C.arityArity α y ⟧ʳ (⟦ f ⇑ʳ C.arityArity α y ⟧ʳ (args y)))
     congr 1
     funext y
     rw [Renaming.extend_comp]
