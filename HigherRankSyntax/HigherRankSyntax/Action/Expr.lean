@@ -143,7 +143,7 @@ def Renaming.actExpr {C : Carrier} :
     {γ δ : C.Shape} → (γ →ʳ δ) → Expr γ → Expr δ
   | _, _, f, .apply x args =>
     Expr.apply' (f x) (C.shapeArity _ x) (f.arity_preserving x)
-      fun y => (f.extend (C.arityArity _ y)).actExpr (args y)
+      fun y => Renaming.actExpr (f ⇑ʳ C.arityArity _ y) (args y)
 
 /-- Action of a renaming on an expression: `⟦ f ⟧ʳ e`. -/
 scoped notation:60 "⟦" f "⟧ʳ " e:61 => Renaming.actExpr f e
@@ -163,18 +163,18 @@ theorem Renaming.actExpr_apply' {C : Carrier} {γ' δ : C.Shape}
                 Expr (γ' ⋈ C.arityArity α y)) :
     ⟦ g ⟧ʳ (Expr.apply' x α hα children) =
     Expr.apply' (g x) α ((g.arity_preserving x).trans hα)
-                (fun y => ⟦ g.extend (C.arityArity α y) ⟧ʳ (children y)) := by
+                (fun y => ⟦ g ⇑ʳ C.arityArity α y ⟧ʳ (children y)) := by
   subst hα
   rfl
 
 @[simp]
 theorem Renaming.actExpr.map_id {C : Carrier} :
-    ∀ {γ : C.Shape} (e : Expr γ), ⟦ Renaming.id γ ⟧ʳ e = e
+    ∀ {γ : C.Shape} (e : Expr γ), ⟦ 𝟙ʳ ⟧ʳ e = e
   | _, .apply x args => by
     show Expr.apply' x (C.shapeArity _ x) rfl
-           (fun y => ⟦ (Renaming.id _).extend (C.arityArity _ y) ⟧ʳ (args y))
+           (fun y => ⟦ 𝟙ʳ ⇑ʳ C.arityArity _ y ⟧ʳ (args y))
          = Expr.apply x args
-    have h : (fun y => ⟦ (Renaming.id _).extend (C.arityArity _ y) ⟧ʳ (args y))
+    have h : (fun y => ⟦ (𝟙ʳ : _ →ʳ _) ⇑ʳ C.arityArity _ y ⟧ʳ (args y))
              = args := by
       funext y
       rw [Renaming.extend_id]
@@ -192,11 +192,11 @@ theorem Renaming.actExpr.map_comp {C : Carrier} :
     -- children equal pointwise via `extend_comp` and the IH.
     show Expr.apply' ((g ∘ʳ f) x) (C.shapeArity _ x)
             ((g ∘ʳ f).arity_preserving x)
-            (fun y => ⟦ (g ∘ʳ f).extend (C.arityArity _ y) ⟧ʳ (args y))
+            (fun y => ⟦ (g ∘ʳ f) ⇑ʳ C.arityArity _ y ⟧ʳ (args y))
        = ⟦ g ⟧ʳ (⟦ f ⟧ʳ (Expr.apply x args))
     rw [show ⟦ f ⟧ʳ (Expr.apply x args)
           = Expr.apply' (f x) (C.shapeArity _ x) (f.arity_preserving x)
-              (fun y => ⟦ f.extend (C.arityArity _ y) ⟧ʳ (args y)) from rfl,
+              (fun y => ⟦ f ⇑ʳ C.arityArity _ y ⟧ʳ (args y)) from rfl,
         Renaming.actExpr_apply']
     congr 1
     funext y

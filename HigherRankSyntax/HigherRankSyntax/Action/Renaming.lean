@@ -75,16 +75,16 @@ theorem Renaming.ext {C : Carrier} {γ δ : C.Shape} {f g : γ →ʳ δ}
 /-! ## Category laws -/
 
 theorem Renaming.id_comp {C : Carrier} {γ δ : C.Shape} (f : γ →ʳ δ) :
-    Renaming.comp (Renaming.id γ) f = f := by
+    f ∘ʳ 𝟙ʳ = f := by
   ext; rfl
 
 theorem Renaming.comp_id {C : Carrier} {γ δ : C.Shape} (f : γ →ʳ δ) :
-    Renaming.comp f (Renaming.id δ) = f := by
+    𝟙ʳ ∘ʳ f = f := by
   ext; rfl
 
 theorem Renaming.comp_assoc {C : Carrier} {γ δ ε ζ : C.Shape}
     (f : γ →ʳ δ) (g : δ →ʳ ε) (h : ε →ʳ ζ) :
-    Renaming.comp (Renaming.comp f g) h = Renaming.comp f (Renaming.comp g h) := by
+    h ∘ʳ (g ∘ʳ f) = (h ∘ʳ g) ∘ʳ f := by
   ext; rfl
 
 /-! ## Extending through a binder -/
@@ -116,7 +116,7 @@ it preserves identities and composition. -/
 
 @[simp]
 theorem Renaming.extend_id {C : Carrier} (γ : C.Shape) (β : C.Arity) :
-    (Renaming.id γ) ⇑ʳ β = Renaming.id (γ ⋈ β) := by
+    (𝟙ʳ : γ →ʳ γ) ⇑ʳ β = 𝟙ʳ := by
   ext s
   show (match C.slotsExt γ β s with
         | .inl p => Carrier.inlSlot γ β p
@@ -131,7 +131,7 @@ theorem Renaming.extend_id {C : Carrier} (γ : C.Shape) (β : C.Arity) :
 @[simp]
 theorem Renaming.extend_comp {C : Carrier} {γ δ ε : C.Shape}
     (f : γ →ʳ δ) (g : δ →ʳ ε) (β : C.Arity) :
-    (f.comp g) ⇑ʳ β = (f ⇑ʳ β).comp (g ⇑ʳ β) := by
+    (g ∘ʳ f) ⇑ʳ β = (g ⇑ʳ β) ∘ʳ (f ⇑ʳ β) := by
   ext s
   show (match C.slotsExt γ β s with
         | .inl p => Carrier.inlSlot ε β (g (f p))
