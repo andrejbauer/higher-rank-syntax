@@ -160,4 +160,47 @@ theorem Renaming.actExpr.map_comp {C : Carrier} :
     rw [Renaming.extend_comp]
     exact Renaming.actExpr.map_comp _ _ (args y)
 
+/-! ## Functoriality of `J` and `T`
+
+`J` and `T` are functors `C.Shape → (C.Arity → Type)`.  The shape
+argument is functorial along renamings; the arity argument is
+discrete.  We package the morphism action explicitly. -/
+
+/-- Action of a renaming on `J`: send `⟨x, hx⟩` of arity α in γ to
+`⟨f x, hx after f's arity-preservation⟩` of arity α in δ. -/
+def Expr.J.map {C : Carrier} {γ δ : C.Shape} (f : γ →ʳ δ)
+    {α : C.Arity} (v : Expr.J γ α) : Expr.J δ α :=
+  ⟨f v.val, (f.arity_preserving v.val).trans v.property⟩
+
+@[simp]
+theorem Expr.J.map_id {C : Carrier} {γ : C.Shape} {α : C.Arity}
+    (v : Expr.J γ α) : Expr.J.map 𝟙ʳ v = v := rfl
+
+@[simp]
+theorem Expr.J.map_comp {C : Carrier} {γ δ ε : C.Shape}
+    (f : γ →ʳ δ) (g : δ →ʳ ε) {α : C.Arity} (v : Expr.J γ α) :
+    Expr.J.map (g ∘ʳ f) v = Expr.J.map g (Expr.J.map f v) := rfl
+
+/-- Action of a renaming on `T`: `T γ α = Expr (γ ⋈ α)`, and a
+renaming `f : γ →ʳ δ` extended through the bound binder `α` acts
+on expressions via `actExpr`. -/
+def Expr.T.map {C : Carrier} {γ δ : C.Shape} (f : γ →ʳ δ)
+    (α : C.Arity) (e : Expr.T γ α) : Expr.T δ α :=
+  ⟦ f ⇑ʳ α ⟧ʳ e
+
+@[simp]
+theorem Expr.T.map_id {C : Carrier} {γ : C.Shape} (α : C.Arity)
+    (e : Expr.T γ α) : Expr.T.map 𝟙ʳ α e = e := by
+  show ⟦ (𝟙ʳ : γ →ʳ γ) ⇑ʳ α ⟧ʳ e = e
+  rw [Renaming.extend_id]
+  exact Renaming.actExpr.map_id e
+
+@[simp]
+theorem Expr.T.map_comp {C : Carrier} {γ δ ε : C.Shape}
+    (f : γ →ʳ δ) (g : δ →ʳ ε) (α : C.Arity) (e : Expr.T γ α) :
+    Expr.T.map (g ∘ʳ f) α e = Expr.T.map g α (Expr.T.map f α e) := by
+  show ⟦ (g ∘ʳ f) ⇑ʳ α ⟧ʳ e = ⟦ g ⇑ʳ α ⟧ʳ (⟦ f ⇑ʳ α ⟧ʳ e)
+  rw [Renaming.extend_comp]
+  exact Renaming.actExpr.map_comp _ _ e
+
 end Action
