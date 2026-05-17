@@ -109,6 +109,22 @@ def Renaming.extend {C : Carrier} {γ δ : C.Shape}
 /-- `f ⇑ʳ β` is `f` extended through a fresh binder of arity `β`. -/
 scoped infixl:95 " ⇑ʳ " => Renaming.extend
 
+/-- The canonical inclusion of `γ` into `γ ⋈ β` as the γ-summand of
+the slot equivalence: every slot of `γ` is sent to its image on the
+γ-side of `slotsExt`. -/
+def Renaming.weaken {C : Carrier} (γ : C.Shape) (β : C.Arity) :
+    γ →ʳ γ ⋈ β where
+  toFun := Carrier.inlSlot γ β
+  arity_preserving := Carrier.shapeArity_inlSlot γ β
+
+/-- Iterated weakening: the canonical inclusion `γ →ʳ γ ⋈* τ`, built
+by recursion on `τ`.  Empty `τ` gives the identity; cons extends the
+previous weakening through one more binder. -/
+def Renaming.weakenList {C : Carrier} (γ : C.Shape) :
+    (τ : List C.Arity) → γ →ʳ γ ⋈* τ
+  | [] => Renaming.id γ
+  | β :: rest => Renaming.weaken (γ ⋈* rest) β ∘ʳ Renaming.weakenList γ rest
+
 /-! ## Functoriality of `extend`
 
 For each fixed arity `β`, `(- ⇑ʳ β) : Shape ⥤ Shape` is a functor:

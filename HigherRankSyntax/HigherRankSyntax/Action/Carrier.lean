@@ -106,6 +106,22 @@ theorem Carrier.shapeArity_inrSlot {C : Carrier} (γ : C.Shape)
   rw [C.slotsExtCompat γ α]
   simp [Carrier.inrSlot]
 
+/-- Arity-of-image for a slot that decomposes to the γ-summand: the
+γ-side of `slotsExt γ α x` carries the slot's arity from `γ`. -/
+theorem Carrier.shapeArity_of_slotsExt_inl {C : Carrier} {γ : C.Shape}
+    {α : C.Arity} {x : C.ShapeSlots (γ ⋈ α)} {q : C.ShapeSlots γ}
+    (h : C.slotsExt γ α x = .inl q) :
+    C.shapeArity (γ ⋈ α) x = C.shapeArity γ q := by
+  rw [C.slotsExtCompat γ α x, h]; rfl
+
+/-- Arity-of-image for a slot that decomposes to the α-summand: the
+α-side of `slotsExt γ α x` carries the binder's arity from `α`. -/
+theorem Carrier.shapeArity_of_slotsExt_inr {C : Carrier} {γ : C.Shape}
+    {α : C.Arity} {x : C.ShapeSlots (γ ⋈ α)} {z : C.AritySlots α}
+    (h : C.slotsExt γ α x = .inr z) :
+    C.shapeArity (γ ⋈ α) x = C.arityArity α z := by
+  rw [C.slotsExtCompat γ α x, h]; rfl
+
 /-- Iterated action of a list of arities on a shape, in
 **cons-as-snoc** order: the head of the list is the **outermost**
 extension, applied last.  Concretely,

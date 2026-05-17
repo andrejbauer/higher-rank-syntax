@@ -52,6 +52,46 @@ def Expr.apply {C : Carrier} {γ : C.Shape} (x : C.ShapeSlots γ)
     Expr γ :=
   Expr.apply' x (C.shapeArity γ x) rfl args
 
+/-! ## Structural subterm relation
+
+A heterogeneous "one-step child" relation on expressions, packaged
+as a relation on `Σ γ, Expr γ` so the two sides — which live at
+different shape indices — share a homogeneous type.  The Σ-wrapping
+is purely for type uniformity; only the second component carries
+order content. -/
+
+/-- `Expr.Subterm e' e` holds when `e` is some `apply' x α hα args`
+and `e'` is one of its arguments `args z`.  The shape indices `γ`,
+`γ ⋈ arityArity α z` come along for the ride inside the `Σ`. -/
+inductive Expr.Subterm {C : Carrier} :
+    (Σ γ : C.Shape, Expr γ) → (Σ γ : C.Shape, Expr γ) → Prop where
+  | of_arg {γ : C.Shape} (x : C.ShapeSlots γ) (α : C.Arity)
+      (hα : C.shapeArity γ x = α)
+      (args : (y : C.AritySlots α) → Expr (γ ⋈ C.arityArity α y))
+      (z : C.AritySlots α) :
+      Expr.Subterm
+        ⟨γ ⋈ C.arityArity α z, args z⟩
+        ⟨γ, Expr.apply' x α hα args⟩
+
+/-- The subterm relation is well-founded by structural induction on
+the second component: at each `apply' x α hα args`, the recursor's
+inductive hypothesis supplies accessibility of `args z` for every
+`z : AritySlots α` simultaneously, which is exactly the set of
+predecessors. -/
+theorem Expr.Subterm.wf {C : Carrier} : WellFounded (@Expr.Subterm C) := by
+  refine ⟨fun ⟨γ, e⟩ => ?_⟩
+  induction e with
+  | apply' _ _ _ _ ih =>
+    refine Acc.intro _ ?_
+    rintro ⟨_, _⟩ h
+    cases h
+    exact ih _
+
+instance Expr.Subterm.wellFoundedRelation {C : Carrier} :
+    WellFoundedRelation (Σ γ : C.Shape, Expr γ) where
+  rel := @Expr.Subterm C
+  wf := Expr.Subterm.wf
+
 /-! ## The relative-monad functors
 
 The relative monad of `Expr` acts on the category of shapes (with
