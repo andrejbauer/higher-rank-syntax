@@ -2,7 +2,7 @@ import Mathlib.CategoryTheory.Category.Basic
 import Mathlib.CategoryTheory.Comma.Presheaf.Basic
 import Lean.Level
 import Mathlib.CategoryTheory.Monad.Basic
-import HigherRankSyntax.RelativeMonads.RelativeMonad
+import HigherRankSyntax.RelativeMonad.Basic
 
 open CategoryTheory
 

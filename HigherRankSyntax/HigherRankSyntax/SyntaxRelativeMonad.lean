@@ -4,7 +4,7 @@ import Mathlib.CategoryTheory.Comma.Presheaf.Basic
 import Lean.Level
 import Mathlib.CategoryTheory.Monad.Basic
 
-import HigherRankSyntax.RelativeMonads.RelativeMonad
+import HigherRankSyntax.RelativeMonad.Basic
 import HigherRankSyntax.Renaming
 import HigherRankSyntax.Syntax
 -- import HigherRankSyntax.Substitution

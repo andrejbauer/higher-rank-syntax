@@ -9,7 +9,7 @@ import Mathlib.CategoryTheory.NatIso
 import Mathlib.CategoryTheory.Adjunction.Basic
 
 
-import HigherRankSyntax.RelativeMonads.RelativeMonad
+import HigherRankSyntax.RelativeMonad.Basic
 
 open CategoryTheory
 open Opposite
