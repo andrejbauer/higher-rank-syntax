@@ -164,4 +164,19 @@ def Expr.T.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) (α : C.Arity)
   rw [Renaming.extend_comp]
   exact Renaming.actExpr.map_comp _ _ e
 
+/-- η is natural: `T.map ρ ∘ η = η ∘ J.map ρ`. -/
+@[simp] theorem Expr.T.map_η {C : Carrier} : ∀ {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
+    (α : C.Arity) (v : Expr.J Γ α),
+    Expr.T.map ρ α (Expr.η Γ α v) = Expr.η Δ α (Expr.J.map ρ v)
+  | _, _, ρ, α, ⟨p, hp⟩ => by
+    unfold Expr.η Expr.T.map Expr.J.map
+    rw [Renaming.actExpr]
+    congr 1
+    funext i
+    have ih := Expr.T.map_η (ρ ⇑ʳ α) i.arity ⟨.here i, rfl⟩
+    unfold Expr.T.map Expr.J.map at ih
+    exact ih
+termination_by _ _ _ α _ => α
+decreasing_by exact ⟨_, rfl⟩
+
 end Action
