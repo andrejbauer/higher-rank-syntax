@@ -103,8 +103,16 @@ def inst.aux {C : Carrier} {Δ : Shape C} (α : C.Arity) (ι : Inst α Δ)
                   let weakened_ιj :=
                     ⟦ (Renaming.weakenList Δ τ) ⇑ʳ j.arity ⟧ʳ (ι j)
                   inst.aux j.arity new_args [] weakened_ιj
-termination_by sizeOf e
-decreasing_by all_goals sorry
+termination_by (⟨α, _, e⟩ : (_ : C.Arity) ×' Σ Γ : Shape C, Expr Γ)
+decreasing_by
+  -- ext args descent
+  · exact PSigma.Lex.right _ (Expr.Subterm.of_arg _ _ _ _ _)
+  -- .there args descent
+  · exact PSigma.Lex.right _ (Expr.Subterm.of_arg _ _ _ _ _)
+  -- .here args descent
+  · exact PSigma.Lex.right _ (Expr.Subterm.of_arg _ _ _ _ _)
+  -- α decreases (j.arity ≺ α)
+  · exact PSigma.Lex.left _ _ ⟨j, rfl⟩
 
 /-- Kleisli extension walker.  Walks `e : Expr (Γ ⋈* τ)` by classifying each head:
 τ-binder rebuilds; Γ-slot substitutes via σ and folds the τ-stack into σ's image. -/
@@ -132,8 +140,9 @@ def lift.aux {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
               let weakened_σq :=
                 ⟦ (Renaming.weakenList Δ τ) ⇑ʳ q.arity ⟧ʳ (σ q)
               inst.aux q.arity new_args [] weakened_σq
-termination_by sizeOf e
-decreasing_by all_goals sorry
+termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
+decreasing_by
+  all_goals exact Expr.Subterm.of_arg _ _ _ _ _
 
 /-! ## Public wrappers -/
 
