@@ -26,7 +26,7 @@ structure Renaming {C : Carrier} (Γ Δ : Shape C) : Type where
   /-- The underlying slot map. -/
   toFun : Slot Γ → Slot Δ
   /-- Each slot's image has the same arity as the slot itself. -/
-  arity : ∀ (s : Slot Γ), (toFun s).arity = s.arity
+  arity : ∀ (p : Slot Γ), (toFun p).arity = p.arity
 
 /-- Notation `Γ →ʳ Δ` for renamings from `Γ` to `Δ`. -/
 scoped infixr:25 " →ʳ " => Renaming
@@ -37,7 +37,7 @@ instance {C : Carrier} {Γ Δ : Shape C} :
 
 /-- The identity renaming on `Γ`. -/
 def Renaming.id {C : Carrier} (Γ : Shape C) : Γ →ʳ Γ where
-  toFun s := s
+  toFun p := p
   arity _ := rfl
 
 /-- The identity renaming on a shape. -/
@@ -45,8 +45,8 @@ scoped notation "𝟙ʳ" => Renaming.id _
 
 /-- Composition of renamings: `comp f g` sends a slot through `f`, then through `g`. -/
 def Renaming.comp {C : Carrier} {Γ Δ Ε : Shape C} (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) : Γ →ʳ Ε where
-  toFun s := g (f s)
-  arity s := (g.arity (f s)).trans (f.arity s)
+  toFun p := g (f p)
+  arity p := (g.arity (f p)).trans (f.arity p)
 
 /-- `g ∘ʳ f` is the composition "g after f" (= `Renaming.comp f g`). -/
 scoped notation:90 g:90 " ∘ʳ " f:91 => Renaming.comp f g
@@ -55,12 +55,12 @@ scoped notation:90 g:90 " ∘ʳ " f:91 => Renaming.comp f g
 arity-preservation proofs are propositions and agree by proof irrelevance. -/
 @[ext]
 theorem Renaming.ext {C : Carrier} {Γ Δ : Shape C} {f g : Γ →ʳ Δ}
-    (h : ∀ (s : Slot Γ), f s = g s) : f = g := by
+    (h : ∀ (p : Slot Γ), f p = g p) : f = g := by
   cases f
   cases g
   congr
-  funext s
-  exact h s
+  funext p
+  exact h p
 
 /-! ## Category laws -/
 
@@ -79,7 +79,7 @@ theorem Renaming.comp_assoc {C : Carrier} {Γ Δ Ε Ζ : Shape C}
 /-- The canonical weakening renaming `Γ →ʳ Γ ⋈ α`: every slot of `Γ` is sent to its image
 under `Slot.there`. -/
 def Renaming.weaken {C : Carrier} (Γ : Shape C) (α : C.Arity) : Γ →ʳ Γ ⋈ α where
-  toFun s := Slot.there s
+  toFun p := Slot.there p
   arity _ := rfl
 
 /-- Extend a renaming through a fresh binder of arity `β`.  `f.extend β : Γ ⋈ β →ʳ Δ ⋈ β`
@@ -87,11 +87,11 @@ acts as the identity on the `.here` binders and as `f` on the `.there` slots. -/
 def Renaming.extend {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) (β : C.Arity) :
     Γ ⋈ β →ʳ Δ ⋈ β where
   toFun := fun
-    | .here z  => .here z
-    | .there s => .there (f s)
+    | .here i  => .here i
+    | .there p => .there (f p)
   arity := fun
     | .here _  => rfl
-    | .there s => f.arity s
+    | .there p => f.arity p
 
 /-- `f ⇑ʳ β` is `f` extended through a fresh binder of arity `β`. -/
 scoped infixl:95 " ⇑ʳ " => Renaming.extend
@@ -99,16 +99,16 @@ scoped infixl:95 " ⇑ʳ " => Renaming.extend
 @[simp]
 theorem Renaming.extend_id {C : Carrier} (Γ : Shape C) (β : C.Arity) :
     (Renaming.id Γ) ⇑ʳ β = Renaming.id (Γ ⋈ β) := by
-  ext s
-  cases s with
+  ext p
+  cases p with
   | here _  => rfl
   | there _ => rfl
 
 @[simp]
 theorem Renaming.extend_comp {C : Carrier} {Γ Δ Ε : Shape C}
     (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) (β : C.Arity) : (g ∘ʳ f) ⇑ʳ β = (g ⇑ʳ β) ∘ʳ (f ⇑ʳ β) := by
-  ext s
-  cases s with
+  ext p
+  cases p with
   | here _  => rfl
   | there _ => rfl
 

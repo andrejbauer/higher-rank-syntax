@@ -9,12 +9,12 @@ The framework-level data on top of a `Carrier`.
   (`.base γ`) and one-step extension by an arity (`.ext Γ α`, notation `Γ ⋈ α`).
 
 * **Slots.**  `Slot Γ` is inductively the slots of `Γ`, with one constructor per layer:
-  `.base p` for a variable of the base shape, `.here z` for a binder introduced at this
-  `ext` layer, `.there s` for a slot inherited from the shape below.
+  `.base x` for a variable of the base shape, `.here i` for a binder introduced at this
+  `ext` layer, `.there p` for a slot inherited from the shape below.
 
 * **Slot arity.**  `Slot.arity` reads off the arity of a slot by recursion: a base slot
-  uses `baseSlotArity`, a `.here` binder uses `arityArity`, a `.there` slot inherits from
-  the shape below.  The equations hold by `rfl`.
+  uses the variable's `arity`, a `.here` binder uses the binder's `arity`, a `.there`
+  slot inherits from the shape below.  The equations hold by `rfl`.
 -/
 
 namespace Action
@@ -33,26 +33,26 @@ scoped infixl:65 " ⋈ " => Shape.ext
 extension, or a slot inherited from the shape below. -/
 inductive Slot {C : Carrier} : Shape C → Type where
   /-- A variable of the base shape. -/
-  | base  : {γ : C.BaseShape} → (p : C.BaseShapeSlot γ) → Slot (.base γ)
+  | base  : {γ : C.BaseShape} → (x : C.Var γ) → Slot (.base γ)
   /-- A binder introduced by the topmost extension. -/
-  | here  : {Γ : Shape C} → {α : C.Arity} → (z : C.AritySlot α) → Slot (Γ ⋈ α)
+  | here  : {Γ : Shape C} → {α : C.Arity} → (i : C.Binder α) → Slot (Γ ⋈ α)
   /-- A slot inherited from the shape below the topmost extension. -/
-  | there : {Γ : Shape C} → {α : C.Arity} → (s : Slot Γ) → Slot (Γ ⋈ α)
+  | there : {Γ : Shape C} → {α : C.Arity} → (p : Slot Γ) → Slot (Γ ⋈ α)
 
 /-- The arity of a slot, by recursion on its constructors. -/
 def Slot.arity {C : Carrier} {Γ : Shape C} : Slot Γ → C.Arity
-  | .base p  => C.baseSlotArity _ p
-  | .here z  => C.arityArity _ z
-  | .there s => s.arity
+  | .base x  => x.arity
+  | .here i  => i.arity
+  | .there p => p.arity
 
-@[simp] theorem Slot.arity_base {C : Carrier} {γ : C.BaseShape} (p : C.BaseShapeSlot γ) :
-    (Slot.base (C := C) p).arity = C.baseSlotArity γ p := rfl
+@[simp] theorem Slot.arity_base {C : Carrier} {γ : C.BaseShape} (x : C.Var γ) :
+    (Slot.base (C := C) x).arity = x.arity := rfl
 
 @[simp] theorem Slot.arity_here {C : Carrier} {Γ : Shape C} {α : C.Arity}
-    (z : C.AritySlot α) : (Slot.here (Γ := Γ) z).arity = C.arityArity α z := rfl
+    (i : C.Binder α) : (Slot.here (Γ := Γ) i).arity = i.arity := rfl
 
 @[simp] theorem Slot.arity_there {C : Carrier} {Γ : Shape C} {α : C.Arity}
-    (s : Slot Γ) : (Slot.there (α := α) s).arity = s.arity := rfl
+    (p : Slot Γ) : (Slot.there (α := α) p).arity = p.arity := rfl
 
 /-- Iterated extension of a shape by a list of arities, cons-as-snoc: the head of the list
 is the outermost extension.  `Γ ⋈* (β :: rest) := (Γ ⋈* rest) ⋈ β` and `Γ ⋈* [] := Γ`. -/
