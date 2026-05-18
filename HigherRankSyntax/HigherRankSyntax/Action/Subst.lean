@@ -64,6 +64,31 @@ def classify {C : Carrier} {Γ : Shape C} :
       | XPos.ext (τ_above := ta) (β := b) (τ_below := tb) j =>
           XPos.ext (τ_above := β :: ta) (β := b) (τ_below := tb) j
 
+/-- Classifying a Γ-slot weakened through τ recovers the original Γ-slot. -/
+@[simp] theorem classify_weakenList {C : Carrier} {Γ : Shape C}
+    (τ : List C.Arity) (p : Slot Γ) :
+    classify τ ((Renaming.weakenList Γ τ).toFun p) = XPos.base p := by
+  induction τ with
+  | nil => rfl
+  | cons β rest ih =>
+    show classify (β :: rest)
+           (Slot.there ((Renaming.weakenList Γ rest).toFun p)) = XPos.base p
+    simp [classify, ih]
+
+/-- Classifying a `tauSlot` recovers the corresponding `XPos.ext`. -/
+@[simp] theorem classify_tauSlot {C : Carrier} {Γ : Shape C}
+    (τ_above : List C.Arity) (β : C.Arity) (τ_below : List C.Arity)
+    (i : C.Binder β) :
+    classify (τ_above ++ β :: τ_below) (tauSlot Γ τ_above β τ_below i)
+      = XPos.ext (τ_above := τ_above) (β := β) (τ_below := τ_below) i := by
+  induction τ_above with
+  | nil => rfl
+  | cons a rest ih =>
+    show classify (a :: (rest ++ β :: τ_below))
+           (Slot.there (tauSlot Γ rest β τ_below i))
+         = XPos.ext (τ_above := a :: rest) (β := β) (τ_below := τ_below) i
+    simp [classify, ih]
+
 /-! ## Walkers -/
 
 /-- α-instantiation walker.  Walks `e : Expr ((Δ ⋈ α) ⋈* τ)` by classifying each head:
