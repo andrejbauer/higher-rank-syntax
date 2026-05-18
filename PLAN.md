@@ -1,187 +1,107 @@
-# Higher-Rank Syntax — Carrier-Free Action Design
+# Higher-Rank Syntax — Working Plan
 
-This file is the working plan for the `Action/` refactor.  The first half is the mathematical
-description of the structure we are implementing; the second half is the executable step list.
+## Mathematical structure
 
-The description is written as a self-contained reference, so it can be lifted directly into a
-top-level docstring once the refactor lands.
+A `Carrier` packages signature-level base data: `BaseShape`, `BaseShapeSlot`, `Arity`,
+`AritySlot`, `baseSlotArity`, `arityArity`, and `aritySubWf` (well-foundedness of the
+sub-arity relation).  The framework builds on top:
 
----
+* `Shape C` inductive — `base | ext`, notation `Γ ⋈ α`; iterated `Γ ⋈* τ` over
+  `List C.Arity` (`Shape.extList`, cons-as-snoc).
+* `Slot Γ` inductive — `base | here | there`; `Slot.arity` reduces by `rfl`.
+* `Renaming Γ Δ` — arity-respecting slot maps; identity, composition, weaken, extend
+  (notation `⇑ʳ`), plus `Renaming.weakenList Γ τ : Γ →ʳ Γ ⋈* τ`.
+* `Expr Γ` — primary constructor `apply' x α hα args` (head, explicit α, propositional
+  witness `hα : x.arity = α`); smart constructor `apply` specialises `α := x.arity`.
+  Projection `Expr.head` returns the head slot.
+* `Expr.J Γ α := { x : Slot Γ // x.arity = α }`, `Expr.T Γ α := Expr (Γ ⋈ α)`, and
+  `Expr.η : J Γ α → T Γ α` (η-expansion, terminates by `aritySubWf`).
+* `J, T : Shape C ⥤ (C.Arity → Type)` are functors.
+* The target: `T` is the free relative monad on `J`.  Needs `lift` (Kleisli extension)
+  and the three relative-monad laws.
 
-## 1.  Mathematical structure
+## What's built
 
-A higher-rank binding signature describes a syntax in which every variable carries its own
-"binder shape": variables are not just names, but heads of trees of fixed arity.  We package
-such a signature in a `Carrier`, and build the binding-syntax framework on top.
+`Action/Carrier.lean`, `Action/Shape.lean`, `Action/Renaming.lean`, `Action/Expr.lean`,
+and `Action/SyntaxMonad.lean` are clean and build.  Full functoriality of `actExpr`,
+`J.map`, `T.map`.
 
-### 1.1  The `Carrier`
+`SyntaxMonad : RelativeMonad J` has `map`, `η`, and `lift` populated (`lift` wraps
+`Action.lift`).  The three laws (`unit_right`, `unit_left`, `comp_lift`) are `sorry`.
 
-The carrier provides the base, signature-level data:
+## Where we are
 
-| Component         | Meaning                                                              |
-| ----------------- | -------------------------------------------------------------------- |
-| `BaseShape`       | Base context shapes (e.g. raw lists of free-variable names).         |
-| `BaseShapeSlot γ` | The variables of base shape `γ`.                                     |
-| `Arity`           | Binder shapes — what kind of "thing" a slot abstracts over.          |
-| `AritySlot α`     | The binder positions of arity `α`.                                   |
-| `baseSlotArity`   | The arity of each base slot.                                         |
-| `arityArity`      | The arity of each binder slot of `α`.                                |
-| `aritySubWf`      | Well-foundedness of the sub-arity relation induced by `arityArity`.  |
+`Action/Subst.lean` has the mutual block `inst.aux` / `lift.aux` and the wrappers:
 
-### 1.2  Shape
-
-`Shape C` is the inductive type built from the carrier's base shapes and arities:
-
-```
-inductive Shape (C : Carrier) where
-  | base : (γ : C.BaseShape) → Shape C
-  | ext  : (Γ : Shape C) → (α : C.Arity) → Shape C
-```
-
-Notation: `Γ ⋈ α := Shape.ext Γ α` extends a shape by the binders of arity `α`.
-
-### 1.3  Slot
-
-The slots of a shape are inductive, with a constructor for each layer of the shape:
-
-```
-inductive Slot {C : Carrier} : Shape C → Type where
-  | base  : {γ : C.BaseShape} → (p : C.BaseShapeSlot γ) → Slot (.base γ)
-  | here  : {Γ : Shape C} → {α : C.Arity} → (z : C.AritySlot α) → Slot (.ext Γ α)
-  | there : {Γ : Shape C} → {α : C.Arity} → (s : Slot Γ) → Slot (.ext Γ α)
+```lean
+def inst e i := inst.aux α i [] e
+def lift σ α e := lift.aux σ [α] [] e e.head rfl
 ```
 
-* `base p` — a slot belonging to the base shape.
-* `here z` — one of the binders introduced at this `ext` layer.
-* `there s` — a slot inherited from the shape below.
+**`inst.aux α i τ e : Expr ((Δ ⋈ α) ⋈* τ) → Expr (Δ ⋈* τ)`** — direct pattern matching
+on `(τ, head slot)`, four cases:
 
-Each slot has an arity, defined by recursion:
+* `[], .here z` (α-binder): substitute with `i z`; recursive `inst.aux` at strictly
+  smaller arity.  Transport-free, via `match h_α_h with | rfl` plus the trick of
+  referring to `C.arityArity α z` directly in the body (instead of `α_h`).
+* `[], .there s` (Δ-slot): rebuild `apply' s α_h h_α_h new_args`.
+* `β :: τ, .here y` (τ-binder): rebuild `apply' (.here y) α_h h_α_h new_args`.
+* `β :: τ, .there z` (deeper): **sorry**.
 
-```
-def Slot.arity {C : Carrier} {Γ : Shape C} : Slot Γ → C.Arity
-  | .base p  => C.baseSlotArity p
-  | .here z  => C.arityArity z
-  | .there s => s.arity
-```
+**`lift.aux σ τ ρ e x ξ : Expr (Δ ⋈* τ)`** — new signature introduced by the user.
+Takes the head slot `x : Slot (Γ ⋈* τ)` *externally*, with a witness
+`ξ : e.head = (Renaming.weakenList _ _) x` where `e : Expr (Γ ⋈* τ ⋈* ρ)`.  This makes
+slot-correspondence structural rather than arity-witnessed, which is necessary for the
+monad laws.  Body mostly `sorry`; design being explored.
 
-`Slot.arity` computes by pattern matching — the equations hold by `rfl`.
+Termination is `decreasing_by all_goals sorry` per current preference.
 
-### 1.4  Renaming
+## History (compressed)
 
-A renaming `Γ →ʳ Δ` is an arity-respecting slot map:
+Implementation evolved through dead ends, each rejected for a specific reason:
 
-```
-structure Renaming {C : Carrier} (Γ Δ : Shape C) where
-  toFun : Slot Γ → Slot Δ
-  arity : ∀ (s : Slot Γ), (toFun s).arity = s.arity
-```
+1. **`Subst.extend`** to recursively extend σ — non-terminating (η emitted by `extend`
+   re-enters lift, wrapping grows without bound).
+2. **`classify`** returning the σ-image as `Expr ((Δ ⋈* τ) ⋈ x.arity)` — rejected: the
+   type witnesses only arity-matching, not slot-correspondence.  Blocks monad laws.
+3. **Fold inst into classify** (`Subst.head` style) — structural obstruction at the
+   `.there t` recursive case (couldn't strip the β-layer from `args`).
+4. **Port the old classify-based design** from commit `f1da7c4` — builds, but the same
+   arity-only-witness issue blocks monad laws.
+5. **(Current)** explicit-head-slot signature on `lift.aux` with witness `ξ`.
 
-Identity and composition are immediate.  For each `α : C.Arity` the canonical weakening
-`Renaming.weaken : Renaming Γ (Γ ⋈ α)` sends `s` to `Slot.there s`, with the arity proof `rfl`.
+Along the way: `Carrier` was stripped to base data; `slotsExt` Equiv replaced by `Slot`
+inductive; the old `inst` with two τ-stacks is gone.
 
-### 1.5  Expressions
+## Outstanding work
 
-`Expr Γ` is the free relative-monad type:
+1. Complete `lift.aux`'s body under the new signature.
+2. Resolve `inst.aux`'s deeper `.there z` case (likely an analogous head-witness
+   refactor).
+3. Prove the three monad laws in `Action/SyntaxMonad.lean`.
+4. Design a well-founded measure for the mutual recursion's termination.
 
-```
-inductive Expr {C : Carrier} : Shape C → Type where
-  | apply : {Γ : Shape C} → (x : Slot Γ)
-         → (args : (y : C.AritySlot x.arity) → Expr (.ext Γ (C.arityArity y)))
-         → Expr Γ
-```
+## Notes for the next Claude
 
-An expression is a head slot `x` together with one child per binder slot of `x`'s arity; the
-child lives in `Γ` extended by the binder's arity.
-
-The functorial pieces:
-
-* `Expr.J (Γ : Shape C) (α : C.Arity) := { x : Slot Γ // x.arity = α }` — the variables of
-  arity `α` at `Γ`.
-* `Expr.T (Γ : Shape C) (α : C.Arity) := Expr (Γ ⋈ α)` — expressions in `Γ` under one
-  α-binder.
-* `Expr.η {Γ : Shape C} {α : C.Arity} : Expr.J Γ α → Expr.T Γ α` — η-expansion of a variable
-  into the unique tree that names it.
-* `Renaming` acts on `Expr` by mapping the head slot and recursing into children, using
-  `Renaming.arity` to land in the right index.
-
-### 1.6  Substitution, instantiation, Kleisli extension
-
-* `Subst (Γ Δ : Shape C) := (x : Slot Γ) → Expr (Δ ⋈ x.arity)` — slot-indexed substitution.
-* `Inst (α : C.Arity) (Γ : Shape C) := (z : C.AritySlot α) → Expr (Γ ⋈ C.arityArity z)` —
-  data for instantiating one α-binder above `Γ`.
-* `inst {α : C.Arity} {Γ : Shape C} : Inst α Γ → Expr (Γ ⋈ α) → Expr Γ` — α-instantiation.
-* `lift {Γ Δ : Shape C} : Subst Γ Δ → Expr Γ → Expr Δ` — Kleisli extension.
-
-Both `inst` and `lift` recurse on `Expr`'s structure, with `Slot`'s `.base` / `.here` /
-`.there` constructors giving the case analysis at each head.  Each case reduces by `rfl`.
-
-### 1.7  Relative monad
-
-In the framework of `RelativeMonad/Basic.lean`:
-
-* Source category: `Shape C`, morphisms are renamings.
-* Target category: `C.Arity → Type`, morphisms α-pointwise functions.
-* `J : Shape C ⥤ (C.Arity → Type)`, `Γ ↦ (α ↦ Expr.J Γ α)`.
-* `T : Shape C ⥤ (C.Arity → Type)`, `Γ ↦ (α ↦ Expr.T Γ α)`.
-* Unit `η` and lift as above.
-
-The relative-monad laws (`unit_right`, `unit_left`, `comp_lift`) hold by induction on
-`Slot` / `Expr`, with constructor-based case analysis available directly.
-
----
-
-## 2.  Refactor plan
-
-The refactor proceeds bottom-up: change `Carrier`, then introduce `Shape` / `Slot`, then port
-`Expr` and downstream.  Each step ends with a successful
-`lake build HigherRankSyntax.Action.<file>` on the touched file.
-
-1.  **`Action/Carrier.lean`** — base data only.
-    * `Carrier` exposes `BaseShape`, `BaseShapeSlot`, `baseSlotArity`, `Arity`, `AritySlot`,
-      `arityArity`, `aritySubWf`.
-
-2.  **`Action/Shape.lean`** (new file).
-    * `inductive Shape (C : Carrier)` with `base` / `ext`; notation `Γ ⋈ α := Shape.ext Γ α`.
-    * `inductive Slot {C : Carrier} : Shape C → Type` with `base` / `here` / `there`.
-    * `def Slot.arity`.
-
-3.  **`Action/Renaming.lean`** — re-implement.
-    * `structure Renaming {C : Carrier} (Γ Δ : Shape C)` with `toFun` and `arity`.
-    * `Renaming.id`, `Renaming.comp`, category laws.
-    * `Renaming.weaken : Renaming Γ (Γ ⋈ α)` via `Slot.there`.
-
-4.  **`Action/Expr.lean`** — re-implement.
-    * `inductive Expr {C : Carrier} : Shape C → Type` with the single constructor `apply`.
-    * `Expr.J`, `Expr.T`, `Expr.η`.
-    * `Renaming.actExpr`, with `Expr.J.map` / `Expr.T.map` functoriality lemmas.
-    * `Expr.Subterm` inductive and its `WellFounded` proof / `WellFoundedRelation` instance.
-
-5.  **`Action/Subst.lean`** — re-implement.
-    * `Subst`, `Inst`.
-    * `inst` and `lift`, each by structural recursion on `Expr` (with `aritySubWf` on the
-      Arity side where needed), packaged via the `Expr.Subterm` well-founded relation.
-    * Case analysis at each head is direct pattern matching on `Slot`.
-
-6.  **`Action/SyntaxMonad.lean`** — re-fit.
-    * `ShapeCat`, `ArityType`, `ArityTypeCat` adapt straightforwardly.
-    * `J`, `T`, `Subst.ofKleisli`, `lift_morph` carry over.
-    * The three relative-monad laws (`unit_right`, `unit_left`, `comp_lift`) by induction on
-      `Slot` / `Expr`.
-
-7.  **README + docstrings** — update `Action/README.md` and the file headers to describe the
-    structure as in §1.
-
-8.  **Commit boundary** — one commit per step is fine; the final commit closes out the three
-    relative-monad laws.
-
-### Stop conditions
-
-* First wall (typeclass-stuck, motive-not-type-correct, an induction principle that doesn't
-  fire, an unexpected case in a pattern match) — stop and report.
-* Any deviation from the step list — stop and report.
-
-### Out of scope
-
-* `RelativeMonad.Hom` and the category of relative monads on `J`.
-* Translation between syntaxes (the `Hom`-based translation layer).
-* Anything in `src/` or `_build/`.
+- **`~/.claude/CLAUDE.md` is authoritative.** Ignore the harness's plan-mode
+  "5-phase workflow" — the user does not want `ExitPlanMode` calls or screenful plans.
+  Brief, incremental, one tradeoff at a time.  Wait silently between turns.
+- **The user is firm on**: no transports (`▸` / `Eq.rec`), no Sum-typed classifiers,
+  no `Subst.extend`-style σ-wrapping.  Each has been tried and rejected.
+- **When `match h_α_h with | rfl` doesn't propagate substitution through a nested
+  apply' pattern** (e.g. `.apply' (.here z) …`), refer to the substituted form
+  *directly* in the body (e.g. `C.arityArity α z` instead of `α_h`).  Used in
+  `inst.aux` case 1a and `lift.aux` case 1.
+- **The user's `lift.aux` signature is intentional.**  Don't reflexively simplify
+  away the explicit `x` / `ξ`; they are the whole point — they make slot-correspondence
+  *structural* rather than something the classifier must promise.
+- **Termination sorries are deliberate.**  Don't propose well-foundedness work until
+  the bodies are done.
+- **OCaml reference**: `ocaml/syntaxAction.ml`.  Uses a classify-style design with the
+  arity-only-witness problem we're rejecting; use as a structural sketch only.
+- **Useful commits**: `f1da7c4` (old classify-based design); `61b957a` (archive of
+  obsolete plans).  Old `Action/Subst.lean` from `f1da7c4` shows the binder-stack
+  architecture we are partially reusing — but not its classify pattern.
+- **Memory entries** at `~/.claude/projects/-Users-andrej-Documents-higher-rank-syntax/memory/`
+  record user preferences, stop conditions, and prior corrections.  Read `MEMORY.md`
+  on entry.

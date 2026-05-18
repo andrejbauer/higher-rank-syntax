@@ -1,0 +1,70 @@
+import Mathlib.CategoryTheory.Category.Basic
+import Mathlib.CategoryTheory.Functor.Basic
+import HigherRankSyntax.Action.Expr
+import HigherRankSyntax.Action.Subst
+import HigherRankSyntax.RelativeMonad.Basic
+
+/-!
+# Categorical scaffolding for the syntax monad
+
+The categorical setting on which the syntax-monad structure of `Expr` sits.
+
+* Source category `Shape C`: morphisms are renamings.
+* Target category `ArityType C := C.Arity → Type`: α-pointwise functions; `C.Arity` is
+  treated as a discrete base.
+* `J : Shape C ⥤ ArityType C` — the variables-of-arity-α functor.
+* `T : Shape C ⥤ ArityType C` — the expressions-under-one-α-binder functor.
+
+The relative-monad structure (unit `η`, Kleisli extension, laws) sits on top of this
+scaffolding and will be added once the substitution machinery is in place.
+-/
+
+namespace Action
+
+open CategoryTheory
+
+/-- The category of shapes and renamings. -/
+instance ShapeCat {C : Carrier} : Category (Shape C) where
+  Hom := Renaming
+  id := Renaming.id
+  comp := Renaming.comp
+  id_comp _ := Renaming.id_comp _
+  comp_id _ := Renaming.comp_id _
+  assoc _ _ _ := Renaming.comp_assoc _ _ _
+
+/-- The target category: families `C.Arity → Type` with α-pointwise morphisms. -/
+abbrev ArityType (C : Carrier) : Type 1 := C.Arity → Type
+
+instance ArityTypeCat {C : Carrier} : Category (ArityType C) where
+  Hom F G := ∀ α : C.Arity, F α → G α
+  id _ := fun _ x => x
+  comp f g := fun α x => g α (f α x)
+  id_comp _ := rfl
+  comp_id _ := rfl
+  assoc _ _ _ := rfl
+
+/-- Variables functor: `Γ ↦ (α ↦ Expr.J Γ α)`. -/
+def J {C : Carrier} : Shape C ⥤ ArityType C where
+  obj Γ := fun α => Expr.J Γ α
+  map ρ := fun _ v => Expr.J.map ρ v
+  map_id _ := by funext _ _; rfl
+  map_comp _ _ := by funext _ _; rfl
+
+/-- Expressions functor: `Γ ↦ (α ↦ Expr.T Γ α)`. -/
+def T {C : Carrier} : Shape C ⥤ ArityType C where
+  obj Γ := fun α => Expr.T Γ α
+  map ρ := fun α e => Expr.T.map ρ α e
+  map_id _ := by funext α e; exact Expr.T.map_id α e
+  map_comp _ _ := by funext α e; exact Expr.T.map_comp _ _ α e
+
+/-- The syntax relative monad: `T` is the free relative monad on `J`.  Map, unit, and the
+Kleisli extension are filled in; the three laws await the completion of `lift.aux`. -/
+def SyntaxMonad {C : Carrier} : RelativeMonad (@J C) where
+  map        := T.obj
+  η          := Expr.η
+  lift       := fun {_ _} f α e => Action.lift (fun s => f s.arity ⟨s, rfl⟩) α e
+  unit_right := sorry
+  unit_left  := sorry
+  comp_lift  := sorry
+
+end Action
