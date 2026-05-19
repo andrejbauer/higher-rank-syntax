@@ -67,13 +67,58 @@ populated; the three laws (`unit_right`, `unit_left`, `comp_lift`) are `sorry`.
 
 ## Outstanding work
 
-1. Prove the three monad laws in `Action/SyntaxMonad.lean`.  Will need lemmas
-   about how `classify` commutes with renamings, with η, and with composition.
-2. Discharge the two `decreasing_by all_goals sorry` in `inst.aux` and
-   `lift.aux`.  `lift.aux` needs only a measure on `e` (subterm via
-   `Expr.Subterm`); `inst.aux` needs a lex measure on `(α, e)` to cover both
-   the args descent (e shrinks) and the smaller-arity call (α decreases via
-   `subWf`).
+1. Prove the three monad laws in `Action/SyntaxMonad.lean`.  See "What still
+   blocks the monad laws" below for the specific sub-lemma that's needed.
+2. ~~Discharge the two `decreasing_by all_goals sorry`~~ — done in
+   `ff54857`.  `lift.aux` uses `Expr.Subterm.wellFoundedRelation` on
+   `Σ Γ, Expr Γ`; `inst.aux` uses a lex `PSigma` over `(C.Arity, Σ Γ, Expr Γ)`.
+
+## Warmup lemmas (done)
+
+Three `simp` lemmas covering the classify dispatch and η naturality:
+
+* `classify_weakenList` in `Action/Subst.lean`: `classify τ (weakenList Γ τ p) =
+  XPos.base p`.  Induction on τ.
+* `classify_tauSlot` in `Action/Subst.lean`: `classify (τ_above ++ β :: τ_below)
+  (tauSlot Γ τ_above β τ_below i) = XPos.ext i`.  Induction on τ_above.
+* `Expr.T.map_η` in `Action/Expr.lean`: `T.map ρ α (η v) = η (J.map ρ v)`.
+  Well-founded recursion on α via `subWf` (mirrors `Expr.η`'s recursion).
+  Note: `rw [Expr.η]` did NOT work — use `unfold Expr.η` to expose the body
+  for WF-recursive functions.
+
+## What still blocks the monad laws
+
+Tracing both `unit_right` and `unit_left` through `lift.aux`'s gamma branch
+ends at the same point: `inst.aux α ι [] (η <weakened slot>)`.
+
+In `unit_right` this `inst.aux` call needs to return `apply' p α_h h_α_h
+args` — the same expression we started with.  The Δ-slot branch peels one
+`.there`, but recurses on `inst.aux` of each η-child.  Each η-child is
+`η ⟨.here i, _⟩`, which fires the α-binder case (since `.here i` is a binder
+of α), producing yet another `inst.aux` at smaller arity `i.arity` on
+`weakened (ι i)`.  By `subWf` this terminates, but the proof has to capture
+"the chain of `inst.aux` calls on η-images of binders unwinds to give back
+the original `args`".
+
+The required generalised lemma is roughly:
+
+```
+inst.aux α ι τ (η-expansion-image) =
+  apply' (corresponding-slot) … (corresponding-new-args)
+```
+
+with two flavours depending on whether the η's slot is `.there p` (Γ-slot,
+which gives the Δ-slot rebuild) or `.here i` (binder, which plugs ι and
+recurses at `i.arity`).  Best to prove these by mutual induction on α via
+`subWf` and on the `Σ Γ, Expr Γ` subterm order for the inner expressions.
+
+`unit_left` lands on the same gamma branch but with σ being arbitrary `f`
+(rather than η).  The same sub-lemma's "Δ-slot rebuild" + "binder plug"
+machinery is what gets us back to `f α v`.
+
+`comp_lift` adds substitution-composition on top — likely needs both the
+above and a renaming/substitution commutation lemma
+(`lift.aux σ τ (⟦ ρ ⟧ʳ e) = ⟦ ρ' ⟧ʳ (lift.aux σ' τ' e)` style).
 
 ## History (compressed)
 
