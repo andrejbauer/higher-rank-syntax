@@ -101,17 +101,26 @@ unlocks for this project's proof landscape.  Reach for them by default.
 
 * **WF-recursion one-step equation lemma.**  For a function `f` defined by
   well-founded recursion (or pattern-matching that compiles to one — e.g.
-  `inst.aux`, `lift.aux`), `rw [f]` fails because Lean does not unfold
-  `WellFounded.fix` definitionally.  Recipe:
+  `inst.aux`, `lift.aux`), `rw [f]` fails because Lean does not unfold the
+  underlying recursion definitionally.  Recipe (current as of Lean
+  `v4.30.0-rc2`):
   ```lean
   delta f
   change f._unary <packed-args> = _   -- arrange to match the unary form
-  rw [f._unary.eq_1, WellFounded.fix_eq]
+  rw [f._unary.eq_1]
   simp [<classify lemmas / case-discriminating lemmas>]
   ```
   This is how `inst_aux_ext_eq`, `inst_aux_base_there_eq`, and
   `inst_aux_base_here_eq` were proved.  For non-mutual WF functions, `unfold f`
   is often enough (see `Expr.T.map_η`).
+
+  > **Lean version note.**  Through `v4.13.0-rc3` the recipe needed an extra
+  > `rw [WellFounded.fix_eq]` after `f._unary.eq_1` — at that time the
+  > unfolded body contained a literal `WellFounded.fix ?hwf ?F ?x` that had
+  > to be peeled.  From `v4.30.0-rc2` onwards the compiler emits the body as
+  > a `PSigma.casesOn ⟨…⟩ fun … ↦ match e with …` directly, with no
+  > `WellFounded.fix` left, so the second rewrite must be omitted — the
+  > subsequent `simp` reduces the literal `casesOn` on its own.
 
 * **Prove per-case `@[simp]` unfolders first.**  Before attempting any
   user-level theorem about a WF walker, prove one `@[simp]` lemma per

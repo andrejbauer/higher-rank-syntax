@@ -168,7 +168,7 @@ private def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ
       ⟨Δ, ⟨Ξ, ⟨α, ⟨ρ, ⟨ι, ⟨τ_above ++ β :: τ_below,
         Expr.apply' (tauSlot (Δ ⋈ α) τ_above β τ_below i)
           α_h h args⟩⟩⟩⟩⟩⟩ = _
-  rw [inst.aux._unary.eq_1, WellFounded.fix_eq]
+  rw [inst.aux._unary.eq_1]
   simp [classify_tauSlot]
 
 @[simp] private theorem inst_aux_base_there_eq {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
@@ -190,7 +190,7 @@ private def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ
       ⟨Δ, ⟨Ξ, ⟨α, ⟨ρ, ⟨ι, ⟨τ,
         Expr.apply' ((Renaming.weakenList (Δ ⋈ α) τ).toFun (.there r))
           α_h h args⟩⟩⟩⟩⟩⟩ = _
-  rw [inst.aux._unary.eq_1, WellFounded.fix_eq]
+  rw [inst.aux._unary.eq_1]
   simp [classify_weakenList]
 
 @[simp] private theorem inst_aux_base_here_eq {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
@@ -209,7 +209,7 @@ private def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ
       ⟨Δ, ⟨Ξ, ⟨α, ⟨ρ, ⟨ι, ⟨τ,
         Expr.apply' ((Renaming.weakenList (Δ ⋈ α) τ).toFun (.here j))
           j.arity h args⟩⟩⟩⟩⟩⟩ = _
-  rw [inst.aux._unary.eq_1, WellFounded.fix_eq]
+  rw [inst.aux._unary.eq_1]
   simp [classify_weakenList]
 
 private theorem inst_aux_η_tauSlot {C : Carrier} :
@@ -396,7 +396,7 @@ decreasing_by
   change lift.aux._unary (C := C) σ
       ⟨τ_above ++ β :: τ_below,
         Expr.apply' (tauSlot Γ τ_above β τ_below i) α_h h args⟩ = _
-  rw [lift.aux._unary.eq_1, WellFounded.fix_eq]
+  rw [lift.aux._unary.eq_1]
   simp [classify_tauSlot]
 
 @[simp] private theorem lift_aux_base_eq {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
@@ -411,7 +411,7 @@ decreasing_by
   delta lift.aux
   change lift.aux._unary (C := C) σ
       ⟨τ, Expr.apply' ((Renaming.weakenList Γ τ).toFun q) q.arity h args⟩ = _
-  rw [lift.aux._unary.eq_1, WellFounded.fix_eq]
+  rw [lift.aux._unary.eq_1]
   simp [classify_weakenList]
 
 private theorem lift_aux_η_tauSlot {C : Carrier} :
@@ -523,5 +523,15 @@ theorem unit_left {C : Carrier} {Γ Δ : Shape C}
     cases hp
     symm
     exact unit_left.aux (fun s => f s.arity ⟨s, rfl⟩) ⟨p, rfl⟩
+
+/-- Composition of Kleisli extensions: substituting via σ then via θ equals substituting
+via the composed substitution `fun q => Subst.lift θ (σ q)`. -/
+theorem comp_lift {C : Carrier} {Γ Δ Ε : Shape C}
+    (σ : Subst Γ Δ) (θ : Subst Δ Ε) :
+    ∀ {α : C.Arity} (e : Expr (Γ ⋈ α)),
+      Subst.lift (fun q => Subst.lift θ (σ q)) e
+        =
+      Subst.lift θ (Subst.lift σ e) := by
+  sorry
 
 end Action

@@ -71,6 +71,9 @@ def SyntaxMonad {C : Carrier} : RelativeMonad (@J C) where
     intro Γ Δ f
     funext α v
     exact unit_left f v
-  comp_lift  := sorry
+  comp_lift  := by
+    intro X Y Z f g
+    funext α e
+    exact comp_lift (fun s => f s.arity ⟨s, rfl⟩) (fun s => g s.arity ⟨s, rfl⟩) e
 
 end Action
