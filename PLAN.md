@@ -7,22 +7,21 @@ A `Carrier` packages signature-level base data: `BaseShape`, `Var γ`, `Arity`,
 sub-arity relation `Sub`).  Dot-notation aliases `Carrier.Var.arity` and
 `Carrier.Binder.arity` let us write `x.arity` and `i.arity` at use sites.
 
-The framework builds on top:
+Framework on top:
 
 * `Shape C` inductive — `base | ext`, notation `Γ ⋈ α`; iterated `Γ ⋈* τ`
   over `List C.Arity` (`Shape.extList`, cons-as-snoc).
 * `Slot Γ` inductive — `base x | here i | there p`; `Slot.arity` reduces by
-  `rfl` through `.there`, and by the dot-notation aliases at `.base` and
-  `.here`.
+  `rfl`.
 * `Renaming Γ Δ` — arity-respecting slot maps; identity, composition, weaken,
-  extend (notation `⇑ʳ`), plus `Renaming.weakenList Γ τ : Γ →ʳ Γ ⋈* τ`.
+  extend (notation `⇑ʳ`), `Renaming.weakenList Γ τ : Γ →ʳ Γ ⋈* τ`.
 * `Expr Γ` — primary constructor `apply' p α hα args` (head, explicit α,
   propositional witness `hα : p.arity = α`); smart constructor `apply`
   specialises `α := p.arity`.  Projection `Expr.head`.
 * `Expr.J Γ α := { p : Slot Γ // p.arity = α }`, `Expr.T Γ α := Expr (Γ ⋈ α)`,
-  and `Expr.η : J Γ α → T Γ α` (η-expansion, terminates by `subWf`).
-* `J, T : Shape C ⥤ (C.Arity → Type)` are functors.
-* The target: `T` is the free relative monad on `J`.
+  `Expr.η : J Γ α → T Γ α` (terminates by `subWf`).
+* `J, T : Shape C ⥤ (C.Arity → Type)` are functors.  Target: `T` is the free
+  relative monad on `J`.
 
 ## Naming conventions
 
@@ -33,196 +32,221 @@ The framework builds on top:
 | `C.Binder α` | `i`     | `j`, `k`  |
 | `Inst α Δ`   | `ι`     |           |
 
-Greek `ι` for the instantiation parameter inside `inst.aux` keeps `i` free for
-the binders introduced in its body.
+Greek `ι` for the instantiation parameter keeps `i` free for binders.
 
 ## What's built
 
-All `Action/*.lean` files build; only the `comp_lift` monad-law sorry remains.
-Full functoriality of `actExpr`, `J.map`, `T.map`.  `SyntaxMonad :
-RelativeMonad J` has `map`, `η`, `lift`, `unit_right`, and `unit_left`
-populated; `comp_lift` is still `sorry`.
+`Action/*.lean` builds; only `comp_lift` is `sorry` (one occurrence, in
+`Subst.lean`, wired through `SyntaxMonad.lean`).  `SyntaxMonad : RelativeMonad J`
+has `map`, `η`, `lift`, `unit_right`, `unit_left` populated.
 
-`Action/Subst.lean` defines:
+`Action/Subst.lean` defines (public surface):
 
 * `Subst Γ Δ`, `Inst α Γ` — substitution and instantiation data.
-* `tauSlot Γ τ_above β τ_below i : Slot (Γ ⋈* (τ_above ++ β :: τ_below))` —
-  iterated `.there^|τ_above|` of `.here i`.  Lemma `tauSlot_arity` reduces
-  its arity to `i.arity`.
-* `XPos Γ τ p : Type` — two-constructor classifier:
-  * `base q` with index `Renaming.weakenList Γ τ q` (Γ-slot weakened through τ)
-  * `ext i` (with implicit `τ_above`, `β`, `τ_below`) with index
-    `tauSlot Γ τ_above β τ_below i`
-  The slot-correspondence witness lives in the index, so pattern matching
-  yields it definitionally — no `Eq.rec`.
-* `classify (τ) (p : Slot (Γ ⋈* τ)) : XPos Γ τ p` — structural recursion on
-  `(τ, p)`.
-* `inst.aux α ρ ι τ e : Expr ((Δ ⋈ α) ⋈* τ) → Expr (Ξ ⋈* τ)` — classify the
-  head, three cases: τ-binder (rebuild as `tauSlot Ξ …`); Δ-slot (apply
-  `ρ : Δ →ʳ Ξ`, then weaken with `weakenList Ξ τ`); α-binder (plug `ι j`
-  directly and recurse at smaller arity with `ρ := weakenList Ξ τ`).
-* `η_fillers Δ α : Inst α (Δ ⋈ α)` — canonical η-expansions of the α-binders.
-* `inst_aux_η` and `inst_aux_η_inv` — η-instantiation facts for the refactored
-  `inst.aux α ρ ι τ e`, with `inst_aux_η_inv` stated over an arbitrary τ-stack:
-  `inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α) τ e = e`.
-* `lift.aux σ τ e : Expr (Γ ⋈* τ) → Expr (Δ ⋈* τ)` — classify the head, two
-  cases: τ-binder (rebuild); Γ-slot (call `inst.aux` directly on `σ q`, with
-  `ρ := Renaming.weakenList Δ τ`).
-* `unit_right.aux` and `unit_left.aux` discharge the two unit laws in
-  `SyntaxMonad.lean`; `lift_aux_η_tauSlot` supplies the τ-binder η preservation
-  needed by left unit.
-* Wrappers `inst` and `lift`.
+* `inst e ι` and `Subst.lift σ e` — public wrappers calling `inst.aux` and
+  `lift.aux` at `τ := []` / `[α]`.
+* `unit_right`, `unit_left`, `comp_lift` (the last sorried).
 
-## Outstanding work
+Internal (`private`):
 
-1. Prove `comp_lift` in `Action/SyntaxMonad.lean`.  See "What still blocks
-   `comp_lift`" below for the expected sub-lemma.
-2. ~~Discharge the two `decreasing_by all_goals sorry`~~ — done in
-   `ff54857`.  `lift.aux` uses `Expr.Subterm.wellFoundedRelation` on
-   `Σ Γ, Expr Γ`; `inst.aux` uses a lex `PSigma` over `(C.Arity, Σ Γ, Expr Γ)`.
+* `tauSlot` and `tauSlot_arity`; the `XPos` classifier and `classify`, with
+  simp lemmas `classify_weakenList` and `classify_tauSlot`.
+* `inst.aux α ρ ι τ e : Expr ((Δ ⋈ α) ⋈* τ) → Expr (Ξ ⋈* τ)` — walker; ρ is
+  a *Renaming* `Δ →ʳ Ξ`, ι : Inst α Ξ.  Three branches via `classify`.
+* `lift.aux σ τ e : Expr (Γ ⋈* τ) → Expr (Δ ⋈* τ)` — walker; at Γ-slots
+  delegates to `inst.aux` with `ρ := Renaming.weakenList Δ τ`.
+* Per-branch `@[simp]` unfolders `inst_aux_*_eq`, `lift_aux_*_eq`.
+* `η_fillers`, `inst_aux_η`, `inst_aux_η_inv`, `lift_aux_η_tauSlot` — η-side
+  lemmas used by the unit laws.
+* `unit_right.aux`, `unit_left.aux` — internal companions to the public laws.
 
-## Warmup lemmas (done)
+`Action/Expr.lean` has `Renaming.actExpr` (`⟦ ρ ⟧ʳ e`) with full functoriality
+(`map_id`, `map_comp`, `J.map`, `T.map`, plus `T.map_η` naturality).
 
-Three `simp` lemmas covering the classify dispatch and η naturality:
+Termination: `lift.aux` uses `Expr.Subterm.wellFoundedRelation`; `inst.aux`
+uses lex `PSigma` over `(C.Arity, Σ Γ, Expr Γ)`.
 
-* `classify_weakenList` in `Action/Subst.lean`: `classify τ (weakenList Γ τ p) =
-  XPos.base p`.  Induction on τ.
-* `classify_tauSlot` in `Action/Subst.lean`: `classify (τ_above ++ β :: τ_below)
-  (tauSlot Γ τ_above β τ_below i) = XPos.ext i`.  Induction on τ_above.
-* `Expr.T.map_η` in `Action/Expr.lean`: `T.map ρ α (η v) = η (J.map ρ v)`.
-  Well-founded recursion on α via `subWf` (mirrors `Expr.η`'s recursion).
-  Note: `rw [Expr.η]` did NOT work — use `unfold Expr.η` to expose the body
-  for WF-recursive functions.
+## Outstanding
 
-## Lean tactical recipes (recorded)
+Prove `comp_lift` (`Action/SyntaxMonad.lean` and `Action/Subst.lean`).  Plan
+below.
 
-These were not obvious from the standard Lean repertoire; they were the
-unlocks for this project's proof landscape.  Reach for them by default.
+## Plan for `comp_lift`
 
-* **WF-recursion one-step equation lemma.**  For a function `f` defined by
-  well-founded recursion (or pattern-matching that compiles to one — e.g.
-  `inst.aux`, `lift.aux`), `rw [f]` fails because Lean does not unfold the
-  underlying recursion definitionally.  Recipe (current as of Lean
-  `v4.30.0-rc2`):
+Approach: state the categorical operations and the two laws that the
+`comp_lift` proof needs, then **dry-run the proof** before attacking any
+sub-lemma's body.  This validates the operations and law statements before
+investing in proving them.  Andrej's rule: "untested lemmas are not worth
+proving".
+
+### Step 1 — Operations (top-level definitions, no proofs)
+
+In `Subst.lean`:
+
+* `Renaming.toSubst (ρ : Γ →ʳ Δ) : Subst Γ Δ := fun s => Expr.η ⟨ρ s, ρ.arity s⟩`
+* `(ρ : Γ →ʳ Γ') ʳ∘ˢ (σ : Subst Γ' Δ) : Subst Γ Δ` — pre-compose Subst by
+  Renaming.  Body: `fun s => (ρ.arity s) ▸ σ (ρ s)`, or whichever transport-
+  free form Lean accepts cleanly.
+* `(σ : Subst Γ Δ) ˢ∘ʳ (ρ : Δ →ʳ Δ') : Subst Γ Δ'` — post-compose Subst by
+  Renaming.  Body: `fun s => ⟦ ρ ⇑ʳ s.arity ⟧ʳ (σ s)`.
+* `(σ : Subst Γ Δ) ˢ∘ˢ (θ : Subst Δ Ε) : Subst Γ Ε` — Kleisli composition.
+  Body: `fun s => Subst.lift θ (σ s)`.
+
+Notation choices: `ρ.toSubst`, `ρ ʳ∘ˢ σ`, `σ ˢ∘ʳ ρ`, `σ ˢ∘ˢ θ` (or `ηʳ ρ`,
+etc. — pick a consistent style on first try).
+
+### Step 2 — State the laws that `comp_lift` consumes (`:= sorry`)
+
+* **L4** (= `comp_lift`):
+  `Subst.lift (σ ˢ∘ˢ θ) e = Subst.lift θ (Subst.lift σ e)`.
+* **L5** (lift-after-inst commutation):
+  ```
+  lift.aux θ τ (inst.aux α (weakenList Δ τ) ι [] e)
+    = inst.aux α (weakenList Ε τ) (fun j => lift.aux θ (j.arity :: τ) (ι j))
+                [] (Subst.lift θ e)
+  ```
+
+### Step 3 — Dry-run `comp_lift.aux σ θ τ e` using L5 + IH
+
+Structural induction on `e`, classify the head.
+
+* **XPos.ext (τ-binder).**  Both sides reduce via `lift_aux_ext_eq`; the
+  apply' trees agree on head and arity-proof.  Args differ by lift composition
+  vs sequencing — equal by **IH of `comp_lift.aux` at deeper τ**.
+* **XPos.base q (Γ-slot).**  Both sides reduce via `lift_aux_base_eq` to
+  nested `inst.aux`.
+  * LHS: `inst.aux q.arity (weakenList Ε τ) Λ_LHS [] ((σ ˢ∘ˢ θ) q)` with
+    `(σ ˢ∘ˢ θ) q = Subst.lift θ (σ q)` by `ˢ∘ˢ`'s definition.
+  * RHS: `lift.aux θ τ (inst.aux q.arity (weakenList Δ τ) Λ_σ [] (σ q))`.
+  * Apply **L5** to the RHS: pulls `lift.aux θ τ` through `inst.aux`, yielding
+    `inst.aux q.arity (weakenList Ε τ) (fun j => lift.aux θ (j.arity :: τ) (Λ_σ j)) [] (Subst.lift θ (σ q))`.
+  * `Λ_LHS j = lift.aux (σ ˢ∘ˢ θ) (j.arity :: τ) (args j)` and the rewritten
+    RHS's `fun j => lift.aux θ (j.arity :: τ) (Λ_σ j) = fun j => lift.aux θ (…) (lift.aux σ (…) (args j))`
+    are equal by **IH of `comp_lift.aux` at deeper τ**.
+
+### Step 4 — What the dry-run tells us
+
+* The four operations and **L4, L5** are sufficient for the `comp_lift.aux`
+  proof modulo their own bodies.
+* The Subst-level identity `(σ ˢ∘ˢ θ) s = Subst.lift θ (σ s)` is definitional —
+  no extra lemma.
+* **L5** is the central new lemma.  Its proof is the next planning round.
+* Categorical lemmas **NOT** in the consumer chain (skip until L5 dictates):
+  - L1 pre-rename naturality (`Subst.lift (ρ ʳ∘ˢ σ) e = Subst.lift σ (⟦ … ⟧ʳ e)`)
+  - L2 post-rename naturality (`Subst.lift (σ ˢ∘ʳ ρ) e = ⟦ … ⟧ʳ (Subst.lift σ e)`)
+  - L3 embedding (`Subst.lift ρ.toSubst e = ⟦ … ⟧ʳ e`)
+  - M1/M2 renaming-naturality of `inst.aux`
+  - Subst-level associativities and identities mixing the four operations.
+
+  These will likely appear when **proving L5**, and at that point we should
+  state and prove only the ones L5 actually uses.
+
+### Concrete first move
+
+State the four operations and **L4**, **L5** in `Subst.lean` with `sorry`
+bodies.  Write the body of `comp_lift.aux` (and the public `comp_lift` wrapper)
+*assuming* L5 and IH.  Build to confirm the proof typechecks modulo the
+sorries — that validates the L5 statement.  Only **then** plan how to prove
+L5.
+
+## Warmup lemmas (done, reference)
+
+`@[simp]` per-case unfolders for `inst.aux` / `lift.aux` in `Subst.lean`:
+`inst_aux_ext_eq`, `inst_aux_base_there_eq`, `inst_aux_base_here_eq`,
+`lift_aux_ext_eq`, `lift_aux_base_eq`.  Also `classify_weakenList`,
+`classify_tauSlot`.  In `Expr.lean`: `Expr.T.map_η` (η naturality, WF on α).
+
+## Lean tactical recipes
+
+* **WF-recursion one-step equation lemma.**  For `f` defined by well-founded
+  recursion, `rw [f]` fails.  Recipe (current as of `v4.30.0-rc2`):
   ```lean
   delta f
-  change f._unary <packed-args> = _   -- arrange to match the unary form
+  change f._unary <packed-args> = _
   rw [f._unary.eq_1]
   simp [<classify lemmas / case-discriminating lemmas>]
   ```
-  This is how `inst_aux_ext_eq`, `inst_aux_base_there_eq`, and
-  `inst_aux_base_here_eq` were proved.  For non-mutual WF functions, `unfold f`
-  is often enough (see `Expr.T.map_η`).
+  This is how every `inst_aux_*_eq` / `lift_aux_*_eq` was proved.  For
+  non-mutual WF functions, `unfold f` is often enough (see `Expr.T.map_η`).
 
   > **Lean version note.**  Through `v4.13.0-rc3` the recipe needed an extra
-  > `rw [WellFounded.fix_eq]` after `f._unary.eq_1` — at that time the
-  > unfolded body contained a literal `WellFounded.fix ?hwf ?F ?x` that had
-  > to be peeled.  From `v4.30.0-rc2` onwards the compiler emits the body as
-  > a `PSigma.casesOn ⟨…⟩ fun … ↦ match e with …` directly, with no
-  > `WellFounded.fix` left, so the second rewrite must be omitted — the
-  > subsequent `simp` reduces the literal `casesOn` on its own.
+  > `rw [WellFounded.fix_eq]` after `f._unary.eq_1` — the unfolded body
+  > contained a literal `WellFounded.fix`.  From `v4.30.0-rc2` onwards the
+  > compiler emits `PSigma.casesOn ⟨…⟩ fun … ↦ match e with …` directly with
+  > no residual `WellFounded.fix`, so the second rewrite must be omitted.
 
-* **Prove per-case `@[simp]` unfolders first.**  Before attempting any
-  user-level theorem about a WF walker, prove one `@[simp]` lemma per
-  case-branch of its classifier using the recipe above.  Downstream proofs
-  (e.g. the monad laws) then proceed almost mechanically by `simp [...]` on
-  the relevant cases.  Don't try to crack the user-facing theorem directly.
+* **Per-case `@[simp]` unfolders first.**  Before any user-level theorem
+  about a WF walker, prove one `@[simp]` lemma per case-branch of its
+  classifier.  Downstream proofs become almost mechanical.
 
-* **Slot-correspondence as inductive *index*, not separate equation.**  When
-  designing a classifier inductive (the `XPos`/`ClassifiedFoo` pattern), put
-  the slot-correspondence in the *index* of the type itself — i.e. the
-  inductive is `XPos Γ τ (p : Slot (Γ ⋈* τ))` and each constructor's
-  signature *forces* `p` to be a specific construction (`weakenList _ _ q`
-  or `tauSlot _ _ _ _ i`).  Pattern matching on `XPos` then yields the
-  slot-equation definitionally via index unification.  A naive Sum-typed
-  classifier returning `Slot _ ⊕ …` with a separate `h : _.arity = _` field
-  only witnesses arity-matching, which is insufficient for the monad laws.
-  This was the unlock that made `XPos` work where earlier attempts didn't.
+* **Slot-correspondence as inductive *index*, not separate equation.**  The
+  `XPos` pattern: put the slot-correspondence in the type's *index*.  Pattern
+  matching yields the equation definitionally.  A Sum-typed classifier with a
+  separate `h : _.arity = _` field only witnesses arity-matching, which is
+  insufficient for the monad laws.  This was the unlock that made the unit
+  laws (and downstream) provable.
 
-## What still blocks `comp_lift`
+* **`match h_α_h with | rfl`** is fine for substituting `α_h := …` when the
+  RHS reduces to a value Lean can see.  When the head's arity is opaque
+  (e.g., `(weakenList Γ τ p).arity`), chain through `(weakenList Γ τ).arity p`
+  first to obtain `p.arity = α_h`, then match *that* with `rfl`.
 
-The unit laws are closed.  The remaining composition law should start from a
-substitution-composition theorem for `lift.aux`:
-
-```
-theorem lift_aux_comp {C : Carrier} {Γ Δ Ε : Shape C}
-    (σ : Subst Γ Δ) (θ : Subst Δ Ε) :
-    ∀ (τ : List C.Arity) (e : Expr (Γ ⋈* τ)),
-      lift.aux (fun q => lift.aux θ [q.arity] (σ q)) τ e
-        =
-      lift.aux θ τ (lift.aux σ τ e)
-```
-
-Expect the Γ-slot case to need a specialized commutation lemma between
-`lift.aux` and `inst.aux`, exactly for the refactored call shape
-`inst.aux q.arity (Renaming.weakenList Δ τ) new_args [] (σ q)`.  Try this
-specialized lemma before generalising `lift.aux`.
-
-### Open question (deferred)
-
-Whether to similarly generalise `lift.aux` (carry a renaming or
-substitution-extension).  Andrej is undecided — revisit after inst.aux's
-refactor lands and we see how the proofs go.
+* **Index pattern destructuring** can put outer variables out of scope (e.g.,
+  after matching `XPos.ext (τ_above := ta) (β := b) (τ_below := tb) i` the
+  outer τ becomes inaccessible — refer to `ta ++ b :: tb` in the body).
 
 ## History (compressed)
 
-Implementation evolved through dead ends, each rejected for a specific reason:
+Implementation walked through five rejected designs before landing on the
+current `XPos`-classifier-with-slot-equation-as-index.  Each was rejected for
+a specific reason:
 
-1. **`Subst.extend`** to recursively extend σ — non-terminating (η emitted by
-   `extend` re-enters lift, wrapping grows without bound).
-2. **`classify`** returning the σ-image as `Expr ((Δ ⋈* τ) ⋈ x.arity)` —
-   rejected: the *type* witnesses only arity-matching, not slot-correspondence.
-   Blocks monad laws.
-3. **Fold inst into classify** (`Subst.head` style) — structural obstruction
-   at the `.there t` recursive case (couldn't strip the β-layer from `args`).
-4. **Port the old classify-based design** from commit `f1da7c4` — builds,
-   but the same arity-only-witness issue blocks monad laws.
-5. **Explicit-head-slot signature** `lift.aux σ τ ρ e x ξ` with witness
-   `ξ : e.head = weakenList _ _ x` — slot-correspondence as separate
-   hypothesis.  Works for a single step but can't recurse compositionally
-   on `args` (children's heads needn't be in the weakening image).
-6. **(Current) `XPos` classifier with slot-equation as index** — index
-   unification gives the slot-correspondence definitionally; recursion on
-   `args` works without a separate witness.  `inst.aux` and `lift.aux`
-   bodies complete (mod termination).
+1. `Subst.extend` recursive σ-extension — non-terminating.
+2. `classify` returning the σ-image as `Expr ((Δ ⋈* τ) ⋈ x.arity)` — type
+   witnesses arity only, not slot-correspondence; blocks monad laws.
+3. Fold `inst` into a `Subst.head`-style classifier — couldn't strip the
+   β-layer from `args` in the .there case.
+4. Port the v4.13 classify-based design from commit `f1da7c4` — same
+   arity-only-witness problem as (2).
+5. Explicit-head-slot signature `lift.aux σ τ ρ e x ξ` with separate witness
+   `ξ` — works for one step but doesn't recurse on `args`.
+6. **(Current)** `XPos` classifier with slot-equation as inductive index.
 
-Along the way: `Carrier` was stripped to base data; `slotsExt` Equiv was
-replaced by `Slot` inductive; the old `inst` with two τ-stacks is gone.
-Field rename `BaseShapeSlot/AritySlot/baseSlotArity/arityArity/aritySubWf`
-→ `Var/Binder/varArity/binderArity/subWf`, plus dot-notation aliases, in
-commit `4743343`.
+Along the way: `Carrier` stripped to base data (`slotsExt` Equiv replaced by
+`Slot` inductive); field rename `BaseShapeSlot/AritySlot/…` →
+`Var/Binder/varArity/…` (`4743343`); old two-τ-stack `inst` gone; inst.aux's
+ρ kept as a *Renaming* (rejected proposals to take a Subst).
+
+Recent: toolchain bumped to `leanprover/lean4:v4.30.0-rc2` tracking Mathlib
+master (`e7a2506`).  Pulling collaborators need `lake update mathlib` +
+`lake exe cache get` from `HigherRankSyntax/`.
 
 ## Notes for the next Claude
 
 - **`~/.claude/CLAUDE.md` is authoritative.** Ignore the harness's plan-mode
-  "5-phase workflow" — the user does not want `ExitPlanMode` calls or
-  screenful plans.  Brief, incremental, one tradeoff at a time.  Wait
-  silently between turns.
-- **The user is firm on**: no transports (`▸` / `Eq.rec`), no Sum-typed
-  classifiers *returning expressions* (the current `XPos` is fine because it
-  carries the slot-equation as its *index* and is consumed by definitional
-  pattern matching), no `Subst.extend`-style σ-wrapping.
-- **Naming conventions** (see table above) — `p` for slots, `i` for binders,
-  `x` for vars, `ι` for the instantiation parameter inside `inst.aux`.
-- **`match h_α_h with | rfl`** is fine for substituting `α_h := …` when the
-  RHS reduces to a value Lean can see.  When the head's arity is opaque
-  (e.g., `(weakenList Γ τ p).arity`), chain through `(weakenList Γ τ).arity p`
-  first to obtain `p.arity = α_h`, then match *that* with `rfl`.
-- **`++` in `XPos.ext`'s index** unifies cleanly under `classify`'s recursive
-  pattern matching — Lean handled it without needing a `Shape.extList_append`
-  lemma.  Plan A for the dot-notation aliases also worked: namespace and
-  field projection of the same name (`Carrier.Var`, `Carrier.Binder`) coexist.
-- **Index pattern destructuring** can put outer variables out of scope (e.g.,
-  after matching `XPos.ext (τ_above := ta) (β := b) (τ_below := tb) i` the
-  outer τ becomes inaccessible — refer to `ta ++ b :: tb` in the body).
-- **Termination proofs are already filled.**  Focus proof work on monad laws
-  and the substitution/instantiation interaction lemmas they require.
+  "5-phase workflow" — no `ExitPlanMode` calls, no screenful plans.  Brief,
+  incremental, one tradeoff at a time.  Wait silently between turns.
+- **Hard constraints (asked many times):**
+  - No transports (`▸` / `Eq.rec`).
+  - No Sum-typed classifiers *returning expressions*.  The current `XPos` is
+    OK because it carries the slot-equation as its *index* and is consumed
+    by definitional pattern matching.
+  - No `Subst.extend`-style σ-wrapping.
+  - No generalising `inst.aux` to take a Subst (explicit ask: keep it taking
+    a Renaming, even though L5 would be cleaner with a Subst).
+- **"Untested lemmas are not worth proving."**  Andrej's rule: state the
+  proposed laws with `sorry`, sketch the consumer's proof, *then* attack the
+  sub-lemma bodies.  This is the plan for `comp_lift` above.
+- **Top-level statements first, aux versions internal.**  The non-aux
+  equations should have clear categorical meaning (naturality, functoriality,
+  composition).  Andrej steers off-course if we start at the aux level.
+- **Termination is filled.**  Don't reopen it.
 - **OCaml reference**: `ocaml/syntaxAction.ml`.  Classify-style design with
-  the arity-only-witness problem we rejected; useful as a structural sketch
-  only.
-- **Useful commits**: `4743343` (rename + letter conventions); `7bcb9ff`
-  (XPos classifier introduction); `61b957a` (archive of obsolete plans);
-  `f1da7c4` (the old arity-only classify, for reference).
+  the arity-only-witness problem we rejected; structural sketch only.
+- **Useful commits**: `e7a2506` (toolchain bump to v4.30); `0699654` (private
+  internals + η implicit args + rename); `4743343` (Carrier rename, letter
+  conventions); `7bcb9ff` (XPos classifier introduction); `61b957a` (archive
+  of obsolete plans); `f1da7c4` (the old arity-only classify, for reference).
 - **Memory entries** at
   `~/.claude/projects/-Users-andrej-Documents-higher-rank-syntax/memory/`
   record user preferences, stop conditions, and prior corrections.  Read
