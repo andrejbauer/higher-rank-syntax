@@ -82,10 +82,8 @@ abbrev Expr.T {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type := Expr (Γ ⋈
 `apply' (.there p) α hp (fun i => η (.here i))`, where each binder `i` of `α` recursively
 η-expands the bound variable.  Termination descends along the sub-arity relation: each
 recursive call uses `i.arity`, strictly smaller than `α` via `subWf`. -/
-def Expr.η {C : Carrier} : (Γ : Shape C) → (α : C.Arity) → Expr.J Γ α → Expr.T Γ α
-  | Γ, α, ⟨p, hp⟩ =>
-    Expr.apply' (.there p) α hp (fun i =>
-      Expr.η (Γ ⋈ α) i.arity ⟨.here i, rfl⟩)
+def Expr.η {C : Carrier} : (Γ : Shape C) → (α : C.Arity) → J Γ α → T Γ α
+  | Γ, α, ⟨p, hp⟩ => apply' (.there p) α hp (fun i => η (Γ ⋈ α) i.arity ⟨.here i, rfl⟩)
 termination_by Γ α _ => α
 decreasing_by exact ⟨_, rfl⟩
 
@@ -136,45 +134,44 @@ along renamings; the arity argument is discrete. -/
 /-- Action of a renaming on `J`: send `⟨p, hp⟩` of arity `α` in `Γ` to `⟨ρ p, _⟩` of arity
 `α` in `Δ`. -/
 def Expr.J.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) {α : C.Arity}
-    (v : Expr.J Γ α) : Expr.J Δ α :=
+    (v : J Γ α) : J Δ α :=
   ⟨ρ v.val, (ρ.arity v.val).trans v.property⟩
 
 @[simp] theorem Expr.J.map_id {C : Carrier} {Γ : Shape C} {α : C.Arity}
-    (v : Expr.J Γ α) : Expr.J.map 𝟙ʳ v = v := rfl
+    (v : J Γ α) : J.map 𝟙ʳ v = v := rfl
 
 @[simp] theorem Expr.J.map_comp {C : Carrier} {Γ Δ Ε : Shape C}
-    (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ε) {α : C.Arity} (v : Expr.J Γ α) :
-    Expr.J.map (σ ∘ʳ ρ) v = Expr.J.map σ (Expr.J.map ρ v) := rfl
+    (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ε) {α : C.Arity} (v : J Γ α) :
+    J.map (σ ∘ʳ ρ) v = J.map σ (J.map ρ v) := rfl
 
 /-- Action of a renaming on `T`: extend the renaming through the bound α-binder and apply
 the renaming action on expressions. -/
 def Expr.T.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) (α : C.Arity)
-    (e : Expr.T Γ α) : Expr.T Δ α := ⟦ ρ ⇑ʳ α ⟧ʳ e
+    (e : T Γ α) : T Δ α := ⟦ ρ ⇑ʳ α ⟧ʳ e
 
-@[simp] theorem Expr.T.map_id {C : Carrier} {Γ : Shape C} (α : C.Arity) (e : Expr.T Γ α) :
-    Expr.T.map 𝟙ʳ α e = e := by
+@[simp] theorem Expr.T.map_id {C : Carrier} {Γ : Shape C} (α : C.Arity) (e : T Γ α) :
+    T.map 𝟙ʳ α e = e := by
   show ⟦ (𝟙ʳ : Γ →ʳ Γ) ⇑ʳ α ⟧ʳ e = e
   rw [Renaming.extend_id]
   exact Renaming.actExpr.map_id e
 
 @[simp] theorem Expr.T.map_comp {C : Carrier} {Γ Δ Ε : Shape C}
-    (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ε) (α : C.Arity) (e : Expr.T Γ α) :
-    Expr.T.map (σ ∘ʳ ρ) α e = Expr.T.map σ α (Expr.T.map ρ α e) := by
+    (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ε) (α : C.Arity) (e : T Γ α) :
+    T.map (σ ∘ʳ ρ) α e = T.map σ α (T.map ρ α e) := by
   show ⟦ (σ ∘ʳ ρ) ⇑ʳ α ⟧ʳ e = ⟦ σ ⇑ʳ α ⟧ʳ (⟦ ρ ⇑ʳ α ⟧ʳ e)
   rw [Renaming.extend_comp]
   exact Renaming.actExpr.map_comp _ _ e
 
 /-- η is natural: `T.map ρ ∘ η = η ∘ J.map ρ`. -/
-@[simp] theorem Expr.T.map_η {C : Carrier} : ∀ {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
-    (α : C.Arity) (v : Expr.J Γ α),
-    Expr.T.map ρ α (Expr.η Γ α v) = Expr.η Δ α (Expr.J.map ρ v)
+@[simp] theorem Expr.T.map_η {C : Carrier} : ∀ {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) (α : C.Arity) (v : J Γ α),
+  T.map ρ α (η Γ α v) = η Δ α (J.map ρ v)
   | _, _, ρ, α, ⟨p, hp⟩ => by
-    unfold Expr.η Expr.T.map Expr.J.map
+    unfold η T.map J.map
     rw [Renaming.actExpr]
     congr 1
     funext i
-    have ih := Expr.T.map_η (ρ ⇑ʳ α) i.arity ⟨.here i, rfl⟩
-    unfold Expr.T.map Expr.J.map at ih
+    have ih := T.map_η (ρ ⇑ʳ α) i.arity ⟨.here i, rfl⟩
+    unfold T.map J.map at ih
     exact ih
 termination_by _ _ _ α _ => α
 decreasing_by exact ⟨_, rfl⟩
