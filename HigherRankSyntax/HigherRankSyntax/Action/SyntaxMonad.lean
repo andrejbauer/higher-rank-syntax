@@ -15,8 +15,8 @@ The categorical setting on which the syntax-monad structure of `Expr` sits.
 * `J : Shape C ⥤ ArityType C` — the variables-of-arity-α functor.
 * `T : Shape C ⥤ ArityType C` — the expressions-under-one-α-binder functor.
 
-The relative-monad structure (unit `η`, Kleisli extension, laws) sits on top of this
-scaffolding and will be added once the substitution machinery is in place.
+The relative-monad structure (unit `η`, Kleisli extension, and laws) sits on top of this
+scaffolding.  The two unit laws are proved; the Kleisli composition law remains.
 -/
 
 namespace Action
@@ -57,14 +57,26 @@ def T {C : Carrier} : Shape C ⥤ ArityType C where
   map_id _ := by funext α e; exact Expr.T.map_id α e
   map_comp _ _ := by funext α e; exact Expr.T.map_comp _ _ α e
 
-/-- The syntax relative monad: `T` is the free relative monad on `J`.  Map, unit, and the
-Kleisli extension are filled in; the three laws await the completion of `lift.aux`. -/
+/-- The syntax relative monad: `T` is the free relative monad on `J`.  Map, unit,
+Kleisli extension, and the two unit laws are filled in; `comp_lift` remains. -/
 def SyntaxMonad {C : Carrier} : RelativeMonad (@J C) where
   map        := T.obj
   η          := Expr.η
   lift       := fun {_ _} f α e => Action.lift (fun s => f s.arity ⟨s, rfl⟩) α e
-  unit_right := sorry
-  unit_left  := sorry
+  unit_right := by
+    intro Γ
+    funext α e
+    exact lift_aux_unit_right [α] e
+  unit_left  := by
+    intro Γ Δ f
+    funext α v
+    rcases v with ⟨p, hp⟩
+    cases hp
+    change f p.arity ⟨p, rfl⟩ =
+      Action.lift (fun s => f s.arity ⟨s, rfl⟩) p.arity
+        (Expr.η Γ p.arity ⟨p, rfl⟩)
+    symm
+    exact lift_aux_unit_left (fun s => f s.arity ⟨s, rfl⟩) ⟨p, rfl⟩
   comp_lift  := sorry
 
 end Action

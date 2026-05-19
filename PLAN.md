@@ -38,10 +38,10 @@ the binders introduced in its body.
 
 ## What's built
 
-All `Action/*.lean` files build; only the three monad-law sorries remain.
+All `Action/*.lean` files build; only the `comp_lift` monad-law sorry remains.
 Full functoriality of `actExpr`, `J.map`, `T.map`.  `SyntaxMonad :
-RelativeMonad J` has `map`, `η`, and `lift` populated; the three laws
-(`unit_right`, `unit_left`, `comp_lift`) are `sorry`.
+RelativeMonad J` has `map`, `η`, `lift`, `unit_right`, and `unit_left`
+populated; `comp_lift` is still `sorry`.
 
 `Action/Subst.lean` defines:
 
@@ -61,17 +61,22 @@ RelativeMonad J` has `map`, `η`, and `lift` populated; the three laws
   head, three cases: τ-binder (rebuild as `tauSlot Ξ …`); Δ-slot (apply
   `ρ : Δ →ʳ Ξ`, then weaken with `weakenList Ξ τ`); α-binder (plug `ι j`
   directly and recurse at smaller arity with `ρ := weakenList Ξ τ`).
-* `η_fillers Δ α : Inst α (Δ ⋈ α)` — canonical η-expansions of the α-binders,
-  retained for the future η-inverse lemma.
+* `η_fillers Δ α : Inst α (Δ ⋈ α)` — canonical η-expansions of the α-binders.
+* `inst_aux_η` and `inst_aux_η_inv` — η-instantiation facts for the refactored
+  `inst.aux α ρ ι τ e`, with `inst_aux_η_inv` stated over an arbitrary τ-stack:
+  `inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α) τ e = e`.
 * `lift.aux σ τ e : Expr (Γ ⋈* τ) → Expr (Δ ⋈* τ)` — classify the head, two
   cases: τ-binder (rebuild); Γ-slot (call `inst.aux` directly on `σ q`, with
   `ρ := Renaming.weakenList Δ τ`).
+* `lift_aux_unit_right` and `lift_aux_unit_left` discharge the two unit laws in
+  `SyntaxMonad.lean`; `lift_aux_η_tauSlot` supplies the τ-binder η preservation
+  needed by left unit.
 * Wrappers `inst` and `lift`.
 
 ## Outstanding work
 
-1. Prove the three monad laws in `Action/SyntaxMonad.lean`.  See "What still
-   blocks the monad laws" below for the specific sub-lemma that's needed.
+1. Prove `comp_lift` in `Action/SyntaxMonad.lean`.  See "What still blocks
+   `comp_lift`" below for the expected sub-lemma.
 2. ~~Discharge the two `decreasing_by all_goals sorry`~~ — done in
    `ff54857`.  `lift.aux` uses `Expr.Subterm.wellFoundedRelation` on
    `Σ Γ, Expr Γ`; `inst.aux` uses a lex `PSigma` over `(C.Arity, Σ Γ, Expr Γ)`.
@@ -89,28 +94,24 @@ Three `simp` lemmas covering the classify dispatch and η naturality:
   Note: `rw [Expr.η]` did NOT work — use `unfold Expr.η` to expose the body
   for WF-recursive functions.
 
-## What still blocks the monad laws
+## What still blocks `comp_lift`
 
-Tracing both `unit_right` and `unit_left` through `lift.aux`'s gamma branch
-ends at the direct call
-`inst.aux q.arity (Renaming.weakenList Δ τ) new_args [] (σ q)`.  The σ-image
-is no longer pre-weakened.  Instead, `inst.aux` maps Δ-slots through its
-renaming parameter `ρ`; in the `lift.aux` gamma branch this `ρ` is exactly
-the target weakening through τ.
-
-### After the refactor: re-state `inst_aux_η_inv`
-
-The old `α_weak`/`α_weak_τ` setup is gone.  The η-fillers lemma should be
-re-stated as roughly:
+The unit laws are closed.  The remaining composition law should start from a
+substitution-composition theorem for `lift.aux`:
 
 ```
-theorem inst_aux_η_inv (Δ : Shape C) (α : C.Arity) (e : Expr (Δ ⋈ α)) :
-    inst.aux α (Renaming.id (Δ ⋈ α)) (η_fillers Δ α) [] e = e
+theorem lift_aux_comp {C : Carrier} {Γ Δ Ε : Shape C}
+    (σ : Subst Γ Δ) (θ : Subst Δ Ε) :
+    ∀ (τ : List C.Arity) (e : Expr (Γ ⋈* τ)),
+      lift.aux (fun q => lift.aux θ [q.arity] (σ q)) τ e
+        =
+      lift.aux θ τ (lift.aux σ τ e)
 ```
 
-— inst.aux with ρ = id and ι = η_fillers is identity.  Or possibly with
-a non-trivial ρ.  Re-derive the exact statement by tracing one of the
-unit laws once the refactor is in place.
+Expect the Γ-slot case to need a specialized commutation lemma between
+`lift.aux` and `inst.aux`, exactly for the refactored call shape
+`inst.aux q.arity (Renaming.weakenList Δ τ) new_args [] (σ q)`.  Try this
+specialized lemma before generalising `lift.aux`.
 
 ### Open question (deferred)
 
@@ -169,8 +170,8 @@ commit `4743343`.
 - **Index pattern destructuring** can put outer variables out of scope (e.g.,
   after matching `XPos.ext (τ_above := ta) (β := b) (τ_below := tb) i` the
   outer τ becomes inaccessible — refer to `ta ++ b :: tb` in the body).
-- **Termination sorries are deliberate.**  Don't propose well-foundedness
-  work unless asked.
+- **Termination proofs are already filled.**  Focus proof work on monad laws
+  and the substitution/instantiation interaction lemmas they require.
 - **OCaml reference**: `ocaml/syntaxAction.ml`.  Classify-style design with
   the arity-only-witness problem we rejected; useful as a structural sketch
   only.
