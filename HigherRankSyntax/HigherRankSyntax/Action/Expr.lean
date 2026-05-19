@@ -101,6 +101,16 @@ def Renaming.actExpr {C : Carrier} : {Γ Δ : Shape C} → (Γ →ʳ Δ) → Exp
 /-- Action of a renaming on an expression: `⟦ ρ ⟧ʳ e`. -/
 scoped notation:60 "⟦" ρ "⟧ʳ " e:61 => Renaming.actExpr ρ e
 
+/-- Defining equation of `actExpr` on `apply'`.  Provides a simp-friendly unfolder that
+avoids the motive-correctness issues of rewriting slots through the dependent witness. -/
+@[simp]
+theorem Renaming.actExpr_apply' {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
+    (p : Slot Γ) (α : C.Arity) (h : p.arity = α)
+    (args : (i : C.Binder α) → Expr (Γ ⋈ i.arity)) :
+    ⟦ ρ ⟧ʳ (Expr.apply' p α h args)
+      = Expr.apply' (ρ p) α ((ρ.arity p).trans h)
+          (fun i => ⟦ ρ ⇑ʳ i.arity ⟧ʳ (args i)) := rfl
+
 @[simp]
 theorem Renaming.actExpr.map_id {C : Carrier} : ∀ {Γ : Shape C} (e : Expr Γ),
     ⟦ 𝟙ʳ ⟧ʳ e = e

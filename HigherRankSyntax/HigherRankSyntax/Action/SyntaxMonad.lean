@@ -2,6 +2,7 @@ import Mathlib.CategoryTheory.Category.Basic
 import Mathlib.CategoryTheory.Functor.Basic
 import HigherRankSyntax.Action.Expr
 import HigherRankSyntax.Action.Subst
+import HigherRankSyntax.Action.Equations
 import HigherRankSyntax.RelativeMonad.Basic
 
 /-!

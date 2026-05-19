@@ -1,7 +1,12 @@
 import HigherRankSyntax.Action.Expr
 
 /-!
-# Substitution, instantiation, and the Kleisli extension
+# Substitution, instantiation, and the Kleisli extension — definitions
+
+The substitution machinery: slot classification, the walkers `inst.aux` and
+`lift.aux`, their per-case unfolders, the public wrappers `inst` and
+`Subst.lift`, and the categorical operations (`Renaming.toSubst`,
+`Renaming.preSubst`, `Subst.postRen`, `Subst.comp`).
 
 Each head slot is classified by `classify` into either a Γ-slot (`XPos.base`, the
 weakening of some `p : Slot Γ` through τ) or a τ-binder (`XPos.ext`, identified by a
@@ -13,6 +18,10 @@ slot-correspondence witness lives in the inductive's index, so pattern matching 
 `inst.aux` directly on σ's image, threading the target weakening as a renaming.
 `inst.aux` walks `Expr ((Δ ⋈ α) ⋈* τ)`, carries a renaming `ρ : Δ →ʳ Ξ`, and
 maps Δ-slots through `ρ` during traversal.
+
+Equational theorems about these walkers — the η-laws, the relative-monad laws
+(`unit_right`, `unit_left`, `comp_lift`), and the categorical embedding `L3` —
+live in `Action/Equations.lean`.
 -/
 
 namespace Action
@@ -31,14 +40,14 @@ abbrev Inst {C : Carrier} (α : C.Arity) (Γ : Shape C) : Type :=
 
 /-- The slot at depth `|τ_above|` in `Γ ⋈* (τ_above ++ β :: τ_below)` corresponding to
 binder `i` of `β`.  Iterates `.there` over `τ_above` from `.here i`. -/
-private def tauSlot {C : Carrier} (Γ : Shape C) :
+def tauSlot {C : Carrier} (Γ : Shape C) :
     (τ_above : List C.Arity) → (β : C.Arity) → (τ_below : List C.Arity) →
     (i : C.Binder β) → Slot (Γ ⋈* (τ_above ++ β :: τ_below))
   | [],        _, _, i => .here i
   | _ :: rest, β, τ_below, i => .there (tauSlot Γ rest β τ_below i)
 
 /-- A `tauSlot`'s arity is the binder's sub-arity. -/
-private theorem tauSlot_arity {C : Carrier} (Γ : Shape C)
+theorem tauSlot_arity {C : Carrier} (Γ : Shape C)
     (τ_above : List C.Arity) (β : C.Arity) (τ_below : List C.Arity)
     (i : C.Binder β) : (tauSlot Γ τ_above β τ_below i).arity = i.arity := by
   induction τ_above with
@@ -46,7 +55,7 @@ private theorem tauSlot_arity {C : Carrier} (Γ : Shape C)
   | cons _ _ ih => exact ih
 
 /-- Position of a slot in `Γ ⋈* τ`: a Γ-slot weakened through τ, or a τ-binder. -/
-private inductive XPos {C : Carrier} (Γ : Shape C) :
+inductive XPos {C : Carrier} (Γ : Shape C) :
     (τ : List C.Arity) → Slot (Γ ⋈* τ) → Type where
   | base : ∀ {τ : List C.Arity}, (p : Slot Γ) →
            XPos Γ τ (Renaming.weakenList Γ τ p)
@@ -55,7 +64,7 @@ private inductive XPos {C : Carrier} (Γ : Shape C) :
            XPos Γ (τ_above ++ β :: τ_below) (tauSlot Γ τ_above β τ_below i)
 
 /-- Classify a slot in an iterated extension. -/
-private def classify {C : Carrier} {Γ : Shape C} :
+def classify {C : Carrier} {Γ : Shape C} :
     (τ : List C.Arity) → (p : Slot (Γ ⋈* τ)) → XPos Γ τ p
   | [],       p        => XPos.base p
   | _ :: _,   .here i  => XPos.ext (τ_above := []) i
@@ -66,7 +75,7 @@ private def classify {C : Carrier} {Γ : Shape C} :
           XPos.ext (τ_above := β :: ta) (β := b) (τ_below := tb) j
 
 /-- Classifying a Γ-slot weakened through τ recovers the original Γ-slot. -/
-@[simp] private theorem classify_weakenList {C : Carrier} {Γ : Shape C}
+@[simp] theorem classify_weakenList {C : Carrier} {Γ : Shape C}
     (τ : List C.Arity) (p : Slot Γ) :
     classify τ ((Renaming.weakenList Γ τ).toFun p) = XPos.base p := by
   induction τ with
@@ -77,7 +86,7 @@ private def classify {C : Carrier} {Γ : Shape C} :
     simp [classify, ih]
 
 /-- Classifying a `tauSlot` recovers the corresponding `XPos.ext`. -/
-@[simp] private theorem classify_tauSlot {C : Carrier} {Γ : Shape C}
+@[simp] theorem classify_tauSlot {C : Carrier} {Γ : Shape C}
     (τ_above : List C.Arity) (β : C.Arity) (τ_below : List C.Arity)
     (i : C.Binder β) :
     classify (τ_above ++ β :: τ_below) (tauSlot Γ τ_above β τ_below i)
@@ -95,7 +104,7 @@ private def classify {C : Carrier} {Γ : Shape C} :
 /-- α-instantiation walker.  Walks `e : Expr ((Δ ⋈ α) ⋈* τ)` by classifying each head:
 τ-binder rebuilds the same `tauSlot` at the Ξ-side; Δ-slots are mapped through `ρ` and
 then weakened through τ; α-binders plug `ι j` and recurse at smaller arity. -/
-private def inst.aux {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
+def inst.aux {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
     (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
     (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)) : Expr (Ξ ⋈* τ) :=
   match e with
@@ -140,14 +149,14 @@ decreasing_by
   -- α decreases (j.arity ≺ α)
   · exact PSigma.Lex.left _ _ ⟨j, rfl⟩
 
-/-! ## η-fillers and instantiation η-laws -/
+/-! ## η-fillers and per-case unfolders for `inst.aux` -/
 
 /-- Canonical η-fillers for an α-binder over a shape with α at the top.
 At each binder position `i`, returns the η-expansion of the bound variable `.here i`. -/
-private def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ ⋈ α) :=
+def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ ⋈ α) :=
   fun i => Expr.η ⟨.here i, rfl⟩
 
-@[simp] private theorem inst_aux_ext_eq {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
+@[simp] theorem inst_aux_ext_eq {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
     (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
     (τ_above : List C.Arity) (β : C.Arity) (τ_below : List C.Arity)
     (i : C.Binder β) (α_h : C.Arity)
@@ -171,7 +180,7 @@ private def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ
   rw [inst.aux._unary.eq_1]
   simp [classify_tauSlot]
 
-@[simp] private theorem inst_aux_base_there_eq {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
+@[simp] theorem inst_aux_base_there_eq {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
     (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
     (τ : List C.Arity) (r : Slot Δ) (α_h : C.Arity)
     (h : ((Renaming.weakenList (Δ ⋈ α) τ).toFun (.there r)).arity = α_h)
@@ -193,7 +202,7 @@ private def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ
   rw [inst.aux._unary.eq_1]
   simp [classify_weakenList]
 
-@[simp] private theorem inst_aux_base_here_eq {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
+@[simp] theorem inst_aux_base_here_eq {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
     (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
     (τ : List C.Arity) (j : C.Binder α)
     (h : ((Renaming.weakenList (Δ ⋈ α) τ).toFun (.here j)).arity = j.arity)
@@ -212,148 +221,10 @@ private def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ
   rw [inst.aux._unary.eq_1]
   simp [classify_weakenList]
 
-private theorem inst_aux_η_tauSlot {C : Carrier} :
-    ∀ {Δ Ξ : Shape C} (α : C.Arity) (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
-      (τ_above : List C.Arity) (β : C.Arity) (τ_below : List C.Arity)
-      (i : C.Binder β),
-      inst.aux α ρ ι (i.arity :: (τ_above ++ β :: τ_below))
-        (Expr.η ⟨tauSlot (Δ ⋈ α) τ_above β τ_below i, tauSlot_arity (Δ ⋈ α) τ_above β τ_below i⟩)
-        =
-      Expr.η ⟨tauSlot Ξ τ_above β τ_below i, tauSlot_arity Ξ τ_above β τ_below i⟩
-  | Δ, Ξ, α, ρ, ι, τ_above, β, τ_below, i => by
-    unfold Expr.η
-    change inst.aux α ρ ι ((i.arity :: τ_above) ++ β :: τ_below)
-        (Expr.apply' (tauSlot (Δ ⋈ α) (i.arity :: τ_above) β τ_below i)
-          i.arity (tauSlot_arity (Δ ⋈ α) (i.arity :: τ_above) β τ_below i)
-          (fun k =>
-            Expr.η ⟨.here k, rfl⟩))
-        =
-      Expr.apply' (tauSlot Ξ (i.arity :: τ_above) β τ_below i)
-        i.arity (tauSlot_arity Ξ (i.arity :: τ_above) β τ_below i)
-        (fun k =>
-          Expr.η ⟨.here k, rfl⟩)
-    rw [inst_aux_ext_eq]
-    congr 1
-    funext k
-    exact inst_aux_η_tauSlot α ρ ι [] i.arity (τ_above ++ β :: τ_below) k
-termination_by _ _ _ _ _ _ _ _ i => i.arity
-decreasing_by exact ⟨_, rfl⟩
-
-private theorem inst_aux_η_inv_of {C : Carrier} (Δ : Shape C) (α : C.Arity)
-    (hη : ∀ (j : C.Binder α) {Δ' Ξ' : Shape C}
-      (ρ : Δ' →ʳ Ξ') (ι : Inst j.arity Ξ') (v : Expr.J Δ' j.arity),
-      inst.aux j.arity ρ ι [] (Expr.η v)
-        = Expr.apply' (ρ v.val) j.arity ((ρ.arity v.val).trans v.property) ι) :
-    ∀ (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
-      inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α) τ e = e
-  | τ, Expr.apply' p α_h h args => by
-    have ih_arg : ∀ (j : C.Binder α_h),
-        inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α)
-          (j.arity :: τ) (args j) = args j := by
-      intro j
-      exact inst_aux_η_inv_of Δ α hη (j.arity :: τ) (args j)
-    cases classify τ p with
-    | ext i =>
-      rw [inst_aux_ext_eq]
-      congr 1
-      funext j
-      exact ih_arg j
-    | base q =>
-      cases q with
-      | there r =>
-        rw [inst_aux_base_there_eq]
-        congr 1
-        funext j
-        exact ih_arg j
-      | here j =>
-        have hs : j.arity = α_h :=
-          ((Renaming.weakenList (Δ ⋈ α) τ).arity (.here j)).symm.trans h
-        cases hs
-        rw [inst_aux_base_here_eq]
-        change inst.aux j.arity (Renaming.weakenList (Δ ⋈ α) τ)
-            (fun k => inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α)
-              (k.arity :: τ) (args k)) []
-            (Expr.η ⟨.here j, rfl⟩)
-          = Expr.apply' ((Renaming.weakenList (Δ ⋈ α) τ).toFun (.here j))
-            j.arity h args
-        rw [hη j (Δ' := Δ ⋈ α) (Ξ' := (Δ ⋈ α) ⋈* τ)
-          (ρ := Renaming.weakenList (Δ ⋈ α) τ)
-          (ι := fun k =>
-            inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α)
-              (k.arity :: τ) (args k)) (v := ⟨.here j, rfl⟩)]
-        congr 1
-        funext k
-        exact ih_arg k
-termination_by τ e => (⟨(Δ ⋈ α) ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
-decreasing_by exact Expr.Subterm.of_arg p α_h h args j
-
-private theorem inst_aux_η_bundle {C : Carrier} (α : C.Arity) :
-    (∀ {Δ Ξ : Shape C} (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
-      (v : Expr.J Δ α),
-      inst.aux α ρ ι [] (Expr.η v)
-        = Expr.apply' (ρ v.val) α ((ρ.arity v.val).trans v.property) ι)
-    ∧
-    (∀ (Δ : Shape C) (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
-      inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α) τ e = e) := by
-  refine C.subWf.induction (C := fun α =>
-    (∀ {Δ Ξ : Shape C} (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
-      (v : Expr.J Δ α),
-      inst.aux α ρ ι [] (Expr.η v)
-        = Expr.apply' (ρ v.val) α ((ρ.arity v.val).trans v.property) ι)
-    ∧
-    (∀ (Δ : Shape C) (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
-      inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α) τ e = e)) α ?_
-  intro α ih
-  constructor
-  · intro Δ Ξ ρ ι v
-    rcases v with ⟨p, hp⟩
-    unfold Expr.η
-    change inst.aux α ρ ι []
-        (Expr.apply' ((Renaming.weakenList (Δ ⋈ α) []).toFun (.there p))
-          α hp (fun i => Expr.η ⟨.here i, rfl⟩))
-        = Expr.apply' (ρ p) α ((ρ.arity p).trans hp) ι
-    rw [inst_aux_base_there_eq]
-    congr 1
-    funext i
-    unfold Expr.η
-    change inst.aux α ρ ι [i.arity]
-        (Expr.apply' ((Renaming.weakenList (Δ ⋈ α) [i.arity]).toFun (.here i))
-          i.arity rfl
-          (fun k => Expr.η ⟨.here k, rfl⟩))
-        = ι i
-    rw [inst_aux_base_here_eq]
-    change inst.aux i.arity (Renaming.weakenList Ξ [i.arity])
-        (fun k : C.Binder i.arity => inst.aux α ρ ι (k.arity :: [i.arity])
-          (Expr.η ⟨.here k, rfl⟩)) [] (ι i)
-      = ι i
-    have hargs : (fun k : C.Binder i.arity => inst.aux α ρ ι (k.arity :: [i.arity])
-          (Expr.η ⟨.here k, rfl⟩))
-        = η_fillers Ξ i.arity := by
-      funext k
-      unfold η_fillers
-      exact inst_aux_η_tauSlot α ρ ι [] i.arity [] k
-    rw [hargs]
-    exact (ih i.arity ⟨i, rfl⟩).2 Ξ [] (ι i)
-  · intro Δ
-    exact inst_aux_η_inv_of Δ α (fun j => (ih j.arity ⟨j, rfl⟩).1)
-
-private theorem inst_aux_η {C : Carrier} {Δ Ξ : Shape C}
-    (α : C.Arity) (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
-    (v : Expr.J Δ α) :
-    inst.aux α ρ ι [] (Expr.η v)
-      =
-    Expr.apply' (ρ v.val) α ((ρ.arity v.val).trans v.property) ι :=
-  (inst_aux_η_bundle α).1 ρ ι v
-
-private theorem inst_aux_η_inv {C : Carrier} (Δ : Shape C) (α : C.Arity) :
-    ∀ (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
-      inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α) τ e = e :=
-  (inst_aux_η_bundle α).2 Δ
-
 /-- Kleisli extension walker.  Walks `e : Expr (Γ ⋈* τ)` by classifying each head:
 τ-binder rebuilds; Γ-slot substitutes via σ and threads the target weakening through
 `inst.aux`. -/
-private def lift.aux {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
+def lift.aux {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
     (τ : List C.Arity) (e : Expr (Γ ⋈* τ)) : Expr (Δ ⋈* τ) :=
   match e with
   | .apply' p α_h h_α_h args =>
@@ -379,7 +250,7 @@ termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by
   all_goals exact Expr.Subterm.of_arg _ _ _ _ _
 
-@[simp] private theorem lift_aux_ext_eq {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
+@[simp] theorem lift_aux_ext_eq {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
     (τ_above : List C.Arity) (β : C.Arity) (τ_below : List C.Arity)
     (i : C.Binder β) (α_h : C.Arity)
     (h : (tauSlot Γ τ_above β τ_below i).arity = α_h)
@@ -399,7 +270,7 @@ decreasing_by
   rw [lift.aux._unary.eq_1]
   simp [classify_tauSlot]
 
-@[simp] private theorem lift_aux_base_eq {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
+@[simp] theorem lift_aux_base_eq {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
     (τ : List C.Arity) (q : Slot Γ)
     (h : ((Renaming.weakenList Γ τ).toFun q).arity = q.arity)
     (args : (j : C.Binder q.arity) → Expr (Γ ⋈* τ ⋈ j.arity)) :
@@ -414,90 +285,6 @@ decreasing_by
   rw [lift.aux._unary.eq_1]
   simp [classify_weakenList]
 
-private theorem lift_aux_η_tauSlot {C : Carrier} :
-    ∀ {Γ Δ : Shape C} (σ : Subst Γ Δ)
-      (τ_above : List C.Arity) (β : C.Arity) (τ_below : List C.Arity)
-      (i : C.Binder β),
-      lift.aux σ (i.arity :: (τ_above ++ β :: τ_below))
-        (Expr.η ⟨tauSlot Γ τ_above β τ_below i, tauSlot_arity Γ τ_above β τ_below i⟩)
-        =
-      Expr.η ⟨tauSlot Δ τ_above β τ_below i, tauSlot_arity Δ τ_above β τ_below i⟩
-  | Γ, Δ, σ, τ_above, β, τ_below, i => by
-    unfold Expr.η
-    change lift.aux σ ((i.arity :: τ_above) ++ β :: τ_below)
-        (Expr.apply' (tauSlot Γ (i.arity :: τ_above) β τ_below i)
-          i.arity (tauSlot_arity Γ (i.arity :: τ_above) β τ_below i)
-          (fun k =>
-            Expr.η ⟨.here k, rfl⟩))
-        =
-      Expr.apply' (tauSlot Δ (i.arity :: τ_above) β τ_below i)
-        i.arity (tauSlot_arity Δ (i.arity :: τ_above) β τ_below i)
-        (fun k =>
-          Expr.η ⟨.here k, rfl⟩)
-    rw [lift_aux_ext_eq]
-    congr 1
-    funext k
-    exact lift_aux_η_tauSlot σ [] i.arity (τ_above ++ β :: τ_below) k
-termination_by _ _ _ _ _ _ i => i.arity
-decreasing_by exact ⟨_, rfl⟩
-
-private theorem unit_right.aux {C : Carrier} {Γ : Shape C} :
-    ∀ (τ : List C.Arity) (e : Expr (Γ ⋈* τ)), lift.aux (fun q => Expr.η ⟨q, rfl⟩) τ e = e
-  | τ, Expr.apply' p α_h h args => by
-    have ih_arg : ∀ (j : C.Binder α_h), lift.aux (fun q => Expr.η ⟨q, rfl⟩) (j.arity :: τ) (args j) = args j := by
-      intro j
-      exact unit_right.aux (j.arity :: τ) (args j)
-    cases classify τ p with
-    | ext i =>
-      rw [lift_aux_ext_eq]
-      congr 1
-      funext j
-      exact ih_arg j
-    | base q =>
-      have hs : q.arity = α_h :=
-        ((Renaming.weakenList Γ τ).arity q).symm.trans h
-      cases hs
-      rw [lift_aux_base_eq]
-      change inst.aux q.arity (Renaming.weakenList Γ τ)
-          (fun j => lift.aux (fun q => Expr.η ⟨q, rfl⟩) (j.arity :: τ) (args j)) [] (Expr.η ⟨q, rfl⟩)
-        = Expr.apply' ((Renaming.weakenList Γ τ).toFun q) q.arity h args
-      rw [inst_aux_η]
-      congr 1
-      funext j
-      exact ih_arg j
-termination_by τ e => (⟨Γ ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
-decreasing_by exact Expr.Subterm.of_arg p α_h h args j
-
-private theorem unit_left.aux {C : Carrier} {Γ Δ : Shape C}
-    (σ : Subst Γ Δ) :
-    ∀ {α : C.Arity} (v : Expr.J Γ α),
-      lift.aux σ [α] (Expr.η v)
-        =
-      (match v with | ⟨p, hp⟩ => match hp with | rfl => σ p)
-  | α, ⟨p, hp⟩ => by
-    cases hp
-    unfold Expr.η
-    change lift.aux σ [p.arity]
-        (Expr.apply' ((Renaming.weakenList Γ [p.arity]).toFun p)
-          p.arity rfl
-          (fun i => Expr.η ⟨.here i, rfl⟩))
-        = σ p
-    rw [lift_aux_base_eq]
-    change inst.aux p.arity (Renaming.weakenList Δ [p.arity])
-        (fun i : C.Binder p.arity =>
-          lift.aux σ (i.arity :: [p.arity])
-            (Expr.η ⟨.here i, rfl⟩)) [] (σ p)
-      = σ p
-    have hargs : (fun i : C.Binder p.arity =>
-          lift.aux σ (i.arity :: [p.arity])
-            (Expr.η ⟨.here i, rfl⟩))
-        = η_fillers Δ p.arity := by
-      funext i
-      unfold η_fillers
-      exact lift_aux_η_tauSlot σ [] p.arity [] i
-    rw [hargs]
-    exact inst_aux_η_inv Δ p.arity [] (σ p)
-
 /-! ## Public wrappers -/
 
 /-- α-instantiation: replace the α-binder of `Δ ⋈ α` by `ι`. -/
@@ -509,20 +296,6 @@ def inst {C : Carrier} {α : C.Arity} {Δ : Shape C}
 def Subst.lift {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
     {α : C.Arity} (e : Expr (Γ ⋈ α)) : Expr (Δ ⋈ α) :=
   lift.aux σ [α] e
-
-theorem unit_right {C : Carrier} {Γ : Shape C}
-    (α : C.Arity) (e : Expr.T Γ α) :
-    Subst.lift (fun q => Expr.η ⟨q, rfl⟩) e = e :=
-  unit_right.aux [α] e
-
-theorem unit_left {C : Carrier} {Γ Δ : Shape C}
-    (f : ∀ α : C.Arity, Expr.J Γ α → Expr.T Δ α) :
-    ∀ {α : C.Arity} (v : Expr.J Γ α),
-      f α v = Subst.lift (fun s => f s.arity ⟨s, rfl⟩) (Expr.η v)
-  | _, ⟨p, hp⟩ => by
-    cases hp
-    symm
-    exact unit_left.aux (fun s => f s.arity ⟨s, rfl⟩) ⟨p, rfl⟩
 
 /-! ## Categorical operations: substitution and renaming compositions -/
 
@@ -554,61 +327,5 @@ def Subst.comp {C : Carrier} {Γ Δ Ε : Shape C}
 
 @[inherit_doc Subst.comp]
 scoped infixl:90 " ˢ∘ˢ " => Subst.comp
-
-/-! ## Naturality lemma needed by `comp_lift` -/
-
-/-- **L5** — naturality of `lift` past `inst`.  Walking
-`inst.aux α (weakenList Δ τ) ι [] e` with `lift.aux θ τ` is the same as
-instantiating with the `lift`ed instantiation data into the `lift`ed expression. -/
-private theorem lift_inst_commute {C : Carrier} :
-    ∀ {Δ Ε : Shape C} (θ : Subst Δ Ε) (α : C.Arity)
-      (τ : List C.Arity) (ι : Inst α (Δ ⋈* τ)) (e : Expr (Δ ⋈ α)),
-      lift.aux θ τ (inst.aux α (Renaming.weakenList Δ τ) ι [] e)
-        =
-      inst.aux α (Renaming.weakenList Ε τ)
-        (fun j => lift.aux θ (j.arity :: τ) (ι j))
-        [] (Subst.lift θ e) := by
-  sorry
-
-/-! ## Composition law -/
-
-private theorem comp_lift.aux {C : Carrier} {Γ Δ Ε : Shape C}
-    (σ : Subst Γ Δ) (θ : Subst Δ Ε) :
-    ∀ (τ : List C.Arity) (e : Expr (Γ ⋈* τ)),
-      lift.aux (σ ˢ∘ˢ θ) τ e = lift.aux θ τ (lift.aux σ τ e)
-  | τ, Expr.apply' p α_h h args => by
-    have ih_arg : ∀ (j : C.Binder α_h),
-        lift.aux (σ ˢ∘ˢ θ) (j.arity :: τ) (args j)
-          = lift.aux θ (j.arity :: τ) (lift.aux σ (j.arity :: τ) (args j)) := by
-      intro j
-      exact comp_lift.aux σ θ (j.arity :: τ) (args j)
-    cases classify τ p with
-    | ext i =>
-      simp only [lift_aux_ext_eq]
-      congr 1
-      funext j
-      exact ih_arg j
-    | base q =>
-      have hs : q.arity = α_h :=
-        ((Renaming.weakenList Γ τ).arity q).symm.trans h
-      cases hs
-      simp only [lift_aux_base_eq]
-      rw [lift_inst_commute]
-      congr 1
-      funext j
-      exact ih_arg j
-termination_by τ e => (⟨Γ ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
-decreasing_by exact Expr.Subterm.of_arg p α_h h args j
-
-/-- Composition of Kleisli extensions: substituting via σ then via θ equals substituting
-via the composed substitution `σ ˢ∘ˢ θ`. -/
-theorem comp_lift {C : Carrier} {Γ Δ Ε : Shape C}
-    (σ : Subst Γ Δ) (θ : Subst Δ Ε) :
-    ∀ {α : C.Arity} (e : Expr (Γ ⋈ α)),
-      Subst.lift (fun q => Subst.lift θ (σ q)) e
-        =
-      Subst.lift θ (Subst.lift σ e) := by
-  intro α e
-  exact comp_lift.aux σ θ [α] e
 
 end Action

@@ -119,4 +119,36 @@ def Renaming.weakenList {C : Carrier} (Γ : Shape C) :
   | []        => Renaming.id Γ
   | β :: rest => Renaming.weaken (Γ ⋈* rest) β ∘ʳ Renaming.weakenList Γ rest
 
+/-- Iterated extension of a renaming through a list of binders. -/
+def Renaming.extendList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
+    (τ : List C.Arity) → Γ ⋈* τ →ʳ Δ ⋈* τ
+  | []        => ρ
+  | β :: rest => Renaming.extendList ρ rest ⇑ʳ β
+
+@[simp] theorem Renaming.extendList_nil {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
+    Renaming.extendList ρ [] = ρ := rfl
+
+@[simp] theorem Renaming.extendList_cons {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
+    (β : C.Arity) (rest : List C.Arity) :
+    Renaming.extendList ρ (β :: rest) = Renaming.extendList ρ rest ⇑ʳ β := rfl
+
+@[simp] theorem Renaming.extendList_id {C : Carrier} (Γ : Shape C) :
+    ∀ (τ : List C.Arity), Renaming.extendList (Renaming.id Γ) τ = Renaming.id (Γ ⋈* τ)
+  | []        => rfl
+  | β :: rest => by
+    show Renaming.extendList (Renaming.id Γ) rest ⇑ʳ β = Renaming.id (Γ ⋈* rest ⋈ β)
+    rw [Renaming.extendList_id Γ rest, Renaming.extend_id]
+
+/-- Naturality of `extendList` w.r.t. `weakenList`: extending a renaming and then
+weakening through `τ` equals weakening first then applying the renaming. -/
+@[simp] theorem Renaming.extendList_weakenList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
+    ∀ (τ : List C.Arity) (p : Slot Γ),
+      (Renaming.extendList ρ τ).toFun ((Renaming.weakenList Γ τ).toFun p)
+        = (Renaming.weakenList Δ τ).toFun (ρ p)
+  | [], _ => rfl
+  | β :: rest, p => by
+    show Slot.there ((Renaming.extendList ρ rest).toFun ((Renaming.weakenList Γ rest).toFun p))
+       = Slot.there ((Renaming.weakenList Δ rest).toFun (ρ p))
+    rw [Renaming.extendList_weakenList ρ rest p]
+
 end Action

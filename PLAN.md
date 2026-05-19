@@ -36,125 +36,118 @@ Greek `ι` for the instantiation parameter keeps `i` free for binders.
 
 ## What's built
 
-`Action/*.lean` builds; only `comp_lift` is `sorry` (one occurrence, in
-`Subst.lean`, wired through `SyntaxMonad.lean`).  `SyntaxMonad : RelativeMonad J`
-has `map`, `η`, `lift`, `unit_right`, `unit_left` populated.
+`Action/*.lean` builds.  `SyntaxMonad : RelativeMonad J` is fully populated
+modulo the **one remaining `sorry`** — `lift_inst_commute` (= **L5**) in
+`Action/Equations.lean`.  The composition law `comp_lift` is proved modulo
+that sorry.
 
-`Action/Subst.lean` defines (public surface):
+The substitution layer is split across two files:
 
-* `Subst Γ Δ`, `Inst α Γ` — substitution and instantiation data.
-* `inst e ι` and `Subst.lift σ e` — public wrappers calling `inst.aux` and
-  `lift.aux` at `τ := []` / `[α]`.
-* `unit_right`, `unit_left`, `comp_lift` (the last sorried).
+`Action/Subst.lean` — **machinery**:
 
-Internal (`private`):
+* Types: `Subst Γ Δ`, `Inst α Γ`.
+* Slot classification: `tauSlot`, `tauSlot_arity`; the `XPos` inductive and
+  `classify`; the @[simp] lemmas `classify_weakenList`, `classify_tauSlot`.
+* Walkers: `inst.aux α ρ ι τ e : Expr ((Δ ⋈ α) ⋈* τ) → Expr (Ξ ⋈* τ)` (ρ is a
+  *Renaming*, three branches via `classify`); `lift.aux σ τ e` (at Γ-slots
+  delegates to `inst.aux` with `ρ := Renaming.weakenList Δ τ`).
+* Per-case @[simp] unfolders: `inst_aux_ext_eq`, `inst_aux_base_there_eq`,
+  `inst_aux_base_here_eq`, `lift_aux_ext_eq`, `lift_aux_base_eq`.
+* Helper: `η_fillers`.
+* Public wrappers: `inst e ι`, `Subst.lift σ e`.
+* Categorical operations: `Renaming.toSubst`, `Renaming.preSubst` (`ʳ∘ˢ`),
+  `Subst.postRen` (`ˢ∘ʳ`), `Subst.comp` (`ˢ∘ˢ`).
 
-* `tauSlot` and `tauSlot_arity`; the `XPos` classifier and `classify`, with
-  simp lemmas `classify_weakenList` and `classify_tauSlot`.
-* `inst.aux α ρ ι τ e : Expr ((Δ ⋈ α) ⋈* τ) → Expr (Ξ ⋈* τ)` — walker; ρ is
-  a *Renaming* `Δ →ʳ Ξ`, ι : Inst α Ξ.  Three branches via `classify`.
-* `lift.aux σ τ e : Expr (Γ ⋈* τ) → Expr (Δ ⋈* τ)` — walker; at Γ-slots
-  delegates to `inst.aux` with `ρ := Renaming.weakenList Δ τ`.
-* Per-branch `@[simp]` unfolders `inst_aux_*_eq`, `lift_aux_*_eq`.
-* `η_fillers`, `inst_aux_η`, `inst_aux_η_inv`, `lift_aux_η_tauSlot` — η-side
-  lemmas used by the unit laws.
-* `unit_right.aux`, `unit_left.aux` — internal companions to the public laws.
+`Action/Equations.lean` — **theorems** (imports `Subst`):
 
-`Action/Expr.lean` has `Renaming.actExpr` (`⟦ ρ ⟧ʳ e`) with full functoriality
-(`map_id`, `map_comp`, `J.map`, `T.map`, plus `T.map_η` naturality).
+* `extendList_tauSlot` — naturality of `Renaming.extendList` against `tauSlot`.
+* η-side lemmas (private): `inst_aux_η_tauSlot`, `inst_aux_η_inv_of`,
+  `inst_aux_η_bundle`, `inst_aux_η`, `inst_aux_η_inv`, `lift_aux_η_tauSlot`.
+* `unit_left.aux` (private) and public `unit_left`.
+* `L3.aux` (private) and public `L3 : Subst.lift ρ.toSubst e = ⟦ ρ ⇑ʳ α ⟧ʳ e`
+  — the categorical embedding lemma.
+* Public **`unit_right`** as a one-line corollary of `L3` at `ρ := 𝟙ʳ`.
+* **`lift_inst_commute`** (L5, still `sorry`'d).
+* `comp_lift.aux` (private) and public `comp_lift` (proved modulo L5).
+
+`Action/Renaming.lean` adds `Renaming.extendList ρ τ : Γ ⋈* τ →ʳ Δ ⋈* τ` and
+naturality `extendList_weakenList`, `extendList_id`.
+
+`Action/Expr.lean` adds `Renaming.actExpr_apply'` as a @[simp] unfolder of
+`⟦ ρ ⟧ʳ (apply' …)` — avoids motive-correctness issues when rewriting slots
+through the dependent witness `hα`.
 
 Termination: `lift.aux` uses `Expr.Subterm.wellFoundedRelation`; `inst.aux`
 uses lex `PSigma` over `(C.Arity, Σ Γ, Expr Γ)`.
 
 ## Outstanding
 
-Prove `comp_lift` (`Action/SyntaxMonad.lean` and `Action/Subst.lean`).  Plan
-below.
+Prove **L5** (`lift_inst_commute` in `Action/Equations.lean`).  Plan below.
 
-## Plan for `comp_lift`
+## Plan for `lift_inst_commute` (L5)
 
-Approach: state the categorical operations and the two laws that the
-`comp_lift` proof needs, then **dry-run the proof** before attacking any
-sub-lemma's body.  This validates the operations and law statements before
-investing in proving them.  Andrej's rule: "untested lemmas are not worth
-proving".
+Statement:
 
-### Step 1 — Operations (top-level definitions, no proofs)
+```
+lift.aux θ τ (inst.aux α (weakenList Δ τ) ι [] e)
+  = inst.aux α (weakenList Ε τ)
+      (fun j => lift.aux θ (j.arity :: τ) (ι j)) [] (Subst.lift θ e)
+```
 
-In `Subst.lean`:
+A direct structural induction on `e` does not close: at the `.here j`
+sub-case of `e`'s head (`.here j : Slot (Δ ⋈ α)` with `j : Binder α`), the
+walker plugs `ι j : Expr ((Δ ⋈* τ) ⋈ j.arity)` and re-enters `inst.aux` at
+`j.arity` with `ρ = 𝟙ʳ` — the source shape is no longer `Δ ⋈ α` and the
+inst-walker's own `τ_inst` is no longer `[]`.  So L5 must be generalised in
+two directions at once.
 
-* `Renaming.toSubst (ρ : Γ →ʳ Δ) : Subst Γ Δ := fun s => Expr.η ⟨ρ s, ρ.arity s⟩`
-* `(ρ : Γ →ʳ Γ') ʳ∘ˢ (σ : Subst Γ' Δ) : Subst Γ Δ` — pre-compose Subst by
-  Renaming.  Body: `fun s => (ρ.arity s) ▸ σ (ρ s)`, or whichever transport-
-  free form Lean accepts cleanly.
-* `(σ : Subst Γ Δ) ˢ∘ʳ (ρ : Δ →ʳ Δ') : Subst Γ Δ'` — post-compose Subst by
-  Renaming.  Body: `fun s => ⟦ ρ ⇑ʳ s.arity ⟧ʳ (σ s)`.
-* `(σ : Subst Γ Δ) ˢ∘ˢ (θ : Subst Δ Ε) : Subst Γ Ε` — Kleisli composition.
-  Body: `fun s => Subst.lift θ (σ s)`.
+### Likely generalisation
 
-Notation choices: `ρ.toSubst`, `ρ ʳ∘ˢ σ`, `σ ˢ∘ʳ ρ`, `σ ˢ∘ˢ θ` (or `ηʳ ρ`,
-etc. — pick a consistent style on first try).
+```
+lift.aux θ (τ_inst ++ τ) (inst.aux α (weakenList Δ τ) ι τ_inst e)
+  = inst.aux α (weakenList Ε τ)
+      (fun j => lift.aux θ (j.arity :: τ) (ι j))
+      τ_inst (lift.aux (Subst.under θ α) τ_inst e)
+```
 
-### Step 2 — State the laws that `comp_lift` consumes (`:= sorry`)
+where `Subst.under (θ : Subst Δ Ε) (α : C.Arity) : Subst (Δ ⋈ α) (Ε ⋈ α)`
+sends the topmost α-binder to itself and pushes Δ-slots through θ (then
+weakens through α on the codomain side).  Type-aligning the two sides needs
+`Shape.extList_append : Γ ⋈* (xs ++ ys) = (Γ ⋈* ys) ⋈* xs`; this is
+provable by structural recursion on `xs`.
 
-* **L4** (= `comp_lift`):
-  `Subst.lift (σ ˢ∘ˢ θ) e = Subst.lift θ (Subst.lift σ e)`.
-* **L5** (lift-after-inst commutation):
-  ```
-  lift.aux θ τ (inst.aux α (weakenList Δ τ) ι [] e)
-    = inst.aux α (weakenList Ε τ) (fun j => lift.aux θ (j.arity :: τ) (ι j))
-                [] (Subst.lift θ e)
-  ```
+### Induction structure
 
-### Step 3 — Dry-run `comp_lift.aux σ θ τ e` using L5 + IH
+Lex on `(α, e)`, parallel to `inst_aux_η_bundle`:
 
-Structural induction on `e`, classify the head.
+* **XPos.ext (τ_inst slot).**  Both sides reduce via `inst_aux_ext_eq` /
+  `lift_aux_ext_eq`; recurse on args at deeper `τ_inst`.
+* **XPos.base, .there r (Δ-slot).**  Reduces both sides through the
+  Δ-renaming chain; recurse on args at deeper `τ_inst`.
+* **XPos.base, .here j (α-binder).**  Plugs `ι j` and reenters `inst.aux` at
+  `j.arity` (strictly smaller α via `subWf`).  Apply IH at `α := j.arity`.
 
-* **XPos.ext (τ-binder).**  Both sides reduce via `lift_aux_ext_eq`; the
-  apply' trees agree on head and arity-proof.  Args differ by lift composition
-  vs sequencing — equal by **IH of `comp_lift.aux` at deeper τ**.
-* **XPos.base q (Γ-slot).**  Both sides reduce via `lift_aux_base_eq` to
-  nested `inst.aux`.
-  * LHS: `inst.aux q.arity (weakenList Ε τ) Λ_LHS [] ((σ ˢ∘ˢ θ) q)` with
-    `(σ ˢ∘ˢ θ) q = Subst.lift θ (σ q)` by `ˢ∘ˢ`'s definition.
-  * RHS: `lift.aux θ τ (inst.aux q.arity (weakenList Δ τ) Λ_σ [] (σ q))`.
-  * Apply **L5** to the RHS: pulls `lift.aux θ τ` through `inst.aux`, yielding
-    `inst.aux q.arity (weakenList Ε τ) (fun j => lift.aux θ (j.arity :: τ) (Λ_σ j)) [] (Subst.lift θ (σ q))`.
-  * `Λ_LHS j = lift.aux (σ ˢ∘ˢ θ) (j.arity :: τ) (args j)` and the rewritten
-    RHS's `fun j => lift.aux θ (j.arity :: τ) (Λ_σ j) = fun j => lift.aux θ (…) (lift.aux σ (…) (args j))`
-    are equal by **IH of `comp_lift.aux` at deeper τ**.
+### Categorical infrastructure likely needed
 
-### Step 4 — What the dry-run tells us
+* `Subst.under θ α` and its compatibility with `Renaming.weaken`.
+* A Fubini-style law for nested `inst.aux` at distinct arities — used when
+  `Subst.lift θ` on a `.there r` head produces an inst.aux that then sits
+  inside the outer `inst.aux α`.
+* Inst.aux × renaming naturality (the M1/M2 family from earlier plans).
 
-* The four operations and **L4, L5** are sufficient for the `comp_lift.aux`
-  proof modulo their own bodies.
-* The Subst-level identity `(σ ˢ∘ˢ θ) s = Subst.lift θ (σ s)` is definitional —
-  no extra lemma.
-* **L5** is the central new lemma.  Its proof is the next planning round.
-* Categorical lemmas **NOT** in the consumer chain (skip until L5 dictates):
-  - L1 pre-rename naturality (`Subst.lift (ρ ʳ∘ˢ σ) e = Subst.lift σ (⟦ … ⟧ʳ e)`)
-  - L2 post-rename naturality (`Subst.lift (σ ˢ∘ʳ ρ) e = ⟦ … ⟧ʳ (Subst.lift σ e)`)
-  - L3 embedding (`Subst.lift ρ.toSubst e = ⟦ … ⟧ʳ e`)
-  - M1/M2 renaming-naturality of `inst.aux`
-  - Subst-level associativities and identities mixing the four operations.
-
-  These will likely appear when **proving L5**, and at that point we should
-  state and prove only the ones L5 actually uses.
-
-### Concrete first move
-
-State the four operations and **L4**, **L5** in `Subst.lean` with `sorry`
-bodies.  Write the body of `comp_lift.aux` (and the public `comp_lift` wrapper)
-*assuming* L5 and IH.  Build to confirm the proof typechecks modulo the
-sorries — that validates the L5 statement.  Only **then** plan how to prove
-L5.
+State each new law with `sorry` and dry-run the L5 proof using them, as we
+did for `comp_lift`, before investing in their bodies.
 
 ## Warmup lemmas (done, reference)
 
-`@[simp]` per-case unfolders for `inst.aux` / `lift.aux` in `Subst.lean`:
-`inst_aux_ext_eq`, `inst_aux_base_there_eq`, `inst_aux_base_here_eq`,
-`lift_aux_ext_eq`, `lift_aux_base_eq`.  Also `classify_weakenList`,
-`classify_tauSlot`.  In `Expr.lean`: `Expr.T.map_η` (η naturality, WF on α).
+* `@[simp]` per-case unfolders for `inst.aux` / `lift.aux`:
+  `inst_aux_ext_eq`, `inst_aux_base_there_eq`, `inst_aux_base_here_eq`,
+  `lift_aux_ext_eq`, `lift_aux_base_eq` (Subst.lean).
+* `classify_weakenList`, `classify_tauSlot` (Subst.lean).
+* `Renaming.actExpr_apply'`, `Expr.T.map_η` (Expr.lean).
+* `Renaming.extendList`, `extendList_id`, `extendList_weakenList`
+  (Renaming.lean).
+* `extendList_tauSlot`, `inst_aux_η`, `inst_aux_η_inv`, `L3` (Equations.lean).
 
 ## Lean tactical recipes
 
@@ -220,6 +213,15 @@ Along the way: `Carrier` stripped to base data (`slotsExt` Equiv replaced by
 Recent: toolchain bumped to `leanprover/lean4:v4.30.0-rc2` tracking Mathlib
 master (`e7a2506`).  Pulling collaborators need `lake update mathlib` +
 `lake exe cache get` from `HigherRankSyntax/`.
+
+Most recent: dry-run of `comp_lift` validated the four categorical operations
++ L5 + IH (`08f2408`); the conceptual refactor added `L3` (embedding lemma
+`Subst.lift ρ.toSubst e = ⟦ ρ ⇑ʳ α ⟧ʳ e`), turned `unit_right` into a
+one-liner `(L3 𝟙ʳ e).trans (by simp)`, and split `Subst.lean` into
+`Subst.lean` (definitions) + `Equations.lean` (theorems).  Note: Lean's
+`private` is file-scoped, so anything moved to `Equations.lean` needed its
+mentioned dependencies (`tauSlot`, `classify`, `inst.aux`, `lift.aux`,
+`η_fillers`, per-case unfolders) promoted to non-private in `Subst.lean`.
 
 ## Notes for the next Claude
 
