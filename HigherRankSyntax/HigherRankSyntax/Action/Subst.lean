@@ -54,7 +54,7 @@ theorem tauSlot_arity {C : Carrier} (Γ : Shape C)
 inductive XPos {C : Carrier} (Γ : Shape C) :
     (τ : List C.Arity) → Slot (Γ ⋈* τ) → Type where
   | base : ∀ {τ : List C.Arity}, (p : Slot Γ) →
-           XPos Γ τ (Renaming.weakenList Γ τ p)
+           XPos Γ τ ((Γ ↪ʳ τ) p)
   | ext  : ∀ {τ_above : List C.Arity} {β : C.Arity} {τ_below : List C.Arity},
            (i : C.Binder β) →
            XPos Γ (τ_above ++ β :: τ_below) (tauSlot Γ τ_above β τ_below i)
@@ -73,12 +73,12 @@ def classify {C : Carrier} {Γ : Shape C} :
 /-- Classifying a Γ-slot weakened through τ recovers the original Γ-slot. -/
 @[simp] theorem classify_weakenList {C : Carrier} {Γ : Shape C}
     (τ : List C.Arity) (p : Slot Γ) :
-    classify τ ((Renaming.weakenList Γ τ).toFun p) = XPos.base p := by
+    classify τ ((Γ ↪ʳ τ) p) = XPos.base p := by
   induction τ with
   | nil => rfl
   | cons β rest ih =>
     show classify (β :: rest)
-           (.there ((Renaming.weakenList Γ rest).toFun p)) = XPos.base p
+           (.there ((Γ ↪ʳ rest) p)) = XPos.base p
     simp [classify, ih]
 
 /-- Classifying a `tauSlot` recovers the corresponding `XPos.ext`. -/
@@ -120,20 +120,20 @@ def inst.aux {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
               let new_args : (i : C.Binder α_h) →
                   Expr ((Ξ ⋈* τ) ⋈ i.arity) :=
                 fun i => inst.aux α ρ ι (i.arity :: τ) (args i)
-              have new_h : ((Renaming.weakenList Ξ τ).toFun (ρ r)).arity = α_h :=
-                ((Renaming.weakenList Ξ τ).arity (ρ r)).trans
+              have new_h : ((Ξ ↪ʳ τ) (ρ r)).arity = α_h :=
+                ((Ξ ↪ʳ τ).arity (ρ r)).trans
                   ((ρ.arity r).trans
-                    (((Renaming.weakenList (Δ ⋈ α) τ).arity (.there r)).symm.trans h_α_h))
-              Expr.apply' ((Renaming.weakenList Ξ τ).toFun (ρ r)) α_h new_h new_args
+                    ((((Δ ⋈ α) ↪ʳ τ).arity (.there r)).symm.trans h_α_h))
+              Expr.apply' ((Ξ ↪ʳ τ) (ρ r)) α_h new_h new_args
           | .here j =>
               have hs : j.arity = α_h :=
-                ((Renaming.weakenList (Δ ⋈ α) τ).arity (.here j)).symm.trans h_α_h
+                (((Δ ⋈ α) ↪ʳ τ).arity (.here j)).symm.trans h_α_h
               match hs with
               | rfl =>
                   let new_args : (i : C.Binder j.arity) →
                       Expr ((Ξ ⋈* τ) ⋈ i.arity) :=
                     fun i => inst.aux α ρ ι (i.arity :: τ) (args i)
-                  inst.aux j.arity (Renaming.weakenList Ξ τ) new_args [] (ι j)
+                  inst.aux j.arity (Ξ ↪ʳ τ) new_args [] (ι j)
 termination_by (⟨α, _, e⟩ : (_ : C.Arity) ×' Σ Γ : Shape C, Expr Γ)
 decreasing_by
   -- ext args descent
@@ -179,21 +179,21 @@ def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ ⋈ α)
 @[simp] theorem inst_aux_base_there_eq {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
     (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
     (τ : List C.Arity) (r : Slot Δ) (α_h : C.Arity)
-    (h : ((Renaming.weakenList (Δ ⋈ α) τ).toFun (.there r)).arity = α_h)
+    (h : (((Δ ⋈ α) ↪ʳ τ) (.there r)).arity = α_h)
     (args : (j : C.Binder α_h) → Expr ((Δ ⋈ α) ⋈* τ ⋈ j.arity)) :
     inst.aux α ρ ι τ
-      (Expr.apply' ((Renaming.weakenList (Δ ⋈ α) τ).toFun (.there r))
+      (Expr.apply' (((Δ ⋈ α) ↪ʳ τ) (.there r))
         α_h h args)
       =
-    Expr.apply' ((Renaming.weakenList Ξ τ).toFun (ρ r)) α_h
-      (((Renaming.weakenList Ξ τ).arity (ρ r)).trans
+    Expr.apply' ((Ξ ↪ʳ τ) (ρ r)) α_h
+      (((Ξ ↪ʳ τ).arity (ρ r)).trans
         ((ρ.arity r).trans
-          (((Renaming.weakenList (Δ ⋈ α) τ).arity (.there r)).symm.trans h)))
+          ((((Δ ⋈ α) ↪ʳ τ).arity (.there r)).symm.trans h)))
       (fun j => inst.aux α ρ ι (j.arity :: τ) (args j)) := by
   delta inst.aux
   change inst.aux._unary (C := C)
       ⟨Δ, ⟨Ξ, ⟨α, ⟨ρ, ⟨ι, ⟨τ,
-        Expr.apply' ((Renaming.weakenList (Δ ⋈ α) τ).toFun (.there r))
+        Expr.apply' (((Δ ⋈ α) ↪ʳ τ) (.there r))
           α_h h args⟩⟩⟩⟩⟩⟩ = _
   rw [inst.aux._unary.eq_1]
   simp [classify_weakenList]
@@ -201,18 +201,18 @@ def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ ⋈ α)
 @[simp] theorem inst_aux_base_here_eq {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
     (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
     (τ : List C.Arity) (j : C.Binder α)
-    (h : ((Renaming.weakenList (Δ ⋈ α) τ).toFun (.here j)).arity = j.arity)
+    (h : (((Δ ⋈ α) ↪ʳ τ) (.here j)).arity = j.arity)
     (args : (k : C.Binder j.arity) → Expr ((Δ ⋈ α) ⋈* τ ⋈ k.arity)) :
     inst.aux α ρ ι τ
-      (Expr.apply' ((Renaming.weakenList (Δ ⋈ α) τ).toFun (.here j))
+      (Expr.apply' (((Δ ⋈ α) ↪ʳ τ) (.here j))
         j.arity h args)
       =
-    inst.aux j.arity (Renaming.weakenList Ξ τ)
+    inst.aux j.arity (Ξ ↪ʳ τ)
       (fun k => inst.aux α ρ ι (k.arity :: τ) (args k)) [] (ι j) := by
   delta inst.aux
   change inst.aux._unary (C := C)
       ⟨Δ, ⟨Ξ, ⟨α, ⟨ρ, ⟨ι, ⟨τ,
-        Expr.apply' ((Renaming.weakenList (Δ ⋈ α) τ).toFun (.here j))
+        Expr.apply' (((Δ ⋈ α) ↪ʳ τ) (.here j))
           j.arity h args⟩⟩⟩⟩⟩⟩ = _
   rw [inst.aux._unary.eq_1]
   simp [classify_weakenList]
@@ -235,13 +235,13 @@ def lift.aux {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
           Expr.apply' (tauSlot Δ ta b tb i) α_h new_h new_args
       | XPos.base q =>
           have hs : q.arity = α_h :=
-            ((Renaming.weakenList Γ τ).arity q).symm.trans h_α_h
+            ((Γ ↪ʳ τ).arity q).symm.trans h_α_h
           match hs with
           | rfl =>
               let new_args : (i : C.Binder q.arity) →
                   Expr ((Δ ⋈* τ) ⋈ i.arity) :=
                 fun i => lift.aux σ (i.arity :: τ) (args i)
-              inst.aux q.arity (Renaming.weakenList Δ τ) new_args [] (σ q)
+              inst.aux q.arity (Δ ↪ʳ τ) new_args [] (σ q)
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by
   all_goals exact Expr.Subterm.of_arg _ _ _ _ _
@@ -268,16 +268,16 @@ decreasing_by
 
 @[simp] theorem lift_aux_base_eq {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
     (τ : List C.Arity) (q : Slot Γ)
-    (h : ((Renaming.weakenList Γ τ).toFun q).arity = q.arity)
+    (h : ((Γ ↪ʳ τ) q).arity = q.arity)
     (args : (j : C.Binder q.arity) → Expr (Γ ⋈* τ ⋈ j.arity)) :
     lift.aux σ τ
-      (Expr.apply' ((Renaming.weakenList Γ τ).toFun q) q.arity h args)
+      (Expr.apply' ((Γ ↪ʳ τ) q) q.arity h args)
       =
-    inst.aux q.arity (Renaming.weakenList Δ τ)
+    inst.aux q.arity (Δ ↪ʳ τ)
       (fun j => lift.aux σ (j.arity :: τ) (args j)) [] (σ q) := by
   delta lift.aux
   change lift.aux._unary (C := C) σ
-      ⟨τ, Expr.apply' ((Renaming.weakenList Γ τ).toFun q) q.arity h args⟩ = _
+      ⟨τ, Expr.apply' ((Γ ↪ʳ τ) q) q.arity h args⟩ = _
   rw [lift.aux._unary.eq_1]
   simp [classify_weakenList]
 

@@ -119,6 +119,9 @@ def Renaming.weakenList {C : Carrier} (Γ : Shape C) :
   | []        => Renaming.id Γ
   | β :: rest => Renaming.weaken (Γ ⋈* rest) β ∘ʳ Renaming.weakenList Γ rest
 
+@[inherit_doc Renaming.weakenList]
+scoped notation:65 Γ " ↪ʳ " τ => Renaming.weakenList Γ τ
+
 /-- Iterated extension of a renaming through a list of binders. -/
 def Renaming.extendList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     (τ : List C.Arity) → Γ ⋈* τ →ʳ Δ ⋈* τ
@@ -143,12 +146,11 @@ def Renaming.extendList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
 weakening through `τ` equals weakening first then applying the renaming. -/
 @[simp] theorem Renaming.extendList_weakenList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     ∀ (τ : List C.Arity) (p : Slot Γ),
-      (Renaming.extendList ρ τ).toFun ((Renaming.weakenList Γ τ).toFun p)
-        = (Renaming.weakenList Δ τ).toFun (ρ p)
+      Renaming.extendList ρ τ ((Γ ↪ʳ τ) p) = (Δ ↪ʳ τ) (ρ p)
   | [], _ => rfl
   | β :: rest, p => by
-    show Slot.there ((Renaming.extendList ρ rest).toFun ((Renaming.weakenList Γ rest).toFun p))
-       = Slot.there ((Renaming.weakenList Δ rest).toFun (ρ p))
+    show Slot.there (Renaming.extendList ρ rest ((Γ ↪ʳ rest) p))
+       = Slot.there ((Δ ↪ʳ rest) (ρ p))
     rw [Renaming.extendList_weakenList ρ rest p]
 
 end Action

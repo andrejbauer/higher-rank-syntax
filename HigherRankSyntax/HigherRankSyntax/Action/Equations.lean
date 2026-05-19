@@ -15,12 +15,12 @@ namespace Action
 @[simp] private theorem extendList_tauSlot {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     ∀ (τ_above : List C.Arity) (β : C.Arity) (τ_below : List C.Arity)
       (i : C.Binder β),
-      (Renaming.extendList ρ (τ_above ++ β :: τ_below)).toFun
+      Renaming.extendList ρ (τ_above ++ β :: τ_below)
           (tauSlot Γ τ_above β τ_below i)
         = tauSlot Δ τ_above β τ_below i
   | [],        _, _,       _ => rfl
   | _ :: rest, β, τ_below, i => by
-    show Slot.there ((Renaming.extendList ρ (rest ++ β :: τ_below)).toFun
+    show Slot.there (Renaming.extendList ρ (rest ++ β :: τ_below)
             (tauSlot Γ rest β τ_below i))
        = Slot.there (tauSlot Δ rest β τ_below i)
     rw [extendList_tauSlot ρ rest β τ_below i]
@@ -60,10 +60,10 @@ private theorem inst_aux_η_inv_of {C : Carrier} (Δ : Shape C) (α : C.Arity)
       inst.aux j.arity ρ ι [] (Expr.η v)
         = Expr.apply' (ρ v.val) j.arity ((ρ.arity v.val).trans v.property) ι) :
     ∀ (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
-      inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α) τ e = e
+      inst.aux α (Δ ↪ʳ [α]) (η_fillers Δ α) τ e = e
   | τ, Expr.apply' p α_h h args => by
     have ih_arg : ∀ (j : C.Binder α_h),
-        inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α)
+        inst.aux α (Δ ↪ʳ [α]) (η_fillers Δ α)
           (j.arity :: τ) (args j) = args j := by
       intro j
       exact inst_aux_η_inv_of Δ α hη (j.arity :: τ) (args j)
@@ -82,19 +82,19 @@ private theorem inst_aux_η_inv_of {C : Carrier} (Δ : Shape C) (α : C.Arity)
         exact ih_arg j
       | here j =>
         have hs : j.arity = α_h :=
-          ((Renaming.weakenList (Δ ⋈ α) τ).arity (.here j)).symm.trans h
+          (((Δ ⋈ α) ↪ʳ τ).arity (.here j)).symm.trans h
         cases hs
         rw [inst_aux_base_here_eq]
-        change inst.aux j.arity (Renaming.weakenList (Δ ⋈ α) τ)
-            (fun k => inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α)
+        change inst.aux j.arity ((Δ ⋈ α) ↪ʳ τ)
+            (fun k => inst.aux α (Δ ↪ʳ [α]) (η_fillers Δ α)
               (k.arity :: τ) (args k)) []
             (Expr.η ⟨.here j, rfl⟩)
-          = Expr.apply' ((Renaming.weakenList (Δ ⋈ α) τ).toFun (.here j))
+          = Expr.apply' (((Δ ⋈ α) ↪ʳ τ) (.here j))
             j.arity h args
         rw [hη j (Δ' := Δ ⋈ α) (Ξ' := (Δ ⋈ α) ⋈* τ)
-          (ρ := Renaming.weakenList (Δ ⋈ α) τ)
+          (ρ := ((Δ ⋈ α) ↪ʳ τ))
           (ι := fun k =>
-            inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α)
+            inst.aux α (Δ ↪ʳ [α]) (η_fillers Δ α)
               (k.arity :: τ) (args k)) (v := ⟨.here j, rfl⟩)]
         congr 1
         funext k
@@ -109,7 +109,7 @@ private theorem inst_aux_η_bundle {C : Carrier} (α : C.Arity) :
         = Expr.apply' (ρ v.val) α ((ρ.arity v.val).trans v.property) ι)
     ∧
     (∀ (Δ : Shape C) (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
-      inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α) τ e = e) := by
+      inst.aux α (Δ ↪ʳ [α]) (η_fillers Δ α) τ e = e) := by
   refine C.subWf.induction (C := fun α =>
     (∀ {Δ Ξ : Shape C} (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
       (v : Expr.J Δ α),
@@ -117,14 +117,14 @@ private theorem inst_aux_η_bundle {C : Carrier} (α : C.Arity) :
         = Expr.apply' (ρ v.val) α ((ρ.arity v.val).trans v.property) ι)
     ∧
     (∀ (Δ : Shape C) (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
-      inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α) τ e = e)) α ?_
+      inst.aux α (Δ ↪ʳ [α]) (η_fillers Δ α) τ e = e)) α ?_
   intro α ih
   constructor
   · intro Δ Ξ ρ ι v
     rcases v with ⟨p, hp⟩
     unfold Expr.η
     change inst.aux α ρ ι []
-        (Expr.apply' ((Renaming.weakenList (Δ ⋈ α) []).toFun (.there p))
+        (Expr.apply' (((Δ ⋈ α) ↪ʳ []) (.there p))
           α hp (fun i => Expr.η ⟨.here i, rfl⟩))
         = Expr.apply' (ρ p) α ((ρ.arity p).trans hp) ι
     rw [inst_aux_base_there_eq]
@@ -132,12 +132,12 @@ private theorem inst_aux_η_bundle {C : Carrier} (α : C.Arity) :
     funext i
     unfold Expr.η
     change inst.aux α ρ ι [i.arity]
-        (Expr.apply' ((Renaming.weakenList (Δ ⋈ α) [i.arity]).toFun (.here i))
+        (Expr.apply' (((Δ ⋈ α) ↪ʳ [i.arity]) (.here i))
           i.arity rfl
           (fun k => Expr.η ⟨.here k, rfl⟩))
         = ι i
     rw [inst_aux_base_here_eq]
-    change inst.aux i.arity (Renaming.weakenList Ξ [i.arity])
+    change inst.aux i.arity (Ξ ↪ʳ [i.arity])
         (fun k : C.Binder i.arity => inst.aux α ρ ι (k.arity :: [i.arity])
           (Expr.η ⟨.here k, rfl⟩)) [] (ι i)
       = ι i
@@ -162,7 +162,7 @@ private theorem inst_aux_η {C : Carrier} {Δ Ξ : Shape C}
 
 private theorem inst_aux_η_inv {C : Carrier} (Δ : Shape C) (α : C.Arity) :
     ∀ (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
-      inst.aux α (Renaming.weakenList Δ [α]) (η_fillers Δ α) τ e = e :=
+      inst.aux α (Δ ↪ʳ [α]) (η_fillers Δ α) τ e = e :=
   (inst_aux_η_bundle α).2 Δ
 
 /-! ## η-side lemma for `lift.aux` -/
@@ -206,12 +206,12 @@ private theorem unit_left.aux {C : Carrier} {Γ Δ : Shape C}
     cases hp
     unfold Expr.η
     change lift.aux σ [p.arity]
-        (Expr.apply' ((Renaming.weakenList Γ [p.arity]).toFun p)
+        (Expr.apply' ((Γ ↪ʳ [p.arity]) p)
           p.arity rfl
           (fun i => Expr.η ⟨.here i, rfl⟩))
         = σ p
     rw [lift_aux_base_eq]
-    change inst.aux p.arity (Renaming.weakenList Δ [p.arity])
+    change inst.aux p.arity (Δ ↪ʳ [p.arity])
         (fun i : C.Binder p.arity =>
           lift.aux σ (i.arity :: [p.arity])
             (Expr.η ⟨.here i, rfl⟩)) [] (σ p)
@@ -256,14 +256,14 @@ private theorem lift_toSubst.aux {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ 
       exact ih_arg j
     | base q =>
       have hs : q.arity = α_h :=
-        ((Renaming.weakenList Γ τ).arity q).symm.trans h
+        ((Γ ↪ʳ τ).arity q).symm.trans h
       cases hs
       rw [lift_aux_base_eq]
-      show inst.aux q.arity (Renaming.weakenList Δ τ)
+      show inst.aux q.arity (Δ ↪ʳ τ)
             (fun j => lift.aux ρ.toSubst (j.arity :: τ) (args j)) []
             (Expr.η ⟨ρ q, ρ.arity q⟩)
           = ⟦ Renaming.extendList ρ τ ⟧ʳ
-              Expr.apply' ((Renaming.weakenList Γ τ).toFun q) q.arity h args
+              Expr.apply' ((Γ ↪ʳ τ) q) q.arity h args
       rw [inst_aux_η]
       simp only [Renaming.actExpr_apply', Renaming.extendList_weakenList]
       congr 1
@@ -294,9 +294,9 @@ instantiating with the `lift`ed instantiation data into the `lift`ed expression.
 private theorem lift_inst_commute {C : Carrier} :
     ∀ {Δ Ε : Shape C} (θ : Subst Δ Ε) (α : C.Arity)
       (τ : List C.Arity) (ι : Inst α (Δ ⋈* τ)) (e : Expr (Δ ⋈ α)),
-      lift.aux θ τ (inst.aux α (Renaming.weakenList Δ τ) ι [] e)
+      lift.aux θ τ (inst.aux α (Δ ↪ʳ τ) ι [] e)
         =
-      inst.aux α (Renaming.weakenList Ε τ)
+      inst.aux α (Ε ↪ʳ τ)
         (fun j => lift.aux θ (j.arity :: τ) (ι j))
         [] (Subst.lift θ e) := by
   sorry
@@ -321,7 +321,7 @@ private theorem comp_lift.aux {C : Carrier} {Γ Δ Ε : Shape C}
       exact ih_arg j
     | base q =>
       have hs : q.arity = α_h :=
-        ((Renaming.weakenList Γ τ).arity q).symm.trans h
+        ((Γ ↪ʳ τ).arity q).symm.trans h
       cases hs
       simp only [lift_aux_base_eq]
       rw [lift_inst_commute]
