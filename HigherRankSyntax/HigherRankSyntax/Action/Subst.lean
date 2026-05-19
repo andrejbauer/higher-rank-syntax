@@ -328,4 +328,22 @@ def Subst.comp {C : Carrier} {Γ Δ Ε : Shape C}
 @[inherit_doc Subst.comp]
 scoped infixl:90 " ˢ∘ˢ " => Subst.comp
 
+/-- Extend a substitution through a fresh α-binder: η at the new binder, σ then weaken
+on the underlying slots. -/
+def Subst.under {C : Carrier} {Δ Ε : Shape C} (σ : Subst Δ Ε) (α : C.Arity) :
+    Subst (Δ ⋈ α) (Ε ⋈ α) := fun
+  | .here i  => Expr.η ⟨.here i, rfl⟩
+  | .there p => ⟦ Renaming.weaken Ε α ⇑ʳ p.arity ⟧ʳ (σ p)
+
+/-- Iterated extension of a substitution through a list of binders. -/
+def Subst.extendList {C : Carrier} {Δ Ε : Shape C} (σ : Subst Δ Ε) :
+    (τ : List C.Arity) → Subst (Δ ⋈* τ) (Ε ⋈* τ)
+  | []        => σ
+  | β :: rest => (σ.extendList rest).under β
+
+/-- Componentwise action of a substitution on an instantiation. -/
+def Inst.map {C : Carrier} {α : C.Arity} {Δ Ε : Shape C}
+    (ι : Inst α Δ) (σ : Subst Δ Ε) : Inst α Ε :=
+  fun j => σ.lift (ι j)
+
 end Action

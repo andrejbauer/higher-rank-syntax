@@ -96,6 +96,20 @@ def Renaming.extend {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) (β : C.Ar
 /-- `f ⇑ʳ β` is `f` extended through a fresh binder of arity `β`. -/
 scoped infixl:95 " ⇑ʳ " => Renaming.extend
 
+@[simp] theorem Renaming.extend_here {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ)
+    {β : C.Arity} (i : C.Binder β) :
+    (f ⇑ʳ β).toFun (.here i) = .here i := rfl
+
+@[simp] theorem Renaming.extend_there {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ)
+    {β : C.Arity} (p : Slot Γ) :
+    (f ⇑ʳ β).toFun (.there p) = .there (f p) := rfl
+
+@[simp] theorem Renaming.weaken_apply {C : Carrier} (Γ : Shape C) (β : C.Arity)
+    (p : Slot Γ) : (Renaming.weaken Γ β).toFun p = .there p := rfl
+
+@[simp] theorem Renaming.id_apply {C : Carrier} {Γ : Shape C} (p : Slot Γ) :
+    (𝟙ʳ : Γ →ʳ Γ).toFun p = p := rfl
+
 @[simp]
 theorem Renaming.extend_id {C : Carrier} (Γ : Shape C) (β : C.Arity) :
     (𝟙ʳ : Γ →ʳ Γ) ⇑ʳ β = 𝟙ʳ := by

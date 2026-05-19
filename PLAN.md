@@ -71,7 +71,8 @@ The substitution layer is split across two files:
 * `comp_lift.aux` (private) and public `comp_lift` (proved modulo L5).
 
 `Action/Renaming.lean` adds `Renaming.extendList ρ τ : Γ ⋈* τ →ʳ Δ ⋈* τ` and
-naturality `extendList_weakenList`, `extendList_id`.
+naturality `extendList_weakenList`, `extendList_id`.  Also @[simp]
+slot-action lemmas `extend_here`, `extend_there`, `weaken_apply`, `id_apply`.
 
 `Action/Expr.lean` adds `Renaming.actExpr_apply'` as a @[simp] unfolder of
 `⟦ ρ ⟧ʳ (apply' …)` — avoids motive-correctness issues when rewriting slots
@@ -80,63 +81,96 @@ through the dependent witness `hα`.
 Termination: `lift.aux` uses `Expr.Subterm.wellFoundedRelation`; `inst.aux`
 uses lex `PSigma` over `(C.Arity, Σ Γ, Expr Γ)`.
 
+## Newly added infrastructure (work-in-progress on L5)
+
+In `Subst.lean`:
+
+* `Subst.under (σ : Subst Δ Ε) (α : C.Arity) : Subst (Δ ⋈ α) (Ε ⋈ α)` —
+  `.here i ↦ Expr.η ⟨.here i, rfl⟩`; `.there p ↦ ⟦ Renaming.weaken Ε α ⇑ʳ
+  p.arity ⟧ʳ (σ p)`.
+* `Subst.extendList (σ : Subst Δ Ε) (τ) : Subst (Δ ⋈* τ) (Ε ⋈* τ)` —
+  cons-recursion through `Subst.under`.
+* `Inst.map (ι : Inst α Δ) (σ : Subst Δ Ε) : Inst α Ε := fun j => σ.lift (ι j)`.
+
+In `Equations.lean`:
+
+* `inst_aux_factor_ren` (a.k.a. **InstWeaken**, general τ): proved.
+  ```
+  inst.aux α ρ ι τ e = inst.aux α 𝟙ʳ ι τ (⟦ (ρ ⇑ʳ α).extendList τ ⟧ʳ e)
+  ```
+  The "renaming on the substrate" factor of `inst.aux`.  Provable by
+  structural induction on `e` using `inst_aux_*_eq` + `extendList_tauSlot`
+  + `extendList_weakenList`.
+
 ## Outstanding
 
-Prove **L5** (`lift_inst_commute` in `Action/Equations.lean`).  Plan below.
+Prove **L5** (`lift_inst_commute` in `Action/Equations.lean`).  *Multiple
+proof attempts today did not close.*  See "Lessons from today" below for
+what was learned.
 
-## Plan for `lift_inst_commute` (L5)
+## Lessons from today (2026-05-20)
 
-Statement:
+We attempted several formulations of L5 / a substitution–instantiation
+commutation lemma and **all hit the same structural obstruction**.  Recording
+the lessons so the next attempt does not re-tread them.
+
+### Statements tried
+
+1. **substitutionLemma at τ = 0**:
+   `σ.act (ι.act e) = (ι.map σ).act (σ.lift e)` for σ : Subst Δ Ε,
+   ι : Inst α Δ, e : Expr (Δ ⋈ α).
+
+   At the `.here j` recursive case, args j : Expr ((Δ ⋈ α) ⋈ k.arity), so the
+   IH lives at τ_inst = [k.arity], not 0.  Needs a τ-generalized aux.
+
+2. **τ-generalized substitutionLemma_aux**:
+   `(σ.extendList τ).act (inst.aux α 𝟙ʳ ι τ e) = inst.aux α 𝟙ʳ (ι.map σ) τ (lift.aux (σ.under α) τ e)`.
+
+   At the `.there r` sub-case (r : Slot Δ):
+   * LHS reduces (inst → lift) to `inst.aux r.arity (Ε ↪ʳ τ) Λ_L [] (σ r)`.
+   * RHS reduces (lift first) to
+     `inst.aux α 𝟙ʳ (ι.map σ) τ (inst.aux r.arity ((Ε ⋈ α) ↪ʳ τ) Λ_R [] (⟦weaken⟧ (σ r)))`.
+
+   The outer `inst.aux α … τ` of RHS doesn't fire on an inner `inst.aux`-result
+   (its pattern-match is on `apply'`).  After `inst_aux_factor_ren` flattens
+   the inner to `Λ_R.act (⟦…⟧ʳ (σ r))`, the outer doesn't fire on a
+   `Subst.act`-result either.
+
+3. **Subst.act_comp** as a route to comp_lift:
+   `(σ ˢ∘ˢ θ).act e = θ.act (σ.act e)`.  At base case the inner walker on
+   `args k` lands at τ_inst = [k.arity] — same τ-generalization need.
+
+### The structural obstruction
+
+Every formulation reduces the `.there r` case to a **nested walker
+composition** `outer_walker ∘ inner_walker e'` where `e'` is some renamed
+form of `σ r` — handed to us by σ.  To close, we need to "push" the outer
+walker through the inner walker's result.  No subterm of the original `e`
+decreases at this step; the recursion would have to descend into `σ r`,
+which has no termination measure relative to `e`.
+
+This is a *real* obstruction, not a tactic glitch.
+
+### Hypothesis for tomorrow
+
+Recast `inst.aux α ρ ι []` as a `Subst.act` of a derived `Subst (Δ ⋈ α) Ξ`:
 
 ```
-lift.aux θ τ (inst.aux α (weakenList Δ τ) ι [] e)
-  = inst.aux α (weakenList Ε τ)
-      (fun j => lift.aux θ (j.arity :: τ) (ι j)) [] (Subst.lift θ e)
+def Inst.bind {α Δ Ξ} (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ) : Subst (Δ ⋈ α) Ξ
+  | .here i  => ι i
+  | .there p => ρ.toSubst p  -- i.e., Expr.η ⟨ρ p, ρ.arity p⟩
 ```
+and prove `inst.aux α ρ ι [] e = (Inst.bind ρ ι).act e`.  Then both
+`inst.aux` and `lift.aux` are *the same* `Subst.act` machinery at the same
+shape, just with different substitutions.  The commutation
+becomes the Kleisli associativity `Subst.act_comp`, which still requires a
+τ-generalized aux (comp_lift.aux at τ-generalized form, which we already
+have)— **but** now the `.there r` case may close because both walkers are
+the same operation, and we can compose at the substitution level
+(`σ ˢ∘ˢ θ`) before walking, avoiding nested walkers entirely.
 
-A direct structural induction on `e` does not close: at the `.here j`
-sub-case of `e`'s head (`.here j : Slot (Δ ⋈ α)` with `j : Binder α`), the
-walker plugs `ι j : Expr ((Δ ⋈* τ) ⋈ j.arity)` and re-enters `inst.aux` at
-`j.arity` with `ρ = 𝟙ʳ` — the source shape is no longer `Δ ⋈ α` and the
-inst-walker's own `τ_inst` is no longer `[]`.  So L5 must be generalised in
-two directions at once.
-
-### Likely generalisation
-
-```
-lift.aux θ (τ_inst ++ τ) (inst.aux α (weakenList Δ τ) ι τ_inst e)
-  = inst.aux α (weakenList Ε τ)
-      (fun j => lift.aux θ (j.arity :: τ) (ι j))
-      τ_inst (lift.aux (Subst.under θ α) τ_inst e)
-```
-
-where `Subst.under (θ : Subst Δ Ε) (α : C.Arity) : Subst (Δ ⋈ α) (Ε ⋈ α)`
-sends the topmost α-binder to itself and pushes Δ-slots through θ (then
-weakens through α on the codomain side).  Type-aligning the two sides needs
-`Shape.extList_append : Γ ⋈* (xs ++ ys) = (Γ ⋈* ys) ⋈* xs`; this is
-provable by structural recursion on `xs`.
-
-### Induction structure
-
-Lex on `(α, e)`, parallel to `inst_aux_η_bundle`:
-
-* **XPos.ext (τ_inst slot).**  Both sides reduce via `inst_aux_ext_eq` /
-  `lift_aux_ext_eq`; recurse on args at deeper `τ_inst`.
-* **XPos.base, .there r (Δ-slot).**  Reduces both sides through the
-  Δ-renaming chain; recurse on args at deeper `τ_inst`.
-* **XPos.base, .here j (α-binder).**  Plugs `ι j` and reenters `inst.aux` at
-  `j.arity` (strictly smaller α via `subWf`).  Apply IH at `α := j.arity`.
-
-### Categorical infrastructure likely needed
-
-* `Subst.under θ α` and its compatibility with `Renaming.weaken`.
-* A Fubini-style law for nested `inst.aux` at distinct arities — used when
-  `Subst.lift θ` on a `.there r` head produces an inst.aux that then sits
-  inside the outer `inst.aux α`.
-* Inst.aux × renaming naturality (the M1/M2 family from earlier plans).
-
-State each new law with `sorry` and dry-run the L5 proof using them, as we
-did for `comp_lift`, before investing in their bodies.
+This is a structural reformulation, not a small tactic.  Confirm with
+Andrej before executing.
 
 ## Warmup lemmas (done, reference)
 
@@ -145,9 +179,11 @@ did for `comp_lift`, before investing in their bodies.
   `lift_aux_ext_eq`, `lift_aux_base_eq` (Subst.lean).
 * `classify_weakenList`, `classify_tauSlot` (Subst.lean).
 * `Renaming.actExpr_apply'`, `Expr.T.map_η` (Expr.lean).
-* `Renaming.extendList`, `extendList_id`, `extendList_weakenList`
-  (Renaming.lean).
-* `extendList_tauSlot`, `inst_aux_η`, `inst_aux_η_inv`, `L3` (Equations.lean).
+* `Renaming.extendList`, `extendList_id`, `extendList_weakenList`,
+  slot-action @[simp] lemmas (Renaming.lean).
+* `extendList_tauSlot`, `inst_aux_η`, `inst_aux_η_inv`, `lift_toSubst`
+  (Equations.lean).
+* `inst_aux_factor_ren` (InstWeaken general, Equations.lean) — proven today.
 
 ## Lean tactical recipes
 

@@ -25,6 +25,49 @@ namespace Action
        = Slot.there (tauSlot Δ rest β τ_below i)
     rw [extendList_tauSlot ρ rest β τ_below i]
 
+/-! ## InstWeaken: factoring a renaming out of `inst.aux` -/
+
+/-- `inst.aux` with a non-identity ρ equals first renaming via `ρ ⇑ʳ α` (extended through
+the τ-stack) and then `inst.aux` with the identity renaming. -/
+private theorem inst_aux_factor_ren {C : Carrier} :
+    ∀ {Δ Ξ : Shape C} (α : C.Arity) (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
+      (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
+      inst.aux α ρ ι τ e
+        = inst.aux α 𝟙ʳ ι τ (⟦ (ρ ⇑ʳ α).extendList τ ⟧ʳ e)
+  | Δ, Ξ, α, ρ, ι, τ, Expr.apply' p α_h h args => by
+    have ih_arg : ∀ (j : C.Binder α_h),
+        inst.aux α ρ ι (j.arity :: τ) (args j)
+          = inst.aux α 𝟙ʳ ι (j.arity :: τ)
+              (⟦ (ρ ⇑ʳ α).extendList (j.arity :: τ) ⟧ʳ (args j)) := by
+      intro j
+      exact inst_aux_factor_ren α ρ ι (j.arity :: τ) (args j)
+    cases classify τ p with
+    | ext i =>
+      simp only [inst_aux_ext_eq, Renaming.actExpr_apply', extendList_tauSlot]
+      congr 1
+      funext j
+      exact ih_arg j
+    | base q =>
+      cases q with
+      | there r =>
+        simp only [inst_aux_base_there_eq, Renaming.actExpr_apply',
+          Renaming.extendList_weakenList, Renaming.extend_there,
+          Renaming.id_apply]
+        congr 1
+        funext j
+        exact ih_arg j
+      | here j =>
+        have hs : j.arity = α_h :=
+          (((Δ ⋈ α) ↪ʳ τ).arity (.here j)).symm.trans h
+        cases hs
+        simp only [inst_aux_base_here_eq, Renaming.actExpr_apply',
+          Renaming.extendList_weakenList, Renaming.extend_here]
+        congr 1
+        funext k
+        exact ih_arg k
+termination_by _ _ _ _ _ τ e => (⟨_ ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
+decreasing_by exact Expr.Subterm.of_arg p α_h h args j
+
 /-! ## η-side lemmas for `inst.aux` -/
 
 private theorem inst_aux_η_tauSlot {C : Carrier} :
