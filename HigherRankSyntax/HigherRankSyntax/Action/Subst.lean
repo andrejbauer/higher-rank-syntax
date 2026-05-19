@@ -524,14 +524,91 @@ theorem unit_left {C : Carrier} {Γ Δ : Shape C}
     symm
     exact unit_left.aux (fun s => f s.arity ⟨s, rfl⟩) ⟨p, rfl⟩
 
+/-! ## Categorical operations: substitution and renaming compositions -/
+
+/-- Embed a renaming as a substitution: send each slot through `ρ` and η-expand. -/
+def Renaming.toSubst {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) : Subst Γ Δ :=
+  fun p => Expr.η ⟨ρ p, ρ.arity p⟩
+
+/-- Pre-compose a substitution by a renaming: `(ρ ʳ∘ˢ σ) p = σ (ρ p)` up to the
+arity-preservation transport carried by `ρ`. -/
+def Renaming.preSubst {C : Carrier} {Γ Γ' Δ : Shape C}
+    (ρ : Γ →ʳ Γ') (σ : Subst Γ' Δ) : Subst Γ Δ :=
+  fun p => (ρ.arity p) ▸ σ (ρ p)
+
+@[inherit_doc Renaming.preSubst]
+scoped infixl:90 " ʳ∘ˢ " => Renaming.preSubst
+
+/-- Post-compose a substitution by a renaming: apply `σ`, then rename the result. -/
+def Subst.postRen {C : Carrier} {Γ Δ Δ' : Shape C}
+    (σ : Subst Γ Δ) (ρ : Δ →ʳ Δ') : Subst Γ Δ' :=
+  fun p => ⟦ ρ ⇑ʳ p.arity ⟧ʳ (σ p)
+
+@[inherit_doc Subst.postRen]
+scoped infixl:90 " ˢ∘ʳ " => Subst.postRen
+
+/-- Kleisli composition of substitutions: `(σ ˢ∘ˢ θ) p = Subst.lift θ (σ p)`. -/
+def Subst.comp {C : Carrier} {Γ Δ Ε : Shape C}
+    (σ : Subst Γ Δ) (θ : Subst Δ Ε) : Subst Γ Ε :=
+  fun p => Subst.lift θ (σ p)
+
+@[inherit_doc Subst.comp]
+scoped infixl:90 " ˢ∘ˢ " => Subst.comp
+
+/-! ## Naturality lemma needed by `comp_lift` -/
+
+/-- **L5** — naturality of `lift` past `inst`.  Walking
+`inst.aux α (weakenList Δ τ) ι [] e` with `lift.aux θ τ` is the same as
+instantiating with the `lift`ed instantiation data into the `lift`ed expression. -/
+private theorem lift_inst_commute {C : Carrier} :
+    ∀ {Δ Ε : Shape C} (θ : Subst Δ Ε) (α : C.Arity)
+      (τ : List C.Arity) (ι : Inst α (Δ ⋈* τ)) (e : Expr (Δ ⋈ α)),
+      lift.aux θ τ (inst.aux α (Renaming.weakenList Δ τ) ι [] e)
+        =
+      inst.aux α (Renaming.weakenList Ε τ)
+        (fun j => lift.aux θ (j.arity :: τ) (ι j))
+        [] (Subst.lift θ e) := by
+  sorry
+
+/-! ## Composition law -/
+
+private theorem comp_lift.aux {C : Carrier} {Γ Δ Ε : Shape C}
+    (σ : Subst Γ Δ) (θ : Subst Δ Ε) :
+    ∀ (τ : List C.Arity) (e : Expr (Γ ⋈* τ)),
+      lift.aux (σ ˢ∘ˢ θ) τ e = lift.aux θ τ (lift.aux σ τ e)
+  | τ, Expr.apply' p α_h h args => by
+    have ih_arg : ∀ (j : C.Binder α_h),
+        lift.aux (σ ˢ∘ˢ θ) (j.arity :: τ) (args j)
+          = lift.aux θ (j.arity :: τ) (lift.aux σ (j.arity :: τ) (args j)) := by
+      intro j
+      exact comp_lift.aux σ θ (j.arity :: τ) (args j)
+    cases classify τ p with
+    | ext i =>
+      simp only [lift_aux_ext_eq]
+      congr 1
+      funext j
+      exact ih_arg j
+    | base q =>
+      have hs : q.arity = α_h :=
+        ((Renaming.weakenList Γ τ).arity q).symm.trans h
+      cases hs
+      simp only [lift_aux_base_eq]
+      rw [lift_inst_commute]
+      congr 1
+      funext j
+      exact ih_arg j
+termination_by τ e => (⟨Γ ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
+decreasing_by exact Expr.Subterm.of_arg p α_h h args j
+
 /-- Composition of Kleisli extensions: substituting via σ then via θ equals substituting
-via the composed substitution `fun q => Subst.lift θ (σ q)`. -/
+via the composed substitution `σ ˢ∘ˢ θ`. -/
 theorem comp_lift {C : Carrier} {Γ Δ Ε : Shape C}
     (σ : Subst Γ Δ) (θ : Subst Δ Ε) :
     ∀ {α : C.Arity} (e : Expr (Γ ⋈ α)),
       Subst.lift (fun q => Subst.lift θ (σ q)) e
         =
       Subst.lift θ (Subst.lift σ e) := by
-  sorry
+  intro α e
+  exact comp_lift.aux σ θ [α] e
 
 end Action
