@@ -68,7 +68,7 @@ populated; `comp_lift` is still `sorry`.
 * `lift.aux σ τ e : Expr (Γ ⋈* τ) → Expr (Δ ⋈* τ)` — classify the head, two
   cases: τ-binder (rebuild); Γ-slot (call `inst.aux` directly on `σ q`, with
   `ρ := Renaming.weakenList Δ τ`).
-* `lift_aux_unit_right` and `lift_aux_unit_left` discharge the two unit laws in
+* `unit_right.aux` and `unit_left.aux` discharge the two unit laws in
   `SyntaxMonad.lean`; `lift_aux_η_tauSlot` supplies the τ-binder η preservation
   needed by left unit.
 * Wrappers `inst` and `lift`.
@@ -93,6 +93,42 @@ Three `simp` lemmas covering the classify dispatch and η naturality:
   Well-founded recursion on α via `subWf` (mirrors `Expr.η`'s recursion).
   Note: `rw [Expr.η]` did NOT work — use `unfold Expr.η` to expose the body
   for WF-recursive functions.
+
+## Lean tactical recipes (recorded)
+
+These were not obvious from the standard Lean repertoire; they were the
+unlocks for this project's proof landscape.  Reach for them by default.
+
+* **WF-recursion one-step equation lemma.**  For a function `f` defined by
+  well-founded recursion (or pattern-matching that compiles to one — e.g.
+  `inst.aux`, `lift.aux`), `rw [f]` fails because Lean does not unfold
+  `WellFounded.fix` definitionally.  Recipe:
+  ```lean
+  delta f
+  change f._unary <packed-args> = _   -- arrange to match the unary form
+  rw [f._unary.eq_1, WellFounded.fix_eq]
+  simp [<classify lemmas / case-discriminating lemmas>]
+  ```
+  This is how `inst_aux_ext_eq`, `inst_aux_base_there_eq`, and
+  `inst_aux_base_here_eq` were proved.  For non-mutual WF functions, `unfold f`
+  is often enough (see `Expr.T.map_η`).
+
+* **Prove per-case `@[simp]` unfolders first.**  Before attempting any
+  user-level theorem about a WF walker, prove one `@[simp]` lemma per
+  case-branch of its classifier using the recipe above.  Downstream proofs
+  (e.g. the monad laws) then proceed almost mechanically by `simp [...]` on
+  the relevant cases.  Don't try to crack the user-facing theorem directly.
+
+* **Slot-correspondence as inductive *index*, not separate equation.**  When
+  designing a classifier inductive (the `XPos`/`ClassifiedFoo` pattern), put
+  the slot-correspondence in the *index* of the type itself — i.e. the
+  inductive is `XPos Γ τ (p : Slot (Γ ⋈* τ))` and each constructor's
+  signature *forces* `p` to be a specific construction (`weakenList _ _ q`
+  or `tauSlot _ _ _ _ i`).  Pattern matching on `XPos` then yields the
+  slot-equation definitionally via index unification.  A naive Sum-typed
+  classifier returning `Slot _ ⊕ …` with a separate `h : _.arity = _` field
+  only witnesses arity-matching, which is insufficient for the monad laws.
+  This was the unlock that made `XPos` work where earlier attempts didn't.
 
 ## What still blocks `comp_lift`
 

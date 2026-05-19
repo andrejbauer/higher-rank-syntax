@@ -82,8 +82,8 @@ abbrev Expr.T {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type := Expr (Γ ⋈
 `apply' (.there p) α hp (fun i => η (.here i))`, where each binder `i` of `α` recursively
 η-expands the bound variable.  Termination descends along the sub-arity relation: each
 recursive call uses `i.arity`, strictly smaller than `α` via `subWf`. -/
-def Expr.η {C : Carrier} : (Γ : Shape C) → (α : C.Arity) → J Γ α → T Γ α
-  | Γ, α, ⟨p, hp⟩ => apply' (.there p) α hp (fun i => η (Γ ⋈ α) i.arity ⟨.here i, rfl⟩)
+def Expr.η {C : Carrier} : {Γ : Shape C} → {α : C.Arity} → J Γ α → T Γ α
+  | Γ, α, ⟨p, hp⟩ => apply' (.there p) α hp (fun i => η (Γ := Γ ⋈ α) (α := i.arity) ⟨.here i, rfl⟩)
 termination_by Γ α _ => α
 decreasing_by exact ⟨_, rfl⟩
 
@@ -164,7 +164,7 @@ def Expr.T.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) (α : C.Arity)
 
 /-- η is natural: `T.map ρ ∘ η = η ∘ J.map ρ`. -/
 @[simp] theorem Expr.T.map_η {C : Carrier} : ∀ {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) (α : C.Arity) (v : J Γ α),
-  T.map ρ α (η Γ α v) = η Δ α (J.map ρ v)
+  T.map ρ α (η v) = η (J.map ρ v)
   | _, _, ρ, α, ⟨p, hp⟩ => by
     unfold η T.map J.map
     rw [Renaming.actExpr]

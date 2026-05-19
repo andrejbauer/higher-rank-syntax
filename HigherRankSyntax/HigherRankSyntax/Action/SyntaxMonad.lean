@@ -61,16 +61,16 @@ def T {C : Carrier} : Shape C ⥤ ArityType C where
 Kleisli extension, and the two unit laws are filled in; `comp_lift` remains. -/
 def SyntaxMonad {C : Carrier} : RelativeMonad (@J C) where
   map        := T.obj
-  η          := Expr.η
-  lift       := fun {_ _} f α e => Action.lift (fun s => f s.arity ⟨s, rfl⟩) α e
+  η          := fun _ _ v => Expr.η v
+  lift       := fun {_ _} f _ e => Subst.lift (fun s => f s.arity ⟨s, rfl⟩) e
   unit_right := by
     intro Γ
     funext α e
-    exact lift_unit_right α e
+    exact unit_right α e
   unit_left  := by
     intro Γ Δ f
     funext α v
-    exact lift_unit_left f v
+    exact unit_left f v
   comp_lift  := sorry
 
 end Action

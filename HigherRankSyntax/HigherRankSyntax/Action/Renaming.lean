@@ -77,9 +77,9 @@ theorem Renaming.comp_assoc {C : Carrier} {Γ Δ Ε Ζ : Shape C}
 /-! ## Weakening and extension -/
 
 /-- The canonical weakening renaming `Γ →ʳ Γ ⋈ α`: every slot of `Γ` is sent to its image
-under `Slot.there`. -/
+under `.there`. -/
 def Renaming.weaken {C : Carrier} (Γ : Shape C) (α : C.Arity) : Γ →ʳ Γ ⋈ α where
-  toFun p := Slot.there p
+  toFun p := .there p
   arity _ := rfl
 
 /-- Extend a renaming through a fresh binder of arity `β`.  `f.extend β : Γ ⋈ β →ʳ Δ ⋈ β`
