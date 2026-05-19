@@ -1,13 +1,11 @@
 import HigherRankSyntax.Action.Subst
 
 /-!
-# Equational reasoning about the substitution walkers
+# Equational theorems for the substitution walkers
 
-`Subst.lean` provides the substitution machinery — the walkers `inst.aux` and
-`lift.aux`, their per-case unfolders, the categorical operations.  This file
-builds the theorems on top: η-side lemmas, the relative-monad laws
-(`unit_right`, `unit_left`, `comp_lift`), the categorical embedding `L3`, and
-the lift–inst commutation lemma `lift_inst_commute` consumed by `comp_lift`.
+η-side lemmas, the relative-monad laws (`unit_right`, `unit_left`,
+`comp_lift`), the embedding `lift_toSubst` of renamings as substitutions, and
+the `lift`–`inst` commutation lemma `lift_inst_commute`.
 -/
 
 namespace Action
@@ -237,11 +235,11 @@ theorem unit_left {C : Carrier} {Γ Δ : Shape C}
     symm
     exact unit_left.aux (fun s => f s.arity ⟨s, rfl⟩) ⟨p, rfl⟩
 
-/-! ## Embedding renamings: lift of `ρ.toSubst` is the renaming action -/
+/-! ## Embedding renamings as substitutions -/
 
-/-- **L3.aux** — embedding law at the walker level: lifting `ρ.toSubst` through τ
-acts as the iterated extension of `ρ` through τ. -/
-private theorem L3.aux {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
+/-- Walker-level form of `lift_toSubst`: lifting `ρ.toSubst` through τ acts as the
+iterated extension of `ρ` through τ. -/
+private theorem lift_toSubst.aux {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     ∀ (τ : List C.Arity) (e : Expr (Γ ⋈* τ)),
       lift.aux ρ.toSubst τ e = ⟦ Renaming.extendList ρ τ ⟧ʳ e
   | τ, Expr.apply' p α_h h args => by
@@ -249,7 +247,7 @@ private theorem L3.aux {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
         lift.aux ρ.toSubst (j.arity :: τ) (args j)
           = ⟦ Renaming.extendList ρ (j.arity :: τ) ⟧ʳ (args j) := by
       intro j
-      exact L3.aux ρ (j.arity :: τ) (args j)
+      exact lift_toSubst.aux ρ (j.arity :: τ) (args j)
     cases classify τ p with
     | ext i =>
       simp only [lift_aux_ext_eq, Renaming.actExpr_apply', extendList_tauSlot]
@@ -274,26 +272,24 @@ private theorem L3.aux {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
 termination_by τ e => (⟨Γ ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by exact Expr.Subterm.of_arg p α_h h args j
 
-/-- **L3** — embedding law: `Subst.lift ρ.toSubst e = ⟦ ρ ⇑ʳ α ⟧ʳ e`.  Substituting via
-a renaming-Subst is the renaming action. -/
-theorem L3 {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
+/-- Substituting via a renaming embedded as a substitution is the renaming action:
+`Subst.lift ρ.toSubst e = ⟦ ρ ⇑ʳ α ⟧ʳ e`. -/
+theorem lift_toSubst {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
     {α : C.Arity} (e : Expr (Γ ⋈ α)) :
     Subst.lift ρ.toSubst e = ⟦ ρ ⇑ʳ α ⟧ʳ e :=
-  L3.aux ρ [α] e
+  lift_toSubst.aux ρ [α] e
 
 /-! ## Right unit law -/
 
-/-- Right unit law: lifting the η-substitution is the identity.  One-line corollary of
-L3 specialised to `ρ := 𝟙ʳ`. -/
+/-- Right unit law: lifting the η-substitution is the identity. -/
 theorem unit_right {C : Carrier} {Γ : Shape C}
     (α : C.Arity) (e : Expr.T Γ α) :
     Subst.lift (fun q => Expr.η ⟨q, rfl⟩) e = e :=
-  (L3 (Renaming.id Γ) e).trans (by simp)
+  (lift_toSubst (Renaming.id Γ) e).trans (by simp)
 
-/-! ## Naturality lemma needed by `comp_lift` -/
+/-! ## Commutation of `lift` past `inst` -/
 
-/-- **L5** — naturality of `lift` past `inst`.  Walking
-`inst.aux α (weakenList Δ τ) ι [] e` with `lift.aux θ τ` is the same as
+/-- Walking `inst.aux α (weakenList Δ τ) ι [] e` with `lift.aux θ τ` equals
 instantiating with the `lift`ed instantiation data into the `lift`ed expression. -/
 private theorem lift_inst_commute {C : Carrier} :
     ∀ {Δ Ε : Shape C} (θ : Subst Δ Ε) (α : C.Arity)

@@ -1,12 +1,12 @@
 import HigherRankSyntax.Action.Expr
 
 /-!
-# Substitution, instantiation, and the Kleisli extension — definitions
+# Substitution, instantiation, and the Kleisli extension
 
-The substitution machinery: slot classification, the walkers `inst.aux` and
-`lift.aux`, their per-case unfolders, the public wrappers `inst` and
-`Subst.lift`, and the categorical operations (`Renaming.toSubst`,
-`Renaming.preSubst`, `Subst.postRen`, `Subst.comp`).
+Slot classification, the walkers `inst.aux` and `lift.aux`, their per-case
+unfolders, the public wrappers `inst` and `Subst.lift`, and the categorical
+operations (`Renaming.toSubst`, `Renaming.preSubst`, `Subst.postRen`,
+`Subst.comp`).
 
 Each head slot is classified by `classify` into either a Γ-slot (`XPos.base`, the
 weakening of some `p : Slot Γ` through τ) or a τ-binder (`XPos.ext`, identified by a
@@ -18,10 +18,6 @@ slot-correspondence witness lives in the inductive's index, so pattern matching 
 `inst.aux` directly on σ's image, threading the target weakening as a renaming.
 `inst.aux` walks `Expr ((Δ ⋈ α) ⋈* τ)`, carries a renaming `ρ : Δ →ʳ Ξ`, and
 maps Δ-slots through `ρ` during traversal.
-
-Equational theorems about these walkers — the η-laws, the relative-monad laws
-(`unit_right`, `unit_left`, `comp_lift`), and the categorical embedding `L3` —
-live in `Action/Equations.lean`.
 -/
 
 namespace Action
