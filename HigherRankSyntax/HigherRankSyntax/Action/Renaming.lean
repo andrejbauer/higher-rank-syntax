@@ -98,7 +98,7 @@ scoped infixl:95 " ⇑ʳ " => Renaming.extend
 
 @[simp]
 theorem Renaming.extend_id {C : Carrier} (Γ : Shape C) (β : C.Arity) :
-    (Renaming.id Γ) ⇑ʳ β = Renaming.id (Γ ⋈ β) := by
+    (𝟙ʳ : Γ →ʳ Γ) ⇑ʳ β = 𝟙ʳ := by
   ext p
   cases p with
   | here _  => rfl
@@ -116,7 +116,7 @@ theorem Renaming.extend_comp {C : Carrier} {Γ Δ Ε : Shape C}
 Empty `τ` gives the identity; cons extends the previous weakening through one more binder. -/
 def Renaming.weakenList {C : Carrier} (Γ : Shape C) :
     (τ : List C.Arity) → Γ →ʳ Γ ⋈* τ
-  | []        => Renaming.id Γ
+  | []        => 𝟙ʳ
   | β :: rest => Renaming.weaken (Γ ⋈* rest) β ∘ʳ Renaming.weakenList Γ rest
 
 @[inherit_doc Renaming.weakenList]
@@ -126,30 +126,30 @@ scoped notation:65 Γ " ↪ʳ " τ => Renaming.weakenList Γ τ
 def Renaming.extendList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     (τ : List C.Arity) → Γ ⋈* τ →ʳ Δ ⋈* τ
   | []        => ρ
-  | β :: rest => Renaming.extendList ρ rest ⇑ʳ β
+  | β :: rest => ρ.extendList rest ⇑ʳ β
 
 @[simp] theorem Renaming.extendList_nil {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
-    Renaming.extendList ρ [] = ρ := rfl
+    ρ.extendList [] = ρ := rfl
 
 @[simp] theorem Renaming.extendList_cons {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
     (β : C.Arity) (rest : List C.Arity) :
-    Renaming.extendList ρ (β :: rest) = Renaming.extendList ρ rest ⇑ʳ β := rfl
+    ρ.extendList (β :: rest) = ρ.extendList rest ⇑ʳ β := rfl
 
 @[simp] theorem Renaming.extendList_id {C : Carrier} (Γ : Shape C) :
-    ∀ (τ : List C.Arity), Renaming.extendList (Renaming.id Γ) τ = Renaming.id (Γ ⋈* τ)
+    ∀ (τ : List C.Arity), (𝟙ʳ : Γ →ʳ Γ).extendList τ = 𝟙ʳ
   | []        => rfl
   | β :: rest => by
-    show Renaming.extendList (Renaming.id Γ) rest ⇑ʳ β = Renaming.id (Γ ⋈* rest ⋈ β)
+    show (𝟙ʳ : Γ →ʳ Γ).extendList rest ⇑ʳ β = 𝟙ʳ
     rw [Renaming.extendList_id Γ rest, Renaming.extend_id]
 
 /-- Naturality of `extendList` w.r.t. `weakenList`: extending a renaming and then
 weakening through `τ` equals weakening first then applying the renaming. -/
 @[simp] theorem Renaming.extendList_weakenList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     ∀ (τ : List C.Arity) (p : Slot Γ),
-      Renaming.extendList ρ τ ((Γ ↪ʳ τ) p) = (Δ ↪ʳ τ) (ρ p)
+      ρ.extendList τ ((Γ ↪ʳ τ) p) = (Δ ↪ʳ τ) (ρ p)
   | [], _ => rfl
   | β :: rest, p => by
-    show Slot.there (Renaming.extendList ρ rest ((Γ ↪ʳ rest) p))
+    show Slot.there (ρ.extendList rest ((Γ ↪ʳ rest) p))
        = Slot.there ((Δ ↪ʳ rest) (ρ p))
     rw [Renaming.extendList_weakenList ρ rest p]
 

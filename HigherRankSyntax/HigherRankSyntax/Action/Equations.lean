@@ -15,12 +15,12 @@ namespace Action
 @[simp] private theorem extendList_tauSlot {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     ∀ (τ_above : List C.Arity) (β : C.Arity) (τ_below : List C.Arity)
       (i : C.Binder β),
-      Renaming.extendList ρ (τ_above ++ β :: τ_below)
+      ρ.extendList (τ_above ++ β :: τ_below)
           (tauSlot Γ τ_above β τ_below i)
         = tauSlot Δ τ_above β τ_below i
   | [],        _, _,       _ => rfl
   | _ :: rest, β, τ_below, i => by
-    show Slot.there (Renaming.extendList ρ (rest ++ β :: τ_below)
+    show Slot.there (ρ.extendList (rest ++ β :: τ_below)
             (tauSlot Γ rest β τ_below i))
        = Slot.there (tauSlot Δ rest β τ_below i)
     rw [extendList_tauSlot ρ rest β τ_below i]
@@ -241,11 +241,11 @@ theorem unit_left {C : Carrier} {Γ Δ : Shape C}
 iterated extension of `ρ` through τ. -/
 private theorem lift_toSubst.aux {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     ∀ (τ : List C.Arity) (e : Expr (Γ ⋈* τ)),
-      lift.aux ρ.toSubst τ e = ⟦ Renaming.extendList ρ τ ⟧ʳ e
+      lift.aux ρ.toSubst τ e = ⟦ ρ.extendList τ ⟧ʳ e
   | τ, Expr.apply' p α_h h args => by
     have ih_arg : ∀ (j : C.Binder α_h),
         lift.aux ρ.toSubst (j.arity :: τ) (args j)
-          = ⟦ Renaming.extendList ρ (j.arity :: τ) ⟧ʳ (args j) := by
+          = ⟦ ρ.extendList (j.arity :: τ) ⟧ʳ (args j) := by
       intro j
       exact lift_toSubst.aux ρ (j.arity :: τ) (args j)
     cases classify τ p with
@@ -262,7 +262,7 @@ private theorem lift_toSubst.aux {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ 
       show inst.aux q.arity (Δ ↪ʳ τ)
             (fun j => lift.aux ρ.toSubst (j.arity :: τ) (args j)) []
             (Expr.η ⟨ρ q, ρ.arity q⟩)
-          = ⟦ Renaming.extendList ρ τ ⟧ʳ
+          = ⟦ ρ.extendList τ ⟧ʳ
               Expr.apply' ((Γ ↪ʳ τ) q) q.arity h args
       rw [inst_aux_η]
       simp only [Renaming.actExpr_apply', Renaming.extendList_weakenList]
@@ -273,10 +273,10 @@ termination_by τ e => (⟨Γ ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by exact Expr.Subterm.of_arg p α_h h args j
 
 /-- Substituting via a renaming embedded as a substitution is the renaming action:
-`Subst.lift ρ.toSubst e = ⟦ ρ ⇑ʳ α ⟧ʳ e`. -/
+`ρ.toSubst.lift e = ⟦ ρ ⇑ʳ α ⟧ʳ e`. -/
 theorem lift_toSubst {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
     {α : C.Arity} (e : Expr (Γ ⋈ α)) :
-    Subst.lift ρ.toSubst e = ⟦ ρ ⇑ʳ α ⟧ʳ e :=
+    ρ.toSubst.lift e = ⟦ ρ ⇑ʳ α ⟧ʳ e :=
   lift_toSubst.aux ρ [α] e
 
 /-! ## Right unit law -/
@@ -285,7 +285,7 @@ theorem lift_toSubst {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
 theorem unit_right {C : Carrier} {Γ : Shape C}
     (α : C.Arity) (e : Expr.T Γ α) :
     Subst.lift (fun q => Expr.η ⟨q, rfl⟩) e = e :=
-  (lift_toSubst (Renaming.id Γ) e).trans (by simp)
+  (lift_toSubst 𝟙ʳ e).trans (by simp)
 
 /-! ## Commutation of `lift` past `inst` -/
 
@@ -298,7 +298,7 @@ private theorem lift_inst_commute {C : Carrier} :
         =
       inst.aux α (Ε ↪ʳ τ)
         (fun j => lift.aux θ (j.arity :: τ) (ι j))
-        [] (Subst.lift θ e) := by
+        [] (θ.lift e) := by
   sorry
 
 /-! ## Composition law -/
@@ -336,9 +336,9 @@ via the composed substitution `σ ˢ∘ˢ θ`. -/
 theorem comp_lift {C : Carrier} {Γ Δ Ε : Shape C}
     (σ : Subst Γ Δ) (θ : Subst Δ Ε) :
     ∀ {α : C.Arity} (e : Expr (Γ ⋈ α)),
-      Subst.lift (fun q => Subst.lift θ (σ q)) e
+      Subst.lift (fun q => θ.lift (σ q)) e
         =
-      Subst.lift θ (Subst.lift σ e) := by
+      θ.lift (σ.lift e) := by
   intro α e
   exact comp_lift.aux σ θ [α] e
 

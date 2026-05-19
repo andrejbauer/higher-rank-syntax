@@ -4,9 +4,9 @@ import HigherRankSyntax.Action.Expr
 # Substitution, instantiation, and the Kleisli extension
 
 Slot classification, the walkers `inst.aux` and `lift.aux`, their per-case
-unfolders, the public wrappers `inst` and `Subst.lift`, and the categorical
-operations (`Renaming.toSubst`, `Renaming.preSubst`, `Subst.postRen`,
-`Subst.comp`).
+unfolders, the public wrappers `Inst.act`, `Subst.lift`, and `Subst.act`, and
+the categorical operations (`Renaming.toSubst`, `Renaming.preSubst`,
+`Subst.postRen`, `Subst.comp`).
 
 Each head slot is classified by `classify` into either a Γ-slot (`XPos.base`, the
 weakening of some `p : Slot Γ` through τ) or a τ-binder (`XPos.ext`, identified by a
@@ -284,14 +284,18 @@ decreasing_by
 /-! ## Public wrappers -/
 
 /-- α-instantiation: replace the α-binder of `Δ ⋈ α` by `ι`. -/
-def inst {C : Carrier} {α : C.Arity} {Δ : Shape C}
-    (e : Expr (Δ ⋈ α)) (ι : Inst α Δ) : Expr Δ :=
+def Inst.act {C : Carrier} {α : C.Arity} {Δ : Shape C}
+    (ι : Inst α Δ) (e : Expr (Δ ⋈ α)) : Expr Δ :=
   inst.aux α 𝟙ʳ ι [] e
 
 /-- Kleisli extension at a single α-binder. -/
 def Subst.lift {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
     {α : C.Arity} (e : Expr (Γ ⋈ α)) : Expr (Δ ⋈ α) :=
   lift.aux σ [α] e
+
+/-- Action of a substitution on an expression without a top binder. -/
+def Subst.act {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ) (e : Expr Γ) : Expr Δ :=
+  lift.aux σ [] e
 
 /-! ## Categorical operations: substitution and renaming compositions -/
 
@@ -316,10 +320,10 @@ def Subst.postRen {C : Carrier} {Γ Δ Δ' : Shape C}
 @[inherit_doc Subst.postRen]
 scoped infixl:90 " ˢ∘ʳ " => Subst.postRen
 
-/-- Kleisli composition of substitutions: `(σ ˢ∘ˢ θ) p = Subst.lift θ (σ p)`. -/
+/-- Kleisli composition of substitutions: `(σ ˢ∘ˢ θ) p = θ.lift (σ p)`. -/
 def Subst.comp {C : Carrier} {Γ Δ Ε : Shape C}
     (σ : Subst Γ Δ) (θ : Subst Δ Ε) : Subst Γ Ε :=
-  fun p => Subst.lift θ (σ p)
+  fun p => θ.lift (σ p)
 
 @[inherit_doc Subst.comp]
 scoped infixl:90 " ˢ∘ˢ " => Subst.comp
