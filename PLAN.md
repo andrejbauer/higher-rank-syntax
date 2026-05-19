@@ -109,8 +109,38 @@ inst.aux α ι τ (η-expansion-image) =
 
 with two flavours depending on whether the η's slot is `.there p` (Γ-slot,
 which gives the Δ-slot rebuild) or `.here i` (binder, which plugs ι and
-recurses at `i.arity`).  Best to prove these by mutual induction on α via
-`subWf` and on the `Σ Γ, Expr Γ` subterm order for the inner expressions.
+recurses at `i.arity`).
+
+### Attempted in session and learned
+
+Tried the smallest natural form:
+
+```
+inst.aux α ι [] (Expr.η Δ α ⟨w, hw⟩) = Expr.apply' w α hw ι
+```
+
+This is *too small*.  Proof can't close at this granularity:
+
+* Outer `.there w` head → `.there r` branch produces `apply' w α _ new_args_inst`.
+* Need `new_args_inst = ι`.  But `new_args_inst i = inst.aux α ι [i.arity]
+  (η-child i)`; inside, `.here i` fires the α-binder branch with
+  `ι i` weakened by `R := (weakenList Δ [i.arity]) ⇑ʳ i.arity`, and recurses
+  to `inst.aux i.arity new_args' [] (⟦ R ⟧ʳ (ι i))`.
+* For arbitrary `ι i` this final recursion has no reason to return `ι i` —
+  it depends on `new_args'` acting as a *left inverse* of weakening along `R`.
+
+So the real load-bearing fact is a separate "inst-aux undoes weakening
+under η-style fillers" lemma — not just one statement about η-images.
+Likely shape:
+
+```
+inst.aux α (η-fillers Δ α τ) τ (⟦ (weakenList Δ τ) ⇑ʳ α ⟧ʳ e) = e
+```
+
+where `η-fillers Δ α τ : Inst α (Δ ⋈* τ)` is the canonical instantiation by
+η-extensions.  Once this is in hand, the η-image equation follows.  Proof
+by induction on `e` (Expr.Subterm); the α-binder case will need a
+companion lemma by `subWf` on α (analogous to `Expr.T.map_η`).
 
 `unit_left` lands on the same gamma branch but with σ being arbitrary `f`
 (rather than η).  The same sub-lemma's "Δ-slot rebuild" + "binder plug"
