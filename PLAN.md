@@ -89,99 +89,131 @@ Three `simp` lemmas covering the classify dispatch and η naturality:
 ## What still blocks the monad laws
 
 Tracing both `unit_right` and `unit_left` through `lift.aux`'s gamma branch
-ends at the same point: `inst.aux α ι [] (η <weakened slot>)`.
+ends at the same point: `inst.aux q.arity new_args [] (⟦ weakening ⟧ʳ (σ q))`.
 
-In `unit_right` this `inst.aux` call needs to return `apply' p α_h h_α_h
-args` — the same expression we started with.  The Δ-slot branch peels one
-`.there`, but recurses on `inst.aux` of each η-child.  Each η-child is
-`η ⟨.here i, _⟩`, which fires the α-binder case (since `.here i` is a binder
-of α), producing yet another `inst.aux` at smaller arity `i.arity` on
-`weakened (ι i)`.  By `subWf` this terminates, but the proof has to capture
-"the chain of `inst.aux` calls on η-images of binders unwinds to give back
-the original `args`".
+Andrej flagged the structural awkwardness: lift.aux *pre-weakens* `σ q`
+through `τ` before calling `inst.aux`, because the current `inst.aux`'s
+ι has to live at the τ-extended level.  The remedy is to **generalise
+`inst.aux` to carry a renaming `ρ` alongside the instantiation `ι`**,
+so the weakening is done *during* the traversal of `σ q` rather than
+beforehand.
 
-The required generalised lemma is roughly:
+## Next task — refactor `inst.aux`
 
-```
-inst.aux α ι τ (η-expansion-image) =
-  apply' (corresponding-slot) … (corresponding-new-args)
-```
+### The new signature
 
-with two flavours depending on whether the η's slot is `.there p` (Γ-slot,
-which gives the Δ-slot rebuild) or `.here i` (binder, which plugs ι and
-recurses at `i.arity`).
-
-### Attempted in session and learned
-
-Tried the smallest natural form:
+Current:
 
 ```
-inst.aux α ι [] (Expr.η Δ α ⟨w, hw⟩) = Expr.apply' w α hw ι
+inst.aux α (ι : Inst α Δ) (τ : List Arity) (e : Expr ((Δ ⋈ α) ⋈* τ))
+  : Expr (Δ ⋈* τ)
 ```
 
-This is *too small*.  Proof can't close at this granularity:
-
-* Outer `.there w` head → `.there r` branch produces `apply' w α _ new_args_inst`.
-* Need `new_args_inst = ι`.  But `new_args_inst i = inst.aux α ι [i.arity]
-  (η-child i)`; inside, `.here i` fires the α-binder branch with
-  `ι i` weakened by `R := (weakenList Δ [i.arity]) ⇑ʳ i.arity`, and recurses
-  to `inst.aux i.arity new_args' [] (⟦ R ⟧ʳ (ι i))`.
-* For arbitrary `ι i` this final recursion has no reason to return `ι i` —
-  it depends on `new_args'` acting as a *left inverse* of weakening along `R`.
-
-So the real load-bearing fact is a separate "inst-aux undoes weakening
-under η-style fillers" lemma — not just one statement about η-images.
-
-### Current state in the working tree (Subst.lean)
-
-Defined (in `Action/Subst.lean`):
+Proposed (Ξ for the "target Δ", per Andrej's preference):
 
 ```
-def η_fillers (Δ : Shape C) (α : C.Arity) : Inst α (Δ ⋈ α) :=
-  fun i => Expr.η (Δ ⋈ α) i.arity ⟨.here i, rfl⟩
-
-def α_weak (Δ : Shape C) (α : C.Arity) : (Δ ⋈ α) →ʳ ((Δ ⋈ α) ⋈ α) :=
-  (Renaming.weakenList Δ [α]) ⇑ʳ α
-
-def α_weak_τ (Δ : Shape C) (α : C.Arity) :
-    (τ : List C.Arity) → ((Δ ⋈ α) ⋈* τ) →ʳ (((Δ ⋈ α) ⋈ α) ⋈* τ)
-  | []        => α_weak Δ α
-  | β :: rest => (α_weak_τ Δ α rest) ⇑ʳ β
+inst.aux {Δ Ξ} (α : C.Arity) (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
+         (τ : List Arity) (e : Expr ((Δ ⋈ α) ⋈* τ))
+  : Expr (Ξ ⋈* τ)
 ```
 
-Stated (proof body is `sorry`):
+`inst.aux` now *carries* `ρ : Δ →ʳ Ξ` and applies it to Δ-slots during
+traversal.  The α-binder branch plugs `ι` directly (no weakening of
+`ι j` needed — `ι` already lives at `Ξ`).
+
+### Detailed body changes
+
+For each branch of inst.aux's `match classify τ y with`:
+
+1. **`XPos.ext (τ_above := ta) (β := b) (τ_below := tb) i`** (τ-binder rebuild)
+   * Rebuild head: `tauSlot Ξ ta b tb i` (was `tauSlot Δ ta b tb i`).
+   * Arity-proof:
+     `(tauSlot_arity Ξ ta b tb i).trans ((tauSlot_arity (Δ ⋈ α) ta b tb i).symm.trans h_α_h)`.
+   * Recursive `new_args` call: `inst.aux α ρ ι (i.arity :: (ta ++ b :: tb)) (args i)`
+     (same as before but with ρ threaded).
+
+2. **`XPos.base (.there r)`** (Δ-slot rebuild — `r : Slot Δ`)
+   * Rebuild head: `(Renaming.weakenList Ξ τ).toFun (ρ.toFun r)` —
+     first apply `ρ` to map into `Ξ`, then weaken through `τ`.
+   * Arity-proof: chain `(Renaming.weakenList Ξ τ).arity`, then
+     `ρ.arity r`, then the existing chain to `h_α_h`.
+   * Recursive `new_args` call: `inst.aux α ρ ι (i.arity :: τ) (args i)`.
+
+3. **`XPos.base (.here j)`** (α-binder, `j : C.Binder α`)
+   * `hs : C.arityArity α j = α_h` (unchanged).
+   * After `match hs with | rfl`:
+     * `new_args' : (i : C.Binder j.arity) → Expr ((Ξ ⋈* τ) ⋈ i.arity)`
+       defined as `fun i => inst.aux α ρ ι (i.arity :: τ) (args i)`.
+     * **No weakening of `ι j`.**  Instead, the recursive call is
+       `inst.aux j.arity (Renaming.weakenList Ξ τ) new_args' [] (ι j)`.
+       The new ρ is `Renaming.weakenList Ξ τ : Ξ →ʳ Ξ ⋈* τ`, which
+       handles the τ-extension during traversal of `ι j`.
+
+### Effect on `lift.aux`'s XPos.base case
+
+Becomes (no pre-weakening of `σ q`):
+
+```lean
+| XPos.base q =>
+    have hs : q.arity = α_h :=
+      ((Renaming.weakenList Γ τ).arity q).symm.trans h_α_h
+    match hs with
+    | rfl =>
+        let new_args : (i : C.Binder q.arity) →
+            Expr ((Δ ⋈* τ) ⋈ i.arity) :=
+          fun i => lift.aux σ (i.arity :: τ) (args i)
+        inst.aux q.arity (Renaming.weakenList Δ τ) new_args [] (σ q)
+```
+
+### Termination
+
+Same lex measure on `(α, e)` — the well-founded structure is unchanged
+by the refactor.  The four `decreasing_by` cases remain
+`PSigma.Lex.right (Expr.Subterm.of_arg _ _ _ _ _)` for args descents and
+`PSigma.Lex.left _ _ ⟨j, rfl⟩` for the α-decrease.  The Ξ change is
+purely cosmetic from termination's POV (PSigma still over `(_ :
+C.Arity) ×' Σ Γ : Shape C, Expr Γ` — though the Γ here is the
+input-shape parameter and unrelated to the substitution Γ; rename if
+clashing).
+
+### Wrappers
+
+* `inst` (public wrapper for one-step instantiation): becomes
+  `inst.aux α (Renaming.id Δ) ι [] e` — pass `id` as the trivial ρ.
+* `lift` (public wrapper): unchanged.
+
+### Working-tree state when picking this up
+
+The session left in working tree (uncommitted) the stubs:
+
+* `η_fillers Δ α : Inst α (Δ ⋈ α)`
+* `α_weak`, `α_weak_τ`
+* `inst_aux_η_inv` (stated, proof = `sorry`)
+
+**Delete `α_weak`, `α_weak_τ`, and the `inst_aux_η_inv` statement.**
+They were built around the *un-refactored* inst.aux and the "double-α"
+artefact they encode is exactly what the refactor eliminates.  Keep
+`η_fillers` — it'll still be useful for the post-refactor lemma.
+
+### After the refactor: re-state `inst_aux_η_inv`
+
+In the new world, `α_weak`/`α_weak_τ` are gone (the weakening is done
+internally by ρ).  The η-fillers lemma should be re-stated as roughly:
 
 ```
-theorem inst_aux_η_inv (Δ : Shape C) (α : C.Arity) :
-    ∀ (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
-    inst.aux α (η_fillers Δ α) τ (⟦ α_weak_τ Δ α τ ⟧ʳ e) = e
+theorem inst_aux_η_inv (Δ : Shape C) (α : C.Arity) (e : Expr (Δ ⋈ α)) :
+    inst.aux α (Renaming.id (Δ ⋈ α)) (η_fillers Δ α) [] e = e
 ```
 
-Note the generalisation over `τ` (previously the stub had `τ = []` only);
-this is needed because the Δ-slot branch's recursion lives at non-empty
-`τ_inst`.
+— inst.aux with ρ = id and ι = η_fillers is identity.  Or possibly with
+a non-trivial ρ.  Re-derive the exact statement by tracing one of the
+unit laws once the refactor is in place.
 
-### Where the proof gets stuck
+### Open question (deferred)
 
-Sketch in the docstring of `inst_aux_η_inv` covers the three cases
-(`XPos.ext`, `XPos.base (.there r)`, `XPos.base (.here z)`).  The first
-two should close by `IH on args i` at `τ' = i.arity :: τ` + `classify_*`
-simp lemmas.  The α-binder case is the genuinely harder one — it triggers
-the recursive `inst.aux z.arity new_args [] (η-image)` at `z.arity ≺ α`,
-which is *not* a "weakened of some e" form, so the lemma at smaller α
-doesn't apply directly.
-
-No tactic-level progress on the proof itself was made this session —
-just the statement and infrastructure.  The fresh look from Andrej is
-the next step.
-
-`unit_left` lands on the same gamma branch but with σ being arbitrary `f`
-(rather than η).  The same sub-lemma's "Δ-slot rebuild" + "binder plug"
-machinery is what gets us back to `f α v`.
-
-`comp_lift` adds substitution-composition on top — likely needs both the
-above and a renaming/substitution commutation lemma
-(`lift.aux σ τ (⟦ ρ ⟧ʳ e) = ⟦ ρ' ⟧ʳ (lift.aux σ' τ' e)` style).
+Whether to similarly generalise `lift.aux` (carry a renaming or
+substitution-extension).  Andrej is undecided — revisit after inst.aux's
+refactor lands and we see how the proofs go.
 
 ## History (compressed)
 
