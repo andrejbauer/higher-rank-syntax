@@ -530,4 +530,18 @@ def lift {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
     (α : C.Arity) (e : Expr (Γ ⋈ α)) : Expr (Δ ⋈ α) :=
   lift.aux σ [α] e
 
+theorem lift_unit_right {C : Carrier} {Γ : Shape C}
+    (α : C.Arity) (e : Expr.T Γ α) :
+    lift (fun q => Expr.η Γ q.arity ⟨q, rfl⟩) α e = e :=
+  lift_aux_unit_right [α] e
+
+theorem lift_unit_left {C : Carrier} {Γ Δ : Shape C}
+    (f : ∀ α : C.Arity, Expr.J Γ α → Expr.T Δ α) :
+    ∀ {α : C.Arity} (v : Expr.J Γ α),
+      f α v = lift (fun s => f s.arity ⟨s, rfl⟩) α (Expr.η Γ α v)
+  | _, ⟨p, hp⟩ => by
+    cases hp
+    symm
+    exact lift_aux_unit_left (fun s => f s.arity ⟨s, rfl⟩) ⟨p, rfl⟩
+
 end Action

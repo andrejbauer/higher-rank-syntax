@@ -66,17 +66,11 @@ def SyntaxMonad {C : Carrier} : RelativeMonad (@J C) where
   unit_right := by
     intro Γ
     funext α e
-    exact lift_aux_unit_right [α] e
+    exact lift_unit_right α e
   unit_left  := by
     intro Γ Δ f
     funext α v
-    rcases v with ⟨p, hp⟩
-    cases hp
-    change f p.arity ⟨p, rfl⟩ =
-      Action.lift (fun s => f s.arity ⟨s, rfl⟩) p.arity
-        (Expr.η Γ p.arity ⟨p, rfl⟩)
-    symm
-    exact lift_aux_unit_left (fun s => f s.arity ⟨s, rfl⟩) ⟨p, rfl⟩
+    exact lift_unit_left f v
   comp_lift  := sorry
 
 end Action
