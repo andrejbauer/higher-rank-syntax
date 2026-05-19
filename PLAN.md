@@ -131,16 +131,49 @@ This is *too small*.  Proof can't close at this granularity:
 
 So the real load-bearing fact is a separate "inst-aux undoes weakening
 under η-style fillers" lemma — not just one statement about η-images.
-Likely shape:
+
+### Current state in the working tree (Subst.lean)
+
+Defined (in `Action/Subst.lean`):
 
 ```
-inst.aux α (η-fillers Δ α τ) τ (⟦ (weakenList Δ τ) ⇑ʳ α ⟧ʳ e) = e
+def η_fillers (Δ : Shape C) (α : C.Arity) : Inst α (Δ ⋈ α) :=
+  fun i => Expr.η (Δ ⋈ α) i.arity ⟨.here i, rfl⟩
+
+def α_weak (Δ : Shape C) (α : C.Arity) : (Δ ⋈ α) →ʳ ((Δ ⋈ α) ⋈ α) :=
+  (Renaming.weakenList Δ [α]) ⇑ʳ α
+
+def α_weak_τ (Δ : Shape C) (α : C.Arity) :
+    (τ : List C.Arity) → ((Δ ⋈ α) ⋈* τ) →ʳ (((Δ ⋈ α) ⋈ α) ⋈* τ)
+  | []        => α_weak Δ α
+  | β :: rest => (α_weak_τ Δ α rest) ⇑ʳ β
 ```
 
-where `η-fillers Δ α τ : Inst α (Δ ⋈* τ)` is the canonical instantiation by
-η-extensions.  Once this is in hand, the η-image equation follows.  Proof
-by induction on `e` (Expr.Subterm); the α-binder case will need a
-companion lemma by `subWf` on α (analogous to `Expr.T.map_η`).
+Stated (proof body is `sorry`):
+
+```
+theorem inst_aux_η_inv (Δ : Shape C) (α : C.Arity) :
+    ∀ (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
+    inst.aux α (η_fillers Δ α) τ (⟦ α_weak_τ Δ α τ ⟧ʳ e) = e
+```
+
+Note the generalisation over `τ` (previously the stub had `τ = []` only);
+this is needed because the Δ-slot branch's recursion lives at non-empty
+`τ_inst`.
+
+### Where the proof gets stuck
+
+Sketch in the docstring of `inst_aux_η_inv` covers the three cases
+(`XPos.ext`, `XPos.base (.there r)`, `XPos.base (.here z)`).  The first
+two should close by `IH on args i` at `τ' = i.arity :: τ` + `classify_*`
+simp lemmas.  The α-binder case is the genuinely harder one — it triggers
+the recursive `inst.aux z.arity new_args [] (η-image)` at `z.arity ≺ α`,
+which is *not* a "weakened of some e" form, so the lemma at smaller α
+doesn't apply directly.
+
+No tactic-level progress on the proof itself was made this session —
+just the statement and infrastructure.  The fresh look from Andrej is
+the next step.
 
 `unit_left` lands on the same gamma branch but with σ being arbitrary `f`
 (rather than η).  The same sub-lemma's "Δ-slot rebuild" + "binder plug"

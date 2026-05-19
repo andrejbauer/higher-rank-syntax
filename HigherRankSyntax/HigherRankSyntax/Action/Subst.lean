@@ -139,6 +139,56 @@ decreasing_by
   -- α decreases (j.arity ≺ α)
   · exact PSigma.Lex.left _ _ ⟨j, rfl⟩
 
+/-! ## η-fillers and the weakening-inverse lemma (work in progress) -/
+
+/-- Canonical η-fillers for an α-binder over a shape with α at the top.
+At each binder position `i`, returns the η-expansion of the bound variable `.here i`. -/
+def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ ⋈ α) :=
+  fun i => Expr.η (Δ ⋈ α) i.arity ⟨.here i, rfl⟩
+
+/-- The base weakening: `(weakenList Δ [α]) ⇑ʳ α : (Δ ⋈ α) →ʳ ((Δ ⋈ α) ⋈ α)`.
+Preserves `.here z` and shifts Δ-slots through `.there`. -/
+def α_weak {C : Carrier} (Δ : Shape C) (α : C.Arity) :
+    (Δ ⋈ α) →ʳ ((Δ ⋈ α) ⋈ α) :=
+  (Renaming.weakenList Δ [α]) ⇑ʳ α
+
+/-- The base weakening iterated through a τ-stack:
+`((Δ ⋈ α) ⋈* τ) →ʳ (((Δ ⋈ α) ⋈ α) ⋈* τ)`. -/
+def α_weak_τ {C : Carrier} (Δ : Shape C) (α : C.Arity) :
+    (τ : List C.Arity) → ((Δ ⋈ α) ⋈* τ) →ʳ (((Δ ⋈ α) ⋈ α) ⋈* τ)
+  | []        => α_weak Δ α
+  | β :: rest => (α_weak_τ Δ α rest) ⇑ʳ β
+
+/-- `inst.aux` with η-fillers is the left inverse of the canonical weakening that
+inserts a fresh α-binder.  This is the load-bearing lemma for `unit_left` (and
+appears inside the proof of `unit_right` too).
+
+WORK IN PROGRESS — statement set up, proof not yet closed.
+
+Sketch of the proof (by joint induction on `e` via `Expr.Subterm` and on `α`
+via `subWf`):
+
+* Unfold `⟦ α_weak_τ Δ α τ ⟧ʳ (apply' p α_e h_e args)` to
+  `apply' ((α_weak_τ Δ α τ).toFun p) α_e _ (fun i => ⟦ α_weak_τ Δ α (i.arity :: τ) ⟧ʳ (args i))`.
+* Case-split on `classify τ (renamed-p)`:
+  - `XPos.ext` (τ-binder): rebuild uses `tauSlot Δ_inst …` whose head equals
+    the original `p` modulo level; new_args matches `args` via the IH at
+    `τ' = i.arity :: τ` (subterm).
+  - `XPos.base (.there r)` (Δ-slot): rebuild uses `(weakenList Δ_inst τ).toFun r`
+    which equals the original `p`; new_args matches as above.
+  - `XPos.base (.here z)` (α-binder, only fires when `p` was the original
+    α-binder, which `(α_weak_τ ⇑ʳ)` preserves into the fresh α-layer): plugs
+    `η_fillers z = η (Δ ⋈ α) z.arity ⟨.here z, rfl⟩` (weakened by
+    `T.map_η` to `η ((Δ ⋈ α) ⋈* τ) z.arity ⟨.there^|τ| (.here z), _⟩`).
+    Recursive `inst.aux z.arity new_args [] (η-image)` then Δ-slot-rebuilds
+    to `apply' (.there^|τ| (.here z)) z.arity _ new_args_outer`.  Matching
+    `new_args_outer = args` needs `subWf`-IH at `i.arity ≺ z.arity ≺ α`. -/
+theorem inst_aux_η_inv {C : Carrier} (Δ : Shape C) (α : C.Arity) :
+    ∀ (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
+    inst.aux α (η_fillers Δ α) τ (⟦ α_weak_τ Δ α τ ⟧ʳ e) = e := by
+  intros τ e
+  sorry
+
 /-- Kleisli extension walker.  Walks `e : Expr (Γ ⋈* τ)` by classifying each head:
 τ-binder rebuilds; Γ-slot substitutes via σ and folds the τ-stack into σ's image. -/
 def lift.aux {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
