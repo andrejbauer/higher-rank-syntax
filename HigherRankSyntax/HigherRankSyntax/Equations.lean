@@ -328,6 +328,53 @@ theorem unit_right {C : Carrier} {Γ : Shape C}
     Subst.lift (fun {α} q => @Expr.η _ _ α q) e = e :=
   (lift_toSubst 𝟙ʳ e).trans (by simp)
 
+/-! ## LiftFactor: absorbing the lift-stack into the substitution -/
+
+/-- The τ = [] case of `lift_aux_base_eq`: at an empty lift-stack, every head slot is a
+Γ-slot, and the renaming `Δ ↪ʳ []` collapses to `𝟙ʳ`. -/
+private theorem lift_aux_nil_apply {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
+    {α : C.Arity} (p : Γ ∋ α)
+    (args : (j : C.Binder α) → Expr (Γ ⋈ j.arity)) :
+    lift.aux σ [] (Expr.apply p args)
+      = inst.aux α 𝟙ʳ (fun j => lift.aux σ [j.arity] (args j)) [] (σ p) := by
+  show lift.aux σ [] (Expr.apply ((Γ ↪ʳ []) p) args) = _
+  exact lift_aux_base_eq σ [] p args
+
+/-- Walking `lift.aux σ τ` over an outer τ-stack equals walking `lift.aux (σ.extendList τ) []`
+with an empty stack. -/
+private theorem lift_aux_via_extendList {C : Carrier} :
+    ∀ {Γ Δ : Shape C} (σ : Subst Γ Δ) (τ : List C.Arity) (e : Expr (Γ ⋈* τ)),
+      lift.aux σ τ e = lift.aux (σ.extendList τ) [] e
+  | Γ, Δ, σ, τ, .apply (α := α_h) p args => by
+    have hΛ : (fun k : C.Binder α_h => lift.aux σ (k.arity :: τ) (args k))
+            = (fun k : C.Binder α_h =>
+                lift.aux (σ.extendList τ) [k.arity] (args k)) := by
+      funext k
+      have hL := lift_aux_via_extendList σ (k.arity :: τ) (args k)
+      have hR := lift_aux_via_extendList (σ.extendList τ) [k.arity] (args k)
+      rw [hL, hR]
+      rfl
+    cases classify τ p with
+    | ext i =>
+      rename_i ta b tb
+      rw [lift_aux_ext_eq]
+      refine Eq.trans ?_ (lift_aux_nil_apply (σ.extendList (ta ++ b :: tb))
+        (tauSlot Γ ta b tb i) args).symm
+      rw [subst_extendList_tauSlot]
+      simp only [Shape.extList_nil]
+      rw [inst_aux_η]
+      simp only [Renaming.id_apply]
+      rw [← hΛ]
+    | base q =>
+      rw [lift_aux_base_eq, inst_aux_factor_ren α_h (Δ ↪ʳ τ)]
+      simp only [Renaming.extendList_nil]
+      refine Eq.trans ?_ (lift_aux_nil_apply (σ.extendList τ)
+        ((Γ ↪ʳ τ) q) args).symm
+      rw [subst_extendList_weakenList, ← hΛ]
+      rfl
+termination_by _ _ _ τ e => (⟨_ ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
+decreasing_by all_goals exact Expr.Subterm.of_arg _ _ _
+
 /-! ## Commutation of `lift` past `inst` -/
 
 /-- **L5**: lift past inst commutation, generalized to arbitrary inst-walker stack ρ. -/
