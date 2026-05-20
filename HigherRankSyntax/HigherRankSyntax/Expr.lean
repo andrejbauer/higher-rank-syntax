@@ -4,17 +4,11 @@ import HigherRankSyntax.Renaming
 /-!
 # Expressions of a higher-rank binding signature
 
-`Expr Γ` is the type of expressions in shape `Γ` over a carrier `C`.  The primary
-constructor `apply'` takes a head slot `p`, an arity `α`, a propositional witness
-`hα : p.arity = α`, and a dependent family of children indexed by `C.Binder α`, each
-child living in `Γ` extended by the binder's sub-arity.  The smart constructor `apply`
-specialises to `α := p.arity` with a reflexive proof.
+`Expr Γ` is the type of expressions in shape `Γ` over a carrier `C`.  The constructor
+`apply` takes an arity-typed head slot `p : Γ ∋ α` and a dependent family of children
+indexed by `C.Binder α`, each child living in `Γ` extended by the binder's sub-arity.
 
-Carrying `α` propositionally at the constructor lets a renaming preserve the children's
-index — the renamed head `ρ p` shares the same `α` via `(ρ.arity p).trans hα`, so no
-`Eq.rec`-transport is needed in `Renaming.actExpr` or the functoriality proofs.
-
-`Expr` is the W-type of `Shape ◅ Slot` decorated by `Slot.arity`, with the recursive
+`Expr` is the W-type of `Shape ◅ Slot` decorated by the arity index, with the recursive
 child's shape index shifted by the action `⋈` — the free relative monad of the decorated
 container.
 -/
@@ -22,21 +16,10 @@ container.
 
 /-- Expressions in shape `Γ` over a carrier `C`. -/
 inductive Expr {C : Carrier} : Shape C → Type where
-  /-- An application of a head slot `p` of `Γ` (with propositional arity `α`) to a
-      dependent family of children, one per binder of `α`. -/
-  | apply' : {Γ : Shape C} → (p : Slot Γ) → (α : C.Arity) → (hα : p.arity = α) →
-             (args : (i : C.Binder α) → Expr (Γ ⋈ i.arity)) →
-             Expr Γ
-
-abbrev Expr.head {C : Carrier} {Γ : Shape C}: Expr Γ → Slot Γ
-| .apply' p _ _ _ => p
-
-/-- Smart constructor: when the head's arity is intended to be its own `Slot.arity`, no
-propositional proof is needed. -/
-@[reducible]
-def Expr.apply {C : Carrier} {Γ : Shape C} (p : Slot Γ)
-    (args : (i : C.Binder p.arity) → Expr (Γ ⋈ i.arity)) : Expr Γ :=
-  Expr.apply' p p.arity rfl args
+  /-- An application of a head slot `p : Γ ∋ α` to a dependent family of children, one
+      per binder of `α`. -/
+  | apply : {Γ : Shape C} → {α : C.Arity} → (p : Γ ∋ α) →
+            (args : (i : C.Binder α) → Expr (Γ ⋈ i.arity)) → Expr Γ
 
 /-! ## Structural subterm relation
 
@@ -44,20 +27,19 @@ A heterogeneous "one-step child" relation on expressions, packaged as a relation
 `Σ Γ, Expr Γ` so the two sides — which live at different shape indices — share a
 homogeneous type. -/
 
-/-- `Expr.Subterm e' e` holds when `e` is some `apply' p α hα args` and `e'` is one of its
-arguments `args j`.  The shape indices come along inside the `Σ`. -/
+/-- `Expr.Subterm e' e` holds when `e = apply p args` and `e'` is one of its arguments
+`args j`. -/
 inductive Expr.Subterm {C : Carrier} :
     (Σ Γ : Shape C, Expr Γ) → (Σ Γ : Shape C, Expr Γ) → Prop where
-  | of_arg {Γ : Shape C} (p : Slot Γ) (α : C.Arity) (hα : p.arity = α)
+  | of_arg {Γ : Shape C} {α : C.Arity} (p : Γ ∋ α)
       (args : (i : C.Binder α) → Expr (Γ ⋈ i.arity))
       (j : C.Binder α) :
-      Expr.Subterm ⟨Γ ⋈ j.arity, args j⟩ ⟨Γ, Expr.apply' p α hα args⟩
+      Expr.Subterm ⟨Γ ⋈ j.arity, args j⟩ ⟨Γ, Expr.apply p args⟩
 
-/-- The subterm relation is well-founded by structural induction on the second component. -/
 theorem Expr.Subterm.wf {C : Carrier} : WellFounded (@Expr.Subterm C) := by
   refine ⟨fun ⟨Γ, e⟩ => ?_⟩
   induction e with
-  | apply' p α hα args ih =>
+  | apply p args ih =>
     refine Acc.intro _ ?_
     rintro ⟨_, _⟩ h
     cases h
@@ -70,52 +52,44 @@ instance Expr.Subterm.wellFoundedRelation {C : Carrier} :
 
 /-! ## J, T, η -/
 
-/-- The variables of arity `α` at `Γ`: slots of `Γ` whose arity equals `α`. -/
-def Expr.J {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type :=
-  { p : Slot Γ // p.arity = α }
+/-- The variables of arity `α` at `Γ`: alias for `SlotAt Γ α`. -/
+abbrev Expr.J {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type := Γ ∋ α
 
 /-- The relative monad's target: expressions with free shape `Γ` under one outer α-binder. -/
 abbrev Expr.T {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type := Expr (Γ ⋈ α)
 
-/-- η-expansion: a variable `⟨p, hp⟩` of arity `α` at `Γ` becomes the fully-applied tree
-`apply' (.there p) α hp (fun i => η (.here i))`, where each binder `i` of `α` recursively
-η-expands the bound variable.  Termination descends along the sub-arity relation: each
-recursive call uses `i.arity`, strictly smaller than `α` via `subWf`. -/
-def Expr.η {C : Carrier} : {Γ : Shape C} → {α : C.Arity} → J Γ α → T Γ α
-  | Γ, α, ⟨p, hp⟩ => apply' (.there p) α hp (fun i => η (Γ := Γ ⋈ α) (α := i.arity) ⟨.here i, rfl⟩)
+/-- η-expansion: a variable `p : Γ ∋ α` becomes the fully-applied tree
+`apply (.there p) (fun i => η (.here i))`, where each binder `i` of `α` recursively
+η-expands the bound variable.  Termination descends along the sub-arity relation. -/
+def Expr.η {C : Carrier} : {Γ : Shape C} → {α : C.Arity} → (Γ ∋ α) → T Γ α
+  | _, α, p => Expr.apply (.there p) (fun i => η (α := i.arity) (.here i))
 termination_by Γ α _ => α
 decreasing_by exact ⟨_, rfl⟩
 
 /-! ## Renaming action -/
 
-/-- Action of a renaming on an expression.  The head slot is sent through the renaming;
-the head's arity `α` is unchanged, with the new proof `(ρ.arity p).trans hα`.  Into each
-child of binder `i` we recurse with the renaming extended through the new binder of arity
-`i.arity`. -/
+/-- Action of a renaming on an expression. -/
 def Renaming.actExpr {C : Carrier} : {Γ Δ : Shape C} → (Γ →ʳ Δ) → Expr Γ → Expr Δ
-  | _, _, ρ, .apply' p α hα args =>
-    Expr.apply' (ρ p) α ((ρ.arity p).trans hα) (fun i =>
-      Renaming.actExpr (ρ ⇑ʳ i.arity) (args i))
+  | _, _, ρ, .apply p args =>
+    Expr.apply (ρ p) (fun i => Renaming.actExpr (ρ ⇑ʳ i.arity) (args i))
 
 /-- Action of a renaming on an expression: `⟦ ρ ⟧ʳ e`. -/
 notation:60 "⟦" ρ "⟧ʳ " e:61 => Renaming.actExpr ρ e
 
-/-- Defining equation of `actExpr` on `apply'`. -/
+/-- Defining equation of `actExpr` on `apply`. -/
 @[simp]
-theorem Renaming.actExpr_apply' {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
-    (p : Slot Γ) (α : C.Arity) (h : p.arity = α)
+theorem Renaming.actExpr_apply {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
+    {α : C.Arity} (p : Γ ∋ α)
     (args : (i : C.Binder α) → Expr (Γ ⋈ i.arity)) :
-    ⟦ ρ ⟧ʳ (Expr.apply' p α h args)
-      = Expr.apply' (ρ p) α ((ρ.arity p).trans h)
-          (fun i => ⟦ ρ ⇑ʳ i.arity ⟧ʳ (args i)) := rfl
+    ⟦ ρ ⟧ʳ (Expr.apply p args)
+      = Expr.apply (ρ p) (fun i => ⟦ ρ ⇑ʳ i.arity ⟧ʳ (args i)) := rfl
 
 @[simp]
 theorem Renaming.actExpr.map_id {C : Carrier} : ∀ {Γ : Shape C} (e : Expr Γ),
     ⟦ 𝟙ʳ ⟧ʳ e = e
-  | _, .apply' p α hα args => by
-    show Expr.apply' p α (((𝟙ʳ : _ →ʳ _).arity p).trans hα)
-           (fun i => ⟦ (𝟙ʳ : _ →ʳ _) ⇑ʳ i.arity ⟧ʳ args i)
-      = Expr.apply' p α hα args
+  | _, .apply p args => by
+    show Expr.apply p (fun i => ⟦ (𝟙ʳ : _ →ʳ _) ⇑ʳ i.arity ⟧ʳ args i)
+      = Expr.apply p args
     congr 1
     funext i
     rw [Renaming.extend_id]
@@ -124,26 +98,19 @@ theorem Renaming.actExpr.map_id {C : Carrier} : ∀ {Γ : Shape C} (e : Expr Γ)
 @[simp]
 theorem Renaming.actExpr.map_comp {C : Carrier} : ∀ {Γ Δ Ε : Shape C}
     (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ε) (e : Expr Γ), ⟦ σ ∘ʳ ρ ⟧ʳ e = ⟦ σ ⟧ʳ (⟦ ρ ⟧ʳ e)
-  | _, _, _, ρ, σ, .apply' p α hα args => by
-    show Expr.apply' (σ (ρ p)) α (((σ ∘ʳ ρ).arity p).trans hα)
-           (fun i => ⟦ (σ ∘ʳ ρ) ⇑ʳ i.arity ⟧ʳ args i)
-      = Expr.apply' (σ (ρ p)) α ((σ.arity (ρ p)).trans ((ρ.arity p).trans hα))
-           (fun i => ⟦ σ ⇑ʳ i.arity ⟧ʳ (⟦ ρ ⇑ʳ i.arity ⟧ʳ args i))
+  | _, _, _, ρ, σ, .apply p args => by
+    show Expr.apply (σ (ρ p)) (fun i => ⟦ (σ ∘ʳ ρ) ⇑ʳ i.arity ⟧ʳ args i)
+      = Expr.apply (σ (ρ p)) (fun i => ⟦ σ ⇑ʳ i.arity ⟧ʳ (⟦ ρ ⇑ʳ i.arity ⟧ʳ args i))
     congr 1
     funext i
     rw [Renaming.extend_comp]
     exact Renaming.actExpr.map_comp _ _ (args i)
 
-/-! ## J and T as functors
+/-! ## J and T as functors -/
 
-`J` and `T` are functors `C.Shape ⥤ (C.Arity → Type)`.  The shape argument is functorial
-along renamings; the arity argument is discrete. -/
-
-/-- Action of a renaming on `J`: send `⟨p, hp⟩` of arity `α` in `Γ` to `⟨ρ p, _⟩` of arity
-`α` in `Δ`. -/
+/-- Action of a renaming on `J`. -/
 def Expr.J.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) {α : C.Arity}
-    (v : J Γ α) : J Δ α :=
-  ⟨ρ v.val, (ρ.arity v.val).trans v.property⟩
+    (v : J Γ α) : J Δ α := ρ v
 
 @[simp] theorem Expr.J.map_id {C : Carrier} {Γ : Shape C} {α : C.Arity}
     (v : J Γ α) : J.map 𝟙ʳ v = v := rfl
@@ -152,8 +119,7 @@ def Expr.J.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) {α : C.Arity}
     (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ε) {α : C.Arity} (v : J Γ α) :
     J.map (σ ∘ʳ ρ) v = J.map σ (J.map ρ v) := rfl
 
-/-- Action of a renaming on `T`: extend the renaming through the bound α-binder and apply
-the renaming action on expressions. -/
+/-- Action of a renaming on `T`. -/
 def Expr.T.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) (α : C.Arity)
     (e : T Γ α) : T Δ α := ⟦ ρ ⇑ʳ α ⟧ʳ e
 
@@ -173,12 +139,12 @@ def Expr.T.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) (α : C.Arity)
 /-- η is natural: `T.map ρ ∘ η = η ∘ J.map ρ`. -/
 @[simp] theorem Expr.T.map_η {C : Carrier} : ∀ {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) (α : C.Arity) (v : J Γ α),
   T.map ρ α (η v) = η (J.map ρ v)
-  | _, _, ρ, α, ⟨p, hp⟩ => by
+  | _, _, ρ, α, p => by
     unfold η T.map J.map
     rw [Renaming.actExpr]
     congr 1
     funext i
-    have ih := T.map_η (ρ ⇑ʳ α) i.arity ⟨.here i, rfl⟩
+    have ih := T.map_η (ρ ⇑ʳ α) i.arity (SlotAt.here i)
     unfold T.map J.map at ih
     exact ih
 termination_by _ _ _ α _ => α
@@ -187,7 +153,5 @@ decreasing_by exact ⟨_, rfl⟩
 /-- `actExpr`-form restatement of `T.map_η`: `⟦ ρ ⇑ʳ α ⟧ʳ` commutes with `η`. -/
 @[simp] theorem Renaming.actExpr_η {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
     (α : C.Arity) (v : Expr.J Γ α) :
-    ⟦ ρ ⇑ʳ α ⟧ʳ (Expr.η v) =
-      Expr.η ⟨ρ v.val, (ρ.arity v.val).trans v.property⟩ :=
+    ⟦ ρ ⇑ʳ α ⟧ʳ (Expr.η v) = Expr.η (ρ v) :=
   Expr.T.map_η ρ α v
-

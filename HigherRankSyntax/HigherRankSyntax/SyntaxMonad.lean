@@ -62,7 +62,7 @@ Kleisli extension, and the two unit laws are filled in; `comp_lift` remains. -/
 def SyntaxMonad {C : Carrier} : RelativeMonad (@J C) where
   map        := T.obj
   η          := fun _ _ v => Expr.η v
-  lift       := fun {_ _} f _ e => Subst.lift (fun s => f s.arity ⟨s, rfl⟩) e
+  lift       := fun {_ _} f _ e => Subst.lift (fun {α} s => f α s) e
   unit_right := by
     intro Γ
     funext α e
@@ -74,5 +74,5 @@ def SyntaxMonad {C : Carrier} : RelativeMonad (@J C) where
   comp_lift  := by
     intro X Y Z f g
     funext α e
-    exact comp_lift (fun s => f s.arity ⟨s, rfl⟩) (fun s => g s.arity ⟨s, rfl⟩) e
+    exact comp_lift (fun {α} s => f α s) (fun {α} s => g α s) e
 

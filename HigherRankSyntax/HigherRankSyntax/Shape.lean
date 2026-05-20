@@ -28,30 +28,24 @@ inductive Shape (C : Carrier) where
 /-- Action of an arity on a shape. -/
 infixl:65 " ⋈ " => Shape.ext
 
-/-- A slot of a shape: a variable of the base layer, a fresh binder of the topmost
-extension, or a slot inherited from the shape below. -/
-inductive Slot {C : Carrier} : Shape C → Type where
-  /-- A variable of the base shape. -/
-  | base  : {γ : C.BaseShape} → (x : C.Var γ) → Slot (.base γ)
-  /-- A binder introduced by the topmost extension. -/
-  | here  : {Γ : Shape C} → {α : C.Arity} → (i : C.Binder α) → Slot (Γ ⋈ α)
-  /-- A slot inherited from the shape below the topmost extension. -/
-  | there : {Γ : Shape C} → {α : C.Arity} → (p : Slot Γ) → Slot (Γ ⋈ α)
+/-- A slot of a shape with its arity tracked as a type index: a variable of the base
+layer (`.base x` at `x.arity`), a fresh binder of the topmost extension (`.here i` at
+`i.arity`), or a slot inherited from the shape below (`.there p` at the same arity as
+`p`). -/
+inductive SlotAt {C : Carrier} : Shape C → C.Arity → Type where
+  /-- A variable of the base shape at its variable's arity. -/
+  | base  : {γ : C.BaseShape} → (x : C.Var γ) → SlotAt (.base γ) x.arity
+  /-- A binder introduced by the topmost extension at its binder's arity. -/
+  | here  : {Γ : Shape C} → {α : C.Arity} → (i : C.Binder α) → SlotAt (Γ ⋈ α) i.arity
+  /-- A slot inherited from the shape below the topmost extension, at the same arity. -/
+  | there : {Γ : Shape C} → {β α : C.Arity} → SlotAt Γ α → SlotAt (Γ ⋈ β) α
 
-/-- The arity of a slot, by recursion on its constructors. -/
-def Slot.arity {C : Carrier} {Γ : Shape C} : Slot Γ → C.Arity
-  | .base x  => x.arity
-  | .here i  => i.arity
-  | .there p => p.arity
+/-- `Γ ∋ α` is the type of slots of `Γ` at arity `α`. -/
+notation:35 Γ " ∋ " α => SlotAt Γ α
 
-@[simp] theorem Slot.arity_base {C : Carrier} {γ : C.BaseShape} (x : C.Var γ) :
-    (Slot.base (C := C) x).arity = x.arity := rfl
-
-@[simp] theorem Slot.arity_here {C : Carrier} {Γ : Shape C} {α : C.Arity}
-    (i : C.Binder α) : (Slot.here (Γ := Γ) i).arity = i.arity := rfl
-
-@[simp] theorem Slot.arity_there {C : Carrier} {Γ : Shape C} {α : C.Arity}
-    (p : Slot Γ) : (Slot.there (α := α) p).arity = p.arity := rfl
+/-- Extract the arity index from a slot. -/
+@[reducible]
+def SlotAt.arity {C : Carrier} {Γ : Shape C} {α : C.Arity} (_ : Γ ∋ α) : C.Arity := α
 
 /-- Iterated extension of a shape by a list of arities, cons-as-snoc: the head of the list
 is the outermost extension.  `Γ ⋈* (β :: rest) := (Γ ⋈* rest) ⋈ β` and `Γ ⋈* [] := Γ`. -/
