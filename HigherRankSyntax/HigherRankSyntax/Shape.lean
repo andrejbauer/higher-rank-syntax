@@ -67,3 +67,12 @@ infixl:67 " ⋈* " => Shape.extList
 @[simp] theorem Shape.extList_cons {C : Carrier} (Γ : Shape C) (β : C.Arity)
     (rest : List C.Arity) : Γ ⋈* (β :: rest) = (Γ ⋈* rest) ⋈ β := rfl
 
+/-- Associativity of iterated extension w.r.t. list append: extending by `ys` then by
+`xs` equals extending by `xs ++ ys`.  Reduces to `rfl` when `xs = []`. -/
+theorem Shape.extList_append {C : Carrier} (Γ : Shape C) :
+    ∀ (xs ys : List C.Arity), (Γ ⋈* ys) ⋈* xs = Γ ⋈* (xs ++ ys)
+  | [],        _  => rfl
+  | x :: xs',  ys => by
+    show ((Γ ⋈* ys) ⋈* xs') ⋈ x = (Γ ⋈* (xs' ++ ys)) ⋈ x
+    rw [Shape.extList_append Γ xs' ys]
+

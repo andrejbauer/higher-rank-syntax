@@ -24,6 +24,39 @@ the `lift`–`inst` commutation lemma `lift_inst_commute`.
        = Slot.there (tauSlot Δ rest β τ_below i)
     rw [extendList_tauSlot ρ rest β τ_below i]
 
+/-! ## How `Subst.extendList` acts on classified slots -/
+
+/-- `σ.extendList τ` at a `tauSlot` η-expands to the corresponding `tauSlot` on the
+codomain side.  The J-witness on the RHS matches the slot's `.arity` (not `i.arity`)
+because `tauSlot_arity` is propositional, not definitional. -/
+private theorem subst_extendList_tauSlot {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ) :
+    ∀ (τ_above : List C.Arity) (β : C.Arity) (τ_below : List C.Arity)
+      (i : C.Binder β),
+      (σ.extendList (τ_above ++ β :: τ_below))
+          (tauSlot Γ τ_above β τ_below i)
+        = Expr.η ⟨tauSlot Δ τ_above β τ_below i,
+                  (tauSlot_arity Δ τ_above β τ_below i).trans
+                    (tauSlot_arity Γ τ_above β τ_below i).symm⟩
+  | [],        _, _,       _ => rfl
+  | a :: rest, β, τ_below, i => by
+    show ⟦ Renaming.weaken (Δ ⋈* (rest ++ β :: τ_below)) a
+            ⇑ʳ (tauSlot Γ rest β τ_below i).arity ⟧ʳ
+            ((σ.extendList (rest ++ β :: τ_below)) (tauSlot Γ rest β τ_below i))
+        = Expr.η ⟨tauSlot Δ (a :: rest) β τ_below i,
+                  (tauSlot_arity Δ (a :: rest) β τ_below i).trans
+                    (tauSlot_arity Γ (a :: rest) β τ_below i).symm⟩
+    rw [subst_extendList_tauSlot σ rest β τ_below i, Renaming.actExpr_η]
+    rfl
+
+/-- `σ.extendList τ` at a Γ-slot weakened through τ equals σ acting on the slot,
+then weakened through τ on the codomain side.  The slot's arity matches via the
+renaming's arity-preservation; the transport handles the propositional shift. -/
+private theorem subst_extendList_weakenList {C : Carrier} {Γ Δ : Shape C}
+    (σ : Subst Γ Δ) (τ : List C.Arity) (q : Slot Γ) :
+    (σ.extendList τ) ((Γ ↪ʳ τ) q)
+      = ((Γ ↪ʳ τ).arity q).symm ▸ (⟦ (Δ ↪ʳ τ) ⇑ʳ q.arity ⟧ʳ (σ q)) := by
+  sorry
+
 /-! ## InstWeaken: factoring a renaming out of `inst.aux` -/
 
 /-- `inst.aux` with a non-identity ρ equals first renaming via `ρ ⇑ʳ α` (extended through
@@ -331,16 +364,24 @@ theorem unit_right {C : Carrier} {Γ : Shape C}
 
 /-! ## Commutation of `lift` past `inst` -/
 
-/-- Walking `inst.aux α (weakenList Δ τ) ι [] e` with `lift.aux θ τ` equals
-instantiating with the `lift`ed instantiation data into the `lift`ed expression. -/
+/-- Walking `inst.aux α (weakenList Δ τ) ι ρ e` with `lift.aux θ (ρ ++ τ)` (after the
+shape-isomorphism transport) equals instantiating with the `lift`ed instantiation data
+into the `lift`ed expression.  At `ρ = []` the transports reduce to `rfl` and this
+specialises to the original L5 form. -/
 private theorem lift_inst_commute {C : Carrier} :
     ∀ {Δ Ε : Shape C} (θ : Subst Δ Ε) (α : C.Arity)
-      (τ : List C.Arity) (ι : Inst α (Δ ⋈* τ)) (e : Expr (Δ ⋈ α)),
-      lift.aux θ τ (inst.aux α (Δ ↪ʳ τ) ι [] e)
+      (τ ρ : List C.Arity) (ι : Inst α (Δ ⋈* τ))
+      (e : Expr ((Δ ⋈ α) ⋈* ρ)),
+      lift.aux θ (ρ ++ τ)
+        (Shape.extList_append Δ ρ τ ▸ inst.aux α (Δ ↪ʳ τ) ι ρ e)
         =
-      inst.aux α (Ε ↪ʳ τ)
-        (fun j => lift.aux θ (j.arity :: τ) (ι j))
-        [] (θ.lift e) := by
+      Shape.extList_append Ε ρ τ ▸
+        inst.aux α (Ε ↪ʳ τ)
+          (fun j => lift.aux θ (j.arity :: τ) (ι j))
+          ρ
+          ((Shape.extList_append Ε ρ [α]).symm ▸
+            lift.aux θ (ρ ++ [α])
+              (Shape.extList_append Δ ρ [α] ▸ e)) := by
   sorry
 
 /-! ## Composition law -/
@@ -366,7 +407,15 @@ private theorem comp_lift.aux {C : Carrier} {Γ Δ Ε : Shape C}
         ((Γ ↪ʳ τ).arity q).symm.trans h
       cases hs
       simp only [lift_aux_base_eq]
-      rw [lift_inst_commute]
+      have hL :
+          lift.aux θ τ (inst.aux q.arity (Δ ↪ʳ τ)
+            (fun j => lift.aux σ (j.arity :: τ) (args j)) [] (σ q))
+            = inst.aux q.arity (Ε ↪ʳ τ)
+              (fun j => lift.aux θ (j.arity :: τ) (lift.aux σ (j.arity :: τ) (args j)))
+              [] (θ.lift (σ q)) :=
+        lift_inst_commute θ q.arity τ []
+          (fun j => lift.aux σ (j.arity :: τ) (args j)) (σ q)
+      rw [hL]
       congr 1
       funext j
       exact ih_arg j

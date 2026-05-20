@@ -184,3 +184,10 @@ def Expr.T.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) (α : C.Arity)
 termination_by _ _ _ α _ => α
 decreasing_by exact ⟨_, rfl⟩
 
+/-- `actExpr`-form restatement of `T.map_η`: `⟦ ρ ⇑ʳ α ⟧ʳ` commutes with `η`. -/
+@[simp] theorem Renaming.actExpr_η {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
+    (α : C.Arity) (v : Expr.J Γ α) :
+    ⟦ ρ ⇑ʳ α ⟧ʳ (Expr.η v) =
+      Expr.η ⟨ρ v.val, (ρ.arity v.val).trans v.property⟩ :=
+  Expr.T.map_η ρ α v
+
