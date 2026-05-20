@@ -58,6 +58,37 @@ private theorem subst_extendList_weakenList {C : Carrier} {Γ Δ : Shape C}
     rw [subst_extendList_weakenList σ rest q,
         ← Renaming.actExpr.map_comp, Renaming.extend_comp]
 
+/-! ## F2 — substitution after renaming -/
+
+/-- **RenSub fusion** (Allais et al. F2): walking `lift.aux σ τ` after a renaming
+`⟦ ρ.extendList τ ⟧ʳ` equals walking `lift.aux (ρ ʳ∘ˢ σ) τ` directly.  The renaming
+is absorbed into the substitution by pre-composition. -/
+private theorem subst_after_ren {C : Carrier} :
+    ∀ {Γ Γ' Δ : Shape C} (ρ : Γ →ʳ Γ') (σ : Subst Γ' Δ)
+      (τ : List C.Arity) (e : Expr (Γ ⋈* τ)),
+      lift.aux σ τ (⟦ ρ.extendList τ ⟧ʳ e)
+        = lift.aux (ρ ʳ∘ˢ σ) τ e
+  | Γ, Γ', Δ, ρ, σ, τ, .apply (α := α_h) p args => by
+    have ih_arg : ∀ (k : C.Binder α_h),
+        lift.aux σ (k.arity :: τ)
+            (⟦ ρ.extendList (k.arity :: τ) ⟧ʳ (args k))
+          = lift.aux (ρ ʳ∘ˢ σ) (k.arity :: τ) (args k) :=
+      fun k => subst_after_ren ρ σ (k.arity :: τ) (args k)
+    cases classify τ p with
+    | ext i =>
+      simp only [Renaming.actExpr_apply, extendList_tauSlot, lift_aux_ext_eq]
+      congr 1
+      funext k
+      exact ih_arg k
+    | base q =>
+      simp only [Renaming.actExpr_apply, Renaming.extendList_weakenList,
+                 lift_aux_base_eq]
+      congr 1
+      funext k
+      exact ih_arg k
+termination_by _ _ _ _ _ τ e => (⟨_ ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
+decreasing_by exact Expr.Subterm.of_arg _ _ _
+
 /-! ## InstWeaken: factoring a renaming out of `inst.aux` -/
 
 /-- `inst.aux` with a non-identity ρ equals first renaming via `ρ ⇑ʳ α` (extended through
