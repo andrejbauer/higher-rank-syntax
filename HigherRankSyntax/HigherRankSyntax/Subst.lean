@@ -1,4 +1,4 @@
-import HigherRankSyntax.Action.Expr
+import HigherRankSyntax.Expr
 
 /-!
 # Substitution, instantiation, and the Kleisli extension
@@ -20,7 +20,6 @@ slot-correspondence witness lives in the inductive's index, so pattern matching 
 maps Δ-slots through `ρ` during traversal.
 -/
 
-namespace Action
 
 /-! ## Substitutions and instantiations -/
 
@@ -310,7 +309,7 @@ def Renaming.preSubst {C : Carrier} {Γ Γ' Δ : Shape C}
   fun p => (ρ.arity p) ▸ σ (ρ p)
 
 @[inherit_doc Renaming.preSubst]
-scoped infixl:90 " ʳ∘ˢ " => Renaming.preSubst
+infixl:90 " ʳ∘ˢ " => Renaming.preSubst
 
 /-- Post-compose a substitution by a renaming: apply `σ`, then rename the result. -/
 def Subst.postRen {C : Carrier} {Γ Δ Δ' : Shape C}
@@ -318,7 +317,7 @@ def Subst.postRen {C : Carrier} {Γ Δ Δ' : Shape C}
   fun p => ⟦ ρ ⇑ʳ p.arity ⟧ʳ (σ p)
 
 @[inherit_doc Subst.postRen]
-scoped infixl:90 " ˢ∘ʳ " => Subst.postRen
+infixl:90 " ˢ∘ʳ " => Subst.postRen
 
 /-- Kleisli composition of substitutions: `(σ ˢ∘ˢ θ) p = θ.lift (σ p)`. -/
 def Subst.comp {C : Carrier} {Γ Δ Ε : Shape C}
@@ -326,7 +325,7 @@ def Subst.comp {C : Carrier} {Γ Δ Ε : Shape C}
   fun p => θ.lift (σ p)
 
 @[inherit_doc Subst.comp]
-scoped infixl:90 " ˢ∘ˢ " => Subst.comp
+infixl:90 " ˢ∘ˢ " => Subst.comp
 
 /-- Extend a substitution through a fresh α-binder: η at the new binder, σ then weaken
 on the underlying slots. -/
@@ -346,4 +345,3 @@ def Inst.map {C : Carrier} {α : C.Arity} {Δ Ε : Shape C}
     (ι : Inst α Δ) (σ : Subst Δ Ε) : Inst α Ε :=
   fun j => σ.lift (ι j)
 
-end Action

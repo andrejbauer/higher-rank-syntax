@@ -1,2 +1,1 @@
-import HigherRankSyntax.Syntax
-import HigherRankSyntax.Renaming
+import HigherRankSyntax.SyntaxMonad

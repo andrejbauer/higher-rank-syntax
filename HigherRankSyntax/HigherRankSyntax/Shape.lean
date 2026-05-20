@@ -1,4 +1,4 @@
-import HigherRankSyntax.Action.Carrier
+import HigherRankSyntax.Carrier
 
 /-!
 # Shapes and slots
@@ -17,7 +17,6 @@ The framework-level data on top of a `Carrier`.
   slot inherits from the shape below.  The equations hold by `rfl`.
 -/
 
-namespace Action
 
 /-- A shape over a carrier `C`: either a base shape, or a one-step extension `Γ ⋈ α`. -/
 inductive Shape (C : Carrier) where
@@ -27,7 +26,7 @@ inductive Shape (C : Carrier) where
   | ext  : (Γ : Shape C) → (α : C.Arity) → Shape C
 
 /-- Action of an arity on a shape. -/
-scoped infixl:65 " ⋈ " => Shape.ext
+infixl:65 " ⋈ " => Shape.ext
 
 /-- A slot of a shape: a variable of the base layer, a fresh binder of the topmost
 extension, or a slot inherited from the shape below. -/
@@ -61,11 +60,10 @@ def Shape.extList {C : Carrier} (Γ : Shape C) : List C.Arity → Shape C
   | β :: rest => (Shape.extList Γ rest) ⋈ β
 
 /-- Iterated extension of a shape by a list of arities. -/
-scoped infixl:67 " ⋈* " => Shape.extList
+infixl:67 " ⋈* " => Shape.extList
 
 @[simp] theorem Shape.extList_nil {C : Carrier} (Γ : Shape C) : Γ ⋈* [] = Γ := rfl
 
 @[simp] theorem Shape.extList_cons {C : Carrier} (Γ : Shape C) (β : C.Arity)
     (rest : List C.Arity) : Γ ⋈* (β :: rest) = (Γ ⋈* rest) ⋈ β := rfl
 
-end Action

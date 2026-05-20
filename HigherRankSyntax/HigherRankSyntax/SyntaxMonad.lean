@@ -1,8 +1,8 @@
 import Mathlib.CategoryTheory.Category.Basic
 import Mathlib.CategoryTheory.Functor.Basic
-import HigherRankSyntax.Action.Expr
-import HigherRankSyntax.Action.Subst
-import HigherRankSyntax.Action.Equations
+import HigherRankSyntax.Expr
+import HigherRankSyntax.Subst
+import HigherRankSyntax.Equations
 import HigherRankSyntax.RelativeMonad.Basic
 
 /-!
@@ -20,7 +20,6 @@ The relative-monad structure (unit `η`, Kleisli extension, and laws) sits on to
 scaffolding.  The two unit laws are proved; the Kleisli composition law remains.
 -/
 
-namespace Action
 
 open CategoryTheory
 
@@ -77,4 +76,3 @@ def SyntaxMonad {C : Carrier} : RelativeMonad (@J C) where
     funext α e
     exact comp_lift (fun s => f s.arity ⟨s, rfl⟩) (fun s => g s.arity ⟨s, rfl⟩) e
 
-end Action

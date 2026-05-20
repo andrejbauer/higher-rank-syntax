@@ -1,194 +1,168 @@
-import HigherRankSyntax.Syntax
-import Mathlib.CategoryTheory.Category.Basic
+import HigherRankSyntax.Shape
 
-def Renaming (γ δ : Shape) := ∀ {{α}}, var_in α γ → var_in α δ
-infix:25 " →ʳ " => Renaming
+/-!
+# Renamings of shapes
 
-namespace Renaming
+A *renaming* `Γ →ʳ Δ` is an arity-respecting slot map: a function `Slot Γ → Slot Δ` that
+sends each slot to a slot of the same arity.  Renamings are the morphisms of the Shape
+category in the relative-monad picture.
 
-@[reducible]
-def id {γ} : γ →ʳ γ := fun {{_}} x => x
+Arities form a discrete category, so no separate notion of renaming on arities is needed.
 
-notation "𝟙ʳ" => Renaming.id
+## Notations
 
-def comp {γ δ η} (f : γ →ʳ δ) (g : δ →ʳ η) : γ →ʳ η :=
-  fun {{_}} x => g (f x)
+  - `Γ →ʳ Δ` is the type of renamings from `Γ` to `Δ`.
+  - `𝟙ʳ` is the identity renaming.
+  - `g ∘ʳ f` is the composition; the textual order reverses `Renaming.comp` so it reads
+    "g after f", matching the mathematical `g ∘ f`.
 
-notation:90 g:90 " ∘ʳ " f:90 => Renaming.comp f g
+The `ʳ` suffix is consistently on the right.
+-/
 
-@[reducible]
-def sum {γ δ θ} (f : γ →ʳ θ) (g : δ →ʳ θ) : γ ⊕ δ →ʳ θ
-| _, .varLeft x => f x
-| _, .varRight x => g x
 
-infix:30 " ⊕ʳ " => Renaming.sum
+/-- A renaming of shapes from `Γ` to `Δ`: an arity-respecting slot map. -/
+structure Renaming {C : Carrier} (Γ Δ : Shape C) : Type where
+  /-- The underlying slot map. -/
+  toFun : Slot Γ → Slot Δ
+  /-- Each slot's image has the same arity as the slot itself. -/
+  arity : ∀ (p : Slot Γ), (toFun p).arity = p.arity
 
-@[reducible]
-def assocLeft {γ δ θ} : γ ⊕ (δ ⊕ θ) →ʳ (γ ⊕ δ) ⊕ θ :=
-  (.varLeft ∘ʳ .varLeft) ⊕ʳ ((.varLeft ∘ʳ .varRight) ⊕ʳ .varRight)
+/-- Notation `Γ →ʳ Δ` for renamings from `Γ` to `Δ`. -/
+infixr:25 " →ʳ " => Renaming
 
-@[reducible]
-def assocRight {γ δ θ} : (γ ⊕ δ) ⊕ θ →ʳ γ ⊕ (δ ⊕ θ) :=
-  (.varLeft ⊕ʳ (.varRight ∘ʳ .varLeft)) ⊕ʳ (.varRight ∘ʳ .varRight)
+instance {C : Carrier} {Γ Δ : Shape C} :
+    CoeFun (Γ →ʳ Δ) (fun _ => Slot Γ → Slot Δ) :=
+  ⟨Renaming.toFun⟩
 
-@[reducible]
-def insertZeroRight {γ} : γ →ʳ γ ⊕ 𝟘 := .varLeft
+/-- The identity renaming on `Γ`. -/
+def Renaming.id {C : Carrier} (Γ : Shape C) : Γ →ʳ Γ where
+  toFun p := p
+  arity _ := rfl
 
-@[reducible]
-def cancelZeroRight {γ} : γ ⊕ 𝟘 →ʳ γ
-| _, .varLeft x => x
+/-- The identity renaming on a shape. -/
+notation "𝟙ʳ" => Renaming.id _
 
-@[reducible]
-def insertZeroLeft {γ} : γ →ʳ 𝟘 ⊕ γ := .varRight
+/-- Composition of renamings: `comp f g` sends a slot through `f`, then through `g`. -/
+def Renaming.comp {C : Carrier} {Γ Δ Ε : Shape C} (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) : Γ →ʳ Ε where
+  toFun p := g (f p)
+  arity p := (g.arity (f p)).trans (f.arity p)
 
-@[reducible]
-def cancelZeroLeft {γ} : 𝟘 ⊕ γ →ʳ γ
-| _, .varRight x => x
+/-- `g ∘ʳ f` is the composition "g after f" (= `Renaming.comp f g`). -/
+notation:90 g:90 " ∘ʳ " f:91 => Renaming.comp f g
 
-def extendRight {γ δ} (f : γ →ʳ δ) (η) : γ ⊕ η →ʳ δ ⊕ η
-| _, .varLeft x => .varLeft (f x)
-| _, .varRight y => .varRight y
+/-- Two renamings are equal when their underlying slot maps agree pointwise.  Their
+arity-preservation proofs are propositions and agree by proof irrelevance. -/
+@[ext]
+theorem Renaming.ext {C : Carrier} {Γ Δ : Shape C} {f g : Γ →ʳ Δ}
+    (h : ∀ (p : Slot Γ), f p = g p) : f = g := by
+  cases f
+  cases g
+  congr
+  funext p
+  exact h p
 
-infixl:95 " ʳ⇑ " => Renaming.extendRight
+/-! ## Category laws -/
 
-def extendLeft {γ δ} (η) (f : γ →ʳ δ) : η ⊕ γ →ʳ η ⊕ δ
-| _, .varLeft x => .varLeft x
-| _, .varRight y => .varRight (f y)
+theorem Renaming.id_comp {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) : f ∘ʳ 𝟙ʳ = f := by
+  ext; rfl
 
-infixl:95 " ⇑ʳ " => Renaming.extendLeft
+theorem Renaming.comp_id {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) : 𝟙ʳ ∘ʳ f = f := by
+  ext; rfl
 
-def extend_id {γ η} : 𝟙ʳ ʳ⇑ η = @id (γ ⊕ η) := by
-  funext α x
-  rcases x with ⟨x, y⟩ <;> rfl
+theorem Renaming.comp_assoc {C : Carrier} {Γ Δ Ε Ζ : Shape C}
+    (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) (h : Ε →ʳ Ζ) : h ∘ʳ (g ∘ʳ f) = (h ∘ʳ g) ∘ʳ f := by
+  ext; rfl
 
-def extendRight_comp {γ δ η θ} {g : δ →ʳ η} {f : γ →ʳ δ}:
-  (g ∘ʳ f) ʳ⇑ θ = (g ʳ⇑ θ) ∘ʳ (f ʳ⇑ θ) := by
-  funext _ x
-  cases x <;> rfl
+/-! ## Weakening and extension -/
 
-def extendLeft_comp {γ δ₁ δ₂ δ₃} {g : δ₂ →ʳ δ₃} {f : δ₁ →ʳ δ₂}:
-  γ ⇑ʳ (g ∘ʳ f) = (γ ⇑ʳ g) ∘ʳ (γ ⇑ʳ f) := by
-  funext _ x
-  cases x <;> rfl
+/-- The canonical weakening renaming `Γ →ʳ Γ ⋈ α`: every slot of `Γ` is sent to its image
+under `.there`. -/
+def Renaming.weaken {C : Carrier} (Γ : Shape C) (α : C.Arity) : Γ →ʳ Γ ⋈ α where
+  toFun p := .there p
+  arity _ := rfl
 
-def actFree {γ γ' δ} (f : γ →ʳ γ') : Expr γ δ → Expr γ' δ
-  | x ◃ ts => f x ◃ (fun ⦃_⦄ y => actFree (f ʳ⇑ _) (ts y))
-  | x ◂ ts => x ◂ (fun ⦃_⦄ y => actFree (f ʳ⇑ _) (ts y))
+/-- Extend a renaming through a fresh binder of arity `β`.  `f.extend β : Γ ⋈ β →ʳ Δ ⋈ β`
+acts as the identity on the `.here` binders and as `f` on the `.there` slots. -/
+def Renaming.extend {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) (β : C.Arity) :
+    Γ ⋈ β →ʳ Δ ⋈ β where
+  toFun := fun
+    | .here i  => .here i
+    | .there p => .there (f p)
+  arity := fun
+    | .here _  => rfl
+    | .there p => f.arity p
 
-def actBound {γ δ δ'} (f : δ →ʳ δ') : Expr γ δ → Expr γ δ'
-  | x ◃ ts => x ◃ (fun ⦃_⦄ y => actFree (_ ⇑ʳ f) (ts y))
-  | x ◂ ts => f x ◂ (fun ⦃_⦄ y => actFree (_ ⇑ʳ f) (ts y))
+/-- `f ⇑ʳ β` is `f` extended through a fresh binder of arity `β`. -/
+infixl:95 " ⇑ʳ " => Renaming.extend
 
-notation:60 " ⟦" f "⟧ʳ " e:61 => Renaming.actFree f e
+@[simp] theorem Renaming.extend_here {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ)
+    {β : C.Arity} (i : C.Binder β) :
+    (f ⇑ʳ β).toFun (.here i) = .here i := rfl
 
-theorem extend_comp {γ γ' δ δ'} (f : γ →ʳ γ') (g : δ →ʳ δ') :
-  (γ' ⇑ʳ g) ∘ʳ (f ʳ⇑ δ)  = (f ʳ⇑ δ') ∘ʳ (γ ⇑ʳ g) := by
-  funext α x
-  cases x <;> simp [comp, extendLeft, extendRight]
+@[simp] theorem Renaming.extend_there {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ)
+    {β : C.Arity} (p : Slot Γ) :
+    (f ⇑ʳ β).toFun (.there p) = .there (f p) := rfl
 
-/-- `actFree` distributes over composition -/
-theorem actFree.map_comp {γ δ} {e : Expr γ δ} :
-  ∀ {δ η} {f : γ →ʳ δ} {g : δ →ʳ η}, ⟦ g ∘ʳ f ⟧ʳ e = ⟦ g ⟧ʳ (⟦ f ⟧ʳ e) := by
-  induction e
-  case applyFree ih =>
-    intros _ _ f g
-    simp [actFree, comp, extendRight_comp]
-    funext
-    apply ih
-  case applyBound ih =>
-    intros _ _ f g
-    simp [actFree, comp, extendRight_comp]
-    funext
-    apply ih
+@[simp] theorem Renaming.weaken_apply {C : Carrier} (Γ : Shape C) (β : C.Arity)
+    (p : Slot Γ) : (Renaming.weaken Γ β).toFun p = .there p := rfl
 
-theorem comp_assoc {γ δ η θ} {f : γ →ʳ δ} {g : δ →ʳ η} {h : η →ʳ θ} :
-  (h ∘ʳ g) ∘ʳ f = h ∘ʳ (g ∘ʳ f) := by rfl
+@[simp] theorem Renaming.id_apply {C : Carrier} {Γ : Shape C} (p : Slot Γ) :
+    (𝟙ʳ : Γ →ʳ Γ).toFun p = p := rfl
 
-theorem eq_size {γ γ' δ} (f : γ →ʳ γ') (e : Expr γ δ) : (⟦ f ⟧ʳ e).sizeOf = e.sizeOf := by
-  induction e
-  case applyFree ih =>
-    sorry
-  case applyBound ih =>
-    sorry
+@[simp]
+theorem Renaming.extend_id {C : Carrier} (Γ : Shape C) (β : C.Arity) :
+    (𝟙ʳ : Γ →ʳ Γ) ⇑ʳ β = 𝟙ʳ := by
+  ext p
+  cases p with
+  | here _  => rfl
+  | there _ => rfl
 
-/-- Extending the identity renaming on the left gives the identity renaming. -/
-theorem extendLeft.id {γ δ} : γ ⇑ʳ @id δ = 𝟙ʳ := by
-  funext α x
-  cases x <;> simp [extendLeft]
+@[simp]
+theorem Renaming.extend_comp {C : Carrier} {Γ Δ Ε : Shape C}
+    (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) (β : C.Arity) : (g ∘ʳ f) ⇑ʳ β = (g ⇑ʳ β) ∘ʳ (f ⇑ʳ β) := by
+  ext p
+  cases p with
+  | here _  => rfl
+  | there _ => rfl
 
-/-- Extending the identity renaming on the right gives the identity renaming. -/
-theorem extendRight.id {γ δ} : @id γ ʳ⇑ δ = 𝟙ʳ := by
-  funext α x
-  cases x <;> simp [extendRight]
+/-- Iterated weakening: the canonical inclusion `Γ →ʳ Γ ⋈* τ`, built by recursion on `τ`.
+Empty `τ` gives the identity; cons extends the previous weakening through one more binder. -/
+def Renaming.weakenList {C : Carrier} (Γ : Shape C) :
+    (τ : List C.Arity) → Γ →ʳ Γ ⋈* τ
+  | []        => 𝟙ʳ
+  | β :: rest => Renaming.weaken (Γ ⋈* rest) β ∘ʳ Renaming.weakenList Γ rest
 
-/-- `actFree` acts trivially with the identity morphism -/
-theorem actFree.map_id {γ δ} (e : Expr γ δ) : 𝟙ʳ.actFree e = e := by
-  induction e
-  case applyFree γ δ α x ts ih =>
-    simp [actFree]
-    funext α x
-    rw [extendRight.id]
-    apply ih
-  case applyBound γ δ α x ts ih =>
-    simp [actFree]
-    funext α x
-    rw [extendRight.id]
-    apply ih
+@[inherit_doc Renaming.weakenList]
+notation:65 Γ " ↪ʳ " τ => Renaming.weakenList Γ τ
 
-/-- `actBound` acts trivially with the identity morphism -/
-theorem actBound.map_id {γ δ} (e : Expr γ δ) : 𝟙ʳ.actBound e = e := by
-  cases e
-  case applyFree α x ts =>
-    simp [actBound]
-    funext
-    rw [extendLeft.id]
-    apply actFree.map_id
-  case applyBound α x ts =>
-    simp [actBound]
-    funext
-    rw [extendLeft.id]
-    apply actFree.map_id
+/-- Iterated extension of a renaming through a list of binders. -/
+def Renaming.extendList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
+    (τ : List C.Arity) → Γ ⋈* τ →ʳ Δ ⋈* τ
+  | []        => ρ
+  | β :: rest => ρ.extendList rest ⇑ʳ β
 
-/-- `actBound` distributes over composition -/
-theorem actBound.map_comp {γ δ₁} {e : Expr γ δ₁} :
-  ∀ {δ₂ δ₃} {f : δ₁ →ʳ δ₂} {g : δ₂ →ʳ δ₃}, (g ∘ʳ f).actBound e = g.actBound (f.actBound e) := by
-    cases e
-    case applyFree α x ts =>
-      intros δ₂ δ₃ f g
-      simp [actBound]
-      funext θ y
-      rw [extendLeft_comp]
-      apply actFree.map_comp
-    case applyBound α x ts =>
-      intros δ₂ δ₃ f g
-      simp [actBound]
-      constructor
-      · rfl
-      · funext β y
-        rw [extendLeft_comp]
-        apply actFree.map_comp
+@[simp] theorem Renaming.extendList_nil {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
+    ρ.extendList [] = ρ := rfl
 
-/-- `actFree` and `actBound` commute. -/
-theorem actFree_actBound {γ γ' δ δ'} (f : γ →ʳ γ') (g : δ →ʳ δ') (e : Expr γ δ) :
-  f.actFree (g.actBound e) = g.actBound (f.actFree e) := by
-  cases e
-  case applyFree α x ts =>
-    simp [actFree, actBound]
-    funext β y
-    rw [←actFree.map_comp, ←actFree.map_comp]
-    congr
-    symm ; apply extend_comp
-  case applyBound α x ts =>
-    simp [actFree, actBound]
-    funext β y
-    rw [←actFree.map_comp, ←actFree.map_comp]
-    congr
-    symm ; apply extend_comp
+@[simp] theorem Renaming.extendList_cons {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
+    (β : C.Arity) (rest : List C.Arity) :
+    ρ.extendList (β :: rest) = ρ.extendList rest ⇑ʳ β := rfl
 
-end Renaming
+@[simp] theorem Renaming.extendList_id {C : Carrier} (Γ : Shape C) :
+    ∀ (τ : List C.Arity), (𝟙ʳ : Γ →ʳ Γ).extendList τ = 𝟙ʳ
+  | []        => rfl
+  | β :: rest => by
+    show (𝟙ʳ : Γ →ʳ Γ).extendList rest ⇑ʳ β = 𝟙ʳ
+    rw [Renaming.extendList_id Γ rest, Renaming.extend_id]
 
-/-- The category of shapes and renamings -/
-instance ShapeCat : CategoryTheory.Category Shape where
-  Hom := Renaming
-  id := @Renaming.id
-  comp := Renaming.comp
+/-- Naturality of `extendList` w.r.t. `weakenList`: extending a renaming and then
+weakening through `τ` equals weakening first then applying the renaming. -/
+@[simp] theorem Renaming.extendList_weakenList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
+    ∀ (τ : List C.Arity) (p : Slot Γ),
+      ρ.extendList τ ((Γ ↪ʳ τ) p) = (Δ ↪ʳ τ) (ρ p)
+  | [], _ => rfl
+  | β :: rest, p => by
+    show Slot.there (ρ.extendList rest ((Γ ↪ʳ rest) p))
+       = Slot.there ((Δ ↪ʳ rest) (ρ p))
+    rw [Renaming.extendList_weakenList ρ rest p]
+

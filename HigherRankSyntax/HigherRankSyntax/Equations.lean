@@ -1,4 +1,4 @@
-import HigherRankSyntax.Action.Subst
+import HigherRankSyntax.Subst
 
 /-!
 # Equational theorems for the substitution walkers
@@ -8,7 +8,6 @@ import HigherRankSyntax.Action.Subst
 the `lift`–`inst` commutation lemma `lift_inst_commute`.
 -/
 
-namespace Action
 
 /-! ## Naturality of `extendList` against `tauSlot` -/
 
@@ -385,4 +384,3 @@ theorem comp_lift {C : Carrier} {Γ Δ Ε : Shape C}
   intro α e
   exact comp_lift.aux σ θ [α] e
 
-end Action

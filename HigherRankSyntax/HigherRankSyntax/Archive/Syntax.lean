@@ -1,4 +1,7 @@
 
+
+namespace Archive
+
 inductive Shape where
   /-- the empty shape -/
 | empty : Shape
@@ -78,3 +81,5 @@ theorem Expr.sizeOfBoundArg {γ δ α} (x : var_in α δ) (ts : ∀ ⦃β⦄, va
   (ts y).sizeOf < (x ◂ ts).sizeOf := sorry
 
 instance {γ δ} : SizeOf (Expr γ δ) where sizeOf := Expr.sizeOf
+
+end Archive

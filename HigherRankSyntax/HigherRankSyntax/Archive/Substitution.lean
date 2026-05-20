@@ -1,6 +1,9 @@
 
-import HigherRankSyntax.Syntax
-import HigherRankSyntax.Renaming
+import HigherRankSyntax.Archive.Syntax
+import HigherRankSyntax.Archive.Renaming
+
+
+namespace Archive
 
 def Substitution γ δ := ∀ {{α}}, var_in α γ → Expr δ α
 infix:25 " →ˢ " => Substitution
@@ -163,3 +166,5 @@ def extend_id (γ δ) : @id γ ⇑ˢ δ = 𝟙ˢ := by
     cases z <;> simp! [Renaming.comp]
 
 end Substitution
+
+end Archive

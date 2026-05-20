@@ -17,7 +17,6 @@ Shapes, slots, expressions, renamings, and the relative-monad structure are buil
 of this data; see `Action/Shape.lean` and downstream.
 -/
 
-namespace Action
 
 /-- A carrier of a higher-rank binding signature: the base data from which the framework
 builds shapes, slots, and expressions. -/
@@ -58,4 +57,3 @@ instance (C : Carrier) : WellFoundedRelation C.Arity where
   rel := Carrier.Sub (C := C)
   wf := C.subWf
 
-end Action

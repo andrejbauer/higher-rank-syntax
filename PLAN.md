@@ -36,14 +36,14 @@ Greek `ι` for the instantiation parameter keeps `i` free for binders.
 
 ## What's built
 
-`Action/*.lean` builds.  `SyntaxMonad : RelativeMonad J` is fully populated
+`HigherRankSyntax/*.lean` builds.  `SyntaxMonad : RelativeMonad J` is fully populated
 modulo the **one remaining `sorry`** — `lift_inst_commute` (= **L5**) in
-`Action/Equations.lean`.  The composition law `comp_lift` is proved modulo
+`Equations.lean`.  The composition law `comp_lift` is proved modulo
 that sorry.
 
 The substitution layer is split across two files:
 
-`Action/Subst.lean` — **machinery**:
+`Subst.lean` — **machinery**:
 
 * Types: `Subst Γ Δ`, `Inst α Γ`.
 * Slot classification: `tauSlot`, `tauSlot_arity`; the `XPos` inductive and
@@ -58,7 +58,7 @@ The substitution layer is split across two files:
 * Categorical operations: `Renaming.toSubst`, `Renaming.preSubst` (`ʳ∘ˢ`),
   `Subst.postRen` (`ˢ∘ʳ`), `Subst.comp` (`ˢ∘ˢ`).
 
-`Action/Equations.lean` — **theorems** (imports `Subst`):
+`Equations.lean` — **theorems** (imports `Subst`):
 
 * `extendList_tauSlot` — naturality of `Renaming.extendList` against `tauSlot`.
 * η-side lemmas (private): `inst_aux_η_tauSlot`, `inst_aux_η_inv_of`,
@@ -70,11 +70,11 @@ The substitution layer is split across two files:
 * **`lift_inst_commute`** (L5, still `sorry`'d).
 * `comp_lift.aux` (private) and public `comp_lift` (proved modulo L5).
 
-`Action/Renaming.lean` adds `Renaming.extendList ρ τ : Γ ⋈* τ →ʳ Δ ⋈* τ` and
+`Renaming.lean` adds `Renaming.extendList ρ τ : Γ ⋈* τ →ʳ Δ ⋈* τ` and
 naturality `extendList_weakenList`, `extendList_id`.  Also @[simp]
 slot-action lemmas `extend_here`, `extend_there`, `weaken_apply`, `id_apply`.
 
-`Action/Expr.lean` adds `Renaming.actExpr_apply'` as a @[simp] unfolder of
+`Expr.lean` adds `Renaming.actExpr_apply'` as a @[simp] unfolder of
 `⟦ ρ ⟧ʳ (apply' …)` — avoids motive-correctness issues when rewriting slots
 through the dependent witness `hα`.
 
@@ -104,7 +104,7 @@ In `Equations.lean`:
 
 ## Outstanding
 
-Prove **L5** (`lift_inst_commute` in `Action/Equations.lean`).  *Multiple
+Prove **L5** (`lift_inst_commute` in `Equations.lean`).  *Multiple
 proof attempts today did not close.*  See "Lessons from today" below for
 what was learned.
 

@@ -1,5 +1,5 @@
-import HigherRankSyntax.Action.Shape
-import HigherRankSyntax.Action.Renaming
+import HigherRankSyntax.Shape
+import HigherRankSyntax.Renaming
 
 /-!
 # Expressions of a higher-rank binding signature
@@ -19,7 +19,6 @@ child's shape index shifted by the action `⋈` — the free relative monad of t
 container.
 -/
 
-namespace Action
 
 /-- Expressions in shape `Γ` over a carrier `C`. -/
 inductive Expr {C : Carrier} : Shape C → Type where
@@ -99,7 +98,7 @@ def Renaming.actExpr {C : Carrier} : {Γ Δ : Shape C} → (Γ →ʳ Δ) → Exp
       Renaming.actExpr (ρ ⇑ʳ i.arity) (args i))
 
 /-- Action of a renaming on an expression: `⟦ ρ ⟧ʳ e`. -/
-scoped notation:60 "⟦" ρ "⟧ʳ " e:61 => Renaming.actExpr ρ e
+notation:60 "⟦" ρ "⟧ʳ " e:61 => Renaming.actExpr ρ e
 
 /-- Defining equation of `actExpr` on `apply'`. -/
 @[simp]
@@ -185,4 +184,3 @@ def Expr.T.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) (α : C.Arity)
 termination_by _ _ _ α _ => α
 decreasing_by exact ⟨_, rfl⟩
 
-end Action

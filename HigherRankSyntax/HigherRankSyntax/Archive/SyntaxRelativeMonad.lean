@@ -5,9 +5,12 @@ import Lean.Level
 import Mathlib.CategoryTheory.Monad.Basic
 
 import HigherRankSyntax.RelativeMonad.Basic
-import HigherRankSyntax.Renaming
-import HigherRankSyntax.Syntax
--- import HigherRankSyntax.Substitution
+import HigherRankSyntax.Archive.Renaming
+import HigherRankSyntax.Archive.Syntax
+-- import HigherRankSyntax.Archive.Substitution
+
+
+namespace Archive
 
 def ArityCat := ShapeCat
 
@@ -130,3 +133,5 @@ def SyntaxRelativeMonad : RelativeMonad 𝕁 := {
   unit_right := sorry
   comp_lift := sorry
 }
+
+end Archive
