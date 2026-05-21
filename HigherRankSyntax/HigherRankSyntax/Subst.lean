@@ -318,7 +318,7 @@ infixl:95 " ⇑ˢ " => Subst.extend
 def Subst.extendList {C : Carrier} {Δ Ε : Shape C} (σ : Subst Δ Ε) :
     (τ : List C.Arity) → Subst (Δ ⋈* τ) (Ε ⋈* τ)
   | []        => σ
-  | β :: rest => Subst.extend (Subst.extendList σ rest) β
+  | β :: rest => (Subst.extendList σ rest) ⇑ˢ β
 
 @[inherit_doc Subst.extendList]
 infixl:95 " ⇑ˢ* " => Subst.extendList
