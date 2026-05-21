@@ -250,6 +250,19 @@ def Subst.act {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ) (e : Expr Γ) :
 def Renaming.toSubst {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) : Subst Γ Δ :=
   fun p => Expr.η (ρ p)
 
+/-- The identity substitution: η-expansion of every slot. -/
+def Subst.id {C : Carrier} (Γ : Shape C) : Subst Γ Γ :=
+  fun p => Expr.η p
+
+/-- Weakening as a substitution: insert a fresh α-binder. -/
+def Subst.weaken {C : Carrier} (Γ : Shape C) (α : C.Arity) : Subst Γ (Γ ⋈ α) :=
+  Renaming.toSubst (Renaming.weaken Γ α)
+
+/-- Iterated weakening as a substitution. -/
+def Subst.weakenList {C : Carrier} (Γ : Shape C) (τ : List C.Arity) :
+    Subst Γ (Γ ⋈* τ) :=
+  Renaming.toSubst (Γ ↪ʳ τ)
+
 /-- Pre-compose a substitution by a renaming. -/
 def Renaming.preSubst {C : Carrier} {Γ Γ' Δ : Shape C}
     (ρ : Γ →ʳ Γ') (σ : Subst Γ' Δ) : Subst Γ Δ :=
