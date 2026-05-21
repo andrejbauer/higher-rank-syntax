@@ -17,6 +17,17 @@ on `classify`'s result yields it definitionally — no `Eq.rec`.
 `inst.aux` directly on σ's image, threading the target weakening as a renaming.
 `inst.aux` walks `Expr ((Δ ⋈ α) ⋈* τ)`, carries a renaming `ρ : Δ →ʳ Ξ`, and
 maps Δ-slots through `ρ` during traversal.
+
+## Notations
+
+  - `Γ →ˢ Δ` is the type of substitutions from `Γ` to `Δ`.
+  - `𝟙ˢ` is the identity substitution.
+  - `σ ∘ˢˢ θ` is Kleisli composition; `ρ ∘ʳˢ σ` and `σ ∘ˢʳ ρ` are pre- and
+    post-composition with a renaming.
+  - `Γ ↪ˢ α` and `Γ ↪ˢ* τ` are the canonical weakenings.
+  - `σ ⇑ˢ α` and `σ ⇑ˢ* τ` extend a substitution through a fresh binder /
+    list of binders.
+  - `⟦σ⟧ˢ e` is the action of `σ` on an expression (parallels `⟦ρ⟧ʳ e`).
 -/
 
 

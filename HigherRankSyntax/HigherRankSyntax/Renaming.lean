@@ -12,6 +12,8 @@ as a type index, arity-preservation is by construction.
   - `𝟙ʳ` is the identity renaming.
   - `g ∘ʳʳ f` is the composition; the textual order reverses `Renaming.comp` so it reads
     "g after f", matching the mathematical `g ∘ f`.
+  - `Γ ↪ʳ α` and `Γ ↪ʳ* τ` are the canonical weakenings.
+  - `ρ ⇑ʳ α` and `ρ ⇑ʳ* τ` extend a renaming through a fresh binder / list of binders.
 -/
 
 
