@@ -129,6 +129,94 @@ private theorem inst_aux_factor_ren {C : Carrier} :
 termination_by _ _ _ _ _ τ e => (⟨_ ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by exact Expr.Subterm.of_arg p args j
 
+/-! ## Renaming naturality of `inst.aux` -/
+
+/-- Inner statement of `inst_aux_rename_id`, parametrised by the smaller-α induction
+hypothesis.  Structural induction on `e` (no α-decrease in this layer). -/
+private theorem inst_aux_rename_id_inner {C : Carrier} {Δ Δ' : Shape C} (α : C.Arity)
+    (ih_α : ∀ (j : C.Binder α) {Δ_ Δ'_ : Shape C} (ρ_ : Δ_ →ʳ Δ'_)
+              (ι_ : Inst j.arity Δ_) (τ_ : List C.Arity)
+              (e_ : Expr ((Δ_ ⋈ j.arity) ⋈* τ_)),
+            ⟦ ρ_.extendList τ_ ⟧ʳ (inst.aux j.arity 𝟙ʳ ι_ τ_ e_)
+              = inst.aux j.arity 𝟙ʳ (fun k => ⟦ ρ_ ⇑ʳ k.arity ⟧ʳ (ι_ k)) τ_
+                  (⟦ (ρ_ ⇑ʳ j.arity).extendList τ_ ⟧ʳ e_))
+    (ρ : Δ →ʳ Δ') (ι : Inst α Δ) :
+    ∀ (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
+      ⟦ ρ.extendList τ ⟧ʳ (inst.aux α 𝟙ʳ ι τ e)
+        = inst.aux α 𝟙ʳ (fun k => ⟦ ρ ⇑ʳ k.arity ⟧ʳ (ι k)) τ
+            (⟦ (ρ ⇑ʳ α).extendList τ ⟧ʳ e)
+  | τ, .apply (α := α_h) p args => by
+    have ih_arg : ∀ (k : C.Binder α_h),
+        ⟦ ρ.extendList (k.arity :: τ) ⟧ʳ
+            (inst.aux α 𝟙ʳ ι (k.arity :: τ) (args k))
+          = inst.aux α 𝟙ʳ (fun j => ⟦ ρ ⇑ʳ j.arity ⟧ʳ (ι j))
+              (k.arity :: τ)
+              (⟦ (ρ ⇑ʳ α).extendList (k.arity :: τ) ⟧ʳ (args k)) :=
+      fun k => inst_aux_rename_id_inner α ih_α ρ ι (k.arity :: τ) (args k)
+    cases classify τ p with
+    | ext i =>
+      simp only [inst_aux_ext_eq, Renaming.actExpr_apply, extendList_tauSlot]
+      congr 1
+      funext k
+      exact ih_arg k
+    | base q =>
+      cases q with
+      | there r =>
+        simp only [inst_aux_base_there_eq, Renaming.actExpr_apply,
+                   Renaming.extendList_weakenList, Renaming.extend_there,
+                   Renaming.id_apply]
+        congr 1
+        funext k
+        exact ih_arg k
+      | here j =>
+        -- LHS: unfold .here, factor (Δ↪ʳτ) out.
+        rw [inst_aux_base_here_eq, inst_aux_factor_ren j.arity (Δ ↪ʳ τ)]
+        simp only [Renaming.extendList_nil]
+        -- RHS: unfold renaming + .here, factor (Δ'↪ʳτ) out.
+        rw [Renaming.actExpr_apply, Renaming.extendList_weakenList,
+            Renaming.extend_here, inst_aux_base_here_eq,
+            inst_aux_factor_ren j.arity (Δ' ↪ʳ τ)]
+        simp only [Renaming.extendList_nil]
+        -- Apply ih_α at j ∈ Binder α to commute the outer renaming through
+        -- the inner inst.aux j.arity.
+        have ih_j := ih_α j (ρ.extendList τ)
+              (fun k => inst.aux α 𝟙ʳ ι (k.arity :: τ) (args k)) []
+              (⟦ (Δ ↪ʳ τ) ⇑ʳ j.arity ⟧ʳ (ι j))
+        simp only [Renaming.extendList_nil] at ih_j
+        refine ih_j.trans ?_
+        -- Goal: inst.aux j.arity 𝟙ʳ Λ_LHS [] (⟦ρ.extendList τ ⇑ʳ j.arity⟧ʳ (⟦(Δ↪ʳτ) ⇑ʳ j.arity⟧ʳ ι j))
+        --     = inst.aux j.arity 𝟙ʳ Λ_RHS [] (⟦(Δ' ↪ʳ τ) ⇑ʳ j.arity⟧ʳ (⟦ρ ⇑ʳ j.arity⟧ʳ ι j))
+        congr 1
+        · -- Λ_LHS = Λ_RHS (function position)
+          funext k
+          exact ih_arg k
+        · -- value position equality via renaming naturality
+          rw [← Renaming.actExpr.map_comp]
+          show Renaming.actExpr (((ρ.extendList τ) ⇑ʳ j.arity) ∘ʳ
+                                  ((Δ ↪ʳ τ) ⇑ʳ j.arity)) (ι j) = _
+          rw [← Renaming.extend_comp (Δ ↪ʳ τ) (ρ.extendList τ) j.arity,
+              Renaming.weakenList_naturality,
+              Renaming.extend_comp ρ (Δ' ↪ʳ τ) j.arity,
+              Renaming.actExpr.map_comp]
+          rfl
+termination_by τ e => (⟨(Δ ⋈ α) ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
+decreasing_by exact Expr.Subterm.of_arg _ _ _
+
+/-- **Inst-Ren naturality** (at the identity-renaming form): pushing a renaming `ρ.extendList τ`
+past `inst.aux α 𝟙ʳ ι τ` factors into a renamed instantiation on the result plus a renaming
+on the input.  Recurses on `α` via `subWf`, wrapping the structural-on-`e`
+`inst_aux_rename_id_inner`. -/
+private theorem inst_aux_rename_id {C : Carrier} {Δ Δ' : Shape C}
+    (α : C.Arity) (ρ : Δ →ʳ Δ') (ι : Inst α Δ)
+    (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)) :
+    ⟦ ρ.extendList τ ⟧ʳ (inst.aux α 𝟙ʳ ι τ e)
+      = inst.aux α 𝟙ʳ (fun k => ⟦ ρ ⇑ʳ k.arity ⟧ʳ (ι k)) τ
+          (⟦ (ρ ⇑ʳ α).extendList τ ⟧ʳ e) :=
+  inst_aux_rename_id_inner α
+    (fun j _ _ ρ_ ι_ τ_ e_ => inst_aux_rename_id j.arity ρ_ ι_ τ_ e_) ρ ι τ e
+termination_by α
+decreasing_by exact ⟨j, rfl⟩
+
 /-! ## η-side lemmas for `inst.aux` -/
 
 private theorem inst_aux_η_tauSlot {C : Carrier} :

@@ -143,3 +143,10 @@ def Renaming.extendList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     show SlotAt.there (ρ.extendList rest ((Γ ↪ʳ rest) p))
        = SlotAt.there ((Δ ↪ʳ rest) (ρ p))
     rw [Renaming.extendList_weakenList ρ rest p]
+
+/-- Morphism-level form of `extendList_weakenList`: the naturality square commutes. -/
+theorem Renaming.weakenList_naturality {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
+    (τ : List C.Arity) :
+    ρ.extendList τ ∘ʳ (Γ ↪ʳ τ) = (Δ ↪ʳ τ) ∘ʳ ρ := by
+  ext α p
+  exact Renaming.extendList_weakenList ρ τ p
