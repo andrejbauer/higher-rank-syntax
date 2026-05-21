@@ -129,32 +129,32 @@ def Renaming.extendList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
 infixl:95 " ⇑ʳ* " => Renaming.extendList
 
 @[simp] theorem Renaming.extendList_nil {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
-    ρ.extendList [] = ρ := rfl
+    ρ ⇑ʳ* [] = ρ := rfl
 
 @[simp] theorem Renaming.extendList_cons {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
     (β : C.Arity) (rest : List C.Arity) :
-    ρ.extendList (β :: rest) = ρ.extendList rest ⇑ʳ β := rfl
+    ρ ⇑ʳ* (β :: rest) = ρ ⇑ʳ* rest ⇑ʳ β := rfl
 
 @[simp] theorem Renaming.extendList_id {C : Carrier} (Γ : Shape C) :
-    ∀ (τ : List C.Arity), (𝟙ʳ : Γ →ʳ Γ).extendList τ = 𝟙ʳ
+    ∀ (τ : List C.Arity), (𝟙ʳ : Γ →ʳ Γ) ⇑ʳ* τ = 𝟙ʳ
   | []        => rfl
   | β :: rest => by
-    show (𝟙ʳ : Γ →ʳ Γ).extendList rest ⇑ʳ β = 𝟙ʳ
+    show (𝟙ʳ : Γ →ʳ Γ) ⇑ʳ* rest ⇑ʳ β = 𝟙ʳ
     rw [Renaming.extendList_id Γ rest, Renaming.extend_id]
 
 /-- Naturality of `extendList` w.r.t. `weakenList`. -/
 @[simp] theorem Renaming.extendList_weakenList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     ∀ (τ : List C.Arity) {α : C.Arity} (p : Γ ∋ α),
-      ρ.extendList τ ((Γ ↪ʳ* τ) p) = (Δ ↪ʳ* τ) (ρ p)
+      (ρ ⇑ʳ* τ) ((Γ ↪ʳ* τ) p) = (Δ ↪ʳ* τ) (ρ p)
   | [], _, _ => rfl
   | β :: rest, α, p => by
-    show SlotAt.there (ρ.extendList rest ((Γ ↪ʳ* rest) p))
+    show SlotAt.there ((ρ ⇑ʳ* rest) ((Γ ↪ʳ* rest) p))
        = SlotAt.there ((Δ ↪ʳ* rest) (ρ p))
     rw [Renaming.extendList_weakenList ρ rest p]
 
 /-- Morphism-level form of `extendList_weakenList`: the naturality square commutes. -/
 theorem Renaming.weakenList_naturality {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
     (τ : List C.Arity) :
-    ρ.extendList τ ∘ʳʳ (Γ ↪ʳ* τ) = (Δ ↪ʳ* τ) ∘ʳʳ ρ := by
+    ρ ⇑ʳ* τ ∘ʳʳ (Γ ↪ʳ* τ) = (Δ ↪ʳ* τ) ∘ʳʳ ρ := by
   ext α p
   exact Renaming.extendList_weakenList ρ τ p
