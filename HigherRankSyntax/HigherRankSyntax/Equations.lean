@@ -336,60 +336,51 @@ private theorem inst_aux_η_inv_of {C : Carrier} (Δ : Shape C) (α : C.Arity)
 termination_by τ e => (⟨(Δ ⋈ α) ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by exact Expr.Subterm.of_arg p args j
 
-private theorem inst_aux_η_bundle {C : Carrier} (α : C.Arity) :
-    (∀ {Δ Ξ : Shape C} (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
-      (v : Δ ∋ α),
-      inst.aux α ρ ι [] (Expr.η v) = Expr.apply (ρ v) ι)
-    ∧
-    (∀ (Δ : Shape C) (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
-      inst.aux α (Δ ↪ʳ* [α]) (η_fillers Δ α) τ e = e) := by
-  refine C.subWf.induction (C := fun α =>
-    (∀ {Δ Ξ : Shape C} (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ) (v : Δ ∋ α),
-      inst.aux α ρ ι [] (Expr.η v) = Expr.apply (ρ v) ι)
-    ∧
-    (∀ (Δ : Shape C) (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
-      inst.aux α (Δ ↪ʳ* [α]) (η_fillers Δ α) τ e = e)) α ?_
-  intro α ih
-  constructor
-  · intro Δ Ξ ρ ι v
-    unfold Expr.η
-    change inst.aux α ρ ι []
-        (Expr.apply ((Δ ⋈ α ↪ʳ* []) (.there v))
-          (fun i => Expr.η (.here i)))
-        = Expr.apply (ρ v) ι
-    rw [inst_aux_base_there_eq]
-    congr 1
-    funext i
-    unfold Expr.η
-    change inst.aux α ρ ι [i.arity]
-        (Expr.apply ((Δ ⋈ α ↪ʳ* [i.arity]) (.here i))
-          (fun k => Expr.η (.here k)))
-        = ι i
-    rw [inst_aux_base_here_eq]
-    change inst.aux i.arity (Ξ ↪ʳ* [i.arity])
-        (fun k : C.Binder i.arity => inst.aux α ρ ι (k.arity :: [i.arity])
-          (Expr.η (.here k))) [] (ι i)
-      = ι i
-    have hargs : (fun k : C.Binder i.arity => inst.aux α ρ ι (k.arity :: [i.arity])
-          (Expr.η (.here k)))
-        = η_fillers Ξ i.arity := by
-      funext k
-      unfold η_fillers
-      exact inst_aux_η_tauSlot α ρ ι [] i.arity [] k
-    rw [hargs]
-    exact (ih i.arity ⟨i, rfl⟩).2 Ξ [] (ι i)
-  · intro Δ
-    exact inst_aux_η_inv_of Δ α (fun j => (ih j.arity ⟨j, rfl⟩).1)
+mutual
 
+/-- η-cancellation for `inst.aux`: applying `inst.aux` at the empty stack to an
+η-expanded variable just produces the slot's image. -/
 private theorem inst_aux_η {C : Carrier} {Δ Ξ : Shape C}
     (α : C.Arity) (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ) (v : Δ ∋ α) :
-    inst.aux α ρ ι [] (Expr.η v) = Expr.apply (ρ v) ι :=
-  (inst_aux_η_bundle α).1 ρ ι v
+    inst.aux α ρ ι [] (Expr.η v) = Expr.apply (ρ v) ι := by
+  unfold Expr.η
+  change inst.aux α ρ ι []
+      (Expr.apply ((Δ ⋈ α ↪ʳ* []) (.there v))
+        (fun i => Expr.η (.here i)))
+      = Expr.apply (ρ v) ι
+  rw [inst_aux_base_there_eq]
+  congr 1
+  funext i
+  unfold Expr.η
+  change inst.aux α ρ ι [i.arity]
+      (Expr.apply ((Δ ⋈ α ↪ʳ* [i.arity]) (.here i))
+        (fun k => Expr.η (.here k)))
+      = ι i
+  rw [inst_aux_base_here_eq]
+  change inst.aux i.arity (Ξ ↪ʳ* [i.arity])
+      (fun k : C.Binder i.arity => inst.aux α ρ ι (k.arity :: [i.arity])
+        (Expr.η (.here k))) [] (ι i)
+    = ι i
+  have hargs : (fun k : C.Binder i.arity => inst.aux α ρ ι (k.arity :: [i.arity])
+        (Expr.η (.here k)))
+      = η_fillers Ξ i.arity := by
+    funext k
+    unfold η_fillers
+    exact inst_aux_η_tauSlot α ρ ι [] i.arity [] k
+  rw [hargs]
+  exact inst_aux_η_inv Ξ i.arity [] (ι i)
+termination_by α
+decreasing_by exact ⟨i, rfl⟩
 
+/-- η-fillers invariance: `inst.aux` with the η-fillers leaves expressions unchanged. -/
 private theorem inst_aux_η_inv {C : Carrier} (Δ : Shape C) (α : C.Arity) :
     ∀ (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
       inst.aux α (Δ ↪ʳ* [α]) (η_fillers Δ α) τ e = e :=
-  (inst_aux_η_bundle α).2 Δ
+  inst_aux_η_inv_of Δ α (fun j => inst_aux_η j.arity)
+termination_by α
+decreasing_by exact ⟨j, rfl⟩
+
+end
 
 /-! ## η-side lemma for `lift.aux` -/
 
