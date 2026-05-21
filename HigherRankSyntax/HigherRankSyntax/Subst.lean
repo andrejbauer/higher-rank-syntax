@@ -330,6 +330,23 @@ def Subst.extendList {C : Carrier} {Δ Ε : Shape C} (σ : Subst Δ Ε) :
 @[inherit_doc Subst.extendList]
 infixl:95 " ⇑ˢ* " => Subst.extendList
 
+/-- An instantiation `ι : Inst α Ξ` together with a base renaming `ρ : Δ →ʳ Ξ`, viewed as
+a substitution from `Δ ⋈ α` to `Ξ`: the α-binder slots are plugged via `ι`; the Δ-slots are
+η-expansions of their `ρ`-images. -/
+def Inst.toSubst {C : Carrier} {α : C.Arity} {Δ Ξ : Shape C}
+    (ι : Inst α Ξ) (ρ : Δ →ʳ Ξ) : Subst (Δ ⋈ α) Ξ :=
+  fun
+    | .here i  => ι i
+    | .there r => Expr.η (ρ r)
+
+@[simp] theorem Inst.toSubst_here {C : Carrier} {α : C.Arity} {Δ Ξ : Shape C}
+    (ι : Inst α Ξ) (ρ : Δ →ʳ Ξ) (i : C.Binder α) :
+    ι.toSubst ρ (.here i) = ι i := rfl
+
+@[simp] theorem Inst.toSubst_there {C : Carrier} {α : C.Arity} {Δ Ξ : Shape C}
+    (ι : Inst α Ξ) (ρ : Δ →ʳ Ξ) {α' : C.Arity} (r : Δ ∋ α') :
+    ι.toSubst ρ (.there r) = Expr.η (ρ r) := rfl
+
 /-- Componentwise action of a substitution on an instantiation. -/
 def Inst.map {C : Carrier} {α : C.Arity} {Δ Ε : Shape C}
     (ι : Inst α Δ) (σ : Subst Δ Ε) : Inst α Ε :=

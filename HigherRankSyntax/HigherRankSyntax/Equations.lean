@@ -535,6 +535,44 @@ private theorem lift_aux_via_extendList {C : Carrier} :
 termination_by _ _ _ τ e => (⟨_ ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg _ _ _
 
+/-! ## Instantiation as a substitution -/
+
+/-- `inst.aux ρ ι τ` equals `lift.aux` of the combined substitution `ι.toSubst ρ` at the
+same stack `τ`.  Structural induction on `e`: the `.there r` case uses `inst_aux_η` to
+collapse the η-expansion of `ρ r` produced by `Inst.toSubst`; the `.here j` and `ext` cases
+match the corresponding per-case unfolders directly, with the recursive args closed by IH. -/
+private theorem inst_aux_as_lift_aux {C : Carrier} :
+    ∀ {Δ Ξ : Shape C} {α : C.Arity}
+      (ρ : Δ →ʳ Ξ) (ι : Inst α Ξ)
+      (τ : List C.Arity) (e : Expr ((Δ ⋈ α) ⋈* τ)),
+      inst.aux ρ ι τ e = lift.aux (ι.toSubst ρ) τ e
+  | _, _, _, ρ, ι, τ, .apply (α := α_h) p args => by
+    have ih_arg : ∀ (k : C.Binder α_h),
+        inst.aux ρ ι (k.arity :: τ) (args k)
+          = lift.aux (ι.toSubst ρ) (k.arity :: τ) (args k) :=
+      fun k => inst_aux_as_lift_aux ρ ι (k.arity :: τ) (args k)
+    cases classify τ p with
+    | ext i =>
+      rw [inst_aux_ext_eq, lift_aux_ext_eq]
+      congr 1
+      funext k
+      exact ih_arg k
+    | base q =>
+      cases q with
+      | there r =>
+        rw [inst_aux_base_there_eq, lift_aux_base_eq, Inst.toSubst_there,
+            inst_aux_η]
+        congr 1
+        funext k
+        exact ih_arg k
+      | here j =>
+        rw [inst_aux_base_here_eq, lift_aux_base_eq, Inst.toSubst_here]
+        congr 1
+        funext k
+        exact ih_arg k
+termination_by _ _ _ _ _ τ e => (⟨_ ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
+decreasing_by exact Expr.Subterm.of_arg _ _ _
+
 /-! ## Commutation of `lift` past `inst` -/
 
 /-- **L5**: lift past inst commutation, generalized to arbitrary inst-walker stack ρ. -/
