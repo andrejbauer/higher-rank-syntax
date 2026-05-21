@@ -29,10 +29,6 @@ def Subst {C : Carrier} (Γ Δ : Shape C) : Type :=
 /-- Notation `Γ →ˢ Δ` for substitutions from `Γ` to `Δ`. -/
 infixr:25 " →ˢ " => Subst
 
-instance {C : Carrier} {Γ Δ : Shape C} :
-    CoeFun (Subst Γ Δ) (fun _ => ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)) :=
-  ⟨id⟩
-
 /-- An instantiation of an α-binder above `Γ`. -/
 abbrev Inst {C : Carrier} (α : C.Arity) (Γ : Shape C) : Type :=
   (i : C.Binder α) → Expr (Γ ⋈ i.arity)
