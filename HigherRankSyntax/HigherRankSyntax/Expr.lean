@@ -97,9 +97,9 @@ theorem Renaming.actExpr.map_id {C : Carrier} : ∀ {Γ : Shape C} (e : Expr Γ)
 
 @[simp]
 theorem Renaming.actExpr.map_comp {C : Carrier} : ∀ {Γ Δ Ε : Shape C}
-    (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ε) (e : Expr Γ), ⟦ σ ∘ʳ ρ ⟧ʳ e = ⟦ σ ⟧ʳ (⟦ ρ ⟧ʳ e)
+    (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ε) (e : Expr Γ), ⟦ σ ∘ʳʳ ρ ⟧ʳ e = ⟦ σ ⟧ʳ (⟦ ρ ⟧ʳ e)
   | _, _, _, ρ, σ, .apply p args => by
-    show Expr.apply (σ (ρ p)) (fun i => ⟦ (σ ∘ʳ ρ) ⇑ʳ i.arity ⟧ʳ args i)
+    show Expr.apply (σ (ρ p)) (fun i => ⟦ (σ ∘ʳʳ ρ) ⇑ʳ i.arity ⟧ʳ args i)
       = Expr.apply (σ (ρ p)) (fun i => ⟦ σ ⇑ʳ i.arity ⟧ʳ (⟦ ρ ⇑ʳ i.arity ⟧ʳ args i))
     congr 1
     funext i
@@ -117,7 +117,7 @@ def Expr.J.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) {α : C.Arity}
 
 @[simp] theorem Expr.J.map_comp {C : Carrier} {Γ Δ Ε : Shape C}
     (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ε) {α : C.Arity} (v : J Γ α) :
-    J.map (σ ∘ʳ ρ) v = J.map σ (J.map ρ v) := rfl
+    J.map (σ ∘ʳʳ ρ) v = J.map σ (J.map ρ v) := rfl
 
 /-- Action of a renaming on `T`. -/
 def Expr.T.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) (α : C.Arity)
@@ -131,8 +131,8 @@ def Expr.T.map {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) (α : C.Arity)
 
 @[simp] theorem Expr.T.map_comp {C : Carrier} {Γ Δ Ε : Shape C}
     (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ε) (α : C.Arity) (e : T Γ α) :
-    T.map (σ ∘ʳ ρ) α e = T.map σ α (T.map ρ α e) := by
-  show ⟦ (σ ∘ʳ ρ) ⇑ʳ α ⟧ʳ e = ⟦ σ ⇑ʳ α ⟧ʳ (⟦ ρ ⇑ʳ α ⟧ʳ e)
+    T.map (σ ∘ʳʳ ρ) α e = T.map σ α (T.map ρ α e) := by
+  show ⟦ (σ ∘ʳʳ ρ) ⇑ʳ α ⟧ʳ e = ⟦ σ ⇑ʳ α ⟧ʳ (⟦ ρ ⇑ʳ α ⟧ʳ e)
   rw [Renaming.extend_comp]
   exact Renaming.actExpr.map_comp _ _ e
 

@@ -49,7 +49,7 @@ def tauSlot {C : Carrier} (Γ : Shape C) :
 inductive XPos {C : Carrier} (Γ : Shape C) :
     {τ : List C.Arity} → {α : C.Arity} → SlotAt (Γ ⋈* τ) α → Type where
   | base : {τ : List C.Arity} → {α : C.Arity} → (p : Γ ∋ α) →
-           XPos Γ ((Γ ↪ʳ τ) p)
+           XPos Γ ((Γ ↪ʳ* τ) p)
   | ext  : {τ_above : List C.Arity} → {β : C.Arity} → {τ_below : List C.Arity} →
            (i : C.Binder β) →
            XPos Γ (τ := τ_above ++ β :: τ_below) (tauSlot Γ τ_above β τ_below i)
@@ -68,11 +68,11 @@ def classify {C : Carrier} {Γ : Shape C} :
 /-- Classifying a Γ-slot weakened through τ recovers the original Γ-slot. -/
 @[simp] theorem classify_weakenList {C : Carrier} {Γ : Shape C}
     (τ : List C.Arity) {α : C.Arity} (p : Γ ∋ α) :
-    classify τ ((Γ ↪ʳ τ) p) = XPos.base p := by
+    classify τ ((Γ ↪ʳ* τ) p) = XPos.base p := by
   induction τ with
   | nil => rfl
   | cons β rest ih =>
-    show classify (β :: rest) (.there ((Γ ↪ʳ rest) p)) = XPos.base p
+    show classify (β :: rest) (.there ((Γ ↪ʳ* rest) p)) = XPos.base p
     simp [classify, ih]
 
 /-- Classifying a `tauSlot` recovers the corresponding `XPos.ext`. -/
@@ -106,10 +106,10 @@ def inst.aux {C : Carrier} {Δ Ξ : Shape C} (α : C.Arity)
       | XPos.base q =>
           match q with
           | .there r =>
-              Expr.apply ((Ξ ↪ʳ τ) (ρ r))
+              Expr.apply ((Ξ ↪ʳ* τ) (ρ r))
                 (fun k => inst.aux α ρ ι (k.arity :: τ) (args k))
           | .here j =>
-              inst.aux j.arity (Ξ ↪ʳ τ)
+              inst.aux j.arity (Ξ ↪ʳ* τ)
                 (fun k => inst.aux α ρ ι (k.arity :: τ) (args k)) [] (ι j)
 termination_by (⟨α, _, e⟩ : (_ : C.Arity) ×' Σ Γ : Shape C, Expr Γ)
 decreasing_by
@@ -152,14 +152,14 @@ def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ ⋈ α)
     (τ : List C.Arity) {α_r : C.Arity} (r : Δ ∋ α_r)
     (args : (j : C.Binder α_r) → Expr ((Δ ⋈ α) ⋈* τ ⋈ j.arity)) :
     inst.aux α ρ ι τ
-      (Expr.apply (((Δ ⋈ α) ↪ʳ τ) (.there r)) args)
+      (Expr.apply (((Δ ⋈ α) ↪ʳ* τ) (.there r)) args)
       =
-    Expr.apply ((Ξ ↪ʳ τ) (ρ r))
+    Expr.apply ((Ξ ↪ʳ* τ) (ρ r))
       (fun j => inst.aux α ρ ι (j.arity :: τ) (args j)) := by
   delta inst.aux
   change inst.aux._unary (C := C)
       ⟨Δ, ⟨Ξ, ⟨α, ⟨ρ, ⟨ι, ⟨τ,
-        Expr.apply (((Δ ⋈ α) ↪ʳ τ) (.there r)) args⟩⟩⟩⟩⟩⟩ = _
+        Expr.apply (((Δ ⋈ α) ↪ʳ* τ) (.there r)) args⟩⟩⟩⟩⟩⟩ = _
   rw [inst.aux._unary.eq_1]
   simp [classify_weakenList]
 
@@ -168,14 +168,14 @@ def η_fillers {C : Carrier} (Δ : Shape C) (α : C.Arity) : Inst α (Δ ⋈ α)
     (τ : List C.Arity) (j : C.Binder α)
     (args : (k : C.Binder j.arity) → Expr ((Δ ⋈ α) ⋈* τ ⋈ k.arity)) :
     inst.aux α ρ ι τ
-      (Expr.apply (((Δ ⋈ α) ↪ʳ τ) (.here j)) args)
+      (Expr.apply (((Δ ⋈ α) ↪ʳ* τ) (.here j)) args)
       =
-    inst.aux j.arity (Ξ ↪ʳ τ)
+    inst.aux j.arity (Ξ ↪ʳ* τ)
       (fun k => inst.aux α ρ ι (k.arity :: τ) (args k)) [] (ι j) := by
   delta inst.aux
   change inst.aux._unary (C := C)
       ⟨Δ, ⟨Ξ, ⟨α, ⟨ρ, ⟨ι, ⟨τ,
-        Expr.apply (((Δ ⋈ α) ↪ʳ τ) (.here j)) args⟩⟩⟩⟩⟩⟩ = _
+        Expr.apply (((Δ ⋈ α) ↪ʳ* τ) (.here j)) args⟩⟩⟩⟩⟩⟩ = _
   rw [inst.aux._unary.eq_1]
   simp [classify_weakenList]
 
@@ -191,7 +191,7 @@ def lift.aux {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
           Expr.apply (tauSlot Δ ta b tb i)
             (fun k => lift.aux σ (k.arity :: (ta ++ b :: tb)) (args k))
       | XPos.base q =>
-          inst.aux α_h (Δ ↪ʳ τ)
+          inst.aux α_h (Δ ↪ʳ* τ)
             (fun k => lift.aux σ (k.arity :: τ) (args k)) [] (σ q)
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by
@@ -218,13 +218,13 @@ decreasing_by
     (τ : List C.Arity) {α : C.Arity} (q : Γ ∋ α)
     (args : (j : C.Binder α) → Expr (Γ ⋈* τ ⋈ j.arity)) :
     lift.aux σ τ
-      (Expr.apply ((Γ ↪ʳ τ) q) args)
+      (Expr.apply ((Γ ↪ʳ* τ) q) args)
       =
-    inst.aux α (Δ ↪ʳ τ)
+    inst.aux α (Δ ↪ʳ* τ)
       (fun j => lift.aux σ (j.arity :: τ) (args j)) [] (σ q) := by
   delta lift.aux
   change lift.aux._unary (C := C) σ
-      ⟨τ, Expr.apply ((Γ ↪ʳ τ) q) args⟩ = _
+      ⟨τ, Expr.apply ((Γ ↪ʳ* τ) q) args⟩ = _
   rw [lift.aux._unary.eq_1]
   simp [classify_weakenList]
 
@@ -261,7 +261,7 @@ def Subst.weaken {C : Carrier} (Γ : Shape C) (α : C.Arity) : Subst Γ (Γ ⋈ 
 /-- Iterated weakening as a substitution. -/
 def Subst.weakenList {C : Carrier} (Γ : Shape C) (τ : List C.Arity) :
     Subst Γ (Γ ⋈* τ) :=
-  Renaming.toSubst (Γ ↪ʳ τ)
+  Renaming.toSubst (Γ ↪ʳ* τ)
 
 /-- Pre-compose a substitution by a renaming. -/
 def Renaming.preSubst {C : Carrier} {Γ Γ' Δ : Shape C}
@@ -269,7 +269,7 @@ def Renaming.preSubst {C : Carrier} {Γ Γ' Δ : Shape C}
   fun p => σ (ρ p)
 
 @[inherit_doc Renaming.preSubst]
-infixl:90 " ʳ∘ˢ " => Renaming.preSubst
+infixl:90 " ∘ʳˢ " => Renaming.preSubst
 
 /-- Post-compose a substitution by a renaming: apply `σ`, then rename the result. -/
 def Subst.postRen {C : Carrier} {Γ Δ Δ' : Shape C}
@@ -277,7 +277,7 @@ def Subst.postRen {C : Carrier} {Γ Δ Δ' : Shape C}
   fun {α} p => ⟦ ρ ⇑ʳ α ⟧ʳ (σ p)
 
 @[inherit_doc Subst.postRen]
-infixl:90 " ˢ∘ʳ " => Subst.postRen
+infixl:90 " ∘ˢʳ " => Subst.postRen
 
 /-- Kleisli composition of substitutions: `(σ ˢ∘ˢ θ) p = θ.lift (σ p)`. -/
 def Subst.comp {C : Carrier} {Γ Δ Ε : Shape C}
@@ -285,7 +285,7 @@ def Subst.comp {C : Carrier} {Γ Δ Ε : Shape C}
   fun p => θ.lift (σ p)
 
 @[inherit_doc Subst.comp]
-infixl:90 " ˢ∘ˢ " => Subst.comp
+infixl:90 " ∘ˢˢ " => Subst.comp
 
 /-- Extend a substitution through a fresh α-binder: η at the new binder, σ then weaken
 on the underlying slots. -/

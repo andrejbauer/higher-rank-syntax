@@ -10,7 +10,7 @@ as a type index, arity-preservation is by construction.
 
   - `Γ →ʳ Δ` is the type of renamings from `Γ` to `Δ`.
   - `𝟙ʳ` is the identity renaming.
-  - `g ∘ʳ f` is the composition; the textual order reverses `Renaming.comp` so it reads
+  - `g ∘ʳʳ f` is the composition; the textual order reverses `Renaming.comp` so it reads
     "g after f", matching the mathematical `g ∘ f`.
 -/
 
@@ -40,8 +40,8 @@ notation "𝟙ʳ" => Renaming.id _
 def Renaming.comp {C : Carrier} {Γ Δ Ε : Shape C} (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) : Γ →ʳ Ε :=
   ⟨fun {_} p => g (f p)⟩
 
-/-- `g ∘ʳ f` is the composition "g after f" (= `Renaming.comp f g`). -/
-notation:90 g:90 " ∘ʳ " f:91 => Renaming.comp f g
+/-- `g ∘ʳʳ f` is the composition "g after f" (= `Renaming.comp f g`). -/
+notation:90 g:90 " ∘ʳʳ " f:91 => Renaming.comp f g
 
 /-- Two renamings are equal when they agree pointwise. -/
 @[ext]
@@ -55,12 +55,12 @@ theorem Renaming.ext {C : Carrier} {Γ Δ : Shape C} {f g : Γ →ʳ Δ}
 
 /-! ## Category laws -/
 
-theorem Renaming.id_comp {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) : f ∘ʳ 𝟙ʳ = f := rfl
+theorem Renaming.id_comp {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) : f ∘ʳʳ 𝟙ʳ = f := rfl
 
-theorem Renaming.comp_id {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) : 𝟙ʳ ∘ʳ f = f := rfl
+theorem Renaming.comp_id {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) : 𝟙ʳ ∘ʳʳ f = f := rfl
 
 theorem Renaming.comp_assoc {C : Carrier} {Γ Δ Ε Ζ : Shape C}
-    (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) (h : Ε →ʳ Ζ) : h ∘ʳ (g ∘ʳ f) = (h ∘ʳ g) ∘ʳ f := rfl
+    (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) (h : Ε →ʳ Ζ) : h ∘ʳʳ (g ∘ʳʳ f) = (h ∘ʳʳ g) ∘ʳʳ f := rfl
 
 /-! ## Weakening and extension -/
 
@@ -99,7 +99,7 @@ theorem Renaming.extend_id {C : Carrier} (Γ : Shape C) (β : C.Arity) :
 
 @[simp]
 theorem Renaming.extend_comp {C : Carrier} {Γ Δ Ε : Shape C}
-    (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) (β : C.Arity) : (g ∘ʳ f) ⇑ʳ β = (g ⇑ʳ β) ∘ʳ (f ⇑ʳ β) := by
+    (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) (β : C.Arity) : (g ∘ʳʳ f) ⇑ʳ β = (g ⇑ʳ β) ∘ʳʳ (f ⇑ʳ β) := by
   ext α p
   cases p with
   | here _  => rfl
@@ -109,10 +109,10 @@ theorem Renaming.extend_comp {C : Carrier} {Γ Δ Ε : Shape C}
 def Renaming.weakenList {C : Carrier} (Γ : Shape C) :
     (τ : List C.Arity) → Γ →ʳ Γ ⋈* τ
   | []        => 𝟙ʳ
-  | β :: rest => Renaming.weaken (Γ ⋈* rest) β ∘ʳ Renaming.weakenList Γ rest
+  | β :: rest => Renaming.weaken (Γ ⋈* rest) β ∘ʳʳ Renaming.weakenList Γ rest
 
 @[inherit_doc Renaming.weakenList]
-notation:65 Γ " ↪ʳ " τ => Renaming.weakenList Γ τ
+notation:65 Γ " ↪ʳ* " τ => Renaming.weakenList Γ τ
 
 /-- Iterated extension of a renaming through a list of binders. -/
 def Renaming.extendList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
@@ -137,16 +137,16 @@ def Renaming.extendList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
 /-- Naturality of `extendList` w.r.t. `weakenList`. -/
 @[simp] theorem Renaming.extendList_weakenList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     ∀ (τ : List C.Arity) {α : C.Arity} (p : Γ ∋ α),
-      ρ.extendList τ ((Γ ↪ʳ τ) p) = (Δ ↪ʳ τ) (ρ p)
+      ρ.extendList τ ((Γ ↪ʳ* τ) p) = (Δ ↪ʳ* τ) (ρ p)
   | [], _, _ => rfl
   | β :: rest, α, p => by
-    show SlotAt.there (ρ.extendList rest ((Γ ↪ʳ rest) p))
-       = SlotAt.there ((Δ ↪ʳ rest) (ρ p))
+    show SlotAt.there (ρ.extendList rest ((Γ ↪ʳ* rest) p))
+       = SlotAt.there ((Δ ↪ʳ* rest) (ρ p))
     rw [Renaming.extendList_weakenList ρ rest p]
 
 /-- Morphism-level form of `extendList_weakenList`: the naturality square commutes. -/
 theorem Renaming.weakenList_naturality {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
     (τ : List C.Arity) :
-    ρ.extendList τ ∘ʳ (Γ ↪ʳ τ) = (Δ ↪ʳ τ) ∘ʳ ρ := by
+    ρ.extendList τ ∘ʳʳ (Γ ↪ʳ* τ) = (Δ ↪ʳ* τ) ∘ʳʳ ρ := by
   ext α p
   exact Renaming.extendList_weakenList ρ τ p
