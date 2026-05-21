@@ -217,6 +217,56 @@ private theorem inst_aux_rename_id {C : Carrier} {Δ Δ' : Shape C}
 termination_by α
 decreasing_by exact ⟨j, rfl⟩
 
+/-! ## F3 — renaming after substitution -/
+
+/-- **SubRen fusion** (Allais et al. F3): walking `⟦ρ.extendList τ⟧ʳ` after
+`lift.aux σ τ` equals walking `lift.aux (σ ˢ∘ʳ ρ) τ` directly.  The renaming
+is absorbed into the substitution by post-composition.  Uses `inst_aux_rename_id`
+to commute the renaming through `inst.aux` in the `.base` case. -/
+private theorem ren_after_subst {C : Carrier} :
+    ∀ {Γ Δ Δ' : Shape C} (σ : Subst Γ Δ) (ρ : Δ →ʳ Δ')
+      (τ : List C.Arity) (e : Expr (Γ ⋈* τ)),
+      ⟦ ρ.extendList τ ⟧ʳ (lift.aux σ τ e)
+        = lift.aux (σ ˢ∘ʳ ρ) τ e
+  | Γ, Δ, Δ', σ, ρ, τ, .apply (α := α_h) p args => by
+    have ih_arg : ∀ (k : C.Binder α_h),
+        ⟦ ρ.extendList (k.arity :: τ) ⟧ʳ (lift.aux σ (k.arity :: τ) (args k))
+          = lift.aux (σ ˢ∘ʳ ρ) (k.arity :: τ) (args k) :=
+      fun k => ren_after_subst σ ρ (k.arity :: τ) (args k)
+    cases classify τ p with
+    | ext i =>
+      simp only [lift_aux_ext_eq, Renaming.actExpr_apply, extendList_tauSlot]
+      congr 1
+      funext k
+      exact ih_arg k
+    | base q =>
+      -- LHS: ⟦ρ.extendList τ⟧ʳ (inst.aux α_h (Δ↪ʳτ) Λ_LHS [] (σ q)).
+      rw [lift_aux_base_eq, inst_aux_factor_ren α_h (Δ ↪ʳ τ)]
+      simp only [Renaming.extendList_nil]
+      -- Commute the outer renaming through inst.aux at α_h via inst_aux_rename_id.
+      have hI := inst_aux_rename_id α_h (ρ.extendList τ)
+        (fun j => lift.aux σ (j.arity :: τ) (args j)) []
+        (⟦ (Δ ↪ʳ τ) ⇑ʳ α_h ⟧ʳ (σ q))
+      simp only [Renaming.extendList_nil] at hI
+      refine hI.trans ?_
+      -- RHS: lift.aux (σ ˢ∘ʳ ρ) τ (apply ((Γ↪ʳτ) q) args).
+      rw [lift_aux_base_eq, inst_aux_factor_ren α_h (Δ' ↪ʳ τ)]
+      simp only [Renaming.extendList_nil]
+      congr 1
+      · funext k
+        exact ih_arg k
+      · -- Value equality via renaming naturality.
+        rw [← Renaming.actExpr.map_comp]
+        show Renaming.actExpr (((ρ.extendList τ) ⇑ʳ α_h) ∘ʳ
+                                ((Δ ↪ʳ τ) ⇑ʳ α_h)) (σ q) = _
+        rw [← Renaming.extend_comp (Δ ↪ʳ τ) (ρ.extendList τ) α_h,
+            Renaming.weakenList_naturality,
+            Renaming.extend_comp ρ (Δ' ↪ʳ τ) α_h,
+            Renaming.actExpr.map_comp]
+        rfl
+termination_by _ _ _ _ _ τ e => (⟨_ ⋈* τ, e⟩ : Σ Γ : Shape C, Expr Γ)
+decreasing_by exact Expr.Subterm.of_arg _ _ _
+
 /-! ## η-side lemmas for `inst.aux` -/
 
 private theorem inst_aux_η_tauSlot {C : Carrier} :
