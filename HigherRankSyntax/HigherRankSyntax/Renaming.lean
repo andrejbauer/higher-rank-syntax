@@ -68,6 +68,9 @@ theorem Renaming.comp_assoc {C : Carrier} {Γ Δ Ε Ζ : Shape C}
 def Renaming.weaken {C : Carrier} (Γ : Shape C) (α : C.Arity) : Γ →ʳ Γ ⋈ α :=
   ⟨fun {_} p => .there p⟩
 
+@[inherit_doc Renaming.weaken]
+notation:65 Γ " ↪ʳ " α => Renaming.weaken Γ α
+
 /-- Extend a renaming through a fresh binder of arity `β`. -/
 def Renaming.extend {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) (β : C.Arity) :
     Γ ⋈ β →ʳ Δ ⋈ β :=
@@ -119,6 +122,9 @@ def Renaming.extendList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     (τ : List C.Arity) → Γ ⋈* τ →ʳ Δ ⋈* τ
   | []        => ρ
   | β :: rest => ρ.extendList rest ⇑ʳ β
+
+@[inherit_doc Renaming.extendList]
+infixl:95 " ⇑ʳ* " => Renaming.extendList
 
 @[simp] theorem Renaming.extendList_nil {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
     ρ.extendList [] = ρ := rfl

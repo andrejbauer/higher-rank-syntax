@@ -26,6 +26,9 @@ maps Δ-slots through `ρ` during traversal.
 def Subst {C : Carrier} (Γ Δ : Shape C) : Type :=
   ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)
 
+/-- Notation `Γ →ˢ Δ` for substitutions from `Γ` to `Δ`. -/
+infixr:25 " →ˢ " => Subst
+
 instance {C : Carrier} {Γ Δ : Shape C} :
     CoeFun (Subst Γ Δ) (fun _ => ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)) :=
   ⟨id⟩
@@ -244,6 +247,9 @@ def Subst.lift {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ)
 def Subst.act {C : Carrier} {Γ Δ : Shape C} (σ : Subst Γ Δ) (e : Expr Γ) : Expr Δ :=
   lift.aux σ [] e
 
+/-- Action of a substitution on an expression: `⟦ σ ⟧ˢ e`. -/
+notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ e
+
 /-! ## Categorical operations: substitution and renaming compositions -/
 
 /-- Embed a renaming as a substitution: send each slot through `ρ` and η-expand. -/
@@ -254,14 +260,23 @@ def Renaming.toSubst {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) : Subst 
 def Subst.id {C : Carrier} (Γ : Shape C) : Subst Γ Γ :=
   fun p => Expr.η p
 
+/-- The identity substitution on a shape. -/
+notation "𝟙ˢ" => Subst.id _
+
 /-- Weakening as a substitution: insert a fresh α-binder. -/
 def Subst.weaken {C : Carrier} (Γ : Shape C) (α : C.Arity) : Subst Γ (Γ ⋈ α) :=
   Renaming.toSubst (Renaming.weaken Γ α)
+
+@[inherit_doc Subst.weaken]
+notation:65 Γ " ↪ˢ " α => Subst.weaken Γ α
 
 /-- Iterated weakening as a substitution. -/
 def Subst.weakenList {C : Carrier} (Γ : Shape C) (τ : List C.Arity) :
     Subst Γ (Γ ⋈* τ) :=
   Renaming.toSubst (Γ ↪ʳ* τ)
+
+@[inherit_doc Subst.weakenList]
+notation:65 Γ " ↪ˢ* " τ => Subst.weakenList Γ τ
 
 /-- Pre-compose a substitution by a renaming. -/
 def Renaming.preSubst {C : Carrier} {Γ Γ' Δ : Shape C}
@@ -296,11 +311,17 @@ def Subst.extend {C : Carrier} {Δ Ε : Shape C} (σ : Subst Δ Ε) (α : C.Arit
     | .here i  => Expr.η (.here i)
     | .there q => ⟦ Renaming.weaken Ε α ⇑ʳ α' ⟧ʳ (σ q)
 
+@[inherit_doc Subst.extend]
+infixl:95 " ⇑ˢ " => Subst.extend
+
 /-- Iterated extension of a substitution through a list of binders. -/
 def Subst.extendList {C : Carrier} {Δ Ε : Shape C} (σ : Subst Δ Ε) :
     (τ : List C.Arity) → Subst (Δ ⋈* τ) (Ε ⋈* τ)
   | []        => σ
   | β :: rest => Subst.extend (Subst.extendList σ rest) β
+
+@[inherit_doc Subst.extendList]
+infixl:95 " ⇑ˢ* " => Subst.extendList
 
 /-- Componentwise action of a substitution on an instantiation. -/
 def Inst.map {C : Carrier} {α : C.Arity} {Δ Ε : Shape C}
