@@ -276,7 +276,7 @@ infixl:90 " ˢ∘ˢ " => Subst.comp
 
 /-- Extend a substitution through a fresh α-binder: η at the new binder, σ then weaken
 on the underlying slots. -/
-def Subst.under {C : Carrier} {Δ Ε : Shape C} (σ : Subst Δ Ε) (α : C.Arity) :
+def Subst.extend {C : Carrier} {Δ Ε : Shape C} (σ : Subst Δ Ε) (α : C.Arity) :
     Subst (Δ ⋈ α) (Ε ⋈ α) :=
   fun {α'} p =>
     match p with
@@ -287,7 +287,7 @@ def Subst.under {C : Carrier} {Δ Ε : Shape C} (σ : Subst Δ Ε) (α : C.Arity
 def Subst.extendList {C : Carrier} {Δ Ε : Shape C} (σ : Subst Δ Ε) :
     (τ : List C.Arity) → Subst (Δ ⋈* τ) (Ε ⋈* τ)
   | []        => σ
-  | β :: rest => Subst.under (Subst.extendList σ rest) β
+  | β :: rest => Subst.extend (Subst.extendList σ rest) β
 
 /-- Componentwise action of a substitution on an instantiation. -/
 def Inst.map {C : Carrier} {α : C.Arity} {Δ Ε : Shape C}
