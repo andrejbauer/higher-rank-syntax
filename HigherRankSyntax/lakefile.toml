@@ -11,3 +11,6 @@ git = "https://github.com/leanprover-community/mathlib4.git"
 
 [[lean_lib]]
 name = "HigherRankSyntax"
+
+[[lean_lib]]
+name = "HigherRankSyntaxSig"
