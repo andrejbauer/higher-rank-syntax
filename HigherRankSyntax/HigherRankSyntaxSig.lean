@@ -4,3 +4,4 @@ import HigherRankSyntaxSig.Renaming
 import HigherRankSyntaxSig.Expr
 import HigherRankSyntaxSig.Subst
 import HigherRankSyntaxSig.RelativeMonad.Basic
+import HigherRankSyntaxSig.SyntaxMonad

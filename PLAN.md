@@ -259,6 +259,100 @@ one-liner `(L3 𝟙ʳ e).trans (by simp)`, and split `Subst.lean` into
 mentioned dependencies (`tauSlot`, `classify`, `inst.aux`, `lift.aux`,
 `η_fillers`, per-case unfolders) promoted to non-private in `Subst.lean`.
 
+## HigherRankSyntaxSig — alternate library (hand-off)
+
+`HigherRankSyntaxSig/` is a parallel rebuild on a List-Arity `Shape`,
+with `Subst.dom : List C.Arity` (replacing the original single-arity
+dom) so every Kleisli map of the relative monad corresponds directly
+to a `Subst` record — sidestepping the OCaml-style "two flavours of
+walker" obstruction (`lift`/`inst` split, `comp_lift` quagmire) that
+the original library hit.
+
+### What's built
+
+- **`Shape.lean`**: `abbrev Shape (C : Carrier) := List C.Arity`;
+  `.nil` / `.ext Γ α` as `@[match_pattern] abbrev`s for `[]` / `α ::
+  Γ`.  `extList Γ τ := τ ++ Γ` as `abbrev`, notation `⋈*`.  `SlotAt`
+  inductive on `Shape`.
+- **`Carrier.lean`**, **`Renaming.lean`**, **`Expr.lean`**: ported
+  from the original library; identical structure (`actExpr`'s
+  `map_id`/`map_comp` already proved).
+- **`Subst.lean`**:
+  - `Subst { pre : Shape C, dom : List C.Arity, cod : List C.Arity,
+    sub : ∀ {α}, (dom ∋ α) → Expr ((pre ⋈* cod) ⋈ α) }`.  Source =
+    `pre ⋈* dom`, target = `pre ⋈* cod`.
+  - `XPos pre dom : (τ : List Arity) → {α} → SlotAt … → Type` with
+    three constructors `.pre`, `.dom`, `.ext` (pre, dom as
+    parameters; τ as index varying via `.ext`).
+  - `PreOrDom pre dom : {α} → SlotAt → Type` (two constructors) —
+    return type of `classifyDom`, dodges the impossible-but-not-
+    eliminable `.ext` case at τ=[].
+  - `classify`/`classifyDom`: two-phase walk (τ then dom).
+  - `Subst.act`: walker, terminates by lex `(DomLt, Expr.Subterm)`.
+  - `DomLt`: WF relation on `List C.Arity` ([β] ≺ dom iff β is a
+    sub-arity of some αⱼ ∈ dom); WF via `Carrier.Sub`-induction.
+- **`SyntaxMonad.lean`** (stub):
+  - `ShapeCat`, `ArityFunc`: categories on `Shape C` (with Renamings)
+    and on `C.Arity → Type` (wrapped to dodge instance ambiguity if
+    two carriers share `Arity`).
+  - `J : Shape ⥤ ArityFunc` (`Γ ↦ α ↦ Γ ∋ α`).
+  - `T : Shape ⥤ ArityFunc` (`Γ ↦ α ↦ Expr (Γ ⋈ α)`), `map_id`/
+    `map_comp` proved from `Renaming.actExpr.map_id`/`map_comp`.
+  - `toSubst {Γ Δ} (f : J Γ ⟶ T Δ) : Subst C` — wraps `f` as a
+    pre=[] Subst, with `sub := cast … ∘ f` along
+    `(List.append_nil Δ).symm`.
+  - `fromSubst (σ : Subst C) : J (σ.pre ⋈* σ.dom) ⟶ T (σ.pre ⋈*
+    σ.cod)` — dispatches via `classifyDom`: pre-slot → `Expr.η`
+    at the weakened target position, dom-slot → `σ.sub`.
+  - `SyntaxMonad : RelativeMonad J` with `η = Expr.η`, `lift`
+    defined via `toSubst` + `Subst.act` + two casts.
+
+### Open (`sorry`)
+
+- `unit_right`, `unit_left`, `comp_lift` — relative-monad laws.
+- `fromSubst_toSubst` (was sketched, then removed) — `fromSubst
+  (toSubst f) = f` modulo casts.  Deferred until we know what
+  consumer needs it; might fall out of a unit-law proof.
+
+### Key design decisions
+
+- **Transports at the Kleisli boundary are allowed.**  The "no `▸`"
+  rule applies inside `Subst.act`'s recursion (transports there
+  block computation and break inductive hypotheses); at `lift`'s
+  outer wrap/unwrap they're the right tool — O(1) cast vs O(|Expr|)
+  for the structural-renaming alternative.  Previously had
+  `toAppendNil`/`fromAppendNil` renamings; replaced with `cast
+  (congrArg (Expr ∘ (· ⋈ α)) (List.append_nil _))`.
+- **List-`dom` Subst captures all Kleisli maps.**  A Kleisli `f : Γ
+  →ˢ Δ` is exactly `toSubst f : Subst C` with `pre = []`.  The
+  residual friction is `[] ⋈* X = X ++ [] ≠ X` propositionally for
+  abstract `X` — absorbed by the two boundary casts in `lift`.
+- **`Shape = List C.Arity` as `abbrev`** with `.nil`/`.ext` as
+  `@[match_pattern] abbrev`s.  Beware: `Γ ⋈* []` reduces to `Γ`
+  definitionally (τ-recursion of `extList`), but `[] ⋈* Γ` does
+  **not** reduce to `Γ` for abstract `Γ` (it unfolds to `Γ ++ []`,
+  which `List.append` doesn't simplify on the second arg).
+- **Why `XPos` has `pre`/`dom` as parameters and `τ` as index**: pre
+  and dom are known at all `classify` call sites, so making them
+  parameters keeps Lean's pattern matcher happy.  `τ` varies via
+  `.ext`'s implicit `(τ_above ++ β :: τ_below)` decomposition.
+- **`PreOrDom`**: a two-constructor companion to `XPos` whose return
+  type at τ=[] hides the impossible `.ext` case.  Lean's matcher
+  can't eliminate `[] = τ_above ++ β :: τ_below` automatically;
+  using `PreOrDom` avoids `nomatch` gymnastics.
+
+### What to do next
+
+Pick `unit_right` or `unit_left` and try directly via induction.
+`fromSubst_toSubst` is probably a stepping-stone, but state and
+prove the *consumer* (unit law) first — only extract a lemma when
+the proof gets stuck on a recognizable shape.
+
+`comp_lift` is the historically hard law.  The hope of the list-dom
+design: lift-after-lift composes at the `Subst`-record level, and
+`Subst.act`'s self-similar recursion handles the composition
+without the OCaml-flavoured nested walker.  Untested.
+
 ## Notes for the next Claude
 
 - **`~/.claude/CLAUDE.md` is authoritative.** Ignore the harness's plan-mode
@@ -269,7 +363,33 @@ mentioned dependencies (`tauSlot`, `classify`, `inst.aux`, `lift.aux`,
   - No Sum-typed classifiers *returning expressions*.  The current `XPos` is
     OK because it carries the slot-equation as its *index* and is consumed
     by definitional pattern matching.
-  - No `Subst.extend`-style σ-wrapping.
+  - **No σ/ι extension by trivial action in recursive walkers.**
+    Operations like `Subst.extend` (`σ ⇑ˢ`), `Subst.extendList`
+    (`σ ⇑ˢ* τ`), `Subst.under`, and `Inst.toSubst` extend a
+    substitution / instantiation by appending η-identity (or
+    η-of-renamed-slot, which is trivial when the renaming acts
+    identically) on freshly added binder layers.  These extended
+    forms must never appear inside the definition of a recursive
+    walker, nor as the RHS of an equation that a recursive proof
+    rewrites through.  The reason: induction on `e` descends into
+    `args` one binder layer deeper at each step, so σ on the
+    extended-form side must *grow* by another ⇑ˢ; the inductive
+    hypothesis (taken at the un-extended σ) no longer applies and
+    the proof loops.  On the operation side, the walker would
+    recurse through the η-expansions of the trivial-action part
+    and fail to terminate on the substitution argument.
+
+    The whole point of the τ-parameter in `lift.aux σ τ e` and
+    `inst.aux ρ ι τ e` is to provide bookkeeping that records
+    "how many trivial-action binder layers lie beneath σ" *without
+    ever modifying σ*.  σ stays fixed across all recursive calls;
+    τ grows on descent.
+
+    **Equations relating extended and un-extended forms are fine
+    as isolated reasoning aids** (proven as standalone lemmas).
+    What is forbidden is the extended form appearing inside an
+    operation's definition, or being introduced by a step the
+    main proof's recursion rewrites through.
   - No generalising `inst.aux` to take a Subst (explicit ask: keep it taking
     a Renaming, even though L5 would be cleaner with a Subst).
 - **"Untested lemmas are not worth proving."**  Andrej's rule: state the
