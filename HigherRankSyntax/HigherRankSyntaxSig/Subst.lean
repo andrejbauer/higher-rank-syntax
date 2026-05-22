@@ -10,27 +10,13 @@ import HigherRankSyntaxSig.Expr
 -/
 
 
-/-- Membership in a list of arities, with binder data at the position.  Mirrors
-`SlotAt`'s structure but indexed by `List C.Arity` instead of `Shape C`. -/
-inductive ListSlot {C : Carrier} : List C.Arity → C.Arity → Type where
-  | here  : {β : C.Arity} → {rest : List C.Arity} → (i : C.Binder β) →
-            ListSlot (β :: rest) i.arity
-  | there : {β : C.Arity} → {rest : List C.Arity} → {α : C.Arity} →
-            (p : ListSlot rest α) → ListSlot (β :: rest) α
-
-/-- Canonical embedding of a list-slot into the shape extended by that list. -/
-def ListSlot.toSlotAt {C : Carrier} (pre : Shape C) :
-    {dom : List C.Arity} → {α : C.Arity} → ListSlot dom α → (pre ⋈* dom) ∋ α
-  | _, _, ListSlot.here i  => SlotAt.here i
-  | _, _, ListSlot.there p => SlotAt.there (ListSlot.toSlotAt pre p)
-
-/-- A list-slot witnesses that some `β ∈ dom` has the slot's arity as a sub-arity. -/
-theorem ListSlot.subWitness {C : Carrier} :
-    ∀ {dom : List C.Arity} {α : C.Arity}, ListSlot dom α →
+/-- A slot of `dom` witnesses that some `β ∈ dom` has the slot's arity as a sub-arity. -/
+theorem SlotAt.subWitness {C : Carrier} :
+    ∀ {dom : List C.Arity} {α : C.Arity}, (dom ∋ α) →
       ∃ β, β ∈ dom ∧ Carrier.Sub α β
   | _ :: _, _, .here i  => ⟨_, List.Mem.head _, ⟨i, rfl⟩⟩
   | _ :: _, _, .there p => by
-      obtain ⟨β, h_mem, h_sub⟩ := ListSlot.subWitness p
+      obtain ⟨β, h_mem, h_sub⟩ := SlotAt.subWitness p
       exact ⟨β, List.Mem.tail _ h_mem, h_sub⟩
 
 /-- One-step WF relation on `List C.Arity`: `[β] ≺ dom` iff `β` is a sub-arity of
@@ -73,7 +59,7 @@ structure Subst (C : Carrier) where
   pre : Shape C
   dom : List C.Arity
   cod : List C.Arity
-  sub : ∀ {α : C.Arity}, ListSlot dom α → Expr ((pre ⋈* cod) ⋈ α)
+  sub : ∀ {α : C.Arity}, (dom ∋ α) → Expr ((pre ⋈* cod) ⋈ α)
 
 /-- The slot at depth `|τ_above|` in `Γ ⋈* (τ_above ++ β :: τ_below)`. -/
 def tauSlot {C : Carrier} (Γ : Shape C) :
@@ -82,28 +68,26 @@ def tauSlot {C : Carrier} (Γ : Shape C) :
   | [],        _, _, i => .here i
   | _ :: rest, β, τ_below, i => .there (tauSlot Γ rest β τ_below i)
 
-/-- Position of a slot in `(pre ⋈* dom) ⋈* τ`: a pre-slot, a dom-list-slot,
-or a τ-binder. -/
+/-- Position of a slot in `(pre ⋈* dom) ⋈* τ`: a pre-slot, a dom-slot, or a τ-binder. -/
 inductive XPos {C : Carrier} (pre : Shape C) (dom : List C.Arity) :
     (τ : List C.Arity) → {α : C.Arity} →
     SlotAt ((pre ⋈* dom) ⋈* τ) α → Type where
   | pre : {τ : List C.Arity} → {α : C.Arity} → (p : pre ∋ α) →
           XPos pre dom τ (((pre ⋈* dom) ↪ʳ* τ) ((pre ↪ʳ* dom) p))
-  | dom : {τ : List C.Arity} → {α : C.Arity} → (q : ListSlot dom α) →
-          XPos pre dom τ (((pre ⋈* dom) ↪ʳ* τ) (ListSlot.toSlotAt pre q))
+  | dom : {τ : List C.Arity} → {α : C.Arity} → (q : dom ∋ α) →
+          XPos pre dom τ (((pre ⋈* dom) ↪ʳ* τ) (SlotAt.appendRight pre q))
   | ext : {τ_above : List C.Arity} → {β : C.Arity} →
           {τ_below : List C.Arity} → (i : C.Binder β) →
           XPos pre dom (τ_above ++ β :: τ_below)
             (tauSlot (pre ⋈* dom) τ_above β τ_below i)
 
-/-- Classification of a slot in `pre ⋈* dom` (i.e., below τ): either in pre or
-in dom.  Two-constructor companion to `XPos`'s three; the `XPos.ext` case is
-impossible below τ. -/
+/-- Classification of a slot in `pre ⋈* dom` (i.e., below τ): either in pre or in dom.
+Two-constructor companion to `XPos`'s three; the `XPos.ext` case is impossible below τ. -/
 inductive PreOrDom {C : Carrier} (pre : Shape C) (dom : List C.Arity) :
     {α : C.Arity} → (p : (pre ⋈* dom) ∋ α) → Type where
   | pre : {α : C.Arity} → (q : pre ∋ α) → PreOrDom pre dom ((pre ↪ʳ* dom) q)
-  | dom : {α : C.Arity} → (q : ListSlot dom α) →
-          PreOrDom pre dom (ListSlot.toSlotAt pre q)
+  | dom : {α : C.Arity} → (q : dom ∋ α) →
+          PreOrDom pre dom (SlotAt.appendRight pre q)
 
 /-- Walk through dom: at `dom = []` the slot is in pre. -/
 def classifyDom {C : Carrier} (pre : Shape C) :
@@ -114,7 +98,7 @@ def classifyDom {C : Carrier} (pre : Shape C) :
   | _ :: dom',  _, .there p'  =>
     match classifyDom pre dom' p' with
     | PreOrDom.pre q   => PreOrDom.pre q
-    | PreOrDom.dom q'  => PreOrDom.dom (ListSlot.there q')
+    | PreOrDom.dom q'  => PreOrDom.dom (SlotAt.there q')
 
 /-- Walk through τ; at `τ = []` delegate to `classifyDom`. -/
 def classify {C : Carrier} (pre : Shape C) (dom : List C.Arity) :
@@ -159,5 +143,5 @@ decreasing_by
   all_goals first
     | (apply Prod.Lex.right; exact Expr.Subterm.of_arg _ _ _)
     | (apply Prod.Lex.left
-       obtain ⟨β, h_mem, h_sub⟩ := ListSlot.subWitness q
+       obtain ⟨β, h_mem, h_sub⟩ := SlotAt.subWitness q
        exact DomLt.step β h_mem _ h_sub)
