@@ -353,6 +353,85 @@ design: lift-after-lift composes at the `Subst`-record level, and
 `Subst.act`'s self-similar recursion handles the composition
 without the OCaml-flavoured nested walker.  Untested.
 
+## `endomaps` branch — Tele experiment, conclusion
+
+A branch `endomaps` off `with-signature` (head `9bbb9e5`) explored
+replacing `Shape := List C.Arity` with a *telescope* representation
+`Shape := Tele C.Arity := { val : List α → List α // ∀ x xs, val (x ::
+xs) = x :: val xs }`, with the goal of getting *strict* monoid laws
+(`Γ ⋈* nil ≡ Γ`, `nil ⋈* Γ ≡ Γ`, `Γ ⋈* (Δ ⋈* Ε) ≡ (Γ ⋈* Δ) ⋈* Ε`)
+definitionally, eliminating the `List.append_nil` cast in `lift`.
+
+### What worked
+
+- **`Tele.lean`** builds clean.  Strict monoid laws via function
+  composition + Lean η-equivalence + Prop irrelevance for the
+  subtype — all `rfl`.
+- **`Shape.lean`** builds clean with `abbrev Shape := Tele C.Arity`,
+  `⋈ := ∘ᵗ Tele.snoc`, `⋈* := ∘ᵗ`.  All three monoid `simp` lemmas
+  are `rfl`.
+- **Recursive `ofList`** (`ofList (β :: rest) = ofList rest ∘ᵗ snoc β`
+  by `rfl`) makes `Γ ⋈* (ofList (β :: rest)) ≡ (Γ ⋈* ofList rest) ⋈
+  β` definitional — the key reduction needed for List-recursive
+  classify to interact with Tele-based shapes.
+- **Church-encoded lists** (alternative formulation) verified to
+  give the same strict-monoid laws as `rfl` in a tiny test.
+
+### What broke (the fundamental obstacle)
+
+**Lean 4's pattern-matching unifier cannot invert `SlotAt (Γ ⋈ α)`
+when `⋈` is defined via function composition (Tele).**
+
+Concretely, `cases p` on `p : SlotAt (Γ ⋈ β) α` fails:
+
+```
+Dependent elimination failed: Failed to solve equation
+  (fun x ↦ Γ.val ((Tele.snoc β).val x))
+  = fun x ↦ Γ✝.val ((Tele.snoc α✝).val x)
+```
+
+The two sides are α-equivalent (Γ ≔ Γ✝, β ≔ α✝), but Lean's matcher
+doesn't go "inside" the `Tele` struct's `.val` lambda to unify.  This
+breaks every `cases p` in `Renaming.lean` (`extend_id`,
+`extend_comp`), and would equally break classify, classifyDom,
+Subst.act's per-case dispatch, and Expr.actExpr.
+
+### What this means
+
+The whole architecture relies on inverting slot constructors —
+SlotAt is *inherently* inductive and we pattern-match on it
+constantly.  Without inversion, the entire `HigherRankSyntaxSig`
+machinery cannot be ported to Tele as-is.  Workarounds (non-
+inductive SlotAt via Fin/Sigma, custom recursors, etc.) require
+deep rewrites that propagate everywhere SlotAt is consumed.
+
+### Recommendation
+
+**Abandon Tele-as-Shape and stay on `with-signature` (head
+`9bbb9e5`).**  Accept the one propositional cast at `lift`'s
+Kleisli/Subst boundary — it's localised, doesn't propagate into
+the walker, and is unlikely to cause real friction in the
+relative-monad-law proofs.
+
+The strict-monoid pain (`xs ++ [] ≠ xs` definitionally) is real but
+its impact on this codebase is exactly one cast.  The cost of
+eliminating it (via Tele) requires either (a) abandoning inductive
+SlotAt or (b) waiting for Lean to learn higher-order unification
+through structure fields.
+
+### Files left on `endomaps`
+
+- `HigherRankSyntaxSig/Tele.lean` — builds clean, reusable if Tele
+  finds another application.
+- `HigherRankSyntaxSig/Shape.lean`, `Renaming.lean` — modified to
+  use Tele, broken at the SlotAt-inversion step.  Left as evidence.
+- `HigherRankSyntaxSig/Expr.lean`, `Subst.lean`, `SyntaxMonad.lean`
+  — unchanged from `with-signature`, would fail to build with the
+  Tele-based Shape.
+
+Commits: `79185fb` (added Tele.lean), `50e7b13` (broken Shape/Renaming
+refactor with detailed commit message).
+
 ## Notes for the next Claude
 
 - **`~/.claude/CLAUDE.md` is authoritative.** Ignore the harness's plan-mode
