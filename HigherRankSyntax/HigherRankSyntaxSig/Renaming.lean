@@ -138,8 +138,8 @@ infixl:95 " ⇑ʳ* " => Renaming.extendList
       (ρ ⇑ʳ* τ) ((Γ ↪ʳ* τ) p) = (Δ ↪ʳ* τ) (ρ p)
   | [], _, _ => rfl
   | β :: rest, _, p => by
-    show SlotAt.there ((ρ ⇑ʳ* rest) ((Γ ↪ʳ* rest) p))
-       = SlotAt.there ((Δ ↪ʳ* rest) (ρ p))
+    show ListSlotAt.there ((ρ ⇑ʳ* rest) ((Γ ↪ʳ* rest) p))
+       = ListSlotAt.there ((Δ ↪ʳ* rest) (ρ p))
     rw [Renaming.extendList_weakenList ρ rest p]
 
 theorem Renaming.weakenList_naturality {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)

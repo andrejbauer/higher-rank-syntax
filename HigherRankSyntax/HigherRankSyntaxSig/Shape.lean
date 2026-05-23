@@ -4,17 +4,17 @@ import HigherRankSyntaxSig.Tele
 /-!
 # Shapes and slots — telescope representation
 
-`Shape C` is the type of telescopes over `C.Arity`.  The monoid operations
-(`⋈*`, with `Shape.nil` as unit) are **strictly associative with a strict
-unit at the definitional level** — function composition + `id` give us
-`Γ ⋈* Shape.nil ≡ Γ` and `Shape.nil ⋈* Γ ≡ Γ` definitionally.
+`Shape C` is `Tele C.Arity` — cons-style telescopes over arities.  The monoid
+operations `⋈*` (composition) and `Shape.nil` (identity) are **strictly
+associative with strict unit at the level of definitional equality**.
 
-`SlotAt` is the inductive of slots indexed by Shape; constructors reference
-the telescope's structure (`Γ ∘ᵗ Tele.snoc α`).
+Slots are inductive on the underlying list (`Γ.toList`).  Because
+`(Tele.cons α ∘ᵗ Γ).toList = α :: Γ.toList` *definitionally*, pattern matching
+on slots at shapes of the form `Γ ⋈ α` works exactly as if Shape were a List.
 -/
 
 
-/-- A shape over a carrier `C`: a telescope. -/
+/-- A shape over a carrier `C`: a telescope of arities. -/
 abbrev Shape (C : Carrier) : Type := Tele C.Arity
 
 namespace Shape
@@ -22,42 +22,56 @@ namespace Shape
 /-- The empty shape. -/
 @[match_pattern] abbrev nil {C : Carrier} : Shape C := Tele.id
 
-/-- Extension of a shape by an arity. -/
+/-- Extension of a shape by an arity at the topmost layer. -/
 @[match_pattern] abbrev ext {C : Carrier} (Γ : Shape C) (α : C.Arity) : Shape C :=
-  Γ ∘ᵗ Tele.snoc α
+  Tele.cons α ∘ᵗ Γ
 
 end Shape
 
-/-- Action of an arity on a shape: extends `Γ` by `α`. -/
+/-- Action of an arity on a shape: extends `Γ` by `α` at the topmost layer. -/
 infixl:65 " ⋈ " => Shape.ext
 
 /-- Iterated extension of a shape by another shape (telescope composition). -/
-abbrev Shape.extList {C : Carrier} (Γ Δ : Shape C) : Shape C := Γ ∘ᵗ Δ
+abbrev Shape.extList {C : Carrier} (Γ τ : Shape C) : Shape C := τ ∘ᵗ Γ
 
 @[inherit_doc Shape.extList]
 infixl:67 " ⋈* " => Shape.extList
 
-/-- A slot of a shape with its arity tracked as a type index. -/
-inductive SlotAt {C : Carrier} : Shape C → C.Arity → Type where
-  /-- A binder introduced by the topmost extension. -/
-  | here  : {Γ : Shape C} → {α : C.Arity} → (i : C.Binder α) →
-            SlotAt (Γ ⋈ α) i.arity
-  /-- A slot inherited from the shape below the topmost extension. -/
-  | there : {Γ : Shape C} → {β α : C.Arity} → SlotAt Γ α →
-            SlotAt (Γ ⋈ β) α
+/-- A slot of a list of arities with its arity tracked as a type index.  The
+inductive lives on `List`; `SlotAt` on `Shape` is `abbrev`'d to this via the
+underlying-list. -/
+inductive ListSlotAt {C : Carrier} : List C.Arity → C.Arity → Type where
+  /-- A binder introduced by the topmost extension at its binder's arity. -/
+  | here  : {β : C.Arity} → {rest : List C.Arity} → (i : C.Binder β) →
+            ListSlotAt (β :: rest) i.arity
+  /-- A slot inherited from below the topmost extension, at the same arity. -/
+  | there : {β α : C.Arity} → {rest : List C.Arity} →
+            ListSlotAt rest α → ListSlotAt (β :: rest) α
+
+/-- Slots of a shape are slots of its underlying list. -/
+abbrev SlotAt {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type :=
+  ListSlotAt Γ.toList α
 
 /-- `Γ ∋ α` is the type of slots of `Γ` at arity `α`. -/
 notation:35 Γ " ∋ " α => SlotAt Γ α
 
 /-- Extract the arity index from a slot. -/
 @[reducible]
-def SlotAt.arity {C : Carrier} {Γ : Shape C} {α : C.Arity} (_ : Γ ∋ α) : C.Arity := α
+def SlotAt.arity {C : Carrier} {Γ : Shape C} {α : C.Arity}
+    (_ : Γ ∋ α) : C.Arity := α
 
 /-! ### Strict monoid laws (all `rfl`) -/
 
-@[simp] theorem Shape.extList_nil {C : Carrier} (Γ : Shape C) : Γ ⋈* Shape.nil = Γ := rfl
+@[simp] theorem Shape.extList_nil {C : Carrier} (Γ : Shape C) :
+    Γ ⋈* Shape.nil = Γ := rfl
 
-@[simp] theorem Shape.nil_extList {C : Carrier} (Γ : Shape C) : Shape.nil ⋈* Γ = Γ := rfl
+@[simp] theorem Shape.nil_extList {C : Carrier} (Γ : Shape C) :
+    Shape.nil ⋈* Γ = Γ := rfl
 
 @[simp] theorem Shape.extList_assoc {C : Carrier} (Γ Δ Ε : Shape C) :
     (Γ ⋈* Δ) ⋈* Ε = Γ ⋈* (Δ ⋈* Ε) := rfl
+
+/-! ### The all-important reduction: `(Γ ⋈ α).toList = α :: Γ.toList` -/
+
+@[simp] theorem Shape.ext_toList {C : Carrier} (Γ : Shape C) (α : C.Arity) :
+    (Γ ⋈ α).toList = α :: Γ.toList := rfl
