@@ -405,13 +405,48 @@ machinery cannot be ported to Tele as-is.  Workarounds (non-
 inductive SlotAt via Fin/Sigma, custom recursors, etc.) require
 deep rewrites that propagate everywhere SlotAt is consumed.
 
+### Breakthrough — cons-style Tele + SlotAt-via-list
+
+The original obstacle came from using **snoc-style** telescopes
+(`Tele.snoc α := λxs. xs ++ [α]`).  Switching to **cons-style**
+(`Tele.cons α := λxs. α :: xs`) with `Γ ⋈ α := Tele.cons α ∘ᵗ Γ`
+gives `(Γ ⋈ α).toList = α :: Γ.toList` *definitionally* — because
+`Tele.cons α (Γ [])` is just β-reduction.
+
+Combined with `SlotAt Γ α := ListSlotAt Γ.toList α` (inductive on
+`List`, abbrev'd for `Tele`), pattern matching on slots at
+`Γ ⋈ α`-shaped Tele's goes through cleanly — Lean matches on the
+underlying list, which reduces.
+
+**Tele.lean, Shape.lean, Renaming.lean all build clean** with this
+design.  The strict monoid laws are still all `rfl`.
+
+### Remaining obstacle: Subst.dom
+
+`Subst.dom`, `Subst.cod` need to be either:
+
+- **`List C.Arity`** — `classifyDom` walks inductively, but the
+  `lift` bridge sets `σ.dom := Γ.toList` and the source shape
+  becomes `ofList Γ.toList ⋈ α` — propositionally but not
+  definitionally `Γ ⋈ α`.  One propositional cast at the boundary.
+- **`Shape C` (= Tele)** — no boundary cast (`σ.dom := Γ` directly,
+  source is `Γ ⋈ α` def), but `classifyDom` cannot walk an
+  abstract Tele for the pre-vs-dom dispatch.
+
+The user's hint "many results hold for arbitrary maps `List → List`"
+points toward eliminating `classifyDom`'s recursive walk on dom in
+favour of something that works at the Tele level — but it's not
+clear how to dispatch pre-vs-dom for an abstract Tele dom without
+either walking its list-representation or restructuring `Subst`
+itself.
+
 ### Recommendation
 
-**Abandon Tele-as-Shape and stay on `with-signature` (head
-`9bbb9e5`).**  Accept the one propositional cast at `lift`'s
-Kleisli/Subst boundary — it's localised, doesn't propagate into
-the walker, and is unlikely to cause real friction in the
-relative-monad-law proofs.
+The **cons-style + SlotAt-via-list** insight from this branch is
+strictly an improvement over the snoc-style approach and is worth
+keeping as a reference.  Whether to push for full Tele Subst (and
+solve the dom-walking problem) or accept the one propositional cast
+at lift's boundary is a judgement call.
 
 The strict-monoid pain (`xs ++ [] ≠ xs` definitionally) is real but
 its impact on this codebase is exactly one cast.  The cost of
