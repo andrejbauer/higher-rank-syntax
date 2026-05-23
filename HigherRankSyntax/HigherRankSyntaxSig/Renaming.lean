@@ -101,18 +101,18 @@ theorem Renaming.extend_comp {C : Carrier} {Γ Δ Ε : Shape C}
   | here _  => rfl
   | there _ => rfl
 
-/-- Iterated weakening: the canonical inclusion `Γ →ʳ Γ ⋈* τ`. -/
+/-- Iterated weakening: the canonical inclusion `Γ →ʳ Γ ⋈* (Tele.ofList τ)`. -/
 def Renaming.weakenList {C : Carrier} (Γ : Shape C) :
-    (τ : List C.Arity) → Γ →ʳ Γ ⋈* τ
+    (τ : List C.Arity) → Γ →ʳ Γ ⋈* (Tele.ofList τ)
   | []        => 𝟙ʳ
-  | β :: rest => Renaming.weaken (Γ ⋈* rest) β ∘ʳʳ Renaming.weakenList Γ rest
+  | β :: rest => Renaming.weaken (Γ ⋈* (Tele.ofList rest)) β ∘ʳʳ Renaming.weakenList Γ rest
 
 @[inherit_doc Renaming.weakenList]
 notation:65 Γ " ↪ʳ* " τ => Renaming.weakenList Γ τ
 
 /-- Iterated extension of a renaming through a list of binders. -/
 def Renaming.extendList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
-    (τ : List C.Arity) → Γ ⋈* τ →ʳ Δ ⋈* τ
+    (τ : List C.Arity) → Γ ⋈* (Tele.ofList τ) →ʳ Δ ⋈* (Tele.ofList τ)
   | []        => ρ
   | β :: rest => ρ.extendList rest ⇑ʳ β
 
@@ -137,7 +137,7 @@ infixl:95 " ⇑ʳ* " => Renaming.extendList
     ∀ (τ : List C.Arity) {α : C.Arity} (p : Γ ∋ α),
       (ρ ⇑ʳ* τ) ((Γ ↪ʳ* τ) p) = (Δ ↪ʳ* τ) (ρ p)
   | [], _, _ => rfl
-  | β :: rest, α, p => by
+  | β :: rest, _, p => by
     show SlotAt.there ((ρ ⇑ʳ* rest) ((Γ ↪ʳ* rest) p))
        = SlotAt.there ((Δ ↪ʳ* rest) (ρ p))
     rw [Renaming.extendList_weakenList ρ rest p]

@@ -43,10 +43,16 @@ def snoc {α : Type} (a : α) : Tele α where
   val xs := xs ++ [a]
   property := fun _ _ => rfl
 
-/-- The "tele" map from `List α` to `Tele α`: `lst ↦ (xs ↦ xs ++ lst)`. -/
-def ofList {α : Type} (lst : List α) : Tele α where
-  val xs := xs ++ lst
-  property := fun _ _ => rfl
+/-- The "tele" map from `List α` to `Tele α`, defined recursively so that
+`ofList (β :: rest) = ofList rest ∘ᵗ Tele.snoc β` is `rfl`. -/
+def ofList {α : Type} : List α → Tele α
+  | []        => Tele.id
+  | β :: rest => ofList rest ∘ᵗ Tele.snoc β
+
+@[simp] theorem ofList_nil {α : Type} : (ofList ([] : List α)) = Tele.id := rfl
+
+@[simp] theorem ofList_cons {α : Type} (β : α) (rest : List α) :
+    ofList (β :: rest) = ofList rest ∘ᵗ Tele.snoc β := rfl
 
 /-- The underlying list of a telescope: `t.toList = t []`. -/
 def toList {α : Type} (t : Tele α) : List α := t.val []
@@ -55,8 +61,15 @@ def toList {α : Type} (t : Tele α) : List α := t.val []
 
 @[simp] theorem snoc_toList {α : Type} (a : α) : (snoc a).toList = [a] := rfl
 
-@[simp] theorem ofList_toList {α : Type} (lst : List α) : (ofList lst).toList = lst :=
-  List.nil_append lst
+@[simp] theorem ofList_toList {α : Type} : ∀ (lst : List α), (ofList lst).toList = lst
+  | [] => rfl
+  | β :: rest => by
+      show (ofList rest ∘ᵗ snoc β).val [] = β :: rest
+      show (ofList rest).val ([] ++ [β]) = β :: rest
+      show (ofList rest).val [β] = β :: rest
+      rw [(ofList rest).property β []]
+      show β :: (ofList rest).toList = β :: rest
+      rw [ofList_toList rest]
 
 /-! ### Strict monoid laws (all `rfl`) -/
 
@@ -69,22 +82,7 @@ def toList {α : Type} (t : Tele α) : List α := t.val []
 
 /-! ### Round-trips between `Tele` and `List` -/
 
-theorem ofList_toList_eq {α : Type} (t : Tele α) : ofList t.toList = t := by
-  apply Tele.ext
-  funext xs
-  show xs ++ t.val [] = t.val xs
-  induction xs with
-  | nil => rfl
-  | cons x xs ih =>
-    show x :: (xs ++ t.val []) = t.val (x :: xs)
-    rw [t.property, ih]
-
-@[simp] theorem toList_comp {α : Type} (t s : Tele α) :
-    (t ∘ᵗ s).toList = s.toList ++ t.toList := by
-  show t.val (s.val []) = s.val [] ++ t.val []
-  have h : t.val (s.val []) = (ofList t.toList).val (s.val []) := by
-    rw [ofList_toList_eq]
-  rw [h]
-  rfl
+@[simp] theorem snoc_val {α : Type} (a : α) (xs : List α) :
+    (snoc a).val xs = xs ++ [a] := rfl
 
 end Tele
