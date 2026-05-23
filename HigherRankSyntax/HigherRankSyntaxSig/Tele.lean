@@ -49,7 +49,7 @@ infixl:90 " ∘ᵗ " => Tele.comp
 /-- The "cons" telescope: `xs ↦ a :: xs`.  Underlying list: `[a]`. -/
 def cons {α : Type} (a : α) : Tele α where
   val xs := a :: xs
-  property xs := rfl
+  property _ := rfl
 
 /-- The underlying list of a telescope: `t.toList = t []`. -/
 def toList {α : Type} (t : Tele α) : List α := t []
