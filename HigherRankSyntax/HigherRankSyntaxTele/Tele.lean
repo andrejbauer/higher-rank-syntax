@@ -19,13 +19,10 @@ extensional characterization is needed.
 -/
 
 
-/-- A telescope: an endofunction on `List α` that factors as left-prepending its
-underlying list. -/
+/-- A telescope: an endofunction on `List α`. -/
 @[ext] structure Tele (α : Type) where
   /-- The underlying endofunction. -/
   val : List α → List α
-  /-- Extensional characterization: the map is left-append by its action on `[]`. -/
-  property : ∀ xs, val xs = val [] ++ xs
 
 /-- Apply a telescope as a function. -/
 instance {α : Type} : CoeFun (Tele α) (fun _ => List α → List α) := ⟨Tele.val⟩
@@ -33,23 +30,16 @@ instance {α : Type} : CoeFun (Tele α) (fun _ => List α → List α) := ⟨Tel
 namespace Tele
 
 /-- Identity telescope. -/
-def id {α : Type} : Tele α := ⟨_root_.id, fun _ => rfl⟩
+def id {α : Type} : Tele α := ⟨_root_.id⟩
 
 /-- Composition of telescopes.  `t ∘ᵗ s` applies `s` first, then `t`. -/
-def comp {α : Type} (t s : Tele α) : Tele α where
-  val xs := t (s xs)
-  property xs := by
-    show t (s xs) = t (s []) ++ xs
-    rw [s.property xs, t.property (s [] ++ xs), t.property (s [])]
-    exact (List.append_assoc _ _ _).symm
+def comp {α : Type} (t s : Tele α) : Tele α := ⟨fun xs => t (s xs)⟩
 
 @[inherit_doc Tele.comp]
 infixl:90 " ∘ᵗ " => Tele.comp
 
 /-- The "cons" telescope: `xs ↦ a :: xs`.  Underlying list: `[a]`. -/
-def cons {α : Type} (a : α) : Tele α where
-  val xs := a :: xs
-  property _ := rfl
+def cons {α : Type} (a : α) : Tele α := ⟨fun xs => a :: xs⟩
 
 /-- The underlying list of a telescope: `t.toList = t []`. -/
 def toList {α : Type} (t : Tele α) : List α := t []
@@ -100,10 +90,6 @@ def ofList {α : Type} : List α → Tele α
       show β :: (ofList rest).toList = β :: rest
       rw [ofList_toList rest]
 
-/-- Telescopes act as left-prepending of their underlying list. -/
-theorem apply_eq_toList_append {α : Type} (t : Tele α) (xs : List α) :
-    t xs = t.toList ++ xs := t.property xs
-
 theorem ofList_apply {α : Type} :
     ∀ (lst : List α) (xs : List α), (ofList lst) xs = lst ++ xs
   | [], _ => rfl
@@ -111,11 +97,5 @@ theorem ofList_apply {α : Type} :
       show (Tele.cons β ∘ᵗ ofList rest) xs = (β :: rest) ++ xs
       show β :: (ofList rest) xs = β :: (rest ++ xs)
       rw [ofList_apply rest xs]
-
-theorem ofList_toList_eq {α : Type} (t : Tele α) : ofList t.toList = t := by
-  apply Tele.ext
-  funext xs
-  rw [ofList_apply]
-  exact (t.property xs).symm
 
 end Tele
