@@ -104,6 +104,11 @@ def toSubst {C : Carrier} {Γ Δ : Shape C}
   classifyDom := fun {_} p => PreOrDom.dom p
   weakenCod := ⟨fun {_} p => nomatch p⟩
 
+/-- The identity substitution at shape `Γ` — `toSubst` of the unit `Expr.η`.
+This is the Kleisli identity of the syntax relative monad. -/
+def Subst.id {C : Carrier} (Γ : Shape C) : Subst C :=
+  toSubst (fun {β : C.Arity} (p : Γ ∋ β) => Expr.η p)
+
 /-! ### The walker -/
 
 /-- Apply a substitution to an expression at depth `τ` (itself a classifiable
@@ -145,3 +150,11 @@ decreasing_by
       | (refine Prod.Lex.left _ _ ?_
          obtain ⟨β, h_mem, h_sub⟩ := SlotAt.subWitness q_dom
          exact DomLt.step β h_mem _ h_sub))
+
+/-- Kleisli composition of two Kleisli maps via `Subst.act`.  Reified to take
+the form expected by the relative-monad `lift`. -/
+def Subst.kcomp {C : Carrier} {Γ Δ Ε : Shape C}
+    (f : ∀ {β : C.Arity}, (Γ ∋ β) → Expr (Δ ⋈ β))
+    (g : ∀ {β : C.Arity}, (Δ ∋ β) → Expr (Ε ⋈ β)) :
+    ∀ {β : C.Arity}, (Γ ∋ β) → Expr (Ε ⋈ β) :=
+  fun {β} p => (toSubst g).act (CTele.cons β CTele.id) (f p)

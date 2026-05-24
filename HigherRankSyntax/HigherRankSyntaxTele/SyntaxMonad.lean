@@ -64,12 +64,12 @@ def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
   unit_right := by
     intro Γ
     funext α e
-    exact Subst.unit_right α e
+    exact Subst.act_id Γ α e
   unit_left := by
     intro Γ Δ f
     funext α p
-    exact Subst.unit_left (fun {β} p_inner => f β p_inner) α p
+    exact (Subst.act_η (fun {β} p_inner => f β p_inner) α p).symm
   comp_lift := by
     intro Γ Δ Ε f g
     funext α e
-    exact Subst.comp_lift (fun {β} p => f β p) (fun {β} q => g β q) α e
+    exact Subst.act_kcomp (fun {β} p => f β p) (fun {β} q => g β q) α e

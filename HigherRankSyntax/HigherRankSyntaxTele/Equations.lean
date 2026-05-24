@@ -4,35 +4,42 @@ import HigherRankSyntaxTele.Subst
 # Equations of the substitution walker
 
 This file holds the auxiliary equations needed to prove the three
-relative-monad laws (`unit_right`, `unit_left`, `comp_lift`).
+relative-monad laws.
 
-`Subst.act` recurses with a lex measure on `(σ.dom.toList via DomLt,
-Expr.Subterm)`.  Lemmas about it follow the same lex induction.
+## The relative-monad laws, cleanly stated
 
-The critical helper is **`act_η_τ`**: walking `Expr.η q_lifted` for a
-τ-side slot reproduces the η in the target shape.  It is proved by
-induction on the slot's arity via `C.subWf` — the η-args inside `Expr.η`
-recurse on strictly smaller arities, and CTele's `classify_embed` field
-collapses the τ-classify dispatch to the shape-continuation.
+* **`Subst.act_id`** — `(Subst.id Γ).act τ e = e`.  The identity substitution
+  acts as the identity walker.  Translates to `lift η = 𝟙` in the relative
+  monad (unit_right).
 
-From `act_η_τ`, the unit laws fold out:
-* **`unit_right`** — `lift (η Γ) = 𝟙 (map Γ)`: by structural induction
-  on the input, using `act_η_τ` at each τ-slot encountered and a
-  separate "identity walker on the aux Subst" sub-lemma in the dom
-  case.
-* **`unit_left`** — `f = η Γ ≫ lift f`: the dom-aux Subst has `sub`
-  computed by `act_η_τ`'s recursive application to η-args, so it acts
-  as the identity walker on `f p`.
+* **`Subst.act_η`** — `(toSubst f).act (cons α id) (Expr.η p) = f p`.  Acting
+  on an η-expansion of a slot reduces to applying `f` to that slot.  This is
+  the β-rule of the Kleisli extension: `lift f ∘ η = f` (unit_left).
 
-`comp_lift` is structurally harder (needs Subst composition); deferred.
+* **`Subst.act_kcomp`** — `(toSubst (kcomp f g)).act τ e = (toSubst g).act τ
+  ((toSubst f).act τ e)`.  Acting via a Kleisli composition factors through
+  the two `.act`s.  This is `lift (g ∘ f) = lift g ∘ lift f` (comp_lift).
+
+## Auxiliary equations
+
+The proofs need helper lemmas about how `Subst.act` behaves on
+`Expr.η`-shaped inputs at specific slot positions.  The cornerstone:
+
+* **`Subst.act_η_τ`** — walking `Expr.η` of a τ-side slot reproduces the η
+  in the target shape.  Used inside `act_η` to characterize the aux Subst's
+  `sub` as η-fills, and inside `act_id` (via `identity_walker`) for the
+  τ-slot branch of the walker.
+
+Currently all proofs are `sorry`d; we'll test the helper statements by
+proving `act_η` first.
 -/
 
 
-/-! ## Helper: η-walk on a τ-side slot -/
+/-! ## Auxiliary: η-walk on a τ-side slot -/
 
-/-- **act_η_τ**: walking an η-expansion of a τ-side slot reproduces the η in
-the target shape.  Induction on `α` via `C.subWf` — the η-args inside
-`Expr.η` recurse on strictly smaller arities. -/
+/-- Walking an η-expansion of a τ-side slot reproduces the η in the target
+shape.  By induction on the input expression via `Expr.Subterm` (equivalent
+to subWf on the slot's arity, since `Expr.η` terminates by arity). -/
 theorem Subst.act_η_τ {C : Carrier} (σ : Subst C) (t : CTele C)
     {α : C.Arity} (q_τ : t.shape ∋ α) :
     σ.act (CTele.cons α t)
@@ -42,31 +49,28 @@ theorem Subst.act_η_τ {C : Carrier} (σ : Subst C) (t : CTele C)
 
 /-! ## Monad laws -/
 
-/-- **unit_right** — `lift (η Γ) = 𝟙 (map Γ)`. -/
-theorem Subst.unit_right {C : Carrier} {Γ : Shape C} (α : C.Arity)
+/-- **`act_id`** — the identity substitution acts as the identity walker.
+Translates to `lift η = 𝟙` (unit_right). -/
+theorem Subst.act_id {C : Carrier} (Γ : Shape C) (α : C.Arity)
     (e : Expr (Γ ⋈ α)) :
-    (toSubst (fun {β : C.Arity} (p : Γ ∋ β) => Expr.η p)).act
-        (CTele.cons α CTele.id) e
-      = e := by
+    (Subst.id Γ).act (CTele.cons α CTele.id) e = e := by
   sorry
 
-/-- **unit_left** — `f = η Γ ≫ lift f`. -/
-theorem Subst.unit_left {C : Carrier} {Γ Δ : Shape C}
+/-- **`act_η`** — acting on an η-expansion reduces to applying `f`.
+Translates to `lift f ∘ η = f` (unit_left). -/
+theorem Subst.act_η {C : Carrier} {Γ Δ : Shape C}
     (f : ∀ {β : C.Arity}, (Γ ∋ β) → Expr (Δ ⋈ β))
     (α : C.Arity) (p : Γ ∋ α) :
-    f p
-      = (toSubst (fun {β} p => f p)).act (CTele.cons α CTele.id) (Expr.η p) := by
+    (toSubst f).act (CTele.cons α CTele.id) (Expr.η p) = f p := by
   sorry
 
-/-- **comp_lift** — `lift (f ≫ lift g) = lift f ≫ lift g`.  Needs a Subst
-composition theory; deferred. -/
-theorem Subst.comp_lift {C : Carrier} {Γ Δ Ε : Shape C}
+/-- **`act_kcomp`** — acting via a Kleisli composition factors.
+Translates to `lift (g ∘ f) = lift g ∘ lift f` (comp_lift). -/
+theorem Subst.act_kcomp {C : Carrier} {Γ Δ Ε : Shape C}
     (f : ∀ {β : C.Arity}, (Γ ∋ β) → Expr (Δ ⋈ β))
     (g : ∀ {β : C.Arity}, (Δ ∋ β) → Expr (Ε ⋈ β))
     (α : C.Arity) (e : Expr (Γ ⋈ α)) :
-    (toSubst (fun {β} (p : Γ ∋ β) =>
-        (toSubst (fun {γ} q => g q)).act (CTele.cons β CTele.id) (f p))).act
-          (CTele.cons α CTele.id) e
-      = (toSubst (fun {β} q => g q)).act (CTele.cons α CTele.id)
-          ((toSubst (fun {β} p => f p)).act (CTele.cons α CTele.id) e) := by
+    (toSubst (Subst.kcomp f g)).act (CTele.cons α CTele.id) e
+      = (toSubst g).act (CTele.cons α CTele.id)
+          ((toSubst f).act (CTele.cons α CTele.id) e) := by
   sorry
