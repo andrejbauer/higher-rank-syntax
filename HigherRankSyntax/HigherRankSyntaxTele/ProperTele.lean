@@ -48,6 +48,12 @@ class ProperTele {C : Carrier} (t : Tele C.Arity) : Type 1 where
   cover : ∀ (Γ : Shape C) {α : C.Arity} (p : (Γ ⋈* t) ∋ α),
           (∃ q_τ : t ∋ α, p = (embed Γ).apply q_τ)
             ∨ (∃ q_Γ : Γ ∋ α, p = (weaken Γ).apply q_Γ)
+  /-- The S-side embedding at empty base is the identity renaming.
+  Not implied by the other fields (e.g. a "swap" embed could satisfy
+  cover and classify_embed), so we require it explicitly.  Both our
+  declared instances (`instId`, `instCons`) satisfy it. -/
+  embed_nil_id : ∀ {α : C.Arity} (q : t ∋ α),
+    (embed Shape.nil).apply q = q
 
 namespace ProperTele
 
@@ -59,6 +65,7 @@ instance instId {C : Carrier} : ProperTele (Tele.id : Tele C.Arity) where
   classify_embed := fun _Γ _X _α q_τ _k_shape _k_Γ => nomatch q_τ
   classify_weaken := fun _Γ _X _α _q_Γ _k_shape _k_Γ => rfl
   cover := fun _Γ _α p => Or.inr ⟨p, rfl⟩
+  embed_nil_id := fun q => nomatch q
 
 /-- Extend a `ProperTele` by one arity at the top. -/
 instance instCons {C : Carrier} (a : C.Arity) (t : Tele C.Arity) [ProperTele t] :
@@ -93,5 +100,11 @@ instance instCons {C : Carrier} (a : C.Arity) (t : Tele C.Arity) [ProperTele t] 
       · refine Or.inr ⟨q_Γ, ?_⟩
         show ListSlotAt.there q = ListSlotAt.there ((ProperTele.weaken (t := t) Γ).apply q_Γ)
         congr 1
+  embed_nil_id := fun q => by
+    cases q with
+    | here _i  => rfl
+    | there q' =>
+      show ListSlotAt.there ((ProperTele.embed (t := t) Shape.nil).apply q') = .there q'
+      rw [ProperTele.embed_nil_id q']
 
 end ProperTele
