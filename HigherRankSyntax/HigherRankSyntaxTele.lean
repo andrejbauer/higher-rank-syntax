@@ -3,6 +3,5 @@ import HigherRankSyntaxTele.Shape
 import HigherRankSyntaxTele.Renaming
 import HigherRankSyntaxTele.Expr
 import HigherRankSyntaxTele.Subst
-import HigherRankSyntaxTele.IsIdentity
 import HigherRankSyntaxTele.RelativeMonad.Basic
 import HigherRankSyntaxTele.SyntaxMonad
