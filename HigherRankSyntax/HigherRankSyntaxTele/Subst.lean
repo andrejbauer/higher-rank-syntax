@@ -1,5 +1,5 @@
 import HigherRankSyntaxTele.Expr
-import HigherRankSyntaxTele.CTele
+import HigherRankSyntaxTele.ProperTele
 
 /-!
 # Substitution

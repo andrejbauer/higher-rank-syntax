@@ -1,21 +1,19 @@
 /-!
 # Telescopes — cons-style
 
-A *telescope* over `α` is an endofunction `f : List α → List α` representing
-"prepend some list to the input".  Formally, `f xs = f [] ++ xs`.
+A *telescope* over `α` is an endofunction `f : List α → List α`.  We use
+them to represent "prepend some list to the input", but Tele itself
+imposes no such restriction — it's just the carrier of the strict-monoid
+structure.  Cons-preservation properties (where needed) are imposed
+externally via the `ProperTele` type class.
 
 Telescopes form a strict monoid under function composition (with `id` as unit):
 - function composition is definitionally associative;
-- η-equivalence makes `id ∘ f` and `f ∘ id` definitionally `f`;
-- propositional proof irrelevance collapses subtype equality to value equality.
+- η-equivalence makes `id ∘ f` and `f ∘ id` definitionally `f`.
 
 The cons-style convention (vs. snoc-style `xs ↦ xs ++ lst`) is chosen so that
 `(Tele.cons α ∘ᵗ Γ).toList = α :: Γ.toList` reduces *definitionally* — this is
 what makes `SlotAt`-via-underlying-list work cleanly under pattern matching.
-
-Many results in this file hold for arbitrary endofunctions `List α → List α`,
-not just telescopes.  The `property` field is required only where the
-extensional characterization is needed.
 -/
 
 
