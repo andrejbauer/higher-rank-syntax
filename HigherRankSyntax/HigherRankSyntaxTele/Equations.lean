@@ -32,45 +32,44 @@ proofs.
 
 /-- Computing `σ.act` on an apply whose head is a τ-embedded shape-slot:
 collapses to the τ-slot branch reconstruction. -/
-theorem Subst.act_apply_embed {C : Carrier} (σ : Subst C) (τ : CTele C)
+theorem Subst.act_apply_embed {C : Carrier} {pre dom cod : Shape C}
+    (σ : Subst C pre dom cod) (τ : CTele C)
     {α : C.Arity} (q_τ : τ.shape ∋ α)
     (args : (i : C.Binder α) →
-      Expr (((σ.pre ⋈* σ.dom) ⋈* τ.shape) ⋈ i.arity)) :
-    σ.act τ (Expr.apply ((τ.embed (σ.pre ⋈* σ.dom)).apply q_τ) args)
-      = Expr.apply ((τ.embed (σ.pre ⋈* σ.cod)).apply q_τ)
+      Expr (((pre ⋈* dom) ⋈* τ.shape) ⋈ i.arity)) :
+    σ.act τ (Expr.apply ((τ.embed (pre ⋈* dom)).apply q_τ) args)
+      = Expr.apply ((τ.embed (pre ⋈* cod)).apply q_τ)
           (fun j => σ.act (CTele.cons j.arity τ) (args j)) := by
-  have h := Subst.act.eq_1 σ τ α ((τ.embed (σ.pre ⋈* σ.dom)).apply q_τ) args
-  rw [τ.classify_embed (σ.pre ⋈* σ.dom)] at h
+  have h := @Subst.act.eq_1 C pre dom cod σ τ α ((τ.embed (pre ⋈* dom)).apply q_τ) args
+  rw [τ.classify_embed (pre ⋈* dom)] at h
   exact h
 
 /-- Computing `σ.act` on an apply whose head is a τ-weakened below-slot:
 collapses to the below-τ branch, which dispatches via `σ.classifyDom`. -/
-theorem Subst.act_apply_weaken {C : Carrier} (σ : Subst C) (τ : CTele C)
-    {α : C.Arity} (q : (σ.pre ⋈* σ.dom) ∋ α)
+theorem Subst.act_apply_weaken {C : Carrier} {pre dom cod : Shape C}
+    (σ : Subst C pre dom cod) (τ : CTele C)
+    {α : C.Arity} (q : (pre ⋈* dom) ∋ α)
     (args : (i : C.Binder α) →
-      Expr (((σ.pre ⋈* σ.dom) ⋈* τ.shape) ⋈ i.arity)) :
-    σ.act τ (Expr.apply ((τ.weaken (σ.pre ⋈* σ.dom)).apply q) args)
+      Expr (((pre ⋈* dom) ⋈* τ.shape) ⋈ i.arity)) :
+    σ.act τ (Expr.apply ((τ.weaken (pre ⋈* dom)).apply q) args)
       = (match σ.classifyDom q with
           | PreOrDom.dom q_dom =>
-              let aux : Subst C := {
-                pre := σ.pre ⋈* σ.cod
-                dom := Shape.nil ⋈ α
-                cod := τ.shape
+              let aux : Subst C (pre ⋈* cod) (Shape.nil ⋈ α) τ.shape := {
                 sub := fun {_} q' => match q' with
                   | .here i => σ.act (CTele.cons i.arity τ) (args i)
                 classifyDom := fun {_} p' =>
                   match p' with
                   | .here i  => PreOrDom.dom (.here i)
                   | .there q => PreOrDom.pre q
-                weakenCod := τ.weaken (σ.pre ⋈* σ.cod)
+                weakenCod := τ.weaken (pre ⋈* cod)
               }
               aux.act CTele.id (σ.sub q_dom)
           | PreOrDom.pre q_pre =>
-              Expr.apply ((τ.weaken (σ.pre ⋈* σ.cod)).apply
+              Expr.apply ((τ.weaken (pre ⋈* cod)).apply
                            ((σ.weakenCod).apply q_pre))
                 (fun i => σ.act (CTele.cons i.arity τ) (args i))) := by
-  have h := Subst.act.eq_1 σ τ α ((τ.weaken (σ.pre ⋈* σ.dom)).apply q) args
-  rw [τ.classify_weaken (σ.pre ⋈* σ.dom)] at h
+  have h := @Subst.act.eq_1 C pre dom cod σ τ α ((τ.weaken (pre ⋈* dom)).apply q) args
+  rw [τ.classify_weaken (pre ⋈* dom)] at h
   exact h
 
 /-! ## Auxiliary: η-walk on a τ-side slot -/
@@ -78,16 +77,17 @@ theorem Subst.act_apply_weaken {C : Carrier} (σ : Subst C) (τ : CTele C)
 /-- Walking an η-expansion of a τ-side slot reproduces the η in the target
 shape.  By WF recursion on the slot's arity `α`.  Uses `act_apply_embed`
 as a black-box computation lemma — no `unfold Subst.act` needed. -/
-theorem Subst.act_η_τ {C : Carrier} (σ : Subst C) (t : CTele C)
+theorem Subst.act_η_τ {C : Carrier} {pre dom cod : Shape C}
+    (σ : Subst C pre dom cod) (t : CTele C)
     {α : C.Arity} (q_τ : t.shape ∋ α) :
     σ.act (CTele.cons α t)
-        (Expr.η (t.embed (σ.pre ⋈* σ.dom) q_τ))
-      = Expr.η (t.embed (σ.pre ⋈* σ.cod) q_τ) := by
+        (Expr.η (t.embed (pre ⋈* dom) q_τ))
+      = Expr.η (t.embed (pre ⋈* cod) q_τ) := by
   rw [Expr.η.eq_1]
   -- `.there ((t.embed Γ).apply q_τ) = ((cons α t).embed Γ).apply (.there q_τ)`
   -- by cons_embed_there (rfl).  `change` accepts the defeq.
   change σ.act (CTele.cons α t)
-      (Expr.apply (((CTele.cons α t).embed (σ.pre ⋈* σ.dom)).apply
+      (Expr.apply (((CTele.cons α t).embed (pre ⋈* dom)).apply
                      (ListSlotAt.there q_τ))
                   (fun i => Expr.η (ListSlotAt.here i))) = _
   rw [Subst.act_apply_embed σ (CTele.cons α t) (ListSlotAt.there q_τ)]
@@ -133,7 +133,7 @@ theorem Subst.act_η {C : Carrier} {Γ Δ : Shape C}
   -- `.there p = (cons α id).weaken Γ p` (rfl).  `change` accepts.
   change (toSubst f).act (CTele.cons α CTele.id)
       (Expr.apply (((CTele.cons α CTele.id).weaken
-                      ((toSubst f).pre ⋈* (toSubst f).dom)).apply p)
+                      (Shape.nil ⋈* Γ)).apply p)
                   (fun i => Expr.η (ListSlotAt.here i))) = _
   rw [Subst.act_apply_weaken (toSubst f) (CTele.cons α CTele.id) p]
   -- The match reduces via toSubst_classifyDom to PreOrDom.dom p; the

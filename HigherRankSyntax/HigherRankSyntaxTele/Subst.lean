@@ -75,15 +75,13 @@ inductive PreOrDom {C : Carrier} (pre dom : Shape C) (α : C.Arity) : Type where
 
 /-- A substitution record.  Source shape is `pre ⋈* dom`, target is `pre ⋈* cod`.
 
-Beyond the OCaml three-region data, `Subst` carries two function-typed helpers
-that the walker consumes uniformly:
+`pre`, `dom`, `cod` are type-level parameters (not fields), so type-equality of
+two Substs forces equality of all three regions.  Beyond the sub map, `Subst`
+carries two function-typed helpers consumed uniformly by the walker:
 
 * `classifyDom` dispatches a `pre ⋈* dom` slot into pre vs dom.
 * `weakenCod` embeds `pre` into `pre ⋈* cod` (for pre-slot rebuild). -/
-structure Subst (C : Carrier) where
-  pre : Shape C
-  dom : Shape C
-  cod : Shape C
+structure Subst (C : Carrier) (pre dom cod : Shape C) where
   sub : ∀ {α : C.Arity}, (dom ∋ α) → Expr ((pre ⋈* cod) ⋈ α)
   classifyDom : ∀ {α : C.Arity}, ((pre ⋈* dom) ∋ α) → PreOrDom pre dom α
   weakenCod : pre →ʳ pre ⋈* cod
@@ -96,25 +94,10 @@ With cons-style telescopes and `pre := Shape.nil`, the correspondence to
 
 /-- Wrap a Kleisli map as a `Subst` with empty `pre`. -/
 def toSubst {C : Carrier} {Γ Δ : Shape C}
-    (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)) : Subst C where
-  pre := Shape.nil
-  dom := Γ
-  cod := Δ
+    (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)) : Subst C Shape.nil Γ Δ where
   sub := f
   classifyDom := fun {_} p => PreOrDom.dom p
   weakenCod := ⟨fun {_} p => nomatch p⟩
-
-@[simp] theorem toSubst_pre {C : Carrier} {Γ Δ : Shape C}
-    (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)) :
-    (toSubst f).pre = Shape.nil := rfl
-
-@[simp] theorem toSubst_dom {C : Carrier} {Γ Δ : Shape C}
-    (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)) :
-    (toSubst f).dom = Γ := rfl
-
-@[simp] theorem toSubst_cod {C : Carrier} {Γ Δ : Shape C}
-    (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)) :
-    (toSubst f).cod = Δ := rfl
 
 @[simp] theorem toSubst_classifyDom {C : Carrier} {Γ Δ : Shape C}
     (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α))
@@ -128,7 +111,7 @@ def toSubst {C : Carrier} {Γ Δ : Shape C}
 
 /-- The identity substitution at shape `Γ` — `toSubst` of the unit `Expr.η`.
 This is the Kleisli identity of the syntax relative monad. -/
-def Subst.id {C : Carrier} (Γ : Shape C) : Subst C :=
+def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Shape.nil Γ Γ :=
   toSubst (fun {β : C.Arity} (p : Γ ∋ β) => Expr.η p)
 
 /-! ### The walker -/
@@ -138,33 +121,32 @@ telescope).  Uses `τ.classify` (CPS) for the τ/below-τ dispatch and
 `σ.classifyDom` (inductive) for the pre/dom dispatch.  All renamings used to
 rebuild new heads in the target come from carried function-typed fields
 (`τ.weaken`/`τ.embed`/`σ.weakenCod`). -/
-def Subst.act {C : Carrier} : (σ : Subst C) → (τ : CTele C) →
-    Expr ((σ.pre ⋈* σ.dom) ⋈* τ.shape) → Expr ((σ.pre ⋈* σ.cod) ⋈* τ.shape)
-  | σ, τ, .apply (α := α) p args =>
-      τ.classify (σ.pre ⋈* σ.dom) (Expr ((σ.pre ⋈* σ.cod) ⋈* τ.shape)) p
+def Subst.act {C : Carrier} : {pre dom cod : Shape C} → (σ : Subst C pre dom cod) →
+    (τ : CTele C) →
+    Expr ((pre ⋈* dom) ⋈* τ.shape) → Expr ((pre ⋈* cod) ⋈* τ.shape)
+  | pre, dom, cod, σ, τ, .apply (α := α) p args =>
+      τ.classify (pre ⋈* dom) (Expr ((pre ⋈* cod) ⋈* τ.shape)) p
         (fun q_τ =>
-          Expr.apply (τ.embed (σ.pre ⋈* σ.cod) q_τ)
+          Expr.apply (τ.embed (pre ⋈* cod) q_τ)
             (fun i => σ.act (CTele.cons i.arity τ) (args i)))
         (fun p_below =>
           match σ.classifyDom p_below with
           | PreOrDom.dom q_dom =>
-              let aux : Subst C := {
-                pre := σ.pre ⋈* σ.cod
-                dom := Shape.nil ⋈ α
-                cod := τ.shape
+              let aux : Subst C (pre ⋈* cod) (Shape.nil ⋈ α) τ.shape := {
                 sub := fun {_} q' => match q' with
                   | .here i => σ.act (CTele.cons i.arity τ) (args i)
                 classifyDom := fun {_} p' =>
                   match p' with
                   | .here i  => PreOrDom.dom (.here i)
                   | .there q => PreOrDom.pre q
-                weakenCod := τ.weaken (σ.pre ⋈* σ.cod)
+                weakenCod := τ.weaken (pre ⋈* cod)
               }
               aux.act CTele.id (σ.sub q_dom)
           | PreOrDom.pre q_pre =>
-              Expr.apply (τ.weaken (σ.pre ⋈* σ.cod) (σ.weakenCod q_pre))
+              Expr.apply (τ.weaken (pre ⋈* cod) (σ.weakenCod q_pre))
                 (fun i => σ.act (CTele.cons i.arity τ) (args i)))
-termination_by σ _ e => ((⟨σ.dom.toList⟩ : DomMeasure C), (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
+termination_by pre dom _ _ _ e =>
+  ((⟨dom.toList⟩ : DomMeasure C), (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
   all_goals (
     first
