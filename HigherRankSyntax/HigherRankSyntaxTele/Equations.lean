@@ -102,7 +102,17 @@ decreasing_by exact ⟨i, rfl⟩
 /-! ## Monad laws -/
 
 /-- **`act_id`** — the identity substitution acts as the identity walker.
-Translates to `lift η = 𝟙` (unit_right). -/
+Translates to `lift η = 𝟙` (unit_right).
+
+Mathematical structure (deferred): by induction on `e` via `Expr.Subterm`.
+Case-split via `τ.cover`:
+* Embed: `act_apply_embed` rewrites; head preserved (cod=dom=Γ); IH on args.
+* Weaken: `act_apply_weaken` + `toSubst_classifyDom` lands in dom branch;
+  residue is `aux.act CTele.id (Expr.η q_Γ) = .apply (...) args`, which
+  the aux mechanism reconstructs by dispatching the η-args' .here-slots
+  back through `aux.sub = (Subst.id Γ).act ... (args k) = args k` (IH).
+The Lean encoding hits unification issues — `rw` doesn't reduce
+`(Subst.id Γ).pre ⋈* (Subst.id Γ).dom` to `Γ` syntactically. -/
 theorem Subst.act_id {C : Carrier} (Γ : Shape C) (α : C.Arity)
     (e : Expr (Γ ⋈ α)) :
     (Subst.id Γ).act (CTele.cons α CTele.id) e = e := by
