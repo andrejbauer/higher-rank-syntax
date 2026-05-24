@@ -1,4 +1,5 @@
 import HigherRankSyntaxTele.Subst
+import HigherRankSyntaxTele.Equations
 import HigherRankSyntaxTele.RelativeMonad.Basic
 
 /-!
@@ -60,16 +61,15 @@ def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
   η Γ := fun _ p => Expr.η p
   lift {Γ Δ} f := fun α e =>
     (toSubst (fun {β} p => f β p)).act (CTele.cons α CTele.id) e
-  -- TODO: each law needs an η-walk helper lemma showing
-  -- `(toSubst (Expr.η ∘ ρ)).act τ (Expr.η q) = Expr.η (ρ-lift q)`,
-  -- proved by lex induction (subWf on arity, Subterm on Expr).
-  -- unit_right then collapses to "aux is the identity walker".
   unit_right := by
     intro Γ
     funext α e
-    sorry
+    exact Subst.unit_right α e
   unit_left := by
     intro Γ Δ f
     funext α p
-    sorry
-  comp_lift := sorry
+    exact Subst.unit_left (fun {β} p_inner => f β p_inner) α p
+  comp_lift := by
+    intro Γ Δ Ε f g
+    funext α e
+    exact Subst.comp_lift (fun {β} p => f β p) (fun {β} q => g β q) α e

@@ -12,8 +12,17 @@ import HigherRankSyntaxTele.Renaming
 * `classify` — CPS dispatch of a slot of `Γ ⋈* shape` into either a
   `shape`-slot or a `Γ`-slot.
 
-All three are *function-typed* and constructed alongside the shape by
-`id` / `cons`, so the walker never inducts on the underlying Tele.
+Together with two propositional fields:
+
+* `classify_embed` — classifying an embedded shape-slot returns it via
+  the shape-continuation.
+* `classify_weaken` — classifying a weakened base-slot returns it via
+  the base-continuation.
+
+All three function fields are constructed alongside the shape by `id` /
+`cons`, so the walker never inducts on the underlying Tele.  The two
+propositional fields are populated alongside, by `nomatch`/`rfl` and by
+the recursive proofs.
 -/
 
 
@@ -30,6 +39,14 @@ structure CTele (C : Carrier) where
   classify : (Γ : Shape C) → {α : C.Arity} → (X : Type) →
              ((Γ ⋈* shape) ∋ α) →
              ((shape ∋ α) → X) → ((Γ ∋ α) → X) → X
+  /-- Reflection: classifying an embedded shape-slot fires the shape continuation. -/
+  classify_embed : ∀ (Γ : Shape C) (X : Type) {α : C.Arity} (q_τ : shape ∋ α)
+                   (k_shape : (shape ∋ α) → X) (k_Γ : (Γ ∋ α) → X),
+                   classify Γ X (embed Γ q_τ) k_shape k_Γ = k_shape q_τ
+  /-- Reflection: classifying a weakened base-slot fires the base continuation. -/
+  classify_weaken : ∀ (Γ : Shape C) (X : Type) {α : C.Arity} (q_Γ : Γ ∋ α)
+                    (k_shape : (shape ∋ α) → X) (k_Γ : (Γ ∋ α) → X),
+                    classify Γ X (weaken Γ q_Γ) k_shape k_Γ = k_Γ q_Γ
 
 namespace CTele
 
@@ -40,6 +57,8 @@ def id {C : Carrier} : CTele C where
   weaken := fun Γ => Renaming.id Γ
   embed := fun _Γ => ⟨fun {_} p => nomatch p⟩
   classify := fun _Γ _α _X p _k_shape k_Γ => k_Γ p
+  classify_embed := fun _Γ _X _α q_τ _k_shape _k_Γ => nomatch q_τ
+  classify_weaken := fun _Γ _X _α _q_Γ _k_shape _k_Γ => rfl
 
 /-- Extend a CTele by one arity at the top. -/
 def cons {C : Carrier} (a : C.Arity) (t : CTele C) : CTele C where
@@ -53,6 +72,12 @@ def cons {C : Carrier} (a : C.Arity) (t : CTele C) : CTele C where
     match p with
     | .here i  => k_shape (.here i)
     | .there p' => t.classify Γ X p' (fun q_t => k_shape (.there q_t)) k_Γ
+  classify_embed := fun Γ X _α q_τ k_shape k_Γ => by
+    cases q_τ with
+    | here _i  => rfl
+    | there q' => exact t.classify_embed Γ X q' (fun q_t => k_shape (.there q_t)) k_Γ
+  classify_weaken := fun Γ X _α q_Γ k_shape k_Γ' => by
+    exact t.classify_weaken Γ X q_Γ (fun q_t => k_shape (.there q_t)) k_Γ'
 
 /-! ### Construction from a list of arities -/
 
