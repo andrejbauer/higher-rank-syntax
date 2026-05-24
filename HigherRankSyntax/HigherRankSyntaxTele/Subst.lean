@@ -72,22 +72,23 @@ inductive PreOrDom {C : Carrier} (pre dom : Shape C) (α : C.Arity) : Type where
   /-- The slot belongs to `dom`. -/
   | dom (q : dom ∋ α)
 
-/-- A substitution record.  Source shape is `pre ⋈* dom`, target is `pre ⋈* cod`.
-Only `sub` is carried as data — slot dispatch and pre-weakening come
-from the `[ProperTele dom]` and `[ProperTele cod]` instances. -/
-structure Subst (C : Carrier) (pre dom cod : Shape C)
-    [ProperTele dom] [ProperTele cod] : Type where
+/-- A substitution record.  Source shape is `pre ⋈* dom`, target is
+`pre ⋈* cod`.  The `sub` field is the only data; slot dispatch and
+pre-weakening are derived from `[ProperTele dom]` and `[ProperTele cod]`
+at the operations that need them (see `Subst.classifyDom`,
+`Subst.weakenCod`, `Subst.act`). -/
+structure Subst (C : Carrier) (pre dom cod : Shape C) : Type where
   sub : ∀ {α : C.Arity}, (dom ∋ α) → Expr ((pre ⋈* cod) ⋈ α)
 
 /-- Dispatching a `pre ⋈* dom`-slot into pre vs dom, via `[ProperTele dom]`. -/
 def Subst.classifyDom {C : Carrier} {pre dom cod : Shape C}
-    [ProperTele dom] [ProperTele cod] (_σ : Subst C pre dom cod)
+    [ProperTele dom] (_σ : Subst C pre dom cod)
     {α : C.Arity} (p : (pre ⋈* dom) ∋ α) : PreOrDom pre dom α :=
   ProperTele.classify (t := dom) pre _ p PreOrDom.dom PreOrDom.pre
 
 /-- Embedding `pre` into `pre ⋈* cod`, via `[ProperTele cod]`. -/
 def Subst.weakenCod {C : Carrier} {pre dom cod : Shape C}
-    [ProperTele dom] [ProperTele cod] (_σ : Subst C pre dom cod) :
+    [ProperTele cod] (_σ : Subst C pre dom cod) :
     pre →ʳ pre ⋈* cod :=
   ProperTele.weaken (t := cod) pre
 
@@ -98,19 +99,18 @@ With cons-style telescopes and `pre := Shape.nil`, the correspondence to
 `Subst` is *definitional*: `Shape.nil ⋈* X = X` by Tele's strict left unit. -/
 
 /-- Wrap a Kleisli map as a `Subst` with empty `pre`. -/
-def toSubst {C : Carrier} {Γ Δ : Shape C} [ProperTele Γ] [ProperTele Δ]
+def toSubst {C : Carrier} {Γ Δ : Shape C}
     (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)) :
     Subst C Shape.nil Γ Δ where
   sub := f
 
 @[simp] theorem toSubst_sub {C : Carrier} {Γ Δ : Shape C}
-    [ProperTele Γ] [ProperTele Δ]
     (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α))
     {α : C.Arity} (p : Γ ∋ α) :
     (toSubst f).sub p = f p := rfl
 
 /-- The identity substitution at shape `Γ` — `toSubst` of the unit `Expr.η`. -/
-def Subst.id {C : Carrier} (Γ : Shape C) [ProperTele Γ] : Subst C Shape.nil Γ Γ :=
+def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Shape.nil Γ Γ :=
   toSubst (fun {β : C.Arity} (p : Γ ∋ β) => Expr.η p)
 
 /-! ### The walker -/
@@ -153,8 +153,7 @@ decreasing_by
          exact DomLt.step β h_mem _ h_sub))
 
 /-- Kleisli composition of two Kleisli maps via `Subst.act`. -/
-def Subst.kcomp {C : Carrier} {Γ Δ Ε : Shape C}
-    [ProperTele Γ] [ProperTele Δ] [ProperTele Ε]
+def Subst.kcomp {C : Carrier} {Γ Δ Ε : Shape C} [ProperTele Δ] [ProperTele Ε]
     (f : ∀ {β : C.Arity}, (Γ ∋ β) → Expr (Δ ⋈ β))
     (g : ∀ {β : C.Arity}, (Δ ∋ β) → Expr (Ε ⋈ β)) :
     ∀ {β : C.Arity}, (Γ ∋ β) → Expr (Ε ⋈ β) :=
