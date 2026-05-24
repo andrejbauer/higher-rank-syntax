@@ -95,44 +95,33 @@ theorem Subst.act_η {C : Carrier} {Γ Δ : Shape C}
     (f : ∀ {β : C.Arity}, (Γ ∋ β) → Expr (Δ ⋈ β))
     (α : C.Arity) (p : Γ ∋ α) :
     (toSubst f).act (CTele.cons α CTele.id) (Expr.η p) = f p := by
-  -- Step 1: unfold Expr.η p to its `.apply (.there p) (η-args)` form.
+  -- Step 1: unfold the outer Expr.η.
   rw [Expr.η.eq_1]
   -- Step 2: unfold Subst.act on the resulting .apply pattern.
   unfold Subst.act
-  -- Step 3: reduce toSubst's projections (pre/dom/cod/classifyDom) and the
-  -- Tele's monoidal nil-units.  This puts the goal in a form mentioning
-  -- only Γ, Δ, α, p, f — no toSubst projections.
-  simp only [toSubst_pre, toSubst_dom, toSubst_cod, toSubst_classifyDom,
+  -- Step 3: reduce the toSubst projections and Tele's left unit.
+  simp only [toSubst_pre, toSubst_dom, toSubst_cod, toSubst_classifyDom, toSubst_sub,
              Shape.nil_extList]
-  -- Witness that the cons-classify dispatch on `.there p` is `rfl`-grade
-  -- (collapses to the below-τ continuation applied to p).  This `have`
-  -- succeeds — confirming the reduction is definitional.
-  have h_classify : ∀ X (k_s : (Shape.nil ⋈ α ∋ α) → X) (k_g : (Γ ∋ α) → X),
-      (CTele.cons α CTele.id).classify Γ X (ListSlotAt.there p) k_s k_g = k_g p := by
-    intros X k_s k_g
-    rfl
-  -- But `rw [h_classify]` fails: "Did not find an occurrence of the pattern".
-  -- The pattern's `Γ` is the bound `Γ`, but the target's classify-arg `Γ`
-  -- (after the simp) is also `Γ`, *yet rewrite reports no match*.
-  -- The issue appears to be higher-order: the k_shape continuation in the
-  -- goal is `(fun q_τ => Expr.apply ((τ.embed Δ).apply q_τ) (...))`, and
-  -- `rw` can't unify it with the universal `?k_s : (Shape.nil ⋈ α ∋ α) → X`.
-  --
-  -- Attempts that all failed (left here as evidence of what was tried):
-  --   `rw [h_classify]`
-  --   `rw [CTele.cons_classify_there]`
-  --   `simp only [CTele.cons_classify_there, CTele.id_classify]`
-  --     ("unused simp argument" warning — pattern did not match)
-  --   `rw [show (CTele.cons α CTele.id).classify Γ _ (.there p) _ _ = _ from rfl]`
-  --     (also fails to find the occurrence)
-  --
-  -- Expected continuation (mechanically blocked): after reducing the
-  -- classify, the goal lands at `aux.act CTele.id (f p) = f p` for the
-  -- specific aux built by Subst.act's dom branch.  That aux is
-  -- "canonical identity at Δ ⋈ α" once we know `aux.sub (.here i) =
-  -- Expr.η (.here i)`, which is exactly `act_η_τ` applied with
-  -- `t := cons α id` and `q_τ := .here i`.  Then an identity-walker
-  -- lemma on aux closes.
+  -- Step 4: the slot `.there p` IS `(cons α id).weaken Γ |>.apply p`
+  -- (cons_weaken + id_weaken are both `rfl`).  Convert and apply the
+  -- propositional reflection `classify_weaken` to collapse the cons-classify
+  -- dispatch directly to the below-τ continuation `k_below p`.
+  rw [show (ListSlotAt.there p : (Γ ⋈ α) ∋ α) =
+        ((CTele.cons α CTele.id).weaken Γ).apply p from rfl]
+  rw [(CTele.cons α CTele.id).classify_weaken Γ]
+  -- Goal now: `aux.act CTele.id (f p) = f p` for the canonical-identity
+  -- aux at shape `Δ ⋈ α`.  Validate `act_η_τ` by exhibiting that
+  -- `aux.sub (.here i) = Expr.η (.here i)` — the equation that makes
+  -- aux identity-acting.
+  have h_aux_sub_eq_η : ∀ (i : C.Binder α),
+      (toSubst f).act (CTele.cons i.arity (CTele.cons α CTele.id))
+          (@Expr.η C (Γ ⋈ α) i.arity (ListSlotAt.here i))
+        = @Expr.η C (Δ ⋈ α) i.arity (ListSlotAt.here i) := by
+    intro i
+    exact Subst.act_η_τ (toSubst f) (CTele.cons α CTele.id)
+            (q_τ := @ListSlotAt.here C α [] i)
+  -- Lean accepts `h_aux_sub_eq_η`: `act_η_τ`'s statement is validated.
+  -- Remaining: the identity-walker step on aux.  Deferred.
   sorry
 
 /-- **`act_kcomp`** — acting via a Kleisli composition factors.
