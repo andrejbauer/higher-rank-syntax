@@ -1,49 +1,58 @@
-import HigherRankSyntaxSig.Renaming
+import HigherRankSyntaxTele.Renaming
 
 /-!
 # Classifiable Telescopes
 
-`CTele C` bundles a shape (telescope) with the structural data needed to use
-it inside the framework: at minimum, a weakening renaming.  All fields are
-function-typed so composition is strict via Lean's η.
+`CTele C` bundles a shape with three function-typed renaming-style fields:
+
+* `weaken` — `(Γ : Shape C) → Γ →ʳ Γ ⋈* shape` — embeds the base into the
+  extended shape.
+* `embed` — `(Γ : Shape C) → shape →ʳ Γ ⋈* shape` — embeds the telescope's
+  own shape into the extended shape.
+* `classify` — CPS dispatch of a slot of `Γ ⋈* shape` into either a
+  `shape`-slot or a `Γ`-slot.
+
+All three are *function-typed* and constructed alongside the shape by
+`id` / `cons`, so the walker never inducts on the underlying Tele.
 -/
 
 
-/-- A classifiable telescope: a shape together with its weakening renaming and a
-classifier (bipartition of slots into "in this telescope" vs "in the below"). -/
+/-- A classifiable telescope. -/
 structure CTele (C : Carrier) where
   /-- The underlying shape (telescope). -/
   shape : Shape C
-  /-- Weakening renaming: any shape Γ can be embedded into `Γ ⋈* shape`. -/
-  weaken : ∀ (Γ : Shape C), Γ →ʳ Γ ⋈* shape
-  /-- Classifier (CPS-style for η-friendly composition): given a slot of
-  `Γ ⋈* shape`, dispatch into either a `shape`-slot or a `Γ`-slot via continuations. -/
+  /-- Weakening: embed the base shape into the extended shape. -/
+  weaken : (Γ : Shape C) → Γ →ʳ Γ ⋈* shape
+  /-- Embedding: embed the telescope's own shape into the extended shape. -/
+  embed : (Γ : Shape C) → shape →ʳ Γ ⋈* shape
+  /-- Classifier (CPS-style): dispatch a slot of `Γ ⋈* shape` into either a
+  `shape`-slot or a `Γ`-slot. -/
   classify : (Γ : Shape C) → {α : C.Arity} → (X : Type) →
              ((Γ ⋈* shape) ∋ α) →
              ((shape ∋ α) → X) → ((Γ ∋ α) → X) → X
 
 namespace CTele
 
-/-- The identity CTele: empty shape, identity weakening, vacuous classifier. -/
+/-- The identity CTele: empty shape, identity weakening, vacuous embed,
+classifier returning everything to the base. -/
 def id {C : Carrier} : CTele C where
   shape := Shape.nil
   weaken := fun Γ => Renaming.id Γ
+  embed := fun _Γ => ⟨fun {_} p => nomatch p⟩
   classify := fun _Γ _α _X p _k_shape k_Γ => k_Γ p
-  -- shape is Shape.nil = Tele.id, so (Γ ⋈* shape) = Γ; the slot is a Γ-slot
 
 /-- Extend a CTele by one arity at the top. -/
 def cons {C : Carrier} (a : C.Arity) (t : CTele C) : CTele C where
   shape := t.shape ⋈ a
-  weaken := fun Γ => Renaming.weaken (Γ ⋈* t.shape) a ∘ʳʳ t.weaken Γ
-  classify := fun Γ α X p k_shape k_Γ =>
-    -- p : (Γ ⋈* (t.shape ⋈ a)) ∋ α reduces to ((Γ ⋈* t.shape) ⋈ a) ∋ α
+  weaken := fun Γ => ⟨fun {_} p => .there (t.weaken Γ p)⟩
+  embed := fun Γ => ⟨fun {_} p =>
+    match p with
+    | .here i  => .here i
+    | .there q => .there (t.embed Γ q)⟩
+  classify := fun Γ _α X p k_shape k_Γ =>
     match p with
     | .here i  => k_shape (.here i)
     | .there p' => t.classify Γ X p' (fun q_t => k_shape (.there q_t)) k_Γ
-
--- Composition omitted for now — would require embedding t-slots and s-slots
--- into the composed shape, which is non-trivial without additional structural data
--- carried by the CTele.  Exploring this after `id` and `cons` are working.
 
 /-! ### Construction from a list of arities -/
 
@@ -60,30 +69,10 @@ def ofList {C : Carrier} : List C.Arity → CTele C
 @[simp] theorem cons_shape {C : Carrier} (a : C.Arity) (t : CTele C) :
     (CTele.cons a t).shape = t.shape ⋈ a := rfl
 
-@[simp] theorem ofList_nil {C : Carrier} : (ofList ([] : List C.Arity)) = (CTele.id : CTele C) := rfl
+@[simp] theorem ofList_nil {C : Carrier} :
+    (ofList ([] : List C.Arity)) = (CTele.id : CTele C) := rfl
 
 @[simp] theorem ofList_cons {C : Carrier} (a : C.Arity) (rest : List C.Arity) :
     ofList (a :: rest) = CTele.cons a (ofList rest) := rfl
 
-/-! ### Weaken reductions -/
-
-example {C : Carrier} (Γ : Shape C) : (CTele.id (C := C)).weaken Γ = 𝟙ʳ := rfl
-
-example {C : Carrier} (a : C.Arity) (Γ : Shape C) :
-    (CTele.cons a CTele.id).weaken Γ = Renaming.weaken Γ a ∘ʳʳ 𝟙ʳ := rfl
-
-example {C : Carrier} (a : C.Arity) (Γ : Shape C) :
-    (CTele.cons a CTele.id).weaken Γ = Renaming.weaken Γ a := rfl
-
-/-! ### `ofList` and shape -/
-
-example {C : Carrier} (a : C.Arity) :
-    (CTele.ofList [a] : CTele C).shape = Shape.nil ⋈ a := rfl
-
-example {C : Carrier} (a b : C.Arity) :
-    (CTele.ofList [a, b] : CTele C).shape = Shape.nil ⋈ b ⋈ a := rfl
-
 end CTele
-
-
-

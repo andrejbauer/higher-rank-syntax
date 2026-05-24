@@ -1,5 +1,5 @@
-import HigherRankSyntaxSig.Shape
-import HigherRankSyntaxSig.Renaming
+import HigherRankSyntaxTele.Shape
+import HigherRankSyntaxTele.Renaming
 
 /-!
 # Expressions of a higher-rank binding signature

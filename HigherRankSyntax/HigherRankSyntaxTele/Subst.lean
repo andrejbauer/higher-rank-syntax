@@ -1,18 +1,29 @@
-import HigherRankSyntaxSig.Expr
+import HigherRankSyntaxTele.Expr
+import HigherRankSyntaxTele.CTele
 
 /-!
 # Substitution
 
-`Subst C` encodes a Kleisli map of the syntax relative monad.  `pre` is preserved,
-`dom` is replaced by `cod`.  With `dom : List C.Arity`, every Kleisli map
-`Γ →ˢ Δ` corresponds to a `Subst` (take `pre := nil`, `dom` = source list,
-`cod` = target list, `sub` = the map).
+`Subst C` carries the data for a single-pass substitution walker:
+
+* `pre`, `dom`, `cod : Shape C` — the OCaml-style three-region partition.
+* `sub` — substitutes `dom`-slots with expressions in `pre ⋈* cod`.
+* `classifyDom` — dispatches a slot of `pre ⋈* dom` into either a `dom`-slot
+  or a `pre`-slot.  Carried as a function so the walker doesn't induct on
+  the underlying telescope.
+* `weakenCod` — `pre →ʳ pre ⋈* cod`, the renaming needed for pre-slot
+  rebuild.  Carried for the same reason.
+
+The walker `Subst.act` takes `τ : CTele C` and uses CTele's classifier for
+the τ/below-τ dispatch and `σ.classifyDom` for the pre/dom dispatch below τ.
+No list pattern-matching anywhere in the construction.
 -/
 
 
-/-- A slot of `dom` witnesses that some `β ∈ dom` has the slot's arity as a sub-arity. -/
+/-- A slot of `dom` witnesses that some `β ∈ dom.toList` has the slot's arity as
+a sub-arity. -/
 theorem SlotAt.subWitness {C : Carrier} :
-    ∀ {dom : List C.Arity} {α : C.Arity}, (dom ∋ α) →
+    ∀ {dom : List C.Arity} {α : C.Arity}, ListSlotAt dom α →
       ∃ β, β ∈ dom ∧ Carrier.Sub α β
   | _ :: _, _, .here i  => ⟨_, List.Mem.head _, ⟨i, rfl⟩⟩
   | _ :: _, _, .there p => by
@@ -54,94 +65,83 @@ instance (C : Carrier) : WellFoundedRelation (DomMeasure C) where
   rel := fun a b => DomLt a.unwrap b.unwrap
   wf := InvImage.wf DomMeasure.unwrap DomLt.wf
 
-/-- A substitution record. -/
+/-- Dispatching a slot of `pre ⋈* dom` into pre vs dom.  Carried by `Subst` as a
+function-typed field. -/
+inductive PreOrDom {C : Carrier} (pre dom : Shape C) (α : C.Arity) : Type where
+  /-- The slot belongs to `pre`. -/
+  | pre (q : pre ∋ α)
+  /-- The slot belongs to `dom`. -/
+  | dom (q : dom ∋ α)
+
+/-- A substitution record.  Source shape is `pre ⋈* dom`, target is `pre ⋈* cod`.
+
+Beyond the OCaml three-region data, `Subst` carries two function-typed helpers
+that the walker consumes uniformly:
+
+* `classifyDom` dispatches a `pre ⋈* dom` slot into pre vs dom.
+* `weakenCod` embeds `pre` into `pre ⋈* cod` (for pre-slot rebuild). -/
 structure Subst (C : Carrier) where
   pre : Shape C
-  dom : List C.Arity
-  cod : List C.Arity
+  dom : Shape C
+  cod : Shape C
   sub : ∀ {α : C.Arity}, (dom ∋ α) → Expr ((pre ⋈* cod) ⋈ α)
+  classifyDom : ∀ {α : C.Arity}, ((pre ⋈* dom) ∋ α) → PreOrDom pre dom α
+  weakenCod : pre →ʳ pre ⋈* cod
 
-/-- The slot at depth `|τ_above|` in `Γ ⋈* (τ_above ++ β :: τ_below)`. -/
-def tauSlot {C : Carrier} (Γ : Shape C) :
-    (τ_above : List C.Arity) → (β : C.Arity) → (τ_below : List C.Arity) →
-    (i : C.Binder β) → (Γ ⋈* (τ_above ++ β :: τ_below)) ∋ i.arity
-  | [],        _, _, i => .here i
-  | _ :: rest, β, τ_below, i => .there (tauSlot Γ rest β τ_below i)
+/-! ### Kleisli ↔ Subst correspondence
 
-/-- Position of a slot in `(pre ⋈* dom) ⋈* τ`: a pre-slot, a dom-slot, or a τ-binder. -/
-inductive XPos {C : Carrier} (pre : Shape C) (dom : List C.Arity) :
-    (τ : List C.Arity) → {α : C.Arity} →
-    SlotAt ((pre ⋈* dom) ⋈* τ) α → Type where
-  | pre : {τ : List C.Arity} → {α : C.Arity} → (p : pre ∋ α) →
-          XPos pre dom τ (((pre ⋈* dom) ↪ʳ* τ) ((pre ↪ʳ* dom) p))
-  | dom : {τ : List C.Arity} → {α : C.Arity} → (q : dom ∋ α) →
-          XPos pre dom τ (((pre ⋈* dom) ↪ʳ* τ) (SlotAt.appendRight pre q))
-  | ext : {τ_above : List C.Arity} → {β : C.Arity} →
-          {τ_below : List C.Arity} → (i : C.Binder β) →
-          XPos pre dom (τ_above ++ β :: τ_below)
-            (tauSlot (pre ⋈* dom) τ_above β τ_below i)
+A Kleisli map of the syntax relative monad is `∀ {α}, (Γ ∋ α) → Expr (Δ ⋈ α)`.
+With cons-style telescopes and `pre := Shape.nil`, the correspondence to
+`Subst` is *definitional*: `Shape.nil ⋈* X = X` by Tele's strict left unit. -/
 
-/-- Classification of a slot in `pre ⋈* dom` (i.e., below τ): either in pre or in dom.
-Two-constructor companion to `XPos`'s three; the `XPos.ext` case is impossible below τ. -/
-inductive PreOrDom {C : Carrier} (pre : Shape C) (dom : List C.Arity) :
-    {α : C.Arity} → (p : (pre ⋈* dom) ∋ α) → Type where
-  | pre : {α : C.Arity} → (q : pre ∋ α) → PreOrDom pre dom ((pre ↪ʳ* dom) q)
-  | dom : {α : C.Arity} → (q : dom ∋ α) →
-          PreOrDom pre dom (SlotAt.appendRight pre q)
+/-- Wrap a Kleisli map as a `Subst` with empty `pre`. -/
+def toSubst {C : Carrier} {Γ Δ : Shape C}
+    (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)) : Subst C where
+  pre := Shape.nil
+  dom := Γ
+  cod := Δ
+  sub := f
+  classifyDom := fun {_} p => PreOrDom.dom p
+  weakenCod := ⟨fun {_} p => nomatch p⟩
 
-/-- Walk through dom: at `dom = []` the slot is in pre. -/
-def classifyDom {C : Carrier} (pre : Shape C) :
-    (dom : List C.Arity) → {α : C.Arity} → (p : (pre ⋈* dom) ∋ α) →
-      PreOrDom pre dom p
-  | [],         _, p          => PreOrDom.pre p
-  | _ :: _,     _, .here i    => PreOrDom.dom (.here i)
-  | _ :: dom',  _, .there p'  =>
-    match classifyDom pre dom' p' with
-    | PreOrDom.pre q   => PreOrDom.pre q
-    | PreOrDom.dom q'  => PreOrDom.dom (SlotAt.there q')
+/-! ### The walker -/
 
-/-- Walk through τ; at `τ = []` delegate to `classifyDom`. -/
-def classify {C : Carrier} (pre : Shape C) (dom : List C.Arity) :
-    (τ : List C.Arity) → {α : C.Arity} → (p : ((pre ⋈* dom) ⋈* τ) ∋ α) →
-      XPos pre dom τ p
-  | [],       _, p           =>
-      match classifyDom pre dom p with
-      | PreOrDom.pre q  => XPos.pre q
-      | PreOrDom.dom q  => XPos.dom q
-  | _ :: _,   _, .here i     => XPos.ext (τ_above := []) i
-  | β :: τ',  _, .there p'   =>
-    match classify pre dom τ' p' with
-    | XPos.pre q   => XPos.pre q
-    | XPos.dom q'  => XPos.dom q'
-    | XPos.ext (τ_above := ta) (β := b) (τ_below := tb) j =>
-        XPos.ext (τ_above := β :: ta) (β := b) (τ_below := tb) j
-
-/-- The walker: apply σ to an expression at depth τ. -/
-def Subst.act {C : Carrier} : (σ : Subst C) → (τ : List C.Arity) →
-    Expr ((σ.pre ⋈* σ.dom) ⋈* τ) → Expr ((σ.pre ⋈* σ.cod) ⋈* τ)
-  | σ, τ, .apply p args =>
-    match classify σ.pre σ.dom τ p with
-    | XPos.pre q =>
-        Expr.apply
-          (((σ.pre ⋈* σ.cod) ↪ʳ* τ) ((σ.pre ↪ʳ* σ.cod) q))
-          (fun i => σ.act (i.arity :: τ) (args i))
-    | XPos.dom (α := a) q =>
-        let aux : Subst C :=
-          { pre := σ.pre ⋈* σ.cod
-          , dom := [a]
-          , cod := τ
-          , sub := fun {_} q' =>
-              match q' with
-              | .here i => σ.act (i.arity :: τ) (args i) }
-        aux.act [] (σ.sub q)
-    | XPos.ext (τ_above := ta) (β := b) (τ_below := tb) i =>
-        Expr.apply
-          (tauSlot (σ.pre ⋈* σ.cod) ta b tb i)
-          (fun j => σ.act (j.arity :: (ta ++ b :: tb)) (args j))
-termination_by σ _ e => ((⟨σ.dom⟩ : DomMeasure C), (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
+/-- Apply a substitution to an expression at depth `τ` (itself a classifiable
+telescope).  Uses `τ.classify` (CPS) for the τ/below-τ dispatch and
+`σ.classifyDom` (inductive) for the pre/dom dispatch.  All renamings used to
+rebuild new heads in the target come from carried function-typed fields
+(`τ.weaken`/`τ.embed`/`σ.weakenCod`). -/
+def Subst.act {C : Carrier} : (σ : Subst C) → (τ : CTele C) →
+    Expr ((σ.pre ⋈* σ.dom) ⋈* τ.shape) → Expr ((σ.pre ⋈* σ.cod) ⋈* τ.shape)
+  | σ, τ, .apply (α := α) p args =>
+      τ.classify (σ.pre ⋈* σ.dom) (Expr ((σ.pre ⋈* σ.cod) ⋈* τ.shape)) p
+        (fun q_τ =>
+          Expr.apply (τ.embed (σ.pre ⋈* σ.cod) q_τ)
+            (fun i => σ.act (CTele.cons i.arity τ) (args i)))
+        (fun p_below =>
+          match σ.classifyDom p_below with
+          | PreOrDom.dom q_dom =>
+              let aux : Subst C := {
+                pre := σ.pre ⋈* σ.cod
+                dom := Shape.nil ⋈ α
+                cod := τ.shape
+                sub := fun {_} q' => match q' with
+                  | .here i => σ.act (CTele.cons i.arity τ) (args i)
+                classifyDom := fun {_} p' =>
+                  match p' with
+                  | .here i  => PreOrDom.dom (.here i)
+                  | .there q => PreOrDom.pre q
+                weakenCod := τ.weaken (σ.pre ⋈* σ.cod)
+              }
+              aux.act CTele.id (σ.sub q_dom)
+          | PreOrDom.pre q_pre =>
+              Expr.apply (τ.weaken (σ.pre ⋈* σ.cod) (σ.weakenCod q_pre))
+                (fun i => σ.act (CTele.cons i.arity τ) (args i)))
+termination_by σ _ e => ((⟨σ.dom.toList⟩ : DomMeasure C), (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
-  all_goals first
-    | (apply Prod.Lex.right; exact Expr.Subterm.of_arg _ _ _)
-    | (apply Prod.Lex.left
-       obtain ⟨β, h_mem, h_sub⟩ := SlotAt.subWitness q
-       exact DomLt.step β h_mem _ h_sub)
+  all_goals (
+    first
+      | (refine Prod.Lex.right _ ?_; exact Expr.Subterm.of_arg p args i)
+      | (refine Prod.Lex.left _ _ ?_
+         obtain ⟨β, h_mem, h_sub⟩ := SlotAt.subWitness q_dom
+         exact DomLt.step β h_mem _ h_sub))

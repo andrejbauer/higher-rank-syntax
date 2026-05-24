@@ -1,7 +1,7 @@
-import HigherRankSyntaxSig.Carrier
-import HigherRankSyntaxSig.Shape
-import HigherRankSyntaxSig.Renaming
-import HigherRankSyntaxSig.Expr
-import HigherRankSyntaxSig.Subst
-import HigherRankSyntaxSig.RelativeMonad.Basic
-import HigherRankSyntaxSig.SyntaxMonad
+import HigherRankSyntaxTele.Carrier
+import HigherRankSyntaxTele.Shape
+import HigherRankSyntaxTele.Renaming
+import HigherRankSyntaxTele.Expr
+import HigherRankSyntaxTele.Subst
+import HigherRankSyntaxTele.RelativeMonad.Basic
+import HigherRankSyntaxTele.SyntaxMonad

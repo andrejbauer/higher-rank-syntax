@@ -1,5 +1,5 @@
-import HigherRankSyntaxSig.Subst
-import HigherRankSyntaxSig.RelativeMonad.Basic
+import HigherRankSyntaxTele.Subst
+import HigherRankSyntaxTele.RelativeMonad.Basic
 
 /-!
 # Syntax as a relative monad
@@ -7,8 +7,9 @@ import HigherRankSyntaxSig.RelativeMonad.Basic
 `SyntaxMonad C` packages `Expr` over a carrier `C` as a relative monad over the
 "slots" functor `J : Shape C ⥤ ArityFunc C`, with `T Γ α = Expr (Γ ⋈ α)`.
 
-The bridge between Kleisli maps and `Subst` uses two structural renamings to
-identify `Γ` with `[] ⋈* Γ = Γ ++ []` (propositionally equal, not definitionally).
+With cons-style telescopes, the Kleisli ↔ Subst bridge is cast-free:
+`Shape.nil ⋈* X = X` definitionally, so `lift f` is just `Subst.act (toSubst f)`
+at `τ = Shape.nil ⋈ α`.
 -/
 
 
@@ -53,33 +54,12 @@ def T (C : Carrier) : Shape C ⥤ ArityFunc C where
     rw [Renaming.extend_comp]
     exact Renaming.actExpr.map_comp _ _ e
 
-/-- Wrap a Kleisli map as a `Subst` with empty `pre`. -/
-def toSubst {C : Carrier} {Γ Δ : Shape C} (f : (J C).obj Γ ⟶ (T C).obj Δ) : Subst C where
-  pre := []
-  dom := Γ
-  cod := Δ
-  sub {β} p :=
-    cast (congrArg (fun X : Shape C => Expr (X ⋈ β)) (List.append_nil Δ).symm) (f β p)
-
-/-- Unwrap a `Subst` as a Kleisli map on its source/target shapes.  Pre-slots become
-η-expansions of their weakened position in the target; dom-slots use `σ.sub`. -/
-def fromSubst {C : Carrier} (σ : Subst C) :
-    (J C).obj (σ.pre ⋈* σ.dom) ⟶ (T C).obj (σ.pre ⋈* σ.cod) :=
-  fun α p =>
-    match classifyDom σ.pre σ.dom p with
-    | PreOrDom.pre q => ⟦ (σ.pre ↪ʳ* σ.cod) ⇑ʳ α ⟧ʳ (Expr.η q)
-    | PreOrDom.dom q => σ.sub q
-
 /-- The relative monad of the syntax. -/
 def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
   map := (T C).obj
   η Γ := fun _ p => Expr.η p
   lift {Γ Δ} f := fun α e =>
-    let σ := toSubst f
-    let e' : Expr ((σ.pre ⋈* σ.dom) ⋈* [α]) :=
-      cast (congrArg (fun X : Shape C => Expr (X ⋈ α)) (List.append_nil Γ).symm) e
-    let r := σ.act [α] e'
-    cast (congrArg (fun X : Shape C => Expr (X ⋈ α)) (List.append_nil Δ)) r
+    (toSubst (fun {β} p => f β p)).act (CTele.cons α CTele.id) e
   unit_right := by
     intro Γ
     funext α e

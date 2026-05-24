@@ -1,5 +1,5 @@
-import HigherRankSyntaxSig.Carrier
-import HigherRankSyntaxSig.Tele
+import HigherRankSyntaxTele.Carrier
+import HigherRankSyntaxTele.Tele
 
 /-!
 # Shapes and slots — telescope representation
