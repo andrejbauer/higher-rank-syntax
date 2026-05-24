@@ -6,72 +6,98 @@ import HigherRankSyntaxTele.Subst
 This file holds the auxiliary equations needed to prove the three
 relative-monad laws.
 
-## The relative-monad laws, cleanly stated
+## Strategy
 
-* **`Subst.act_id`** — `(Subst.id Γ).act τ e = e`.  The identity substitution
-  acts as the identity walker.  Translates to `lift η = 𝟙` in the relative
-  monad (unit_right).
+`Subst.act`'s body is a long expression with an inline let-bound aux
+struct in the dom branch.  Don't `unfold Subst.act` and try to manipulate
+the raw body — that exposes the let-aux and rewrites become impossible.
 
-* **`Subst.act_η`** — `(toSubst f).act (cons α id) (Expr.η p) = f p`.  Acting
-  on an η-expansion of a slot reduces to applying `f` to that slot.  This is
-  the β-rule of the Kleisli extension: `lift f ∘ η = f` (unit_left).
+Instead, prove small **computation lemmas** that take `Subst.act` on an
+apply with a specific head shape (τ-embedded, τ-weakened) and collapse
+the τ.classify dispatch to a clean RHS.  The reflection fields
+`classify_embed` / `classify_weaken` (on `CTele`) are the rewriting
+handles.  Each computation lemma is proved by `unfold Subst.act; rw
+[classify_*]; rfl` (a short body), then *used as a black box* in further
+proofs.
 
-* **`Subst.act_kcomp`** — `(toSubst (kcomp f g)).act τ e = (toSubst g).act τ
-  ((toSubst f).act τ e)`.  Acting via a Kleisli composition factors through
-  the two `.act`s.  This is `lift (g ∘ f) = lift g ∘ lift f` (comp_lift).
+## Three monad laws (clean statements)
 
-## Auxiliary equations
-
-The proofs need helper lemmas about how `Subst.act` behaves on
-`Expr.η`-shaped inputs at specific slot positions.  The cornerstone:
-
-* **`Subst.act_η_τ`** — walking `Expr.η` of a τ-side slot reproduces the η
-  in the target shape.  Used inside `act_η` to characterize the aux Subst's
-  `sub` as η-fills, and inside `act_id` (via `identity_walker`) for the
-  τ-slot branch of the walker.
-
-`act_η_τ` is proved.  The three monad laws (`act_id`, `act_η`, `act_kcomp`)
-are still `sorry`d.
+* `Subst.act_id` — `(Subst.id Γ).act τ e = e` (unit_right).
+* `Subst.act_η` — `(toSubst f).act (cons α id) (Expr.η p) = f p` (unit_left).
+* `Subst.act_kcomp` — Kleisli composition factors (comp_lift).
 -/
 
+
+/-! ## Computation lemmas — `Subst.act` on a specific apply head -/
+
+/-- Computing `σ.act` on an apply whose head is a τ-embedded shape-slot:
+collapses to the τ-slot branch reconstruction. -/
+theorem Subst.act_apply_embed {C : Carrier} (σ : Subst C) (τ : CTele C)
+    {α : C.Arity} (q_τ : τ.shape ∋ α)
+    (args : (i : C.Binder α) →
+      Expr (((σ.pre ⋈* σ.dom) ⋈* τ.shape) ⋈ i.arity)) :
+    σ.act τ (Expr.apply ((τ.embed (σ.pre ⋈* σ.dom)).apply q_τ) args)
+      = Expr.apply ((τ.embed (σ.pre ⋈* σ.cod)).apply q_τ)
+          (fun j => σ.act (CTele.cons j.arity τ) (args j)) := by
+  have h := Subst.act.eq_1 σ τ α ((τ.embed (σ.pre ⋈* σ.dom)).apply q_τ) args
+  rw [τ.classify_embed (σ.pre ⋈* σ.dom)] at h
+  exact h
+
+/-- Computing `σ.act` on an apply whose head is a τ-weakened below-slot:
+collapses to the below-τ branch, which dispatches via `σ.classifyDom`. -/
+theorem Subst.act_apply_weaken {C : Carrier} (σ : Subst C) (τ : CTele C)
+    {α : C.Arity} (q : (σ.pre ⋈* σ.dom) ∋ α)
+    (args : (i : C.Binder α) →
+      Expr (((σ.pre ⋈* σ.dom) ⋈* τ.shape) ⋈ i.arity)) :
+    σ.act τ (Expr.apply ((τ.weaken (σ.pre ⋈* σ.dom)).apply q) args)
+      = (match σ.classifyDom q with
+          | PreOrDom.dom q_dom =>
+              let aux : Subst C := {
+                pre := σ.pre ⋈* σ.cod
+                dom := Shape.nil ⋈ α
+                cod := τ.shape
+                sub := fun {_} q' => match q' with
+                  | .here i => σ.act (CTele.cons i.arity τ) (args i)
+                classifyDom := fun {_} p' =>
+                  match p' with
+                  | .here i  => PreOrDom.dom (.here i)
+                  | .there q => PreOrDom.pre q
+                weakenCod := τ.weaken (σ.pre ⋈* σ.cod)
+              }
+              aux.act CTele.id (σ.sub q_dom)
+          | PreOrDom.pre q_pre =>
+              Expr.apply ((τ.weaken (σ.pre ⋈* σ.cod)).apply
+                           ((σ.weakenCod).apply q_pre))
+                (fun i => σ.act (CTele.cons i.arity τ) (args i))) := by
+  have h := Subst.act.eq_1 σ τ α ((τ.weaken (σ.pre ⋈* σ.dom)).apply q) args
+  rw [τ.classify_weaken (σ.pre ⋈* σ.dom)] at h
+  exact h
 
 /-! ## Auxiliary: η-walk on a τ-side slot -/
 
 /-- Walking an η-expansion of a τ-side slot reproduces the η in the target
-shape.  By WF recursion on the slot's arity `α`, using the same insight as
-`act_η`: rewrite the inner slot's `.there` as `(cons α t).embed Γ (.there q_τ)`
-so that the propositional reflection `classify_embed` collapses τ.classify
-directly to the shape continuation. -/
+shape.  By WF recursion on the slot's arity `α`.  Uses `act_apply_embed`
+as a black-box computation lemma — no `unfold Subst.act` needed. -/
 theorem Subst.act_η_τ {C : Carrier} (σ : Subst C) (t : CTele C)
     {α : C.Arity} (q_τ : t.shape ∋ α) :
     σ.act (CTele.cons α t)
         (Expr.η (t.embed (σ.pre ⋈* σ.dom) q_τ))
       = Expr.η (t.embed (σ.pre ⋈* σ.cod) q_τ) := by
-  -- Step 1: unfold the LHS's outer Expr.η.
   rw [Expr.η.eq_1]
-  -- Step 2: unfold Subst.act on the resulting .apply.
-  unfold Subst.act
-  -- Step 3: `change` the slot's form to use the cons.embed instead of `.there`
-  -- (these are def-eq via cons_embed_there).  Then classify_embed applies.
-  change ((CTele.cons α t).classify (σ.pre ⋈* σ.dom)
-            (Expr ((σ.pre ⋈* σ.cod) ⋈* (CTele.cons α t).shape))
-            (((CTele.cons α t).embed (σ.pre ⋈* σ.dom)).apply (ListSlotAt.there q_τ))
-            _ _) = _
-  rw [(CTele.cons α t).classify_embed (σ.pre ⋈* σ.dom)]
-  -- Step 4: unfold the RHS's Expr.η.
+  -- `.there ((t.embed Γ).apply q_τ) = ((cons α t).embed Γ).apply (.there q_τ)`
+  -- by cons_embed_there (rfl).  `change` accepts the defeq.
+  change σ.act (CTele.cons α t)
+      (Expr.apply (((CTele.cons α t).embed (σ.pre ⋈* σ.dom)).apply
+                     (ListSlotAt.there q_τ))
+                  (fun i => Expr.η (ListSlotAt.here i))) = _
+  rw [Subst.act_apply_embed σ (CTele.cons α t) (ListSlotAt.there q_τ)]
   rw [Expr.η.eq_1]
-  -- Step 5: both sides are Expr.apply.  Heads agree by cons_embed_there
-  -- (rfl), so congr 1 collapses to the args.  Args agree by IH on i.arity.
   congr 1
   funext i
-  -- IH: act_η_τ at (cons α t, .here i) with α' = i.arity.
-  -- (cons α t).embed Γ (.here i) = .here i (cons_embed_here, rfl).
   exact Subst.act_η_τ σ (CTele.cons α t)
           (q_τ := @ListSlotAt.here C α t.shape.toList i)
 termination_by α
-decreasing_by
-  -- i : C.Binder α gives Carrier.Sub i.arity α
-  exact ⟨i, rfl⟩
+decreasing_by exact ⟨i, rfl⟩
 
 /-! ## Monad laws -/
 
@@ -83,53 +109,11 @@ theorem Subst.act_id {C : Carrier} (Γ : Shape C) (α : C.Arity)
   sorry
 
 /-- **`act_η`** — acting on an η-expansion reduces to applying `f`.
-Translates to `lift f ∘ η = f` (unit_left).
-
-The proof structure decomposes into three steps:
-1. Unfold `Expr.η p = .apply (.there p) (fun i => Expr.η (.here i))` (via
-   `Expr.η.eq_1`).
-2. Walk the apply through `Subst.act`'s body: `τ.classify_weaken` (since
-   `.there p = (cons α id).weaken Γ p`) reduces τ.classify to the
-   below-τ continuation with `p_below = p`.  `toSubst`'s `classifyDom`
-   then gives `PreOrDom.dom p`.  The dom-branch builds aux and calls
-   `aux.act CTele.id (f p)`.
-3. Show `aux.act CTele.id (f p) = f p`.  Aux is "canonical identity at
-   `Δ ⋈ α`" because `aux.sub (.here i) = Expr.η (.here i)` — discharged
-   by `act_η_τ` applied with `t := cons α id`, `q_τ := .here i`.  Then
-   an identity-walker lemma closes.
-
-Mechanical Lean encoding deferred — `act_η_τ`'s use site is established. -/
+Translates to `lift f ∘ η = f` (unit_left). -/
 theorem Subst.act_η {C : Carrier} {Γ Δ : Shape C}
     (f : ∀ {β : C.Arity}, (Γ ∋ β) → Expr (Δ ⋈ β))
     (α : C.Arity) (p : Γ ∋ α) :
     (toSubst f).act (CTele.cons α CTele.id) (Expr.η p) = f p := by
-  -- Step 1: unfold the outer Expr.η.
-  rw [Expr.η.eq_1]
-  -- Step 2: unfold Subst.act on the resulting .apply pattern.
-  unfold Subst.act
-  -- Step 3: reduce the toSubst projections and Tele's left unit.
-  simp only [toSubst_pre, toSubst_dom, toSubst_cod, toSubst_classifyDom, toSubst_sub,
-             Shape.nil_extList]
-  -- Step 4: the slot `.there p` IS `(cons α id).weaken Γ |>.apply p`
-  -- (cons_weaken + id_weaken are both `rfl`).  Convert and apply the
-  -- propositional reflection `classify_weaken` to collapse the cons-classify
-  -- dispatch directly to the below-τ continuation `k_below p`.
-  rw [show (ListSlotAt.there p : (Γ ⋈ α) ∋ α) =
-        ((CTele.cons α CTele.id).weaken Γ).apply p from rfl]
-  rw [(CTele.cons α CTele.id).classify_weaken Γ]
-  -- Goal now: `aux.act CTele.id (f p) = f p` for the canonical-identity
-  -- aux at shape `Δ ⋈ α`.  Validate `act_η_τ` by exhibiting that
-  -- `aux.sub (.here i) = Expr.η (.here i)` — the equation that makes
-  -- aux identity-acting.
-  have h_aux_sub_eq_η : ∀ (i : C.Binder α),
-      (toSubst f).act (CTele.cons i.arity (CTele.cons α CTele.id))
-          (@Expr.η C (Γ ⋈ α) i.arity (ListSlotAt.here i))
-        = @Expr.η C (Δ ⋈ α) i.arity (ListSlotAt.here i) := by
-    intro i
-    exact Subst.act_η_τ (toSubst f) (CTele.cons α CTele.id)
-            (q_τ := @ListSlotAt.here C α [] i)
-  -- Lean accepts `h_aux_sub_eq_η`: `act_η_τ`'s statement is validated.
-  -- Remaining: the identity-walker step on aux.  Deferred.
   sorry
 
 /-- **`act_kcomp`** — acting via a Kleisli composition factors.
