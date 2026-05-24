@@ -100,4 +100,45 @@ def ofList {C : Carrier} : List C.Arity → CTele C
 @[simp] theorem ofList_cons {C : Carrier} (a : C.Arity) (rest : List C.Arity) :
     ofList (a :: rest) = CTele.cons a (ofList rest) := rfl
 
+/-! ### β/ι reduction lemmas for the concrete constructors
+
+These are `rfl`-provable equations that `simp` can use to reduce
+`(CTele.id _).classify _ _ ...` and `(CTele.cons _ _ ).classify _ _ ...`
+calls when their slot argument is in constructor form.  The multi-discriminee
+match Lean compiles `cons.classify` into doesn't auto-reduce, so we expose
+the reductions explicitly.
+-/
+
+@[simp] theorem id_classify {C : Carrier} (Γ : Shape C) (X : Type) {α : C.Arity}
+    (p : Γ ∋ α) (k_shape : ((CTele.id : CTele C).shape ∋ α) → X) (k_Γ : (Γ ∋ α) → X) :
+    (CTele.id : CTele C).classify Γ X p k_shape k_Γ = k_Γ p := rfl
+
+@[simp] theorem cons_classify_here {C : Carrier} (a : C.Arity) (t : CTele C)
+    (Γ : Shape C) (X : Type) (i : C.Binder a)
+    (k_shape : ((CTele.cons a t).shape ∋ i.arity) → X) (k_Γ : (Γ ∋ i.arity) → X) :
+    (CTele.cons a t).classify Γ X (ListSlotAt.here i) k_shape k_Γ
+      = k_shape (ListSlotAt.here i) := rfl
+
+@[simp] theorem cons_classify_there {C : Carrier} (a : C.Arity) (t : CTele C)
+    (Γ : Shape C) (X : Type) {α : C.Arity} (p : (Γ ⋈* t.shape) ∋ α)
+    (k_shape : ((CTele.cons a t).shape ∋ α) → X) (k_Γ : (Γ ∋ α) → X) :
+    (CTele.cons a t).classify Γ X (ListSlotAt.there p) k_shape k_Γ
+      = t.classify Γ X p (fun q_t => k_shape (.there q_t)) k_Γ := rfl
+
+@[simp] theorem cons_embed_here {C : Carrier} (a : C.Arity) (t : CTele C)
+    (Γ : Shape C) (i : C.Binder a) :
+    ((CTele.cons a t).embed Γ).apply (ListSlotAt.here i) = .here i := rfl
+
+@[simp] theorem cons_embed_there {C : Carrier} (a : C.Arity) (t : CTele C)
+    (Γ : Shape C) {α : C.Arity} (q : t.shape ∋ α) :
+    ((CTele.cons a t).embed Γ).apply (ListSlotAt.there q)
+      = .there ((t.embed Γ).apply q) := rfl
+
+@[simp] theorem id_weaken {C : Carrier} (Γ : Shape C) {α : C.Arity} (p : Γ ∋ α) :
+    ((CTele.id : CTele C).weaken Γ).apply p = p := rfl
+
+@[simp] theorem cons_weaken {C : Carrier} (a : C.Arity) (t : CTele C)
+    (Γ : Shape C) {α : C.Arity} (p : Γ ∋ α) :
+    ((CTele.cons a t).weaken Γ).apply p = .there ((t.weaken Γ).apply p) := rfl
+
 end CTele

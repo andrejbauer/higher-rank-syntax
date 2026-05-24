@@ -104,6 +104,23 @@ def toSubst {C : Carrier} {Γ Δ : Shape C}
   classifyDom := fun {_} p => PreOrDom.dom p
   weakenCod := ⟨fun {_} p => nomatch p⟩
 
+@[simp] theorem toSubst_pre {C : Carrier} {Γ Δ : Shape C}
+    (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)) :
+    (toSubst f).pre = Shape.nil := rfl
+
+@[simp] theorem toSubst_dom {C : Carrier} {Γ Δ : Shape C}
+    (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)) :
+    (toSubst f).dom = Γ := rfl
+
+@[simp] theorem toSubst_cod {C : Carrier} {Γ Δ : Shape C}
+    (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α)) :
+    (toSubst f).cod = Δ := rfl
+
+@[simp] theorem toSubst_classifyDom {C : Carrier} {Γ Δ : Shape C}
+    (f : ∀ {α : C.Arity}, (Γ ∋ α) → Expr (Δ ⋈ α))
+    {α : C.Arity} (p : Γ ∋ α) :
+    (toSubst f).classifyDom p = PreOrDom.dom p := rfl
+
 /-- The identity substitution at shape `Γ` — `toSubst` of the unit `Expr.η`.
 This is the Kleisli identity of the syntax relative monad. -/
 def Subst.id {C : Carrier} (Γ : Shape C) : Subst C :=
