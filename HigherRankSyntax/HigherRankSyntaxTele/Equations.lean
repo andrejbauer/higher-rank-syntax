@@ -138,12 +138,21 @@ theorem Subst.act_id {C : Carrier} (Γ : Shape C) [ProperTele Γ]
       rcases ProperTele.cover Shape.nil y with ⟨y, h_q⟩ | ⟨z, _⟩
       · subst h_q
         refine (Subst.act_apply_weaken_dom (Subst.id Γ) τ y args).trans ?_
-        -- Goal: aux.act Shape.nil ((Subst.id Γ).sub y)
-        --        = Expr.apply (weaken_τ (embed_Γ Shape.nil y)) args
+        -- Simplify (Subst.id Γ) y = Expr.η y (rfl via toSubst_sub).
+        show (Subst.inst (Shape.nil ⋈ β) (fun q => match q with
+              | .here k => (Subst.id Γ).act (τ ⋈ k.arity) (args k))).act Shape.nil
+              (Expr.η y) = _
+        -- IH on each inner walk:
+        have h_args : ∀ (k : C.Binder β),
+            (Subst.id Γ).act (τ ⋈ k.arity) (args k) = args k :=
+          fun k => Subst.act_id Γ (τ ⋈ k.arity) (args k)
+        simp only [h_args]
+        -- Simplify (embed Shape.nil).apply y = y on the RHS.
+        rw [ProperTele.embed_nil_id y]
         sorry
       · exact nomatch z
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
-decreasing_by exact Expr.Subterm.of_arg _ args k
+decreasing_by all_goals exact Expr.Subterm.of_arg x args _
 
 /-- **`act_η`** — acting on an η-expansion reduces to applying `f`.
 Translates to `lift f ∘ η = f` (unit_left). -/

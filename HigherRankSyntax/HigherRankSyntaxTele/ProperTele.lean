@@ -50,6 +50,9 @@ class ProperTele {C : Carrier} (S : Tele C.Arity) : Type 1 where
   cover : ∀ (Γ : Shape C) {α : C.Arity} (p : Γ ⋈* S ∋ α),
           (∃ x : S ∋ α, p = (embed Γ).apply x)
             ∨ (∃ y : Γ ∋ α, p = (weaken Γ).apply y)
+  /-- The S-side embedding at empty base is the identity renaming. -/
+  embed_nil_id : ∀ {α : C.Arity} (x : S ∋ α),
+    (embed Shape.nil).apply x = x
 
 namespace ProperTele
 
@@ -61,6 +64,7 @@ instance instId {C : Carrier} : ProperTele (Tele.id : Tele C.Arity) where
   classify_embed := fun _Γ _X _α x _f _g => nomatch x
   classify_weaken := fun _Γ _X _α _y _f _g => rfl
   cover := fun _Γ _α p => Or.inr ⟨p, rfl⟩
+  embed_nil_id := fun x => nomatch x
 
 /-- Extend a `ProperTele` by one arity at the top. -/
 instance instCons {C : Carrier} (a : C.Arity) (T : Tele C.Arity) [ProperTele T] :
@@ -95,5 +99,11 @@ instance instCons {C : Carrier} (a : C.Arity) (T : Tele C.Arity) [ProperTele T] 
       · refine Or.inr ⟨y, ?_⟩
         show ListSlotAt.there p' = ListSlotAt.there ((ProperTele.weaken Γ).apply y)
         congr 1
+  embed_nil_id := fun x => by
+    cases x with
+    | here _i => rfl
+    | there x' =>
+      show ListSlotAt.there ((ProperTele.embed Shape.nil).apply x') = .there x'
+      rw [ProperTele.embed_nil_id x']
 
 end ProperTele
