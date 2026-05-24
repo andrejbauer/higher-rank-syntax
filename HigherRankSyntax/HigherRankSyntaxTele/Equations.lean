@@ -109,11 +109,30 @@ theorem Subst.act_id {C : Carrier} (Γ : Shape C) (α : C.Arity)
   sorry
 
 /-- **`act_η`** — acting on an η-expansion reduces to applying `f`.
-Translates to `lift f ∘ η = f` (unit_left). -/
+Translates to `lift f ∘ η = f` (unit_left).
+
+After the clean reduction via `act_apply_weaken` + `toSubst_classifyDom`,
+the goal lands at `aux.act CTele.id ((toSubst f).sub p) = f p` for the
+canonical-identity aux at shape `Δ ⋈ α`.  The residue: prove that aux
+acts as the identity walker.  This is `identity_walker` — still TODO. -/
 theorem Subst.act_η {C : Carrier} {Γ Δ : Shape C}
     (f : ∀ {β : C.Arity}, (Γ ∋ β) → Expr (Δ ⋈ β))
     (α : C.Arity) (p : Γ ∋ α) :
     (toSubst f).act (CTele.cons α CTele.id) (Expr.η p) = f p := by
+  rw [Expr.η.eq_1]
+  -- `.there p = (cons α id).weaken Γ p` (rfl).  `change` accepts.
+  change (toSubst f).act (CTele.cons α CTele.id)
+      (Expr.apply (((CTele.cons α CTele.id).weaken
+                      ((toSubst f).pre ⋈* (toSubst f).dom)).apply p)
+                  (fun i => Expr.η (ListSlotAt.here i))) = _
+  rw [Subst.act_apply_weaken (toSubst f) (CTele.cons α CTele.id) p]
+  -- The match reduces via toSubst_classifyDom to PreOrDom.dom p; the
+  -- goal is now `aux.act CTele.id ((toSubst f).sub p) = f p`.
+  simp only [toSubst_classifyDom, toSubst_sub]
+  -- Residue: identity walker on aux.  aux.sub (.here i) = Expr.η (.here i)
+  -- via act_η_τ; aux.classifyDom and aux.weakenCod are canonical.
+  -- Proving aux.act CTele.id e = e for arbitrary e requires the
+  -- identity walker lemma (induction on e via Expr.Subterm).
   sorry
 
 /-- **`act_kcomp`** — acting via a Kleisli composition factors.
