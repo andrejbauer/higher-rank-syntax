@@ -30,40 +30,48 @@ The proofs need helper lemmas about how `Subst.act` behaves on
   `sub` as η-fills, and inside `act_id` (via `identity_walker`) for the
   τ-slot branch of the walker.
 
-Currently all proofs are `sorry`d; we'll test the helper statements by
-proving `act_η` first.
+`act_η_τ` is proved.  The three monad laws (`act_id`, `act_η`, `act_kcomp`)
+are still `sorry`d.
 -/
 
 
 /-! ## Auxiliary: η-walk on a τ-side slot -/
 
 /-- Walking an η-expansion of a τ-side slot reproduces the η in the target
-shape.
-
-Proof outline:
-* Unfold `Expr.η q = .apply (.there q) (fun j => Expr.η (.here j))`.
-* Unfold `Subst.act` on the resulting `.apply`.  The τ-classify call is
-  `(cons α t).classify Γ X (.there (t.embed Γ q_τ)) k_shape k_below`.
-  By cons.classify's `.there` branch it recurses with
-  `t.classify Γ X (t.embed Γ q_τ) (λ q_t => k_shape (.there q_t)) k_below`,
-  which by `t.classify_embed` reduces to `k_shape (.there q_τ)`.
-* The τ-slot branch builds `.apply ((cons α t).embed Δ (.there q_τ))
-  (fun j => σ.act (cons j.arity (cons α t)) (Expr.η (.here j)))`.
-  `(cons α t).embed Δ (.there q_τ) = .there (t.embed Δ q_τ)` by
-  cons.embed's `.there` branch.
-* Each recursive call invokes the IH at the smaller arity `j.arity ≺ α`
-  via `C.subWf`, with `t' := cons α t` and `q_τ' := .here j`.  Since
-  `(cons α t).embed Γ (.here j) = .here j` (cons.embed's `.here` branch),
-  the IH gives `σ.act (cons j.arity (cons α t)) (Expr.η (.here j))
-  = Expr.η (.here j)` in the target shape.
-* Folding back: `.apply (.there (t.embed Δ q_τ)) (fun j => Expr.η (.here j))
-  = Expr.η (t.embed Δ q_τ)`. -/
+shape.  By WF recursion on the slot's arity `α`, using the same insight as
+`act_η`: rewrite the inner slot's `.there` as `(cons α t).embed Γ (.there q_τ)`
+so that the propositional reflection `classify_embed` collapses τ.classify
+directly to the shape continuation. -/
 theorem Subst.act_η_τ {C : Carrier} (σ : Subst C) (t : CTele C)
     {α : C.Arity} (q_τ : t.shape ∋ α) :
     σ.act (CTele.cons α t)
         (Expr.η (t.embed (σ.pre ⋈* σ.dom) q_τ))
       = Expr.η (t.embed (σ.pre ⋈* σ.cod) q_τ) := by
-  sorry
+  -- Step 1: unfold the LHS's outer Expr.η.
+  rw [Expr.η.eq_1]
+  -- Step 2: unfold Subst.act on the resulting .apply.
+  unfold Subst.act
+  -- Step 3: `change` the slot's form to use the cons.embed instead of `.there`
+  -- (these are def-eq via cons_embed_there).  Then classify_embed applies.
+  change ((CTele.cons α t).classify (σ.pre ⋈* σ.dom)
+            (Expr ((σ.pre ⋈* σ.cod) ⋈* (CTele.cons α t).shape))
+            (((CTele.cons α t).embed (σ.pre ⋈* σ.dom)).apply (ListSlotAt.there q_τ))
+            _ _) = _
+  rw [(CTele.cons α t).classify_embed (σ.pre ⋈* σ.dom)]
+  -- Step 4: unfold the RHS's Expr.η.
+  rw [Expr.η.eq_1]
+  -- Step 5: both sides are Expr.apply.  Heads agree by cons_embed_there
+  -- (rfl), so congr 1 collapses to the args.  Args agree by IH on i.arity.
+  congr 1
+  funext i
+  -- IH: act_η_τ at (cons α t, .here i) with α' = i.arity.
+  -- (cons α t).embed Γ (.here i) = .here i (cons_embed_here, rfl).
+  exact Subst.act_η_τ σ (CTele.cons α t)
+          (q_τ := @ListSlotAt.here C α t.shape.toList i)
+termination_by α
+decreasing_by
+  -- i : C.Binder α gives Carrier.Sub i.arity α
+  exact ⟨i, rfl⟩
 
 /-! ## Monad laws -/
 
