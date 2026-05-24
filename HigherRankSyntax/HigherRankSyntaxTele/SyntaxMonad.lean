@@ -5,21 +5,40 @@ import HigherRankSyntaxTele.RelativeMonad.Basic
 /-!
 # Syntax as a relative monad
 
-`SyntaxMonad C` packages `Expr` over a carrier `C` as a relative monad over the
-"slots" functor `J : Shape C ⥤ ArityFunc C`, with `T Γ α = Expr (Γ ⋈ α)`.
+`SyntaxMonad C` packages `Expr` over a carrier `C` as a relative monad
+over the "slots" functor `J : PShape C ⥤ ArityFunc C`, with
+`T Γ α = Expr (Γ.tele ⋈ α)`.
+
+The category objects are `PShape C`: a `Tele C.Arity` bundled with a
+`ProperTele` instance.  This makes `[ProperTele Γ.tele]` auto-synthesized
+whenever `Γ : PShape C` is in scope, so `lift`, `unit_right`,
+`unit_left`, and `comp_lift` can call `Subst.act` and the monad-law
+lemmas without manually threading instance args.
 
 With cons-style telescopes, the Kleisli ↔ Subst bridge is cast-free:
-`Shape.nil ⋈* X = X` definitionally, so `lift f` is just `Subst.act (toSubst f)`
-at `τ = Shape.nil ⋈ α`.
+`Shape.nil ⋈* X = X` definitionally, so `lift f` is just
+`(toSubst f).act (Shape.nil ⋈ α)`.
 -/
 
 
 open CategoryTheory
 
-/-- Category structure on `Shape C` with `Renaming`s as morphisms. -/
-instance ShapeCat (C : Carrier) : Category (Shape C) where
-  Hom Γ Δ := Γ →ʳ Δ
-  id Γ := Renaming.id Γ
+/-- A shape with a `ProperTele` instance bundled — the category object
+type for `SyntaxMonad`. -/
+@[ext] structure PShape (C : Carrier) : Type 1 where
+  /-- The underlying telescope. -/
+  tele : Shape C
+  /-- The structural-ops instance for the telescope. -/
+  proper : ProperTele tele
+
+/-- Auto-synthesise `[ProperTele Γ.tele]` from `Γ : PShape C`. -/
+instance (C : Carrier) (Γ : PShape C) : ProperTele Γ.tele := Γ.proper
+
+/-- Category structure on `PShape C` with renamings between underlying
+telescopes as morphisms. -/
+instance ShapeCat (C : Carrier) : Category (PShape C) where
+  Hom Γ Δ := Γ.tele →ʳ Δ.tele
+  id Γ := Renaming.id Γ.tele
   comp f g := g ∘ʳʳ f
 
 /-- The arity-indexed family category: a wrapper around `C.Arity → Type` so we can put
@@ -35,21 +54,21 @@ instance (C : Carrier) : Category (ArityFunc C) where
   id _ := fun _ x => x
   comp f g := fun α x => g α (f α x)
 
-/-- The "slots" functor: shape `Γ ↦ α ↦ Γ ∋ α`. -/
-def J (C : Carrier) : Shape C ⥤ ArityFunc C where
-  obj Γ := ⟨fun α => Γ ∋ α⟩
-  map {Γ Δ} (ρ : Γ →ʳ Δ) := fun _ p => ρ p
+/-- The "slots" functor: shape `Γ ↦ α ↦ Γ.tele ∋ α`. -/
+def J (C : Carrier) : PShape C ⥤ ArityFunc C where
+  obj Γ := ⟨fun α => Γ.tele ∋ α⟩
+  map {Γ Δ} (ρ : Γ.tele →ʳ Δ.tele) := fun _ p => ρ p
 
-/-- The "expressions" functor: shape `Γ ↦ α ↦ Expr (Γ ⋈ α)`. -/
-def T (C : Carrier) : Shape C ⥤ ArityFunc C where
-  obj Γ := ⟨fun α => Expr (Γ ⋈ α)⟩
-  map {Γ Δ} (ρ : Γ →ʳ Δ) := fun α e => ⟦ ρ ⇑ʳ α ⟧ʳ e
+/-- The "expressions" functor: shape `Γ ↦ α ↦ Expr (Γ.tele ⋈ α)`. -/
+def T (C : Carrier) : PShape C ⥤ ArityFunc C where
+  obj Γ := ⟨fun α => Expr (Γ.tele ⋈ α)⟩
+  map {Γ Δ} (ρ : Γ.tele →ʳ Δ.tele) := fun α e => ⟦ ρ ⇑ʳ α ⟧ʳ e
   map_id Γ := by
     funext α e
-    show ⟦ (𝟙ʳ : Γ →ʳ Γ) ⇑ʳ α ⟧ʳ e = e
+    show ⟦ (𝟙ʳ : Γ.tele →ʳ Γ.tele) ⇑ʳ α ⟧ʳ e = e
     rw [Renaming.extend_id]
     exact Renaming.actExpr.map_id e
-  map_comp {Γ Δ Ε} (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ε) := by
+  map_comp {Γ Δ Ε} (ρ : Γ.tele →ʳ Δ.tele) (σ : Δ.tele →ʳ Ε.tele) := by
     funext α e
     show ⟦ (σ ∘ʳʳ ρ) ⇑ʳ α ⟧ʳ e = ⟦ σ ⇑ʳ α ⟧ʳ (⟦ ρ ⇑ʳ α ⟧ʳ e)
     rw [Renaming.extend_comp]
@@ -60,11 +79,11 @@ def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
   map := (T C).obj
   η Γ := fun _ p => Expr.η p
   lift {Γ Δ} f := fun α e =>
-    (toSubst (fun {β} p => f β p)).act (CTele.cons α CTele.id) e
+    (toSubst (fun {β} p => f β p)).act (Shape.nil ⋈ α) e
   unit_right := by
     intro Γ
     funext α e
-    exact Subst.act_id Γ α e
+    exact Subst.act_id Γ.tele α e
   unit_left := by
     intro Γ Δ f
     funext α p
