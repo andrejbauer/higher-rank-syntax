@@ -47,6 +47,11 @@ structure CTele (C : Carrier) where
   classify_weaken : ∀ (Γ : Shape C) (X : Type) {α : C.Arity} (q_Γ : Γ ∋ α)
                     (k_shape : (shape ∋ α) → X) (k_Γ : (Γ ∋ α) → X),
                     classify Γ X (weaken Γ q_Γ) k_shape k_Γ = k_Γ q_Γ
+  /-- Cover (η-rule of the sum decomposition): every slot is either a
+  τ-embedded shape-slot or a τ-weakened base-slot. -/
+  cover : ∀ (Γ : Shape C) {α : C.Arity} (p : (Γ ⋈* shape) ∋ α),
+          (∃ q_τ : shape ∋ α, p = (embed Γ).apply q_τ)
+            ∨ (∃ q_Γ : Γ ∋ α, p = (weaken Γ).apply q_Γ)
 
 namespace CTele
 
@@ -59,6 +64,7 @@ def id {C : Carrier} : CTele C where
   classify := fun _Γ _α _X p _k_shape k_Γ => k_Γ p
   classify_embed := fun _Γ _X _α q_τ _k_shape _k_Γ => nomatch q_τ
   classify_weaken := fun _Γ _X _α _q_Γ _k_shape _k_Γ => rfl
+  cover := fun _Γ _α p => Or.inr ⟨p, rfl⟩
 
 /-- Extend a CTele by one arity at the top. -/
 def cons {C : Carrier} (a : C.Arity) (t : CTele C) : CTele C where
@@ -78,6 +84,17 @@ def cons {C : Carrier} (a : C.Arity) (t : CTele C) : CTele C where
     | there q' => exact t.classify_embed Γ X q' (fun q_t => k_shape (.there q_t)) k_Γ
   classify_weaken := fun Γ X _α q_Γ k_shape k_Γ' => by
     exact t.classify_weaken Γ X q_Γ (fun q_t => k_shape (.there q_t)) k_Γ'
+  cover := fun Γ _α p => by
+    cases p with
+    | here i  => exact Or.inl ⟨ListSlotAt.here i, rfl⟩
+    | there q =>
+      rcases t.cover Γ q with ⟨q_τ, h⟩ | ⟨q_Γ, h⟩
+      · refine Or.inl ⟨ListSlotAt.there q_τ, ?_⟩
+        show ListSlotAt.there q = ListSlotAt.there ((t.embed Γ).apply q_τ)
+        congr 1
+      · refine Or.inr ⟨q_Γ, ?_⟩
+        show ListSlotAt.there q = ListSlotAt.there ((t.weaken Γ).apply q_Γ)
+        congr 1
 
 /-! ### Construction from a list of arities -/
 
