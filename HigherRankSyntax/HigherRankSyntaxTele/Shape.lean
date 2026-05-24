@@ -53,7 +53,7 @@ abbrev SlotAt {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type :=
   ListSlotAt Γ.toList α
 
 /-- `Γ ∋ α` is the type of slots of `Γ` at arity `α`. -/
-notation:35 Γ " ∋ " α => SlotAt Γ α
+infix:35 " ∋ " => SlotAt
 
 /-- Extract the arity index from a slot. -/
 @[reducible]

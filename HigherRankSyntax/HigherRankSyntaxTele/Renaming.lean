@@ -18,13 +18,13 @@ A *renaming* `Γ →ʳ Δ` is an arity-preserving slot map.
 /-- A renaming of shapes from `Γ` to `Δ`: an arity-preserving slot map. -/
 structure Renaming {C : Carrier} (Γ Δ : Shape C) : Type where
   /-- The underlying slot map. -/
-  apply : ∀ {α : C.Arity}, (Γ ∋ α) → (Δ ∋ α)
+  apply : ∀ {α : C.Arity}, Γ ∋ α → Δ ∋ α
 
 @[inherit_doc Renaming]
 infixr:25 " →ʳ " => Renaming
 
 instance {C : Carrier} {Γ Δ : Shape C} :
-    CoeFun (Γ →ʳ Δ) (fun _ => ∀ {α : C.Arity}, (Γ ∋ α) → (Δ ∋ α)) :=
+    CoeFun (Γ →ʳ Δ) (fun _ => ∀ {α : C.Arity}, Γ ∋ α → Δ ∋ α) :=
   ⟨Renaming.apply⟩
 
 /-- The identity renaming on `Γ`. -/

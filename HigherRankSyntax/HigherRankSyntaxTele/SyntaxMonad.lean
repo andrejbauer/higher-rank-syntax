@@ -83,7 +83,7 @@ def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
   unit_right := by
     intro Γ
     funext α e
-    exact Subst.act_id Γ.tele α e
+    exact Subst.act_id Γ.tele (Shape.nil ⋈ α) e
   unit_left := by
     intro Γ Δ f
     funext α p

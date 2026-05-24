@@ -14,8 +14,8 @@ indexed by `C.Binder α`, each child living in `Γ` extended by the binder's sub
 inductive Expr {C : Carrier} : Shape C → Type where
   /-- An application of a head slot `p : Γ ∋ α` to a dependent family of children, one
       per binder of `α`. -/
-  | apply : {Γ : Shape C} → {α : C.Arity} → (p : Γ ∋ α) →
-            (args : (i : C.Binder α) → Expr (Γ ⋈ i.arity)) → Expr Γ
+  | apply : {Γ : Shape C} → {α : C.Arity} → Γ ∋ α →
+            ((i : C.Binder α) → Expr (Γ ⋈ i.arity)) → Expr Γ
 
 /-- `Expr.Subterm e' e` holds when `e = apply p args` and `e'` is one of its arguments
 `args j`. -/
@@ -48,7 +48,7 @@ abbrev Expr.T {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type := Expr (Γ ⋈
 
 /-- η-expansion: a variable `p : Γ ∋ α` becomes the fully-applied tree
 `apply (.there p) (fun i => η (.here i))`. -/
-def Expr.η {C : Carrier} : {Γ : Shape C} → {α : C.Arity} → (Γ ∋ α) → T Γ α
+def Expr.η {C : Carrier} : {Γ : Shape C} → {α : C.Arity} → Γ ∋ α → T Γ α
   | _, α, p => Expr.apply (.there p) (fun i => η (α := i.arity) (.here i))
 termination_by Γ α _ => α
 decreasing_by exact ⟨_, rfl⟩
