@@ -115,6 +115,165 @@ theorem Subst.act_η_τ {C : Carrier} {pre dom cod : Shape C}
 termination_by α
 decreasing_by exact ⟨i, rfl⟩
 
+/-! ## Auxiliary: identity instantiation under one binder -/
+
+/-- The identity instantiation for the one-binder telescope `Shape.nil ⋈ α`,
+with an arbitrary fixed prefix `Δ`. -/
+def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) :
+    Subst C Δ (Shape.nil ⋈ α) (Shape.nil ⋈ α) :=
+  Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+    | .here i => Expr.η (.here i))
+
+private def Subst.InstEtaPreProp {C : Carrier} (α : C.Arity) : Prop :=
+  ∀ {pre cod : Shape C} [ProperTele cod]
+    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+      Expr (pre ⋈* cod ⋈ β))
+    (p : pre ∋ α),
+    (Subst.inst (Shape.nil ⋈ α) ι).act Shape.nil (Expr.η p)
+      =
+    Expr.apply ((ProperTele.weaken pre).apply p)
+      (fun i => ι (ListSlotAt.here i))
+
+private def Subst.InstIdProp {C : Carrier} (α : C.Arity) : Prop :=
+  ∀ (Δ : Shape C) (τ : Shape C) [ProperTele τ]
+    (e : Expr ((Δ ⋈ α) ⋈* τ)),
+    (Subst.instId Δ α).act τ e = e
+
+/-- Identity instantiation, assuming the β-for-η lemma for the immediate
+sub-arities of the head arity.  The proof itself recurses only over the
+expression being walked. -/
+private theorem Subst.act_inst_id_of {C : Carrier} (α : C.Arity) (Δ : Shape C)
+    (hη : ∀ (i : C.Binder α), Subst.InstEtaPreProp i.arity) :
+    ∀ (τ : Shape C) [ProperTele τ] (e : Expr ((Δ ⋈ α) ⋈* τ)),
+      (Subst.instId Δ α).act τ e = e
+  | τ, _, Expr.apply (α := β) head argFam => by
+      have ih_all : ∀ (k : C.Binder β),
+          (Subst.instId Δ α).act (τ ⋈ k.arity) (argFam k) = argFam k :=
+        fun k => Subst.act_inst_id_of α Δ hη (τ ⋈ k.arity) (argFam k)
+      rcases ProperTele.cover (Δ ⋈ α) head with ⟨y, h_y⟩ | ⟨y, h_y⟩
+      · subst h_y
+        refine (Subst.act_apply_embed (Subst.instId Δ α) τ y argFam).trans ?_
+        congr
+        funext k
+        exact ih_all k
+      · subst h_y
+        rcases ProperTele.cover Δ y with ⟨z, h_z⟩ | ⟨z, h_z⟩
+        · subst h_z
+          cases z with
+          | here i =>
+              refine (Subst.act_apply_weaken_dom
+                (Subst.instId Δ α) τ (ListSlotAt.here i) argFam).trans ?_
+              rw [show (Subst.instId Δ α).sub (ListSlotAt.here i)
+                    = @Expr.η C (Δ ⋈ α) i.arity (ListSlotAt.here i) from rfl]
+              refine (hη i (pre := Δ ⋈ α) (cod := τ)
+                (ι := _) (p := ListSlotAt.here i)).trans ?_
+              change
+                Expr.apply ((ProperTele.weaken (Δ ⋈ α)).apply
+                    (ListSlotAt.here i))
+                  (fun k => (Subst.instId Δ α).act (τ ⋈ k.arity) (argFam k))
+                =
+                Expr.apply ((ProperTele.weaken (Δ ⋈ α)).apply
+                    (ListSlotAt.here i)) argFam
+              congr 1
+              funext k
+              exact ih_all k
+          | there z' => nomatch z'
+        · subst h_z
+          refine (Subst.act_apply_weaken_pre (Subst.instId Δ α) τ z argFam).trans ?_
+          change
+            Expr.apply ((ProperTele.weaken (Δ ⋈ α)).apply
+                ((ProperTele.weaken Δ).apply z))
+              (fun k => (Subst.instId Δ α).act (τ ⋈ k.arity) (argFam k))
+            =
+            Expr.apply ((ProperTele.weaken (Δ ⋈ α)).apply
+                ((ProperTele.weaken Δ).apply z)) argFam
+          congr 1
+          funext k
+          exact ih_all k
+termination_by τ _ e => (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
+decreasing_by all_goals exact Expr.Subterm.of_arg head argFam _
+
+/-- The identity-instantiation and β-for-η instantiation lemmas are proved
+together by well-founded recursion on arities. -/
+private theorem Subst.act_inst_bundle {C : Carrier} (α : C.Arity) :
+    Subst.InstEtaPreProp α ∧ Subst.InstIdProp α := by
+  refine ⟨?eta_pre, ?inst_id⟩
+  · intro pre cod _ ι p
+    rw [Expr.η.eq_1]
+    change (Subst.inst (Shape.nil ⋈ α) ι).act Shape.nil
+        (Expr.apply ((ProperTele.weaken (pre ⋈* (Shape.nil ⋈ α))).apply
+          ((ProperTele.weaken pre).apply p)) (fun i => Expr.η (ListSlotAt.here i))) = _
+    rw [Subst.act_apply_weaken_pre]
+    change
+      Expr.apply ((Subst.inst (Shape.nil ⋈ α) ι).weakenCod.apply p)
+        (fun i => (Subst.inst (Shape.nil ⋈ α) ι).act
+          (Shape.nil ⋈ i.arity) (Expr.η (ListSlotAt.here i)))
+      =
+      Expr.apply ((ProperTele.weaken pre).apply p)
+        (fun i => ι (ListSlotAt.here i))
+    change
+      Expr.apply ((ProperTele.weaken pre).apply p)
+        (fun i => (Subst.inst (Shape.nil ⋈ α) ι).act
+          (Shape.nil ⋈ i.arity) (Expr.η (ListSlotAt.here i)))
+      =
+      Expr.apply ((ProperTele.weaken pre).apply p)
+        (fun i => ι (ListSlotAt.here i))
+    congr
+    funext i
+    rw [Expr.η.eq_1]
+    change (Subst.inst (Shape.nil ⋈ α) ι).act (Shape.nil ⋈ i.arity)
+        (Expr.apply ((ProperTele.weaken (pre ⋈* (Shape.nil ⋈ α))).apply
+          ((ProperTele.embed pre).apply (ListSlotAt.here i)))
+          (fun k =>
+            @Expr.η C
+              ((pre ⋈* (Shape.nil ⋈ α)) ⋈* (Shape.nil ⋈ i.arity))
+              k.arity (ListSlotAt.here k))) = _
+    rw [Subst.act_apply_weaken_dom]
+    rw [show (Subst.inst (Shape.nil ⋈ α) ι).sub (ListSlotAt.here i)
+          = ι (ListSlotAt.here i) from rfl]
+    have hfill : ∀ (k : C.Binder i.arity),
+        (Subst.inst (Shape.nil ⋈ α) ι).act
+          ((Shape.nil ⋈ i.arity) ⋈ k.arity)
+            (@Expr.η C
+              ((pre ⋈* (Shape.nil ⋈ α)) ⋈* (Shape.nil ⋈ i.arity))
+              k.arity (ListSlotAt.here k))
+        =
+          @Expr.η C
+            ((pre ⋈* cod) ⋈* (Shape.nil ⋈ i.arity))
+            k.arity (ListSlotAt.here k) := by
+      intro k
+      exact Subst.act_η_τ (Subst.inst (Shape.nil ⋈ α) ι)
+        (Shape.nil ⋈ i.arity) (x := ListSlotAt.here k)
+    simp only [hfill]
+    change (Subst.instId (pre ⋈* cod) i.arity).act Shape.nil
+      (ι (ListSlotAt.here i)) = ι (ListSlotAt.here i)
+    exact (Subst.act_inst_bundle i.arity).2 (pre ⋈* cod) Shape.nil
+      (ι (ListSlotAt.here i))
+  · intro Δ τ _ e
+    exact Subst.act_inst_id_of α Δ
+      (fun i => (Subst.act_inst_bundle i.arity).1) τ e
+termination_by α
+decreasing_by
+  all_goals exact ⟨i, rfl⟩
+
+/-- β-for-η for a one-binder instantiation. -/
+theorem Subst.act_inst_η_pre {C : Carrier} {pre cod : Shape C} [ProperTele cod]
+    {α : C.Arity}
+    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+      Expr (pre ⋈* cod ⋈ β))
+    (p : pre ∋ α) :
+    (Subst.inst (Shape.nil ⋈ α) ι).act Shape.nil (Expr.η p)
+      =
+    Expr.apply ((ProperTele.weaken pre).apply p)
+      (fun i => ι (ListSlotAt.here i)) :=
+  (Subst.act_inst_bundle α).1 ι p
+
+/-- Identity instantiation acts as the identity walker. -/
+theorem Subst.act_inst_id {C : Carrier} (α : C.Arity) (Δ : Shape C) :
+    ∀ (τ : Shape C) [ProperTele τ] (e : Expr ((Δ ⋈ α) ⋈* τ)),
+      (Subst.instId Δ α).act τ e = e :=
+  (Subst.act_inst_bundle α).2 Δ
+
 /-! ## Monad laws -/
 
 /-- **`act_id`** — the identity substitution acts as the identity walker.
@@ -146,10 +305,18 @@ theorem Subst.act_id {C : Carrier} (Γ : Shape C) [ProperTele Γ]
         have h_args : ∀ (k : C.Binder β),
             (Subst.id Γ).act (τ ⋈ k.arity) (args k) = args k :=
           fun k => Subst.act_id Γ (τ ⋈ k.arity) (args k)
-        simp only [h_args]
         -- Simplify (embed Shape.nil).apply y = y on the RHS.
         rw [ProperTele.embed_nil_id y]
-        sorry
+        refine (Subst.act_inst_η_pre
+          (pre := Γ) (cod := τ) (α := β) (ι := _) (p := y)).trans ?_
+        change
+          Expr.apply ((ProperTele.weaken Γ).apply y)
+            (fun k => (Subst.id Γ).act (τ ⋈ k.arity) (args k))
+          =
+          Expr.apply ((ProperTele.weaken Γ).apply y) args
+        congr 1
+        funext k
+        exact h_args k
       · exact nomatch z
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg x args _
@@ -170,7 +337,23 @@ theorem Subst.act_η {C : Carrier} {Γ Δ : Shape C} [ProperTele Γ] [ProperTele
                       ((ProperTele.embed Shape.nil).apply y))
                     (fun i => Expr.η (ListSlotAt.here i))) = _
     rw [Subst.act_apply_weaken_dom (toSubst f) (Shape.nil ⋈ α) y]
-    sorry
+    have hfill : ∀ (i : C.Binder α),
+        (toSubst f).act ((Shape.nil ⋈ α) ⋈ i.arity)
+          (@Expr.η C
+            ((Shape.nil ⋈* Γ) ⋈* (Shape.nil ⋈ α))
+            i.arity (ListSlotAt.here i))
+        =
+        @Expr.η C
+          ((Shape.nil ⋈* Δ) ⋈* (Shape.nil ⋈ α))
+          i.arity (ListSlotAt.here i) := by
+      intro i
+      exact Subst.act_η_τ (toSubst f) (Shape.nil ⋈ α)
+        (x := ListSlotAt.here i)
+    simp only [hfill]
+    rw [toSubst_sub]
+    rw [ProperTele.embed_nil_id y]
+    change (Subst.instId Δ α).act Shape.nil (f y) = f y
+    exact Subst.act_inst_id α Δ Shape.nil (f y)
   · exact nomatch z
 
 /-- **`act_kcomp`** — acting via a Kleisli composition factors.

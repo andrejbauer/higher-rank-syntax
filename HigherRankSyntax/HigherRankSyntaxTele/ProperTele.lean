@@ -106,4 +106,11 @@ instance instCons {C : Carrier} (a : C.Arity) (T : Tele C.Arity) [ProperTele T] 
       show ListSlotAt.there ((ProperTele.embed Shape.nil).apply x') = .there x'
       rw [ProperTele.embed_nil_id x']
 
+/-- A singleton telescope.  This is definitionally the same shape as
+`Tele.cons a ∘ᵗ Tele.id`, but adding the direct instance helps typeclass search
+after strict unit reduction has simplified the telescope to `Tele.cons a`. -/
+instance instSingleton {C : Carrier} (a : C.Arity) :
+    ProperTele (Tele.cons a : Tele C.Arity) :=
+  inferInstanceAs (ProperTele (Tele.cons a ∘ᵗ (Tele.id : Tele C.Arity)))
+
 end ProperTele
