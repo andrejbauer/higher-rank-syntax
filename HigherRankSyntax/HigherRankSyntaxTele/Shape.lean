@@ -32,7 +32,7 @@ end Shape
 infixl:65 " ⋈ " => Shape.ext
 
 /-- Iterated extension of a shape by another shape (telescope composition). -/
-abbrev Shape.extList {C : Carrier} (Γ τ : Shape C) : Shape C := τ ∘ᵗ Γ
+abbrev Shape.extList {C : Carrier} (Γ Δ : Shape C) : Shape C := Δ ∘ᵗ Γ
 
 @[inherit_doc Shape.extList]
 infixl:67 " ⋈* " => Shape.extList
@@ -68,10 +68,10 @@ def SlotAt.arity {C : Carrier} {Γ : Shape C} {α : C.Arity}
 @[simp] theorem Shape.nil_extList {C : Carrier} (Γ : Shape C) :
     Shape.nil ⋈* Γ = Γ := rfl
 
-@[simp] theorem Shape.extList_assoc {C : Carrier} (Γ Δ Ε : Shape C) :
-    (Γ ⋈* Δ) ⋈* Ε = Γ ⋈* (Δ ⋈* Ε) := rfl
+@[simp] theorem Shape.extList_assoc {C : Carrier} (Γ Δ Ξ : Shape C) :
+    (Γ ⋈* Δ) ⋈* Ξ = Γ ⋈* (Δ ⋈* Ξ) := rfl
 
-/-! ### The all-important reduction: `(Γ ⋈ α).toList = α :: Γ.toList` -/
+/-! ### Underlying-list reduction: `(Γ ⋈ α).toList = α :: Γ.toList` -/
 
 @[simp] theorem Shape.ext_toList {C : Carrier} (Γ : Shape C) (α : C.Arity) :
     (Γ ⋈ α).toList = α :: Γ.toList := rfl

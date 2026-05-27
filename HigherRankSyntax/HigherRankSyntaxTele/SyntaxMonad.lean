@@ -68,7 +68,7 @@ def T (C : Carrier) : PShape C ⥤ ArityFunc C where
     show ⟦ (𝟙ʳ : Γ.tele →ʳ Γ.tele) ⇑ʳ α ⟧ʳ e = e
     rw [Renaming.extend_id]
     exact Renaming.actExpr.map_id e
-  map_comp {Γ Δ Ε} (ρ : Γ.tele →ʳ Δ.tele) (σ : Δ.tele →ʳ Ε.tele) := by
+  map_comp {Γ Δ Ξ} (ρ : Γ.tele →ʳ Δ.tele) (σ : Δ.tele →ʳ Ξ.tele) := by
     funext α e
     show ⟦ (σ ∘ʳʳ ρ) ⇑ʳ α ⟧ʳ e = ⟦ σ ⇑ʳ α ⟧ʳ (⟦ ρ ⇑ʳ α ⟧ʳ e)
     rw [Renaming.extend_comp]
@@ -89,6 +89,6 @@ def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
     funext α p
     exact (Subst.act_η (fun {β} p_inner => f β p_inner) α p).symm
   comp_lift := by
-    intro Γ Δ Ε f g
+    intro Γ Δ Ξ f g
     funext α e
     exact Subst.act_kcomp (fun {β} p => f β p) (fun {β} q => g β q) α e

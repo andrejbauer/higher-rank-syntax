@@ -10,8 +10,7 @@ A *renaming* `Γ →ʳ Δ` is an arity-preserving slot map.
   - `Γ →ʳ Δ` is the type of renamings from `Γ` to `Δ`.
   - `𝟙ʳ` is the identity renaming.
   - `g ∘ʳʳ f` is composition "g after f".
-  - `Γ ↪ʳ α` and `Γ ↪ʳ* τ` are the canonical weakenings.
-  - `ρ ⇑ʳ α` and `ρ ⇑ʳ* τ` extend a renaming through a fresh binder / list of binders.
+  - `ρ ⇑ʳ α` extends a renaming through a fresh binder.
 -/
 
 
@@ -35,7 +34,7 @@ def Renaming.id {C : Carrier} (Γ : Shape C) : Γ →ʳ Γ :=
 notation "𝟙ʳ" => Renaming.id _
 
 /-- Composition of renamings: `comp f g` sends a slot through `f`, then through `g`. -/
-def Renaming.comp {C : Carrier} {Γ Δ Ε : Shape C} (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) : Γ →ʳ Ε :=
+def Renaming.comp {C : Carrier} {Γ Δ Ξ : Shape C} (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ) : Γ →ʳ Ξ :=
   ⟨fun {_} p => g (f p)⟩
 
 @[inherit_doc Renaming.comp]
@@ -54,15 +53,8 @@ theorem Renaming.id_comp {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) : f �
 
 theorem Renaming.comp_id {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) : 𝟙ʳ ∘ʳʳ f = f := rfl
 
-theorem Renaming.comp_assoc {C : Carrier} {Γ Δ Ε Ζ : Shape C}
-    (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) (h : Ε →ʳ Ζ) : h ∘ʳʳ (g ∘ʳʳ f) = (h ∘ʳʳ g) ∘ʳʳ f := rfl
-
-/-- The canonical weakening renaming `Γ →ʳ Γ ⋈ α`. -/
-def Renaming.weaken {C : Carrier} (Γ : Shape C) (α : C.Arity) : Γ →ʳ Γ ⋈ α :=
-  ⟨fun {_} p => .there p⟩
-
-@[inherit_doc Renaming.weaken]
-notation:65 Γ " ↪ʳ " α => Renaming.weaken Γ α
+theorem Renaming.comp_assoc {C : Carrier} {Γ Δ Ξ Θ : Shape C}
+    (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ) (h : Ξ →ʳ Θ) : h ∘ʳʳ (g ∘ʳʳ f) = (h ∘ʳʳ g) ∘ʳʳ f := rfl
 
 /-- Extend a renaming through a fresh binder of arity `β`. -/
 def Renaming.extend {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) (β : C.Arity) :
@@ -94,56 +86,9 @@ theorem Renaming.extend_id {C : Carrier} (Γ : Shape C) (β : C.Arity) :
   | there _ => rfl
 
 @[simp]
-theorem Renaming.extend_comp {C : Carrier} {Γ Δ Ε : Shape C}
-    (f : Γ →ʳ Δ) (g : Δ →ʳ Ε) (β : C.Arity) : (g ∘ʳʳ f) ⇑ʳ β = (g ⇑ʳ β) ∘ʳʳ (f ⇑ʳ β) := by
+theorem Renaming.extend_comp {C : Carrier} {Γ Δ Ξ : Shape C}
+    (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ) (β : C.Arity) : (g ∘ʳʳ f) ⇑ʳ β = (g ⇑ʳ β) ∘ʳʳ (f ⇑ʳ β) := by
   ext α p
   cases p with
   | here _  => rfl
   | there _ => rfl
-
-/-- Iterated weakening: the canonical inclusion `Γ →ʳ Γ ⋈* (Tele.ofList τ)`. -/
-def Renaming.weakenList {C : Carrier} (Γ : Shape C) :
-    (τ : List C.Arity) → Γ →ʳ Γ ⋈* (Tele.ofList τ)
-  | []        => 𝟙ʳ
-  | β :: rest => Renaming.weaken (Γ ⋈* (Tele.ofList rest)) β ∘ʳʳ Renaming.weakenList Γ rest
-
-@[inherit_doc Renaming.weakenList]
-notation:65 Γ " ↪ʳ* " τ => Renaming.weakenList Γ τ
-
-/-- Iterated extension of a renaming through a list of binders. -/
-def Renaming.extendList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
-    (τ : List C.Arity) → Γ ⋈* (Tele.ofList τ) →ʳ Δ ⋈* (Tele.ofList τ)
-  | []        => ρ
-  | β :: rest => ρ.extendList rest ⇑ʳ β
-
-@[inherit_doc Renaming.extendList]
-infixl:95 " ⇑ʳ* " => Renaming.extendList
-
-@[simp] theorem Renaming.extendList_nil {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
-    ρ ⇑ʳ* [] = ρ := rfl
-
-@[simp] theorem Renaming.extendList_cons {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
-    (β : C.Arity) (rest : List C.Arity) :
-    ρ ⇑ʳ* (β :: rest) = ρ ⇑ʳ* rest ⇑ʳ β := rfl
-
-@[simp] theorem Renaming.extendList_id {C : Carrier} (Γ : Shape C) :
-    ∀ (τ : List C.Arity), (𝟙ʳ : Γ →ʳ Γ) ⇑ʳ* τ = 𝟙ʳ
-  | []        => rfl
-  | β :: rest => by
-    show (𝟙ʳ : Γ →ʳ Γ) ⇑ʳ* rest ⇑ʳ β = 𝟙ʳ
-    rw [Renaming.extendList_id Γ rest, Renaming.extend_id]
-
-@[simp] theorem Renaming.extendList_weakenList {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) :
-    ∀ (τ : List C.Arity) {α : C.Arity} (p : Γ ∋ α),
-      (ρ ⇑ʳ* τ) ((Γ ↪ʳ* τ) p) = (Δ ↪ʳ* τ) (ρ p)
-  | [], _, _ => rfl
-  | β :: rest, _, p => by
-    show ListSlotAt.there ((ρ ⇑ʳ* rest) ((Γ ↪ʳ* rest) p))
-       = ListSlotAt.there ((Δ ↪ʳ* rest) (ρ p))
-    rw [Renaming.extendList_weakenList ρ rest p]
-
-theorem Renaming.weakenList_naturality {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
-    (τ : List C.Arity) :
-    ρ ⇑ʳ* τ ∘ʳʳ (Γ ↪ʳ* τ) = (Δ ↪ʳ* τ) ∘ʳʳ ρ := by
-  ext α p
-  exact Renaming.extendList_weakenList ρ τ p

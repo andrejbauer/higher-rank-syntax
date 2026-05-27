@@ -8,14 +8,14 @@ import HigherRankSyntaxTele.ProperTele
 scope) carries one field, `sub`, mapping each `dom`-slot to an
 expression in `pre ⋈* cod`.
 
-The walker `Subst.act` takes `τ : Shape C` with `[ProperTele τ]` and
-uses `ProperTele.classify ` for the τ/below-τ dispatch and
-`ProperTele.classify ` for the pre/dom dispatch below τ.
-Weakening pre-slots into the target uses `ProperTele.weaken `.
+`Subst.act σ τ` applies the substitution `σ` to an expression at depth
+`τ : Shape C` (with `[ProperTele τ]`).  It dispatches each head slot with
+`ProperTele.classify` (τ-side vs. below τ) and then `Subst.classifyDom`
+(pre vs. dom); pre-slots reinject into the target via `ProperTele.inl`.
 
 `Subst.classifyDom` and `Subst.weakenCod` are *projections* through
 the `[ProperTele dom]` and `[ProperTele cod]` instances, not struct
-fields — they're determined by the structural data on dom and cod.
+fields — they are determined by the structural data on dom and cod.
 -/
 
 
@@ -95,20 +95,27 @@ def Subst.classifyDom {C : Carrier} {pre dom cod : Shape C}
 def Subst.weakenCod {C : Carrier} {pre dom cod : Shape C}
     [ProperTele cod] (_σ : Subst C pre dom cod) :
     pre →ʳ pre ⋈* cod :=
-  ProperTele.weaken pre
+  ProperTele.inl pre
 
 /-! ### Instantiation Subst
 
 The `Subst.inst` constructor turns a "kit" (one expression per binder of an
 arity α, in some target context) into a Subst with domain `Shape.nil ⋈ α`.
-Used inside `Subst.act`'s dom branch to walk a substituted expression with
-the recursive arg results as fillers. -/
+Used inside `Subst.act`'s dom branch to act on a substituted expression
+with the recursive arg results as fillers. -/
 
 /-- Subst constructor from a slot-keyed function. -/
 abbrev Subst.inst {C : Carrier} {pre : Shape C} (dom : Shape C) {cod : Shape C}
     (f : ∀ {α : C.Arity}, dom ∋ α → Expr (pre ⋈* cod ⋈ α)) :
     Subst C pre dom cod where
   sub := f
+
+/-- The identity instantiation for the one-binder telescope `Shape.nil ⋈ α`,
+with an arbitrary fixed prefix `Δ`. -/
+def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) :
+    Subst C Δ (Shape.nil ⋈ α) (Shape.nil ⋈ α) :=
+  Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+    | .here i => Expr.η (.here i))
 
 /-! ### Kleisli ↔ Subst correspondence
 
@@ -131,12 +138,12 @@ def toSubst {C : Carrier} {Γ Δ : Shape C}
 def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Shape.nil Γ Γ :=
   toSubst (fun {β : C.Arity} (p : Γ ∋ β) => Expr.η p)
 
-/-! ### The walker -/
+/-! ### The substitution action -/
 
-/-- Apply a substitution to an expression at depth `τ`.  Uses
-`ProperTele.classify ` for the τ/below-τ dispatch and
-`σ.classifyDom` for the pre/dom dispatch.  All renamings used to rebuild
-new heads in the target come from `[ProperTele τ]` / `[ProperTele cod]`. -/
+/-- Apply the substitution `σ` to an expression at depth `τ`.  Uses
+`ProperTele.classify` for the τ/below-τ dispatch and `σ.classifyDom` for
+the pre/dom dispatch.  All renamings used to rebuild new heads in the
+target come from `[ProperTele τ]` / `[ProperTele cod]`. -/
 def Subst.act {C : Carrier} : {pre dom cod : Shape C} →
     [ProperTele dom] → [ProperTele cod] →
     (σ : Subst C pre dom cod) →
@@ -145,7 +152,7 @@ def Subst.act {C : Carrier} : {pre dom cod : Shape C} →
   | pre, dom, cod, _, _, σ, τ, _, .apply (α := α) p args =>
       ProperTele.classify (pre ⋈* dom) (Expr (pre ⋈* cod ⋈* τ)) p
         (fun x =>
-          Expr.apply (ProperTele.embed (pre ⋈* cod) x)
+          Expr.apply (ProperTele.inr (pre ⋈* cod) x)
             (fun i => σ.act (τ ⋈ i.arity) (args i)))
         (fun y =>
           match σ.classifyDom y with
@@ -154,7 +161,7 @@ def Subst.act {C : Carrier} : {pre dom cod : Shape C} →
                 | .here i => σ.act (τ ⋈ i.arity) (args i))).act Shape.nil (σ z)
           | PreOrDom.pre z =>
               Expr.apply
-                (ProperTele.weaken (pre ⋈* cod)
+                (ProperTele.inl (pre ⋈* cod)
                   ((Subst.weakenCod σ).apply z))
                 (fun i => σ.act (τ ⋈ i.arity) (args i)))
 termination_by pre dom _ _ _ _ _ _ e =>
@@ -169,8 +176,8 @@ decreasing_by
 
 
 /-- Kleisli composition of two Kleisli maps via `Subst.act`. -/
-def Subst.kcomp {C : Carrier} {Γ Δ Ε : Shape C} [ProperTele Δ] [ProperTele Ε]
-    (f : ∀ {β : C.Arity}, (Γ ∋ β) → Expr (Δ ⋈ β))
-    (g : ∀ {β : C.Arity}, (Δ ∋ β) → Expr (Ε ⋈ β)) :
-    ∀ {β : C.Arity}, (Γ ∋ β) → Expr (Ε ⋈ β) :=
+def Subst.kcomp {C : Carrier} {Γ Δ Ξ : Shape C} [ProperTele Δ] [ProperTele Ξ]
+    (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ⋈ β))
+    (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ξ ⋈ β)) :
+    ∀ {β : C.Arity}, Γ ∋ β → Expr (Ξ ⋈ β) :=
   fun {β} p => (toSubst g).act (Shape.nil ⋈ β) (f p)

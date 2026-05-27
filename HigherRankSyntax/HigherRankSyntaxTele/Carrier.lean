@@ -10,11 +10,7 @@ sub-arity relation.
   binding positions opened by an arity.
 
 * **Termination data.**  `subWf` asserts the sub-arity relation is well-founded; the
-  recursion that walks under binders decreases along it.
-
-A "signature" of primitive symbols, if a user wants one, lives at the framework level
-as an initial prefix of the shape that the user chooses not to substitute through —
-it is not part of the carrier data.
+  recursion that descends under binders decreases along it.
 
 Expressions, renamings, and the relative-monad structure are built on top of this data.
 -/
@@ -30,7 +26,7 @@ structure Carrier where
   /-- The sub-arity of each binder. -/
   binderArity (α : Arity) : Binder α → Arity
   /-- The sub-arity relation `i.arity = α'` is well-founded; this is the termination
-      data for the recursion that walks under binders. -/
+      data for the recursion that descends under binders. -/
   subWf : WellFounded
     (fun α' α : Arity => ∃ i : Binder α, binderArity α i = α')
 

@@ -40,9 +40,6 @@ instance Expr.Subterm.wellFoundedRelation {C : Carrier} :
   rel := @Expr.Subterm C
   wf := Expr.Subterm.wf
 
-/-- The variables of arity `α` at `Γ`: alias for `SlotAt Γ α`. -/
-abbrev Expr.J {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type := Γ ∋ α
-
 /-- The relative monad's target: expressions with free shape `Γ` under one outer α-binder. -/
 abbrev Expr.T {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type := Expr (Γ ⋈ α)
 
@@ -80,8 +77,8 @@ theorem Renaming.actExpr.map_id {C : Carrier} : ∀ {Γ : Shape C} (e : Expr Γ)
     exact Renaming.actExpr.map_id (args i)
 
 @[simp]
-theorem Renaming.actExpr.map_comp {C : Carrier} : ∀ {Γ Δ Ε : Shape C}
-    (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ε) (e : Expr Γ), ⟦ σ ∘ʳʳ ρ ⟧ʳ e = ⟦ σ ⟧ʳ (⟦ ρ ⟧ʳ e)
+theorem Renaming.actExpr.map_comp {C : Carrier} : ∀ {Γ Δ Ξ : Shape C}
+    (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ξ) (e : Expr Γ), ⟦ σ ∘ʳʳ ρ ⟧ʳ e = ⟦ σ ⟧ʳ (⟦ ρ ⟧ʳ e)
   | _, _, _, ρ, σ, .apply p args => by
     show Expr.apply (σ (ρ p)) (fun i => ⟦ (σ ∘ʳʳ ρ) ⇑ʳ i.arity ⟧ʳ args i)
       = Expr.apply (σ (ρ p)) (fun i => ⟦ σ ⇑ʳ i.arity ⟧ʳ (⟦ ρ ⇑ʳ i.arity ⟧ʳ args i))
