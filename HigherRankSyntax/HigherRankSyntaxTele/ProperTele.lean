@@ -123,171 +123,171 @@ try arbitrary telescope decompositions. -/
 @[reducible]
 def compose {C : Carrier} (S T : Shape C) [ProperTele S] [ProperTele T] :
     ProperTele (S ⋈* T) where
-  weaken := fun Γ =>
-    (ProperTele.weaken (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* T) ∘ʳʳ
-      (ProperTele.weaken Γ : Γ →ʳ Γ ⋈* S)
-  embed := fun Γ => ⟨fun {_} p =>
+  inl := fun Γ =>
+    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* T) ∘ʳʳ
+      (ProperTele.inl Γ : Γ →ʳ Γ ⋈* S)
+  inr := fun Γ => ⟨fun {_} p =>
     ProperTele.classify S _ p
-      (fun t => (ProperTele.embed (Γ ⋈* S)).apply t)
-      (fun s => (ProperTele.weaken (Γ ⋈* S)).apply
-        ((ProperTele.embed Γ).apply s))⟩
+      (fun t => (ProperTele.inr (Γ ⋈* S)).apply t)
+      (fun s => (ProperTele.inl (Γ ⋈* S)).apply
+        ((ProperTele.inr Γ).apply s))⟩
   classify := fun Γ _α X p f g =>
     ProperTele.classify (Γ ⋈* S) X p
-      (fun t => f ((ProperTele.embed S).apply t))
+      (fun t => f ((ProperTele.inr S).apply t))
       (fun q => ProperTele.classify Γ X q
-        (fun s => f ((ProperTele.weaken S).apply s))
+        (fun s => f ((ProperTele.inl S).apply s))
         g)
-  classify_embed := fun Γ X _α x f g => by
+  classify_inr := fun Γ X _α x f g => by
     rcases ProperTele.cover S x with ⟨t, h_t⟩ | ⟨s, h_s⟩
     · subst h_t
       have h_embed :
           ({
             apply := fun {x} p =>
               ProperTele.classify S (Γ ⋈* (S ⋈* T) ∋ x) p
-                (fun t => (ProperTele.embed (Γ ⋈* S)).apply t)
-                (fun s => (ProperTele.weaken (Γ ⋈* S)).apply
-                  ((ProperTele.embed Γ).apply s))
+                (fun t => (ProperTele.inr (Γ ⋈* S)).apply t)
+                (fun s => (ProperTele.inl (Γ ⋈* S)).apply
+                  ((ProperTele.inr Γ).apply s))
           } : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
-            ((ProperTele.embed S).apply t)
+            ((ProperTele.inr S).apply t)
           =
-          (ProperTele.embed (Γ ⋈* S)).apply t :=
-        ProperTele.classify_embed S _ t _ _
+          (ProperTele.inr (Γ ⋈* S)).apply t :=
+        ProperTele.classify_inr S _ t _ _
       rw [h_embed]
-      rw [ProperTele.classify_embed (Γ ⋈* S)]
+      rw [ProperTele.classify_inr (Γ ⋈* S)]
     · subst h_s
       have h_weaken :
           ({
             apply := fun {x} p =>
               ProperTele.classify S (Γ ⋈* (S ⋈* T) ∋ x) p
-                (fun t => (ProperTele.embed (Γ ⋈* S)).apply t)
-                (fun s => (ProperTele.weaken (Γ ⋈* S)).apply
-                  ((ProperTele.embed Γ).apply s))
+                (fun t => (ProperTele.inr (Γ ⋈* S)).apply t)
+                (fun s => (ProperTele.inl (Γ ⋈* S)).apply
+                  ((ProperTele.inr Γ).apply s))
           } : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
-            ((ProperTele.weaken S).apply s)
+            ((ProperTele.inl S).apply s)
           =
-          (ProperTele.weaken (Γ ⋈* S)).apply ((ProperTele.embed Γ).apply s) :=
-        ProperTele.classify_weaken S _ s _ _
+          (ProperTele.inl (Γ ⋈* S)).apply ((ProperTele.inr Γ).apply s) :=
+        ProperTele.classify_inl S _ s _ _
       rw [h_weaken]
-      rw [ProperTele.classify_weaken (Γ ⋈* S)]
-      rw [ProperTele.classify_embed Γ]
-  classify_weaken := fun Γ X _α y f g => by
+      rw [ProperTele.classify_inl (Γ ⋈* S)]
+      rw [ProperTele.classify_inr Γ]
+  classify_inl := fun Γ X _α y f g => by
     change
       ProperTele.classify (Γ ⋈* S) X
-        ((ProperTele.weaken (Γ ⋈* S)).apply ((ProperTele.weaken Γ).apply y))
-        (fun t => f ((ProperTele.embed S).apply t))
+        ((ProperTele.inl (Γ ⋈* S)).apply ((ProperTele.inl Γ).apply y))
+        (fun t => f ((ProperTele.inr S).apply t))
         (fun q => ProperTele.classify Γ X q
-          (fun s => f ((ProperTele.weaken S).apply s)) g)
+          (fun s => f ((ProperTele.inl S).apply s)) g)
       =
       g y
-    rw [ProperTele.classify_weaken (Γ ⋈* S)]
-    rw [ProperTele.classify_weaken Γ]
+    rw [ProperTele.classify_inl (Γ ⋈* S)]
+    rw [ProperTele.classify_inl Γ]
   cover := fun Γ _α p => by
     rcases ProperTele.cover (Γ ⋈* S) p with ⟨t, h_t⟩ | ⟨q, h_q⟩
-    · refine Or.inl ⟨(ProperTele.embed S).apply t, ?_⟩
+    · refine Or.inl ⟨(ProperTele.inr S).apply t, ?_⟩
       subst h_t
       have h_embed :
           ({
             apply := fun {x} p =>
               ProperTele.classify S (Γ ⋈* (S ⋈* T) ∋ x) p
-                (fun t => (ProperTele.embed (Γ ⋈* S)).apply t)
-                (fun s => (ProperTele.weaken (Γ ⋈* S)).apply
-                  ((ProperTele.embed Γ).apply s))
+                (fun t => (ProperTele.inr (Γ ⋈* S)).apply t)
+                (fun s => (ProperTele.inl (Γ ⋈* S)).apply
+                  ((ProperTele.inr Γ).apply s))
           } : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
-            ((ProperTele.embed S).apply t)
+            ((ProperTele.inr S).apply t)
           =
-          (ProperTele.embed (Γ ⋈* S)).apply t :=
-        ProperTele.classify_embed S _ t _ _
+          (ProperTele.inr (Γ ⋈* S)).apply t :=
+        ProperTele.classify_inr S _ t _ _
       exact h_embed.symm
     · subst h_q
       rcases ProperTele.cover Γ q with ⟨s, h_s⟩ | ⟨y, h_y⟩
-      · refine Or.inl ⟨(ProperTele.weaken S).apply s, ?_⟩
+      · refine Or.inl ⟨(ProperTele.inl S).apply s, ?_⟩
         subst h_s
         have h_weaken :
             ({
               apply := fun {x} p =>
                 ProperTele.classify S (Γ ⋈* (S ⋈* T) ∋ x) p
-                  (fun t => (ProperTele.embed (Γ ⋈* S)).apply t)
-                  (fun s => (ProperTele.weaken (Γ ⋈* S)).apply
-                    ((ProperTele.embed Γ).apply s))
+                  (fun t => (ProperTele.inr (Γ ⋈* S)).apply t)
+                  (fun s => (ProperTele.inl (Γ ⋈* S)).apply
+                    ((ProperTele.inr Γ).apply s))
             } : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
-              ((ProperTele.weaken S).apply s)
+              ((ProperTele.inl S).apply s)
             =
-            (ProperTele.weaken (Γ ⋈* S)).apply ((ProperTele.embed Γ).apply s) :=
-          ProperTele.classify_weaken S _ s _ _
+            (ProperTele.inl (Γ ⋈* S)).apply ((ProperTele.inr Γ).apply s) :=
+          ProperTele.classify_inl S _ s _ _
         exact h_weaken.symm
       · refine Or.inr ⟨y, ?_⟩
         subst h_y
         rfl
-  embed_nil_id := fun {_α} x => by
+  inr_nil_id := fun {_α} x => by
     rcases ProperTele.cover S x with ⟨t, h_t⟩ | ⟨s, h_s⟩
     · subst h_t
       have h_embed :
           ({
             apply := fun {x} p =>
               ProperTele.classify S (Shape.nil ⋈* (S ⋈* T) ∋ x) p
-                (fun t => (ProperTele.embed (Shape.nil ⋈* S)).apply t)
-                (fun s => (ProperTele.weaken (Shape.nil ⋈* S)).apply
-                  ((ProperTele.embed Shape.nil).apply s))
+                (fun t => (ProperTele.inr (Shape.nil ⋈* S)).apply t)
+                (fun s => (ProperTele.inl (Shape.nil ⋈* S)).apply
+                  ((ProperTele.inr Shape.nil).apply s))
           } : (S ⋈* T) →ʳ Shape.nil ⋈* (S ⋈* T)).apply
-            ((ProperTele.embed S).apply t)
+            ((ProperTele.inr S).apply t)
           =
-          (ProperTele.embed (Shape.nil ⋈* S)).apply t :=
-        ProperTele.classify_embed S _ t _ _
+          (ProperTele.inr (Shape.nil ⋈* S)).apply t :=
+        ProperTele.classify_inr S _ t _ _
       exact h_embed
     · subst h_s
       have h_weaken :
           ({
             apply := fun {x} p =>
               ProperTele.classify S (Shape.nil ⋈* (S ⋈* T) ∋ x) p
-                (fun t => (ProperTele.embed (Shape.nil ⋈* S)).apply t)
-                (fun s => (ProperTele.weaken (Shape.nil ⋈* S)).apply
-                  ((ProperTele.embed Shape.nil).apply s))
+                (fun t => (ProperTele.inr (Shape.nil ⋈* S)).apply t)
+                (fun s => (ProperTele.inl (Shape.nil ⋈* S)).apply
+                  ((ProperTele.inr Shape.nil).apply s))
           } : (S ⋈* T) →ʳ Shape.nil ⋈* (S ⋈* T)).apply
-            ((ProperTele.weaken S).apply s)
+            ((ProperTele.inl S).apply s)
           =
-          (ProperTele.weaken (Shape.nil ⋈* S)).apply
-            ((ProperTele.embed Shape.nil).apply s) :=
-        ProperTele.classify_weaken S _ s _ _
+          (ProperTele.inl (Shape.nil ⋈* S)).apply
+            ((ProperTele.inr Shape.nil).apply s) :=
+        ProperTele.classify_inl S _ s _ _
       rw [h_weaken]
-      rw [ProperTele.embed_nil_id s]
-      change (ProperTele.weaken S).apply s = (ProperTele.weaken S).apply s
+      rw [ProperTele.inr_nil_id s]
+      change (ProperTele.inl S).apply s = (ProperTele.inl S).apply s
       rfl
 
-/-- In the canonical composed `ProperTele`, embedding a `T`-slot is the same
-as first embedding it into `S ⋈* T` and then embedding the composite. -/
-theorem compose_embed_embed {C : Carrier} (S T : Shape C)
+/-- In the composed `ProperTele`, the right injection of a `T`-slot factors
+through `S ⋈* T`: `inr` after `inr` is the two-stage right injection. -/
+theorem compose_inr_inr {C : Carrier} (S T : Shape C)
     [ProperTele S] [ProperTele T] (Γ : Shape C)
     {α : C.Arity} (x : T ∋ α) :
     letI : ProperTele (S ⋈* T) := ProperTele.compose S T
-    (ProperTele.embed Γ : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
-      ((ProperTele.embed S : T →ʳ S ⋈* T).apply x)
+    (ProperTele.inr Γ : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
+      ((ProperTele.inr S : T →ʳ S ⋈* T).apply x)
       =
-    (ProperTele.embed (Γ ⋈* S) : T →ʳ Γ ⋈* S ⋈* T).apply x := by
-  exact ProperTele.classify_embed S _ x _ _
+    (ProperTele.inr (Γ ⋈* S) : T →ʳ Γ ⋈* S ⋈* T).apply x := by
+  exact ProperTele.classify_inr S _ x _ _
 
-/-- In the canonical composed `ProperTele`, embedding an `S`-slot is the same
-as first embedding it into the base and then weakening through `T`. -/
-theorem compose_embed_weaken {C : Carrier} (S T : Shape C)
+/-- In the composed `ProperTele`, the right injection of an `inl_S`-slot is
+the base right injection followed by weakening (`inl`) through `T`. -/
+theorem compose_inr_inl {C : Carrier} (S T : Shape C)
     [ProperTele S] [ProperTele T] (Γ : Shape C)
     {α : C.Arity} (x : S ∋ α) :
     letI : ProperTele (S ⋈* T) := ProperTele.compose S T
-    (ProperTele.embed Γ : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
-      ((ProperTele.weaken S : S →ʳ S ⋈* T).apply x)
+    (ProperTele.inr Γ : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
+      ((ProperTele.inl S : S →ʳ S ⋈* T).apply x)
       =
-    (ProperTele.weaken (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* T).apply
-      ((ProperTele.embed Γ : S →ʳ Γ ⋈* S).apply x) := by
-  exact ProperTele.classify_weaken S _ x _ _
+    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* T).apply
+      ((ProperTele.inr Γ : S →ʳ Γ ⋈* S).apply x) := by
+  exact ProperTele.classify_inl S _ x _ _
 
-/-- Weakening through a canonical composed `ProperTele` is the two-stage
+/-- Weakening (`inl`) through the composed `ProperTele` is the two-stage
 weakening through its factors. -/
-theorem compose_weaken {C : Carrier} (S T : Shape C)
+theorem compose_inl {C : Carrier} (S T : Shape C)
     [ProperTele S] [ProperTele T] (Γ : Shape C)
     {α : C.Arity} (x : Γ ∋ α) :
     letI : ProperTele (S ⋈* T) := ProperTele.compose S T
-    (ProperTele.weaken Γ : Γ →ʳ Γ ⋈* (S ⋈* T)).apply x
+    (ProperTele.inl Γ : Γ →ʳ Γ ⋈* (S ⋈* T)).apply x
       =
-    (ProperTele.weaken (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* T).apply
-      ((ProperTele.weaken Γ : Γ →ʳ Γ ⋈* S).apply x) := by
+    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* T).apply
+      ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* S).apply x) := by
   rfl
 
 end ProperTele

@@ -338,7 +338,7 @@ theorem Subst.act_η {C : Carrier} {Γ Δ : Shape C} [ProperTele Γ] [ProperTele
     exact Subst.act_inst.id α Δ Shape.nil (f y)
   · exact nomatch z
 
-private theorem Subst.act_inst_interchange {C : Carrier}
+private theorem Subst.act_inst.interchange {C : Carrier}
     {pre dom cod τ : Shape C} [ProperTele dom] [ProperTele cod] [ProperTele τ]
     (σ : Subst C pre dom cod)
     {α : C.Arity}
@@ -358,9 +358,9 @@ private theorem Subst.act_inst_interchange {C : Carrier}
       ((Subst.inst (Shape.nil ⋈ α) ι).act υ e) := by
   sorry
 
-private theorem Subst.act_inst_fusion {C : Carrier} {Δ Ε τ : Shape C}
-    [ProperTele Δ] [ProperTele Ε] [ProperTele τ]
-    (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ε ⋈ β))
+private theorem Subst.act_inst.fusion {C : Carrier} {Δ Ξ τ : Shape C}
+    [ProperTele Δ] [ProperTele Ξ] [ProperTele τ]
+    (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ξ ⋈ β))
     {α : C.Arity}
     (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
       Expr (Δ ⋈* τ ⋈ β))
@@ -371,13 +371,15 @@ private theorem Subst.act_inst_fusion {C : Carrier} {Δ Ε τ : Shape C}
       =
     (toSubst g).act τ
       ((Subst.inst (Shape.nil ⋈ α) ι).act Shape.nil e) := by
-  exact Subst.act_inst_interchange (toSubst g) ι Shape.nil e
+  exact Subst.act_inst.interchange (toSubst g) ι Shape.nil e
 
-/-- Tau-generalized Kleisli composition equation for the substitution walker. -/
-private theorem Subst.act_kcomp_τ {C : Carrier} {Γ Δ Ε : Shape C}
-    [ProperTele Γ] [ProperTele Δ] [ProperTele Ε]
+/-- **`act_kcomp`** — acting via a Kleisli composition factors.
+Translates to `lift (g ∘ f) = lift g ∘ lift f` (comp_lift).  Generalised over
+the depth `τ` so the recursive call on each arg fits the same statement. -/
+theorem Subst.act_kcomp {C : Carrier} {Γ Δ Ξ : Shape C}
+    [ProperTele Γ] [ProperTele Δ] [ProperTele Ξ]
     (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ⋈ β))
-    (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ε ⋈ β))
+    (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ξ ⋈ β))
     (τ : Shape C) [ProperTele τ]
     (e : Expr (Γ ⋈* τ)) :
     (toSubst (Subst.kcomp f g)).act τ e
@@ -387,30 +389,30 @@ private theorem Subst.act_kcomp_τ {C : Carrier} {Γ Δ Ε : Shape C}
     rcases ProperTele.cover Γ head with
       ⟨x, h_x⟩ | ⟨y, h_y⟩
     · subst h_x
-      refine (Subst.act_apply_embed (toSubst (Subst.kcomp f g)) τ x args).trans ?_
+      refine (Subst.act_apply_inr (toSubst (Subst.kcomp f g)) τ x args).trans ?_
       change
-        Expr.apply ((ProperTele.embed (Shape.nil ⋈* Ε)).apply x)
+        Expr.apply ((ProperTele.inr (Shape.nil ⋈* Ξ)).apply x)
           (fun j => (toSubst (Subst.kcomp f g)).act (τ ⋈ j.arity) (args j))
         =
         (toSubst g).act τ
           ((toSubst f).act τ
-            (Expr.apply ((ProperTele.embed (Shape.nil ⋈* Γ)).apply x) args))
-      rw [Subst.act_apply_embed (toSubst f) τ x args]
-      rw [Subst.act_apply_embed (toSubst g) τ x
+            (Expr.apply ((ProperTele.inr (Shape.nil ⋈* Γ)).apply x) args))
+      rw [Subst.act_apply_inr (toSubst f) τ x args]
+      rw [Subst.act_apply_inr (toSubst g) τ x
         (fun i => (toSubst f).act (τ ⋈ i.arity) (args i))]
       congr 1
       funext i
-      exact Subst.act_kcomp_τ f g (τ ⋈ i.arity) (args i)
+      exact Subst.act_kcomp f g (τ ⋈ i.arity) (args i)
     · subst h_y
-      rw [← ProperTele.embed_nil_id y]
-      refine (Subst.act_apply_weaken_dom
+      rw [← ProperTele.inr_nil_id y]
+      refine (Subst.act_apply_inl_dom
         (toSubst (Subst.kcomp f g)) τ y args).trans ?_
       have ih_args : ∀ (i : C.Binder β),
           (toSubst (Subst.kcomp f g)).act (τ ⋈ i.arity) (args i)
             =
           (toSubst g).act (τ ⋈ i.arity)
             ((toSubst f).act (τ ⋈ i.arity) (args i)) :=
-        fun i => Subst.act_kcomp_τ f g (τ ⋈ i.arity) (args i)
+        fun i => Subst.act_kcomp f g (τ ⋈ i.arity) (args i)
       rw [show (toSubst (Subst.kcomp f g)).sub y
             = (toSubst g).act (Shape.nil ⋈ β) (f y) from rfl]
       simp only [ih_args]
@@ -425,25 +427,13 @@ private theorem Subst.act_kcomp_τ {C : Carrier} {Γ Δ Ε : Shape C}
         (toSubst g).act τ
           ((toSubst f).act τ
             (Expr.apply
-              ((ProperTele.weaken (Shape.nil ⋈* Γ)).apply
-                ((ProperTele.embed Shape.nil).apply y)) args))
-      rw [Subst.act_apply_weaken_dom (toSubst f) τ y args]
-      exact Subst.act_inst_fusion g
+              ((ProperTele.inl (Shape.nil ⋈* Γ)).apply
+                ((ProperTele.inr Shape.nil).apply y)) args))
+      rw [Subst.act_apply_inl_dom (toSubst f) τ y args]
+      exact Subst.act_inst.fusion g
         (τ := τ)
         (ι := fun {δ} (q : (Shape.nil ⋈ β) ∋ δ) => match q with
           | .here i => (toSubst f).act (τ ⋈ i.arity) (args i))
         (e := f y)
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg head args _
-
-/-- **`act_kcomp`** — acting via a Kleisli composition factors.
-Translates to `lift (g ∘ f) = lift g ∘ lift f` (comp_lift). -/
-theorem Subst.act_kcomp {C : Carrier} {Γ Δ Ξ : Shape C}
-    [ProperTele Γ] [ProperTele Δ] [ProperTele Ξ]
-    (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ⋈ β))
-    (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ξ ⋈ β))
-    (α : C.Arity) (e : Expr (Γ ⋈ α)) :
-    (toSubst (Subst.kcomp f g)).act (Shape.nil ⋈ α) e
-      = (toSubst g).act (Shape.nil ⋈ α)
-          ((toSubst f).act (Shape.nil ⋈ α) e) := by
-  exact Subst.act_kcomp_τ f g (Shape.nil ⋈ α) e

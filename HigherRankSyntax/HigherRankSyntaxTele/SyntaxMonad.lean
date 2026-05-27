@@ -91,4 +91,4 @@ def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
   comp_lift := by
     intro Γ Δ Ξ f g
     funext α e
-    exact Subst.act_kcomp (fun {β} p => f β p) (fun {β} q => g β q) α e
+    exact Subst.act_kcomp (fun {β} p => f β p) (fun {β} q => g β q) (Shape.nil ⋈ α) e
