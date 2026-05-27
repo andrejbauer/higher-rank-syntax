@@ -50,30 +50,37 @@ by arity, then using expression recursion only in `act_inst_id_of`.
 
 The only remaining intentional proof hole in `HigherRankSyntaxTele` is:
 
-- `Subst.act_kcomp` in `HigherRankSyntaxTele/Equations.lean`
+- `Subst.act_inst_interchange` in `HigherRankSyntaxTele/Equations.lean`
 
-This is the equation needed by `SyntaxMonad.comp_lift`.
+This is the adjacent substitution/one-binder-instantiation interchange lemma.
+The public `Subst.act_kcomp` theorem is now factored through the generalized
+`Subst.act_kcomp_τ` theorem and reduces its dom branch to this interchange
+lemma; it is still the equation needed by `SyntaxMonad.comp_lift`.
 
 ## Next Realistic Formalization Targets
 
-1. State a tau-generalized composition theorem for `Subst.act_kcomp`.
-   Do this before working on the public one-binder theorem, because recursive
-   calls under arguments need the generalized statement.
+1. Prove `Subst.act_inst_interchange`.
+   This is the real remaining fusion step: substituting a lower domain and
+   instantiating one binder above it commute when the instantiation bodies are
+   mapped through the lower substitution.
 
-2. Prove the easy branches first.
-   The tau-embed branch should follow from `Subst.act_apply_embed` and the
-   induction hypothesis.  The pre branch should follow from
-   `Subst.act_apply_weaken_pre` and the induction hypothesis.
+2. Use the same arity-bundling pattern as the one-binder identity proof.
+   The upper-binder branch recurses on binder sub-arities, while the lower-dom
+   branch recurses by the `DomLt` measure already used by `Subst.act`.
 
-3. Isolate the dom-branch fusion.
-   The hard case is where the first action substitutes a domain head and
-   produces a one-binder `Subst.inst`.  Name this as its own lemma before
-   trying to close `act_kcomp`.
+3. Be careful with telescope-composition coherence.
+   A naive fully arbitrary extra-τ statement compares the `ProperTele` instance
+   for a composite telescope with nested `ProperTele` instances; the current
+   class does not expose such coherence.  `ProperTele.compose` now packages the
+   canonical two-stage composition, with `compose_embed_embed`,
+   `compose_embed_weaken`, and `compose_weaken` as named rewrites.  The next
+   issue is matching this canonical composition with the `instCons`-extended
+   instances that arise in recursive calls under binders.
 
-4. Reuse the one-binder identity pattern.
-   If the dom fusion needs an instantiation law, follow the same shape as the
-   unit proof: prove the one-binder equation first, bundle mutually dependent
-   arity facts, and keep expression recursion in a separate fixed-shape lemma.
+4. Keep `Subst.act_kcomp_τ` as the public composition proof spine.
+   Its τ-embed branch is already closed by `Subst.act_apply_embed` and the
+   induction hypothesis; its dom branch is exactly `Subst.act_inst_fusion`,
+   a specialization of `Subst.act_inst_interchange`.
 
 ## Validation Commands
 
@@ -87,4 +94,4 @@ rg -n "\bsorry\b|\baxiom\b" HigherRankSyntaxTele
 ```
 
 Expected current result: the Lean files build, and `rg` reports only the
-remaining `Subst.act_kcomp` sorry.
+remaining `Subst.act_inst_interchange` sorry.
