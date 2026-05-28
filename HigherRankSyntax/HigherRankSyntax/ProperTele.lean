@@ -1,4 +1,4 @@
-import HigherRankSyntaxTele.Renaming
+import HigherRankSyntax.Renaming
 
 /-!
 # Proper Telescopes (`ProperTele`)

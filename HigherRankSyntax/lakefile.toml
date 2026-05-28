@@ -1,5 +1,5 @@
 name = "HigherRankSyntax"
-defaultTargets = ["HigherRankSyntaxTele"]
+defaultTargets = ["HigherRankSyntax"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -10,4 +10,4 @@ name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4.git"
 
 [[lean_lib]]
-name = "HigherRankSyntaxTele"
+name = "HigherRankSyntax"

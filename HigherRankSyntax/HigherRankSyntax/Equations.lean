@@ -1,4 +1,4 @@
-import HigherRankSyntaxTele.Subst
+import HigherRankSyntax.Subst
 
 /-!
 # Equations of the substitution action

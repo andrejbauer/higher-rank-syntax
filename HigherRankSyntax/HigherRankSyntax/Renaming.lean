@@ -1,4 +1,4 @@
-import HigherRankSyntaxTele.Shape
+import HigherRankSyntax.Shape
 
 /-!
 # Renamings of shapes

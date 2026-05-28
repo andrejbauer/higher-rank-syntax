@@ -1,6 +1,6 @@
-import HigherRankSyntaxTele.Subst
-import HigherRankSyntaxTele.Equations
-import HigherRankSyntaxTele.RelativeMonad.Basic
+import HigherRankSyntax.Subst
+import HigherRankSyntax.Equations
+import HigherRankSyntax.RelativeMonad.Basic
 
 /-!
 # Syntax as a relative monad

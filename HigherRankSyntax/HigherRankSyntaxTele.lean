@@ -1,7 +1,0 @@
-import HigherRankSyntaxTele.Carrier
-import HigherRankSyntaxTele.Shape
-import HigherRankSyntaxTele.Renaming
-import HigherRankSyntaxTele.Expr
-import HigherRankSyntaxTele.Subst
-import HigherRankSyntaxTele.RelativeMonad.Basic
-import HigherRankSyntaxTele.SyntaxMonad
