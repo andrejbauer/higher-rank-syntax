@@ -57,6 +57,15 @@ list-indexed form through the auxiliary layer:
 - `Subst.act_inst.preNaturality`
 - `Subst.act_inst.interchange`
 
+The theorem statements are written through private statement facades, so the
+main lemmas read as equations between named constructions rather than exposing
+all local `ProperTele` instances and singleton-instantiation plumbing inline:
+
+- `Subst.act_inst.UnderList.actThenInst = UnderList.instThenAct`
+- `Subst.act_inst.PreLift.sequential = PreLift.fused`
+- `Subst.act_inst.PreNaturality.sequential = PreNaturality.fused`
+- `Subst.act_inst.Interchange.actThenInst = Interchange.instThenAct`
+
 The algebraic proof of the lifted commute is now in place:
 
 - `Subst.act_inst.preNaturalityLiftAt` proves the under-list version with an

@@ -356,6 +356,174 @@ private theorem ListSlotAt.sub_single {C : Carrier} {α β : C.Arity}
   | here i => exact ⟨i, rfl⟩
   | there z => nomatch z
 
+/-! ## Statement facades for the interchange lemmas -/
+
+/-- One-binder instantiation, written in binder-indexed form rather than
+singleton-slot form. -/
+private abbrev Subst.act_inst.instOne {C : Carrier} {pre cod : Shape C}
+    (α : C.Arity)
+    (fill : (i : C.Binder α) → Expr (pre ⋈* cod ⋈ i.arity)) :
+    Subst C pre (Shape.nil ⋈ α) cod :=
+  Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+  | .here i => fill i)
+
+private abbrev Subst.act_inst.UnderList.actThenInst {C : Carrier}
+    {pre dom cod τ : Shape C} [ProperTele dom] [ProperTele cod] [ProperTele τ]
+    (σ : Subst C pre dom cod)
+    {α : C.Arity}
+    (ρ υ : List C.Arity)
+    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+      Expr (pre ⋈* dom ⋈* τ ⋈* Tele.ofList ρ ⋈ β))
+    (e : Expr ((pre ⋈* dom ⋈* τ ⋈ α) ⋈* Tele.ofList υ)) :=
+  letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
+  letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
+  letI : ProperTele (τ ⋈* Tele.ofList ρ) :=
+    ProperTele.extendList τ ρ
+  letI : ProperTele ((τ ⋈ α) ⋈* Tele.ofList υ) :=
+    ProperTele.extendList (τ ⋈ α) υ
+  let κ' : Subst C (pre ⋈* cod ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
+    Subst.act_inst.instOne α (fun i =>
+      σ.act ((τ ⋈* Tele.ofList ρ) ⋈ i.arity) (ι (ListSlotAt.here i)))
+  κ'.act (Tele.ofList υ)
+    (σ.act ((τ ⋈ α) ⋈* Tele.ofList υ) e)
+
+private abbrev Subst.act_inst.UnderList.instThenAct {C : Carrier}
+    {pre dom cod τ : Shape C} [ProperTele dom] [ProperTele cod] [ProperTele τ]
+    (σ : Subst C pre dom cod)
+    {α : C.Arity}
+    (ρ υ : List C.Arity)
+    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+      Expr (pre ⋈* dom ⋈* τ ⋈* Tele.ofList ρ ⋈ β))
+    (e : Expr ((pre ⋈* dom ⋈* τ ⋈ α) ⋈* Tele.ofList υ)) :=
+  letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
+  letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
+  letI : ProperTele (τ ⋈* Tele.ofList ρ) :=
+    ProperTele.extendList τ ρ
+  letI : ProperTele ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) :=
+    ProperTele.extendList (τ ⋈* Tele.ofList ρ) υ
+  let κ : Subst C (pre ⋈* dom ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
+    Subst.act_inst.instOne α (fun i => ι (ListSlotAt.here i))
+  σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
+    (κ.act (Tele.ofList υ) e)
+
+private abbrev Subst.act_inst.PreLift.sequential {C : Carrier}
+    {pre τ : Shape C} [ProperTele τ]
+    {α β : C.Arity}
+    (ρ υ χ : List C.Arity)
+    (ι : ∀ {δ : C.Arity}, (Shape.nil ⋈ α) ∋ δ →
+      Expr (pre ⋈* τ ⋈* Tele.ofList ρ ⋈ δ))
+    (η : (j : C.Binder β) →
+      Expr ((pre ⋈* τ ⋈ α) ⋈* Tele.ofList υ ⋈ j.arity))
+    (e : Expr ((pre ⋈ β) ⋈* Tele.ofList χ)) :=
+  letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
+  letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
+  letI : ProperTele (Tele.ofList χ : Shape C) := ProperTele.ofList χ
+  letI : ProperTele (τ ⋈* Tele.ofList ρ) :=
+    ProperTele.extendList τ ρ
+  letI : ProperTele ((τ ⋈ α) ⋈* Tele.ofList υ) :=
+    ProperTele.extendList (τ ⋈ α) υ
+  letI : ProperTele ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ) :=
+    ProperTele.extendList (Tele.ofList υ : Shape C) χ
+  let κ : Subst C (pre ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
+    Subst.act_inst.instOne α (fun i => ι (ListSlotAt.here i))
+  let lam : Subst C pre (Shape.nil ⋈ β) ((τ ⋈ α) ⋈* Tele.ofList υ) :=
+    Subst.act_inst.instOne β η
+  κ.act ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ)
+    (lam.act (Tele.ofList χ) e)
+
+private abbrev Subst.act_inst.PreLift.fused {C : Carrier}
+    {pre τ : Shape C} [ProperTele τ]
+    {α β : C.Arity}
+    (ρ υ χ : List C.Arity)
+    (ι : ∀ {δ : C.Arity}, (Shape.nil ⋈ α) ∋ δ →
+      Expr (pre ⋈* τ ⋈* Tele.ofList ρ ⋈ δ))
+    (η : (j : C.Binder β) →
+      Expr ((pre ⋈* τ ⋈ α) ⋈* Tele.ofList υ ⋈ j.arity))
+    (e : Expr ((pre ⋈ β) ⋈* Tele.ofList χ)) :=
+  letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
+  letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
+  letI : ProperTele (Tele.ofList χ : Shape C) := ProperTele.ofList χ
+  letI : ProperTele (τ ⋈* Tele.ofList ρ) :=
+    ProperTele.extendList τ ρ
+  letI : ProperTele ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) :=
+    ProperTele.extendList (τ ⋈* Tele.ofList ρ) υ
+  let κ : Subst C (pre ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
+    Subst.act_inst.instOne α (fun i => ι (ListSlotAt.here i))
+  let lam' : Subst C pre (Shape.nil ⋈ β)
+      ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) :=
+    Subst.act_inst.instOne β (fun j =>
+      κ.act (Tele.ofList υ ⋈ j.arity) (η j))
+  lam'.act (Tele.ofList χ) e
+
+private abbrev Subst.act_inst.PreNaturality.sequential {C : Carrier}
+    {pre dom cod : Shape C} [ProperTele dom] [ProperTele cod]
+    (σ : Subst C pre dom cod)
+    {α : C.Arity}
+    (ρ υ : List C.Arity)
+    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+      Expr (pre ⋈* dom ⋈* Tele.ofList ρ ⋈ β))
+    (e : Expr ((pre ⋈ α) ⋈* Tele.ofList υ)) :=
+  letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
+  letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
+  letI : ProperTele (dom ⋈* Tele.ofList ρ) :=
+    ProperTele.extendList dom ρ
+  letI : ProperTele ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ) :=
+    ProperTele.extendList (Tele.ofList ρ : Shape C) υ
+  let κ : Subst C pre (Shape.nil ⋈ α) (dom ⋈* Tele.ofList ρ) :=
+    Subst.act_inst.instOne α (fun i => ι (ListSlotAt.here i))
+  σ.act ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ)
+    (κ.act (Tele.ofList υ) e)
+
+private abbrev Subst.act_inst.PreNaturality.fused {C : Carrier}
+    {pre dom cod : Shape C} [ProperTele dom] [ProperTele cod]
+    (σ : Subst C pre dom cod)
+    {α : C.Arity}
+    (ρ υ : List C.Arity)
+    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+      Expr (pre ⋈* dom ⋈* Tele.ofList ρ ⋈ β))
+    (e : Expr ((pre ⋈ α) ⋈* Tele.ofList υ)) :=
+  letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
+  letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
+  letI : ProperTele (cod ⋈* Tele.ofList ρ) :=
+    ProperTele.extendList cod ρ
+  let κ' : Subst C pre (Shape.nil ⋈ α) (cod ⋈* Tele.ofList ρ) :=
+    Subst.act_inst.instOne α (fun i =>
+      σ.act (Tele.ofList ρ ⋈ i.arity) (ι (ListSlotAt.here i)))
+  κ'.act (Tele.ofList υ) e
+
+private abbrev Subst.act_inst.Interchange.actThenInst {C : Carrier}
+    {pre dom cod τ : Shape C} [ProperTele dom] [ProperTele cod] [ProperTele τ]
+    (σ : Subst C pre dom cod)
+    {α : C.Arity}
+    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+      Expr (pre ⋈* dom ⋈* τ ⋈ β))
+    (ρ : List C.Arity)
+    (e : Expr (pre ⋈* dom ⋈* (Shape.nil ⋈ α) ⋈* Tele.ofList ρ)) :=
+  letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
+  letI : ProperTele ((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) :=
+    ProperTele.extendList (Shape.nil ⋈ α) ρ
+  let κ' : Subst C (pre ⋈* cod) (Shape.nil ⋈ α) τ :=
+    Subst.act_inst.instOne α (fun i =>
+      σ.act (τ ⋈ i.arity) (ι (ListSlotAt.here i)))
+  κ'.act (Tele.ofList ρ)
+    (σ.act ((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) e)
+
+private abbrev Subst.act_inst.Interchange.instThenAct {C : Carrier}
+    {pre dom cod τ : Shape C} [ProperTele dom] [ProperTele cod] [ProperTele τ]
+    (σ : Subst C pre dom cod)
+    {α : C.Arity}
+    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+      Expr (pre ⋈* dom ⋈* τ ⋈ β))
+    (ρ : List C.Arity)
+    (e : Expr (pre ⋈* dom ⋈* (Shape.nil ⋈ α) ⋈* Tele.ofList ρ)) :=
+  letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
+  letI : ProperTele (τ ⋈* Tele.ofList ρ) :=
+    ProperTele.extendList τ ρ
+  let κ : Subst C (pre ⋈* dom) (Shape.nil ⋈ α) τ :=
+    Subst.act_inst.instOne α (fun i => ι (ListSlotAt.here i))
+  σ.act (τ ⋈* Tele.ofList ρ)
+    (κ.act (Tele.ofList ρ) e)
+
 /-- Two active substitution-domain fuels, considered up to swapping.  The mutual
 interchange proof either descends in one fuel component or keeps the fuel fixed
 and descends into an expression argument. -/
@@ -444,26 +612,8 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
     (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
       Expr (pre ⋈* dom ⋈* τ ⋈* Tele.ofList ρ ⋈ β))
     (e : Expr ((pre ⋈* dom ⋈* τ ⋈ α) ⋈* Tele.ofList υ)) :
-    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
-    letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
-    letI : ProperTele (τ ⋈* Tele.ofList ρ) :=
-      ProperTele.extendList τ ρ
-    letI : ProperTele ((τ ⋈ α) ⋈* Tele.ofList υ) :=
-      ProperTele.extendList (τ ⋈ α) υ
-    letI : ProperTele ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) :=
-      ProperTele.extendList (τ ⋈* Tele.ofList ρ) υ
-    let κ : Subst C (pre ⋈* dom ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
-      Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-      | .here i => ι (ListSlotAt.here i))
-    let κ' : Subst C (pre ⋈* cod ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
-      Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-      | .here i =>
-          σ.act ((τ ⋈* Tele.ofList ρ) ⋈ i.arity) (ι (ListSlotAt.here i)))
-    κ'.act (Tele.ofList υ)
-        (σ.act ((τ ⋈ α) ⋈* Tele.ofList υ) e)
-      =
-    σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
-      (κ.act (Tele.ofList υ) e) := by
+    Subst.act_inst.UnderList.actThenInst σ ρ υ ι e =
+    Subst.act_inst.UnderList.instThenAct σ ρ υ ι e := by
   letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
   letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
   letI : ProperTele (τ ⋈* Tele.ofList ρ) :=
@@ -1078,31 +1228,8 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
     (η : (j : C.Binder β) →
       Expr ((pre ⋈* τ ⋈ α) ⋈* Tele.ofList υ ⋈ j.arity))
     (e : Expr ((pre ⋈ β) ⋈* Tele.ofList χ)) :
-    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
-    letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
-    letI : ProperTele (Tele.ofList χ : Shape C) := ProperTele.ofList χ
-    letI : ProperTele (τ ⋈* Tele.ofList ρ) :=
-      ProperTele.extendList τ ρ
-    letI : ProperTele ((τ ⋈ α) ⋈* Tele.ofList υ) :=
-      ProperTele.extendList (τ ⋈ α) υ
-    letI : ProperTele ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) :=
-      ProperTele.extendList (τ ⋈* Tele.ofList ρ) υ
-    letI : ProperTele ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ) :=
-      ProperTele.extendList (Tele.ofList υ : Shape C) χ
-    let κ : Subst C (pre ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
-      Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-      | .here i => ι (ListSlotAt.here i))
-    let lam : Subst C pre (Shape.nil ⋈ β) ((τ ⋈ α) ⋈* Tele.ofList υ) :=
-      Subst.inst (Shape.nil ⋈ β) (fun q => match q with
-      | .here j => η j)
-    let lam' : Subst C pre (Shape.nil ⋈ β)
-        ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) :=
-      Subst.inst (Shape.nil ⋈ β) (fun q => match q with
-      | .here j => κ.act (Tele.ofList υ ⋈ j.arity) (η j))
-    κ.act ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ)
-        (lam.act (Tele.ofList χ) e)
-      =
-    lam'.act (Tele.ofList χ) e := by
+    Subst.act_inst.PreLift.sequential ρ υ χ ι η e =
+    Subst.act_inst.PreLift.fused ρ υ χ ι η e := by
   letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
   letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
   letI : ProperTele (Tele.ofList χ : Shape C) := ProperTele.ofList χ
@@ -1241,6 +1368,9 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
               (pre := pre ⋈* τ) (dom := Shape.nil ⋈ α)
               (cod := Tele.ofList ρ) (τ := (Tele.ofList υ : Shape C))
               κ χ [] (ι := θ) (e := η j)
+            unfold Subst.act_inst.UnderList.actThenInst
+              Subst.act_inst.UnderList.instThenAct
+              Subst.act_inst.instOne at hunder
             dsimp only at hunder
             refine Eq.trans hunder.symm ?_
             simp only [hfill, θ, θ']
@@ -1344,27 +1474,8 @@ private theorem Subst.act_inst.preNaturalityLift {C : Carrier}
     (η : (j : C.Binder β) →
       Expr ((pre ⋈* τ ⋈ α) ⋈* Tele.ofList υ ⋈ j.arity))
     (e : Expr (pre ⋈ β)) :
-    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
-    letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
-    letI : ProperTele (τ ⋈* Tele.ofList ρ) :=
-      ProperTele.extendList τ ρ
-    letI : ProperTele ((τ ⋈ α) ⋈* Tele.ofList υ) :=
-      ProperTele.extendList (τ ⋈ α) υ
-    letI : ProperTele ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) :=
-      ProperTele.extendList (τ ⋈* Tele.ofList ρ) υ
-    let κ : Subst C (pre ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
-      Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-      | .here i => ι (ListSlotAt.here i))
-    let lam : Subst C pre (Shape.nil ⋈ β) ((τ ⋈ α) ⋈* Tele.ofList υ) :=
-      Subst.inst (Shape.nil ⋈ β) (fun q => match q with
-      | .here j => η j)
-    let lam' : Subst C pre (Shape.nil ⋈ β)
-        ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) :=
-      Subst.inst (Shape.nil ⋈ β) (fun q => match q with
-      | .here j => κ.act (Tele.ofList υ ⋈ j.arity) (η j))
-    κ.act (Tele.ofList υ) (lam.act Shape.nil e)
-      =
-    lam'.act Shape.nil e := by
+    Subst.act_inst.PreLift.sequential ρ υ [] ι η e =
+    Subst.act_inst.PreLift.fused ρ υ [] ι η e := by
   exact Subst.act_inst.preNaturalityLiftAt
     (pre := pre) (τ := τ) (α := α) (β := β)
     ρ υ [] ι η e
@@ -1377,19 +1488,8 @@ private theorem Subst.act_inst.underList {C : Carrier}
     (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
       Expr (pre ⋈* dom ⋈* τ ⋈* Tele.ofList ρ ⋈ β))
     (e : Expr (pre ⋈* dom ⋈* τ ⋈ α)) :
-    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
-    letI : ProperTele (τ ⋈* Tele.ofList ρ) :=
-      ProperTele.extendList τ ρ
-    let κ : Subst C (pre ⋈* dom ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
-      Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-      | .here i => ι (ListSlotAt.here i))
-    let κ' : Subst C (pre ⋈* cod ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
-      Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-      | .here i =>
-          σ.act ((τ ⋈* Tele.ofList ρ) ⋈ i.arity) (ι (ListSlotAt.here i)))
-    κ'.act Shape.nil (σ.act (τ ⋈ α) e)
-      =
-    σ.act (τ ⋈* Tele.ofList ρ) (κ.act Shape.nil e) := by
+    Subst.act_inst.UnderList.actThenInst σ ρ [] ι e =
+    Subst.act_inst.UnderList.instThenAct σ ρ [] ι e := by
   exact Subst.act_inst.underListAt σ ρ [] ι e
 
 private theorem Subst.act_inst.preNaturalityAt {C : Carrier}
@@ -1400,25 +1500,8 @@ private theorem Subst.act_inst.preNaturalityAt {C : Carrier}
     (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
       Expr (pre ⋈* dom ⋈* Tele.ofList ρ ⋈ β))
     (e : Expr ((pre ⋈ α) ⋈* Tele.ofList υ)) :
-    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
-    letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
-    letI : ProperTele (dom ⋈* Tele.ofList ρ) :=
-      ProperTele.extendList dom ρ
-    letI : ProperTele (cod ⋈* Tele.ofList ρ) :=
-      ProperTele.extendList cod ρ
-    letI : ProperTele ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ) :=
-      ProperTele.extendList (Tele.ofList ρ : Shape C) υ
-    let κ : Subst C pre (Shape.nil ⋈ α) (dom ⋈* Tele.ofList ρ) :=
-      Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-      | .here i => ι (ListSlotAt.here i))
-    let κ' : Subst C pre (Shape.nil ⋈ α) (cod ⋈* Tele.ofList ρ) :=
-      Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-      | .here i =>
-          σ.act (Tele.ofList ρ ⋈ i.arity) (ι (ListSlotAt.here i)))
-    σ.act ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ)
-        (κ.act (Tele.ofList υ) e)
-      =
-    κ'.act (Tele.ofList υ) e := by
+    Subst.act_inst.PreNaturality.sequential σ ρ υ ι e =
+    Subst.act_inst.PreNaturality.fused σ ρ υ ι e := by
   letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
   letI : ProperTele (Tele.ofList υ : Shape C) := ProperTele.ofList υ
   letI : ProperTele (dom ⋈* Tele.ofList ρ) :=
@@ -1603,21 +1686,8 @@ private theorem Subst.act_inst.preNaturality {C : Carrier}
     (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
       Expr (pre ⋈* dom ⋈* Tele.ofList ρ ⋈ β))
     (e : Expr (pre ⋈ α)) :
-    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
-    letI : ProperTele (dom ⋈* Tele.ofList ρ) :=
-      ProperTele.extendList dom ρ
-    letI : ProperTele (cod ⋈* Tele.ofList ρ) :=
-      ProperTele.extendList cod ρ
-    let κ : Subst C pre (Shape.nil ⋈ α) (dom ⋈* Tele.ofList ρ) :=
-      Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-      | .here i => ι (ListSlotAt.here i))
-    let κ' : Subst C pre (Shape.nil ⋈ α) (cod ⋈* Tele.ofList ρ) :=
-      Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-      | .here i =>
-          σ.act (Tele.ofList ρ ⋈ i.arity) (ι (ListSlotAt.here i)))
-    σ.act (Tele.ofList ρ) (κ.act Shape.nil e)
-      =
-    κ'.act Shape.nil e := by
+    Subst.act_inst.PreNaturality.sequential σ ρ [] ι e =
+    Subst.act_inst.PreNaturality.fused σ ρ [] ι e := by
   exact Subst.act_inst.preNaturalityAt σ ρ [] ι e
 
 private theorem Subst.act_inst.interchange {C : Carrier}
@@ -1628,24 +1698,20 @@ private theorem Subst.act_inst.interchange {C : Carrier}
       Expr (pre ⋈* dom ⋈* τ ⋈ β))
     (ρ : List C.Arity)
     (e : Expr (pre ⋈* dom ⋈* (Shape.nil ⋈ α) ⋈* Tele.ofList ρ)) :
-    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
-    letI : ProperTele ((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) :=
-      ProperTele.extendList (Shape.nil ⋈ α) ρ
-    letI : ProperTele (τ ⋈* Tele.ofList ρ) :=
-      ProperTele.extendList τ ρ
-    (Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-      | .here i => σ.act (τ ⋈ i.arity) (ι (ListSlotAt.here i)))).act
-        (Tele.ofList ρ) (σ.act ((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) e)
-      =
-    σ.act (τ ⋈* Tele.ofList ρ)
-      ((Subst.inst (Shape.nil ⋈ α) ι).act (Tele.ofList ρ) e) := by
+    Subst.act_inst.Interchange.actThenInst σ ι ρ e =
+    Subst.act_inst.Interchange.instThenAct σ ι ρ e := by
+  unfold Subst.act_inst.Interchange.actThenInst
+    Subst.act_inst.Interchange.instThenAct
+    Subst.act_inst.instOne
+  dsimp only
   letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
   letI : ProperTele ((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) :=
     ProperTele.extendList (Shape.nil ⋈ α) ρ
   letI : ProperTele (τ ⋈* Tele.ofList ρ) :=
     ProperTele.extendList τ ρ
   let κ : Subst C (pre ⋈* dom) (Shape.nil ⋈ α) τ :=
-    Subst.inst (Shape.nil ⋈ α) ι
+    Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+      | .here i => ι (ListSlotAt.here i))
   let κ' : Subst C (pre ⋈* cod) (Shape.nil ⋈ α) τ :=
     Subst.inst (Shape.nil ⋈ α) (fun q => match q with
       | .here i => σ.act (τ ⋈ i.arity) (ι (ListSlotAt.here i)))
@@ -1768,8 +1834,13 @@ private theorem Subst.act_inst.interchange {C : Carrier}
           fun q => match q with
           | .here j =>
               σ.act (((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) ⋈ j.arity) (args j)
-        refine (Subst.act_inst.preNaturality κ' ρ
-          (ι := ιβ) (e := σ z)).trans ?_
+        have hpre := Subst.act_inst.preNaturality κ' ρ
+          (ι := ιβ) (e := σ z)
+        unfold Subst.act_inst.PreNaturality.sequential
+          Subst.act_inst.PreNaturality.fused
+          Subst.act_inst.instOne at hpre
+        dsimp only at hpre
+        refine hpre.trans ?_
         have hfill : ∀ (j : C.Binder β),
             κ'.act (Tele.ofList ρ ⋈ j.arity)
                 (ιβ (ListSlotAt.here j))
@@ -1852,12 +1923,8 @@ private theorem Subst.act_inst.fusion {C : Carrier} {Δ Ε τ : Shape C}
     (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
       Expr (Δ ⋈* τ ⋈ β))
     (e : Expr (Δ ⋈ α)) :
-    (Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-      | .here i => (toSubst g).act (τ ⋈ i.arity) (ι (ListSlotAt.here i)))).act
-        Shape.nil ((toSubst g).act (Shape.nil ⋈ α) e)
-      =
-    (toSubst g).act τ
-      ((Subst.inst (Shape.nil ⋈ α) ι).act Shape.nil e) := by
+    Subst.act_inst.Interchange.actThenInst (τ := τ) (toSubst g) ι [] e =
+    Subst.act_inst.Interchange.instThenAct (τ := τ) (toSubst g) ι [] e := by
   exact Subst.act_inst.interchange (toSubst g) ι [] e
 
 
