@@ -46,7 +46,7 @@ The key helper layer is the one-binder identity-instantiation bundle:
 These are proved without axioms by bundling the beta-for-eta and identity facts
 by arity, then using expression recursion only in `Subst.act_inst.idOf`.
 
-## Remaining Target
+## Interchange Status
 
 The adjacent substitution/instantiation interchange is now proved in its
 list-indexed form through the auxiliary layer:
@@ -66,19 +66,20 @@ The algebraic proof of the lifted commute is now in place:
   because the dom branch of `underListAt` needs the lifted commute, while the
   β-head branch of the lift needs `underListAt` on the substituted filler.
 
-The remaining proof hole is termination for this private mutual block.  It is
-currently isolated as `decreasing_by sorry` after dummy `termination_by 0`
-measures, so Lean is checking the algebra while deferring the well-founded
-descent.
+The private mutual block now has a checked termination argument.  It uses
+`InterchangeFuel`, a pair of domain measures considered up to swapping, together
+with expression-subterm descent:
+
+- filler jumps decrease one side of the fuel by `Carrier.Sub`/`DomLt`;
+- the β-head call from `preNaturalityLiftAt` into `underListAt` uses the swapped
+  fuel order;
+- ordinary recursive calls into arguments use `Expr.Subterm.of_arg_ofList_cons`.
+
+There are currently no `sorry`s or `axiom`s in `HigherRankSyntax`.
 
 ## Next Realistic Formalization Targets
 
-1. Replace the dummy mutual termination measure with a private stronger measure.
-   Track both active substitution-domain/filler arity and expression subterms;
-   use `Carrier.Sub`/`DomLt` for filler jumps and
-   `Expr.Subterm.of_arg_ofList_cons` for rebuild branches.
-
-2. Be careful with telescope-composition coherence.
+1. Be careful with telescope-composition coherence.
    A naive fully arbitrary extra-τ statement compares the `ProperTele` instance
    for a composite telescope with nested `ProperTele` instances; the current
    class does not expose such coherence.  `ProperTele.compose` now packages the
@@ -87,7 +88,7 @@ descent.
    binder extensions under concrete lists, use `ProperTele.extendList` and its
    `extendList_inr_inr`, `extendList_inr_inl`, and `extendList_inl` rewrites.
 
-3. Keep Andrej's cleaned-up naming and comments as the baseline.
+2. Keep Andrej's cleaned-up naming and comments as the baseline.
    Use `inr` for the telescope/right side, `inl` for the base/left side, and
    the computation lemmas `Subst.act_apply_inr`, `Subst.act_apply_inl_dom`, and
    `Subst.act_apply_inl_pre`.
@@ -103,6 +104,4 @@ lake build HigherRankSyntax
 rg -n "\bsorry\b|\baxiom\b" HigherRankSyntax
 ```
 
-Expected current result: the Lean files build, and `rg` reports only the two
-termination `sorry`s in the private mutual block for
-`Subst.act_inst.underListAt` and `Subst.act_inst.preNaturalityLiftAt`.
+Expected current result: the Lean files build, and `rg` reports no matches.

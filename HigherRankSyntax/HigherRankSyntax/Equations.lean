@@ -356,6 +356,84 @@ private theorem ListSlotAt.sub_single {C : Carrier} {α β : C.Arity}
   | here i => exact ⟨i, rfl⟩
   | there z => nomatch z
 
+/-- Two active substitution-domain fuels, considered up to swapping.  The mutual
+interchange proof either descends in one fuel component or keeps the fuel fixed
+and descends into an expression argument. -/
+private structure InterchangeFuel (C : Carrier) where
+  fst : DomMeasure C
+  snd : DomMeasure C
+
+private inductive InterchangeFuel.Lt {C : Carrier} :
+    InterchangeFuel C → InterchangeFuel C → Prop where
+  | left {a b a' : DomMeasure C}
+      (h : WellFoundedRelation.rel a' a) :
+      InterchangeFuel.Lt ⟨a', b⟩ ⟨a, b⟩
+  | right {a b b' : DomMeasure C}
+      (h : WellFoundedRelation.rel b' b) :
+      InterchangeFuel.Lt ⟨a, b'⟩ ⟨a, b⟩
+  | left_swap {a b a' : DomMeasure C}
+      (h : WellFoundedRelation.rel a' a) :
+      InterchangeFuel.Lt ⟨b, a'⟩ ⟨a, b⟩
+  | right_swap {a b b' : DomMeasure C}
+      (h : WellFoundedRelation.rel b' b) :
+      InterchangeFuel.Lt ⟨b', a⟩ ⟨a, b⟩
+
+private theorem InterchangeFuel.Lt.accPair {C : Carrier}
+    (a b : DomMeasure C) :
+    Acc (InterchangeFuel.Lt (C := C)) ⟨a, b⟩ ∧
+      Acc (InterchangeFuel.Lt (C := C)) ⟨b, a⟩ := by
+  let wf : WellFounded
+      (WellFoundedRelation.rel : DomMeasure C → DomMeasure C → Prop) :=
+    WellFoundedRelation.wf
+  exact WellFounded.induction wf a (C := fun a =>
+      ∀ b : DomMeasure C,
+        Acc (InterchangeFuel.Lt (C := C)) ⟨a, b⟩ ∧
+          Acc (InterchangeFuel.Lt (C := C)) ⟨b, a⟩)
+    (fun a IHa b =>
+      WellFounded.induction wf b (C := fun b =>
+          Acc (InterchangeFuel.Lt (C := C)) ⟨a, b⟩ ∧
+            Acc (InterchangeFuel.Lt (C := C)) ⟨b, a⟩)
+        (fun b IHb => by
+          constructor
+          · refine Acc.intro _ ?_
+            intro y hy
+            cases y with
+            | mk y₀ y₁ =>
+                cases hy with
+                | left h =>
+                    exact (IHa y₀ h b).1
+                | right h =>
+                    exact (IHb y₁ h).1
+                | left_swap h =>
+                    exact (IHa y₁ h b).2
+                | right_swap h =>
+                    exact (IHb y₀ h).2
+          · refine Acc.intro _ ?_
+            intro y hy
+            cases y with
+            | mk y₀ y₁ =>
+                cases hy with
+                | left h =>
+                    exact (IHb y₀ h).2
+                | right h =>
+                    exact (IHa y₁ h b).2
+                | left_swap h =>
+                    exact (IHb y₁ h).1
+                | right_swap h =>
+                    exact (IHa y₀ h b).1))
+    b
+
+private theorem InterchangeFuel.Lt.wf {C : Carrier} :
+    WellFounded (InterchangeFuel.Lt (C := C)) := by
+  refine ⟨fun f => ?_⟩
+  cases f with
+  | mk a b =>
+      exact (InterchangeFuel.Lt.accPair a b).1
+
+private instance {C : Carrier} : WellFoundedRelation (InterchangeFuel C) where
+  rel := InterchangeFuel.Lt
+  wf := InterchangeFuel.Lt.wf
+
 mutual
 
 private theorem Subst.act_inst.underListAt {C : Carrier}
@@ -974,9 +1052,22 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
           σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList (j.arity :: υ))
             (κ.act (Tele.ofList (j.arity :: υ)) (args j))
         exact Subst.act_inst.underListAt σ ρ (j.arity :: υ) ι (args j)
-termination_by 0
+termination_by
+  ((⟨⟨dom.toList⟩, ⟨[α]⟩⟩ : InterchangeFuel C),
+    (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
-  all_goals sorry
+  all_goals
+    subst_vars
+    first
+      | refine Prod.Lex.left _ _ (InterchangeFuel.Lt.right ?_)
+        exact DomLt.step α (List.Mem.head _) β (ListSlotAt.sub_single xα)
+      | refine Prod.Lex.left _ _ (InterchangeFuel.Lt.left ?_)
+        obtain ⟨βdom, hmem, hsub⟩ := SlotAt.subWitness z
+        exact DomLt.step βdom hmem _ hsub
+      | refine Prod.Lex.right _ ?_
+        exact Expr.Subterm.of_arg_ofList_cons υ _ «args✝» _
+      | refine Prod.Lex.right _ ?_
+        exact Expr.Subterm.of_arg_ofList_cons υ _ args _
 
 private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
     {pre τ : Shape C} [ProperTele τ]
@@ -1039,6 +1130,30 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
     lam'.act (Tele.ofList χ) e
   match e with
   | Expr.apply (α := γ) head args =>
+    have ih_args : ∀ (j : C.Binder γ),
+        letI : ProperTele (Tele.ofList (j.arity :: χ) : Shape C) :=
+          ProperTele.ofList (j.arity :: χ)
+        letI : ProperTele ((Tele.ofList υ : Shape C) ⋈*
+            Tele.ofList (j.arity :: χ)) :=
+          ProperTele.extendList (Tele.ofList υ : Shape C) (j.arity :: χ)
+        κ.act ((Tele.ofList υ : Shape C) ⋈*
+              Tele.ofList (j.arity :: χ))
+            (lam.act (Tele.ofList (j.arity :: χ)) (args j))
+          =
+          lam'.act (Tele.ofList (j.arity :: χ)) (args j) := by
+      intro j
+      letI : ProperTele (Tele.ofList (j.arity :: χ) : Shape C) :=
+        ProperTele.ofList (j.arity :: χ)
+      letI : ProperTele ((Tele.ofList υ : Shape C) ⋈*
+          Tele.ofList (j.arity :: χ)) :=
+        ProperTele.extendList (Tele.ofList υ : Shape C) (j.arity :: χ)
+      change κ.act ((Tele.ofList υ : Shape C) ⋈*
+            Tele.ofList (j.arity :: χ))
+          (lam.act (Tele.ofList (j.arity :: χ)) (args j))
+        =
+        lam'.act (Tele.ofList (j.arity :: χ)) (args j)
+      exact Subst.act_inst.preNaturalityLiftAt ρ υ (j.arity :: χ) ι η
+        (args j)
     rcases @ProperTele.cover C (Tele.ofList χ)
         (by exact ProperTele.ofList χ)
         (pre ⋈ β) γ head with
@@ -1085,8 +1200,7 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
           (lam.act (Tele.ofList (j.arity :: χ)) (args j))
         =
         lam'.act (Tele.ofList (j.arity :: χ)) (args j)
-      exact Subst.act_inst.preNaturalityLiftAt ρ υ (j.arity :: χ) ι η
-        (args j)
+      exact ih_args j
     · subst h_below
       rcases ProperTele.cover pre below with ⟨xβ, h_xβ⟩ | ⟨z, h_z⟩
       · subst h_xβ
@@ -1122,8 +1236,7 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
                   (lam.act (Tele.ofList (k.arity :: χ)) (args k))
                 =
                 lam'.act (Tele.ofList (k.arity :: χ)) (args k)
-              exact Subst.act_inst.preNaturalityLiftAt ρ υ (k.arity :: χ) ι η
-                (args k)
+              exact ih_args k
             have hunder := Subst.act_inst.underListAt
               (pre := pre ⋈* τ) (dom := Shape.nil ⋈ α)
               (cod := Tele.ofList ρ) (τ := (Tele.ofList υ : Shape C))
@@ -1207,11 +1320,18 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
             (lam.act (Tele.ofList (k.arity :: χ)) (args k))
           =
           lam'.act (Tele.ofList (k.arity :: χ)) (args k)
-        exact Subst.act_inst.preNaturalityLiftAt ρ υ (k.arity :: χ) ι η
-          (args k)
-termination_by 0
+        exact ih_args k
+termination_by
+  ((⟨⟨[β]⟩, ⟨[α]⟩⟩ : InterchangeFuel C),
+    (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
-  all_goals sorry
+  all_goals
+    subst_vars
+    first
+      | refine Prod.Lex.left _ _ (InterchangeFuel.Lt.left_swap ?_)
+        exact DomLt.step β (List.Mem.head _) j.arity ⟨j, rfl⟩
+      | refine Prod.Lex.right _ ?_
+        exact Expr.Subterm.of_arg_ofList_cons χ head args _
 
 end
 
