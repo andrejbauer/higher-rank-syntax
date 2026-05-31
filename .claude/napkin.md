@@ -19,8 +19,8 @@
 ## Domain Behavior Guardrails
 1. **[2026-05-27] `act_kcomp` reduces to adjacent instantiation interchange**
    Do instead: keep the proved list-indexed `Subst.act_inst.interchange` stack; `Subst.act_inst.fusion` bridges it into `act_kcomp`, and `ProperTele.extendList` keeps recursive binder extension definitional.
-2. **[2026-05-27] Remaining hole is lifted pre-naturality**
-   Do instead: strengthen `Subst.act_inst.preNaturalityLift` with a list depth `χ` and prove it mutually with `underListAt`; it commutes α-instantiation through the β-instantiation produced by `Subst.act_apply_inl_dom` while preserving the untouched `τ` prefix.
+2. **[2026-05-27] Remaining hole is mutual termination**
+   Do instead: keep the algebraic mutual block for `Subst.act_inst.underListAt` and `preNaturalityLiftAt`; replace the dummy `termination_by 0`/`decreasing_by sorry` with a measure tracking filler arity descent and expression subterms.
 3. **[2026-05-27] Interchange needs arity/domain-and-expression descent**
    Do instead: use a private measure that decreases by `Carrier.Sub`/`DomLt` when jumping into fillers, and use `Expr.Subterm.of_arg_ofList_cons` for ordinary rebuild branches; plain expression induction is not enough.
 4. **[2026-05-27] Keep singleton α-slots abstract in under-list proofs**
