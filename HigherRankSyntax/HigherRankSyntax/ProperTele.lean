@@ -116,6 +116,114 @@ instance instSingleton {C : Carrier} (a : C.Arity) :
     ProperTele (Tele.cons a : Tele C.Arity) :=
   inferInstanceAs (ProperTele (Tele.cons a ∘ᵗ (Tele.id : Tele C.Arity)))
 
+/-- Extend an already proper telescope by a concrete list of binders.  Unlike
+`compose`, this recurses over the list, so extension by one more binder is
+definitionally the `instCons` instance needed by recursive expression proofs. -/
+@[reducible]
+def extendList {C : Carrier} (S : Shape C) [ProperTele S] :
+    (ρ : List C.Arity) → ProperTele (S ⋈* Tele.ofList ρ)
+  | [] => inferInstanceAs (ProperTele S)
+  | β :: rest =>
+      letI : ProperTele (S ⋈* Tele.ofList rest) := extendList S rest
+      inferInstanceAs (ProperTele ((S ⋈* Tele.ofList rest) ⋈ β))
+
+/-- A concrete list of binders is a proper telescope. -/
+@[reducible]
+def ofList {C : Carrier} (ρ : List C.Arity) :
+    ProperTele (Tele.ofList ρ : Shape C) :=
+  extendList (Shape.nil : Shape C) ρ
+
+/-- In a concrete list extension, the right injection of a list-side slot is
+the same as first injecting it into `S ⋈* Tele.ofList ρ` and then injecting the
+composite. -/
+theorem extendList_inr_inr {C : Carrier} (S : Shape C) [ProperTele S]
+    (ρ : List C.Arity) (Γ : Shape C)
+    {α : C.Arity} (x : Tele.ofList ρ ∋ α) :
+    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
+    letI : ProperTele (S ⋈* Tele.ofList ρ) := ProperTele.extendList S ρ
+    (ProperTele.inr Γ : S ⋈* Tele.ofList ρ →ʳ Γ ⋈* (S ⋈* Tele.ofList ρ)).apply
+      ((ProperTele.inr S : Tele.ofList ρ →ʳ S ⋈* Tele.ofList ρ).apply x)
+      =
+    (ProperTele.inr (Γ ⋈* S) : Tele.ofList ρ →ʳ Γ ⋈* S ⋈* Tele.ofList ρ).apply x := by
+  induction ρ with
+  | nil => exact nomatch x
+  | cons β rest ih =>
+      letI : ProperTele (Tele.ofList rest : Shape C) := ProperTele.ofList rest
+      letI : ProperTele (S ⋈* Tele.ofList rest) := ProperTele.extendList S rest
+      cases x with
+      | here i => rfl
+      | there x' =>
+          change
+            ListSlotAt.there
+              ((ProperTele.inr Γ : S ⋈* Tele.ofList rest →ʳ
+                Γ ⋈* (S ⋈* Tele.ofList rest)).apply
+                ((ProperTele.inr S : Tele.ofList rest →ʳ
+                  S ⋈* Tele.ofList rest).apply x'))
+            =
+            ListSlotAt.there
+              ((ProperTele.inr (Γ ⋈* S) : Tele.ofList rest →ʳ
+                Γ ⋈* S ⋈* Tele.ofList rest).apply x')
+          congr 1
+          exact ih x'
+
+/-- In a concrete list extension, the right injection of an `S`-slot into the
+composite is the same as injecting it into the base and then weakening through
+the list. -/
+theorem extendList_inr_inl {C : Carrier} (S : Shape C) [ProperTele S]
+    (ρ : List C.Arity) (Γ : Shape C)
+    {α : C.Arity} (x : S ∋ α) :
+    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
+    letI : ProperTele (S ⋈* Tele.ofList ρ) := ProperTele.extendList S ρ
+    (ProperTele.inr Γ : S ⋈* Tele.ofList ρ →ʳ Γ ⋈* (S ⋈* Tele.ofList ρ)).apply
+      ((ProperTele.inl S : S →ʳ S ⋈* Tele.ofList ρ).apply x)
+      =
+    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* Tele.ofList ρ).apply
+      ((ProperTele.inr Γ : S →ʳ Γ ⋈* S).apply x) := by
+  induction ρ with
+  | nil =>
+      change (ProperTele.inr Γ).apply x = (ProperTele.inr Γ).apply x
+      rfl
+  | cons β rest ih =>
+      letI : ProperTele (Tele.ofList rest : Shape C) := ProperTele.ofList rest
+      letI : ProperTele (S ⋈* Tele.ofList rest) := ProperTele.extendList S rest
+      change
+        ListSlotAt.there
+          ((ProperTele.inr Γ : S ⋈* Tele.ofList rest →ʳ
+            Γ ⋈* (S ⋈* Tele.ofList rest)).apply
+            ((ProperTele.inl S : S →ʳ S ⋈* Tele.ofList rest).apply x))
+        =
+        ListSlotAt.there
+          ((ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ
+            Γ ⋈* S ⋈* Tele.ofList rest).apply
+            ((ProperTele.inr Γ : S →ʳ Γ ⋈* S).apply x))
+      congr 1
+
+/-- Weakening through a concrete list extension is the iterated weakening
+through that list. -/
+theorem extendList_inl {C : Carrier} (S : Shape C) [ProperTele S]
+    (ρ : List C.Arity) (Γ : Shape C)
+    {α : C.Arity} (x : Γ ∋ α) :
+    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
+    letI : ProperTele (S ⋈* Tele.ofList ρ) := ProperTele.extendList S ρ
+    (ProperTele.inl Γ : Γ →ʳ Γ ⋈* (S ⋈* Tele.ofList ρ)).apply x
+      =
+    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* Tele.ofList ρ).apply
+      ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* S).apply x) := by
+  induction ρ with
+  | nil => rfl
+  | cons β rest ih =>
+      letI : ProperTele (Tele.ofList rest : Shape C) := ProperTele.ofList rest
+      letI : ProperTele (S ⋈* Tele.ofList rest) := ProperTele.extendList S rest
+      change
+        ListSlotAt.there
+          ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* (S ⋈* Tele.ofList rest)).apply x)
+        =
+        ListSlotAt.there
+          ((ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ
+            Γ ⋈* S ⋈* Tele.ofList rest).apply
+            ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* S).apply x))
+      congr 1
+
 /-- Compose two proper telescopes, keeping the structural operations coherent
 with the two-stage view of `Γ ⋈* S ⋈* T`.  This is deliberately a named
 constructor rather than a global instance, to avoid making typeclass search

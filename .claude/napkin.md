@@ -7,8 +7,8 @@
 - Each item includes date + "Do instead".
 
 ## Execution & Validation (Highest Priority)
-1. **[2026-05-25] Current active work is `endomaps` / `HigherRankSyntaxTele`**
-   Do instead: start from root `PLAN.md` and `HigherRankSyntax/HigherRankSyntaxTele/*.lean`; check with `lake env lean HigherRankSyntaxTele/Equations.lean` and `lake build HigherRankSyntaxTele` from `HigherRankSyntax/`.
+1. **[2026-05-25] Current active work is `endomaps` / `HigherRankSyntax`**
+   Do instead: start from root `PLAN.md` and `HigherRankSyntax/HigherRankSyntax/*.lean`; check with `lake env lean HigherRankSyntax/Equations.lean` and `lake build HigherRankSyntax` from `HigherRankSyntax/`.
 2. **[2026-05-19] Scratch imports can use stale `.olean`s**
    Do instead: after changing an imported module, run `lake build HigherRankSyntax.Action.<Module>` before testing scratch files that `import` it.
 
@@ -18,14 +18,20 @@
 
 ## Domain Behavior Guardrails
 1. **[2026-05-27] `act_kcomp` reduces to adjacent instantiation interchange**
-   Do instead: work on `Subst.act_inst_interchange`; keep `Subst.act_kcomp_τ` as the proof spine, use `ProperTele.compose` rewrites for two-stage coherence, and account for recursive `instCons`-extended composite instances.
-2. **[2026-05-25] Tele unit proofs need one-binder instantiation bundle**
-   Do instead: prove beta-for-eta and identity instantiation together by arity; keep expression recursion in a separate fixed-shape helper like `Subst.act_inst_id_of`.
-3. **[2026-05-19] `inst.aux` carries target renaming**
+   Do instead: keep the proved list-indexed `Subst.act_inst.interchange` stack; `Subst.act_inst.fusion` bridges it into `act_kcomp`, and `ProperTele.extendList` keeps recursive binder extension definitional.
+2. **[2026-05-27] Remaining hole is lifted pre-naturality**
+   Do instead: strengthen `Subst.act_inst.preNaturalityLift` with a list depth `χ` and prove it mutually with `underListAt`; it commutes α-instantiation through the β-instantiation produced by `Subst.act_apply_inl_dom` while preserving the untouched `τ` prefix.
+3. **[2026-05-27] Interchange needs arity/domain-and-expression descent**
+   Do instead: use a private measure that decreases by `Carrier.Sub`/`DomLt` when jumping into fillers, and use `Expr.Subterm.of_arg_ofList_cons` for ordinary rebuild branches; plain expression induction is not enough.
+4. **[2026-05-27] Keep singleton α-slots abstract in under-list proofs**
+   Do instead: avoid case-splitting the whole α-head branch on `xα`; use `ListSlotAt.sub_single xα` for termination and only case-split inside local definitional sub lemmas.
+5. **[2026-05-25] Tele unit proofs need one-binder instantiation bundle**
+   Do instead: prove beta-for-eta and identity instantiation together by arity; keep expression recursion in a separate fixed-shape helper like `Subst.act_inst.idOf`.
+6. **[2026-05-19] `inst.aux` carries target renaming**
    Do instead: in `lift.aux`'s Γ-slot branch, call `inst.aux q.arity (Renaming.weakenList Δ τ) new_args [] (σ q)`; do not pre-weaken `σ q`.
-4. **[2026-05-19] WF-recursive walker equations need `_unary.eq_1`**
+7. **[2026-05-19] WF-recursive walker equations need `_unary.eq_1`**
    Do instead: prove one-step equations by `delta inst.aux`/`delta lift.aux`, `rw [*.aux._unary.eq_1, WellFounded.fix_eq]`, then `simp [classify_*]`.
-5. **[2026-05-19] Avoid rejected substitution designs**
+8. **[2026-05-19] Avoid rejected substitution designs**
    Do instead: keep the indexed `XPos` classifier, avoid transports/`Eq.rec`, Sum classifiers returning expressions, and `Subst.extend`-style wrapping.
 
 ## User Directives
