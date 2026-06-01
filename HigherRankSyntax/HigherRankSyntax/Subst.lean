@@ -100,7 +100,7 @@ def Subst.weakenCod {C : Carrier} {pre dom cod : Shape C}
 /-! ### Instantiation Subst
 
 The `Subst.inst` constructor turns a "kit" (one expression per binder of an
-arity α, in some target context) into a Subst with domain `Shape.nil ⋈ α`.
+arity α, in some target context) into a Subst with domain `⌊α⌋`.
 Used inside `Subst.act`'s dom branch to act on a substituted expression
 with the recursive arg results as fillers. -/
 
@@ -110,11 +110,11 @@ abbrev Subst.inst {C : Carrier} {pre : Shape C} (dom : Shape C) {cod : Shape C}
     Subst C pre dom cod where
   sub := f
 
-/-- The identity instantiation for the one-binder telescope `Shape.nil ⋈ α`,
+/-- The identity instantiation for the one-binder telescope `⌊α⌋`,
 with an arbitrary fixed prefix `Δ`. -/
 def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) :
-    Subst C Δ (Shape.nil ⋈ α) (Shape.nil ⋈ α) :=
-  Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+    Subst C Δ (⌊α⌋) (⌊α⌋) :=
+  Subst.inst (⌊α⌋) (fun q => match q with
     | .here i => Expr.η (.here i))
 
 /-! ### Kleisli ↔ Subst correspondence
@@ -157,12 +157,12 @@ def Subst.act {C : Carrier} : {pre dom cod : Shape C} →
         (fun y =>
           match σ.classifyDom y with
           | PreOrDom.dom z =>
-              (Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+              (Subst.inst (⌊α⌋) (fun q => match q with
                 | .here i => σ.act (τ ⋈ i.arity) (args i))).act Shape.nil (σ z)
           | PreOrDom.pre z =>
               Expr.apply
                 (ProperTele.inl (pre ⋈* cod)
-                  ((Subst.weakenCod σ).apply z))
+                  ((Subst.weakenCod σ) z))
                 (fun i => σ.act (τ ⋈ i.arity) (args i)))
 termination_by pre dom _ _ _ _ _ _ e =>
   ((⟨dom.toList⟩ : DomMeasure C), (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
@@ -174,10 +174,13 @@ decreasing_by
          obtain ⟨β, h_mem, h_sub⟩ := SlotAt.subWitness z
          exact DomLt.step β h_mem _ h_sub))
 
+/-- The ground substitution action `σ.act Shape.nil e`, mirroring `⟦ρ⟧ʳ e`. -/
+notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ Shape.nil e
+
 
 /-- Kleisli composition of two Kleisli maps via `Subst.act`. -/
 def Subst.kcomp {C : Carrier} {Γ Δ Ξ : Shape C} [ProperTele Δ] [ProperTele Ξ]
     (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ⋈ β))
     (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ξ ⋈ β)) :
     ∀ {β : C.Arity}, Γ ∋ β → Expr (Ξ ⋈ β) :=
-  fun {β} p => (toSubst g).act (Shape.nil ⋈ β) (f p)
+  fun {β} p => (toSubst g).act (⌊β⌋) (f p)

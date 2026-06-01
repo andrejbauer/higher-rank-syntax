@@ -12,7 +12,7 @@ dispatch to a clean right-hand side.  The reflection lemmas
 ## The three monad laws
 
 * `Subst.act_id` — `(Subst.id Γ).act τ e = e` (unit_right).
-* `Subst.act_η` — `(toSubst f).act (Shape.nil ⋈ α) (Expr.η p) = f p` (unit_left).
+* `Subst.act_η` — `(toSubst f).act (⌊α⌋) (Expr.η p) = f p` (unit_left).
 * `Subst.act_kcomp` — Kleisli composition factors (comp_lift).
 -/
 
@@ -27,11 +27,11 @@ theorem Subst.act_apply_inr {C : Carrier} {pre dom cod : Shape C}
     {α : C.Arity} (x : τ ∋ α)
     (args : (i : C.Binder α) →
       Expr (pre ⋈* dom ⋈* τ ⋈ i.arity)) :
-    σ.act τ (Expr.apply ((ProperTele.inr (pre ⋈* dom)).apply x) args)
-      = Expr.apply ((ProperTele.inr (pre ⋈* cod)).apply x)
+    σ.act τ (Expr.apply ((ProperTele.inr (pre ⋈* dom)) x) args)
+      = Expr.apply ((ProperTele.inr (pre ⋈* cod)) x)
           (fun j => σ.act (τ ⋈ j.arity) (args j)) := by
   have h := @Subst.act.eq_1 C pre dom cod inferInstance inferInstance σ τ inferInstance α
-              ((ProperTele.inr (pre ⋈* dom)).apply x) args
+              ((ProperTele.inr (pre ⋈* dom)) x) args
   rw [ProperTele.classify_inr (pre ⋈* dom)] at h
   exact h
 
@@ -44,13 +44,13 @@ theorem Subst.act_apply_inl_dom {C : Carrier} {pre dom cod : Shape C}
     (args : (i : C.Binder α) →
       Expr (pre ⋈* dom ⋈* τ ⋈ i.arity)) :
     σ.act τ (Expr.apply
-              ((ProperTele.inl (pre ⋈* dom)).apply
-                ((ProperTele.inr pre).apply y)) args)
-      = (Subst.inst (Shape.nil ⋈ α) (fun q => match q with
-            | .here i => σ.act (τ ⋈ i.arity) (args i))).act Shape.nil (σ y) := by
+              ((ProperTele.inl (pre ⋈* dom))
+                ((ProperTele.inr pre) y)) args)
+      = ⟦Subst.inst (⌊α⌋) (fun q => match q with
+            | .here i => σ.act (τ ⋈ i.arity) (args i))⟧ˢ (σ y) := by
   have h := @Subst.act.eq_1 C pre dom cod inferInstance inferInstance σ τ inferInstance α
-              ((ProperTele.inl (pre ⋈* dom)).apply
-                ((ProperTele.inr pre).apply y)) args
+              ((ProperTele.inl (pre ⋈* dom))
+                ((ProperTele.inr pre) y)) args
   rw [ProperTele.classify_inl (pre ⋈* dom)] at h
   unfold Subst.classifyDom at h
   rw [ProperTele.classify_inr pre] at h
@@ -65,15 +65,15 @@ theorem Subst.act_apply_inl_pre {C : Carrier} {pre dom cod : Shape C}
     (args : (i : C.Binder α) →
       Expr (pre ⋈* dom ⋈* τ ⋈ i.arity)) :
     σ.act τ (Expr.apply
-              ((ProperTele.inl (pre ⋈* dom)).apply
-                ((ProperTele.inl pre).apply z)) args)
+              ((ProperTele.inl (pre ⋈* dom))
+                ((ProperTele.inl pre) z)) args)
       = Expr.apply
-          ((ProperTele.inl (pre ⋈* cod)).apply
-            ((Subst.weakenCod σ).apply z))
+          ((ProperTele.inl (pre ⋈* cod))
+            ((Subst.weakenCod σ) z))
           (fun i => σ.act (τ ⋈ i.arity) (args i)) := by
   have h := @Subst.act.eq_1 C pre dom cod inferInstance inferInstance σ τ inferInstance α
-              ((ProperTele.inl (pre ⋈* dom)).apply
-                ((ProperTele.inl pre).apply z)) args
+              ((ProperTele.inl (pre ⋈* dom))
+                ((ProperTele.inl pre) z)) args
   rw [ProperTele.classify_inl (pre ⋈* dom)] at h
   unfold Subst.classifyDom at h
   rw [ProperTele.classify_inl pre] at h
@@ -89,15 +89,15 @@ theorem Subst.act_η_inr {C : Carrier} {pre dom cod : Shape C}
     (σ : Subst C pre dom cod) (τ : Shape C) [ProperTele τ]
     {α : C.Arity} (x : τ ∋ α) :
     σ.act (τ ⋈ α)
-        (Expr.η ((ProperTele.inr (pre ⋈* dom)).apply x))
-      = Expr.η ((ProperTele.inr (pre ⋈* cod)).apply x) := by
+        (.η ((ProperTele.inr (pre ⋈* dom)) x))
+      = .η ((ProperTele.inr (pre ⋈* cod)) x) := by
   rw [Expr.η.eq_1]
-  -- `.there ((inr τ).apply x) = (inr (τ ⋈ α)).apply (.there x)` holds
+  -- `.there ((inr τ) x) = (inr (τ ⋈ α)) (.there x)` holds
   -- definitionally (instCons.inr); `change` accepts the defeq.
   change σ.act (τ ⋈ α)
-      (Expr.apply ((ProperTele.inr (pre ⋈* dom)).apply
+      (Expr.apply ((ProperTele.inr (pre ⋈* dom))
                      (ListSlotAt.there x))
-                  (fun i => Expr.η (ListSlotAt.here i))) = _
+                  (fun i => .η (ListSlotAt.here i))) = _
   rw [Subst.act_apply_inr σ (τ ⋈ α) (ListSlotAt.there x)]
   rw [Expr.η.eq_1]
   congr 1
@@ -114,10 +114,10 @@ property at the immediate sub-arities of the head arity.  The proof
 recurses over the expression. -/
 private theorem Subst.act_inst.idOf {C : Carrier} (α : C.Arity) (Δ : Shape C)
     (hη : ∀ (i : C.Binder α), ∀ {pre cod : Shape C} [ProperTele cod]
-      (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ i.arity) ∋ β → Expr (pre ⋈* cod ⋈ β))
+      (ι : ∀ {β : C.Arity}, (⌊i.arity⌋) ∋ β → Expr (pre ⋈* cod ⋈ β))
       (p : pre ∋ i.arity),
-      (Subst.inst (Shape.nil ⋈ i.arity) ι).act Shape.nil (Expr.η p)
-        = Expr.apply ((ProperTele.inl pre).apply p) (fun j => ι (ListSlotAt.here j))) :
+      ⟦Subst.inst (⌊i.arity⌋) ι⟧ˢ (.η p)
+        = Expr.apply ((ProperTele.inl pre) p) (fun j => ι (ListSlotAt.here j))) :
     ∀ (τ : Shape C) [ProperTele τ] (e : Expr ((Δ ⋈ α) ⋈* τ)),
       (Subst.instId Δ α).act τ e = e
   | τ, _, Expr.apply (α := β) head argFam => by
@@ -142,11 +142,11 @@ private theorem Subst.act_inst.idOf {C : Carrier} (α : C.Arity) (Δ : Shape C)
               refine (hη i (pre := Δ ⋈ α) (cod := τ)
                 (ι := _) (p := ListSlotAt.here i)).trans ?_
               change
-                Expr.apply ((ProperTele.inl (Δ ⋈ α)).apply
+                Expr.apply ((ProperTele.inl (Δ ⋈ α))
                     (ListSlotAt.here i))
                   (fun k => (Subst.instId Δ α).act (τ ⋈ k.arity) (argFam k))
                 =
-                Expr.apply ((ProperTele.inl (Δ ⋈ α)).apply
+                Expr.apply ((ProperTele.inl (Δ ⋈ α))
                     (ListSlotAt.here i)) argFam
               congr 1
               funext k
@@ -155,12 +155,12 @@ private theorem Subst.act_inst.idOf {C : Carrier} (α : C.Arity) (Δ : Shape C)
         · subst h_z
           refine (Subst.act_apply_inl_pre (Subst.instId Δ α) τ z argFam).trans ?_
           change
-            Expr.apply ((ProperTele.inl (Δ ⋈ α)).apply
-                ((ProperTele.inl Δ).apply z))
+            Expr.apply ((ProperTele.inl (Δ ⋈ α))
+                ((ProperTele.inl Δ) z))
               (fun k => (Subst.instId Δ α).act (τ ⋈ k.arity) (argFam k))
             =
-            Expr.apply ((ProperTele.inl (Δ ⋈ α)).apply
-                ((ProperTele.inl Δ).apply z)) argFam
+            Expr.apply ((ProperTele.inl (Δ ⋈ α))
+                ((ProperTele.inl Δ) z)) argFam
           congr 1
           funext k
           exact ih_all k
@@ -176,60 +176,60 @@ mutual
 of a pre-slot exposes the kit. -/
 theorem Subst.act_inst.η {C : Carrier} {pre cod : Shape C} [ProperTele cod]
     {α : C.Arity}
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (pre ⋈* cod ⋈ β))
     (p : pre ∋ α) :
-    (Subst.inst (Shape.nil ⋈ α) ι).act Shape.nil (Expr.η p)
+    ⟦Subst.inst (⌊α⌋) ι⟧ˢ (.η p)
       =
-    Expr.apply ((ProperTele.inl pre).apply p)
+    Expr.apply ((ProperTele.inl pre) p)
       (fun i => ι (ListSlotAt.here i)) := by
   rw [Expr.η.eq_1]
-  change (Subst.inst (Shape.nil ⋈ α) ι).act Shape.nil
-      (Expr.apply ((ProperTele.inl (pre ⋈* (Shape.nil ⋈ α))).apply
-        ((ProperTele.inl pre).apply p)) (fun i => Expr.η (ListSlotAt.here i))) = _
+  change ⟦Subst.inst (⌊α⌋) ι⟧ˢ
+      (Expr.apply ((ProperTele.inl (pre ⋈* (⌊α⌋)))
+        ((ProperTele.inl pre) p)) (fun i => .η (ListSlotAt.here i))) = _
   rw [Subst.act_apply_inl_pre]
   change
-    Expr.apply ((Subst.inst (Shape.nil ⋈ α) ι).weakenCod.apply p)
-      (fun i => (Subst.inst (Shape.nil ⋈ α) ι).act
-        (Shape.nil ⋈ i.arity) (Expr.η (ListSlotAt.here i)))
+    Expr.apply ((Subst.inst (⌊α⌋) ι).weakenCod p)
+      (fun i => (Subst.inst (⌊α⌋) ι).act
+        (⌊i.arity⌋) (.η (ListSlotAt.here i)))
     =
-    Expr.apply ((ProperTele.inl pre).apply p)
+    Expr.apply ((ProperTele.inl pre) p)
       (fun i => ι (ListSlotAt.here i))
   change
-    Expr.apply ((ProperTele.inl pre).apply p)
-      (fun i => (Subst.inst (Shape.nil ⋈ α) ι).act
-        (Shape.nil ⋈ i.arity) (Expr.η (ListSlotAt.here i)))
+    Expr.apply ((ProperTele.inl pre) p)
+      (fun i => (Subst.inst (⌊α⌋) ι).act
+        (⌊i.arity⌋) (.η (ListSlotAt.here i)))
     =
-    Expr.apply ((ProperTele.inl pre).apply p)
+    Expr.apply ((ProperTele.inl pre) p)
       (fun i => ι (ListSlotAt.here i))
   congr
   funext i
   rw [Expr.η.eq_1]
-  change (Subst.inst (Shape.nil ⋈ α) ι).act (Shape.nil ⋈ i.arity)
-      (Expr.apply ((ProperTele.inl (pre ⋈* (Shape.nil ⋈ α))).apply
-        ((ProperTele.inr pre).apply (ListSlotAt.here i)))
+  change (Subst.inst (⌊α⌋) ι).act (⌊i.arity⌋)
+      (Expr.apply ((ProperTele.inl (pre ⋈* (⌊α⌋)))
+        ((ProperTele.inr pre) (ListSlotAt.here i)))
         (fun k =>
           @Expr.η C
-            ((pre ⋈* (Shape.nil ⋈ α)) ⋈* (Shape.nil ⋈ i.arity))
+            ((pre ⋈* (⌊α⌋)) ⋈* (⌊i.arity⌋))
             k.arity (ListSlotAt.here k))) = _
   rw [Subst.act_apply_inl_dom]
-  rw [show (Subst.inst (Shape.nil ⋈ α) ι).sub (ListSlotAt.here i)
+  rw [show (Subst.inst (⌊α⌋) ι).sub (ListSlotAt.here i)
         = ι (ListSlotAt.here i) from rfl]
   have hfill : ∀ (k : C.Binder i.arity),
-      (Subst.inst (Shape.nil ⋈ α) ι).act
-        ((Shape.nil ⋈ i.arity) ⋈ k.arity)
+      (Subst.inst (⌊α⌋) ι).act
+        ((⌊i.arity⌋) ⋈ k.arity)
           (@Expr.η C
-            ((pre ⋈* (Shape.nil ⋈ α)) ⋈* (Shape.nil ⋈ i.arity))
+            ((pre ⋈* (⌊α⌋)) ⋈* (⌊i.arity⌋))
             k.arity (ListSlotAt.here k))
       =
         @Expr.η C
-          ((pre ⋈* cod) ⋈* (Shape.nil ⋈ i.arity))
+          ((pre ⋈* cod) ⋈* (⌊i.arity⌋))
           k.arity (ListSlotAt.here k) := by
     intro k
-    exact Subst.act_η_inr (Subst.inst (Shape.nil ⋈ α) ι)
-      (Shape.nil ⋈ i.arity) (x := ListSlotAt.here k)
+    exact Subst.act_η_inr (Subst.inst (⌊α⌋) ι)
+      (⌊i.arity⌋) (x := ListSlotAt.here k)
   simp only [hfill]
-  change (Subst.instId (pre ⋈* cod) i.arity).act Shape.nil
+  change ⟦Subst.instId (pre ⋈* cod) i.arity⟧ˢ
     (ι (ListSlotAt.here i)) = ι (ListSlotAt.here i)
   exact Subst.act_inst.id i.arity (pre ⋈* cod) Shape.nil
     (ι (ListSlotAt.here i))
@@ -271,22 +271,22 @@ theorem Subst.act_id {C : Carrier} (Γ : Shape C) [ProperTele Γ]
       · subst h_q
         refine (Subst.act_apply_inl_dom (Subst.id Γ) τ y args).trans ?_
         -- Simplify (Subst.id Γ) y = Expr.η y (rfl via toSubst_sub).
-        show (Subst.inst (Shape.nil ⋈ β) (fun q => match q with
-              | .here k => (Subst.id Γ).act (τ ⋈ k.arity) (args k))).act Shape.nil
-              (Expr.η y) = _
+        show ⟦Subst.inst (⌊β⌋) (fun q => match q with
+              | .here k => (Subst.id Γ).act (τ ⋈ k.arity) (args k))⟧ˢ
+              (.η y) = _
         -- IH on each argument:
         have h_args : ∀ (k : C.Binder β),
             (Subst.id Γ).act (τ ⋈ k.arity) (args k) = args k :=
           fun k => Subst.act_id Γ (τ ⋈ k.arity) (args k)
-        -- Simplify (inr Shape.nil).apply y = y on the RHS.
+        -- Simplify (inr Shape.nil) y = y on the RHS.
         rw [ProperTele.inr_nil_id y]
         refine (Subst.act_inst.η
           (pre := Γ) (cod := τ) (α := β) (ι := _) (p := y)).trans ?_
         change
-          Expr.apply ((ProperTele.inl Γ).apply y)
+          Expr.apply ((ProperTele.inl Γ) y)
             (fun k => (Subst.id Γ).act (τ ⋈ k.arity) (args k))
           =
-          Expr.apply ((ProperTele.inl Γ).apply y) args
+          Expr.apply ((ProperTele.inl Γ) y) args
         congr 1
         funext k
         exact h_args k
@@ -299,33 +299,33 @@ Translates to `lift f ∘ η = f` (unit_left). -/
 theorem Subst.act_η {C : Carrier} {Γ Δ : Shape C} [ProperTele Γ] [ProperTele Δ]
     (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ⋈ β))
     (α : C.Arity) (p : Γ ∋ α) :
-    (toSubst f).act (Shape.nil ⋈ α) (Expr.η p) = f p := by
+    (toSubst f).act (⌊α⌋) (.η p) = f p := by
   rw [Expr.η.eq_1]
-  -- `.there p = (weaken_{Shape.nil ⋈ α} _).apply p` by instCons.weaken (rfl).
+  -- `.there p = (weaken_{⌊α⌋} _) p` by instCons.weaken (rfl).
   -- Cover p at base Shape.nil: p must be in the right image (inl-from-nil empty).
   rcases ProperTele.cover Shape.nil p with ⟨y, h_q⟩ | ⟨z, _⟩
   · subst h_q
-    show (toSubst f).act (Shape.nil ⋈ α)
-        (Expr.apply ((ProperTele.inl (Shape.nil ⋈* Γ)).apply
-                      ((ProperTele.inr Shape.nil).apply y))
-                    (fun i => Expr.η (ListSlotAt.here i))) = _
-    rw [Subst.act_apply_inl_dom (toSubst f) (Shape.nil ⋈ α) y]
+    show (toSubst f).act (⌊α⌋)
+        (Expr.apply ((ProperTele.inl (Shape.nil ⋈* Γ))
+                      ((ProperTele.inr Shape.nil) y))
+                    (fun i => .η (ListSlotAt.here i))) = _
+    rw [Subst.act_apply_inl_dom (toSubst f) (⌊α⌋) y]
     have hfill : ∀ (i : C.Binder α),
-        (toSubst f).act ((Shape.nil ⋈ α) ⋈ i.arity)
+        (toSubst f).act ((⌊α⌋) ⋈ i.arity)
           (@Expr.η C
-            ((Shape.nil ⋈* Γ) ⋈* (Shape.nil ⋈ α))
+            ((Shape.nil ⋈* Γ) ⋈* (⌊α⌋))
             i.arity (ListSlotAt.here i))
         =
         @Expr.η C
-          ((Shape.nil ⋈* Δ) ⋈* (Shape.nil ⋈ α))
+          ((Shape.nil ⋈* Δ) ⋈* (⌊α⌋))
           i.arity (ListSlotAt.here i) := by
       intro i
-      exact Subst.act_η_inr (toSubst f) (Shape.nil ⋈ α)
+      exact Subst.act_η_inr (toSubst f) (⌊α⌋)
         (x := ListSlotAt.here i)
     simp only [hfill]
     rw [toSubst_sub]
     rw [ProperTele.inr_nil_id y]
-    change (Subst.instId Δ α).act Shape.nil (f y) = f y
+    change ⟦Subst.instId Δ α⟧ˢ (f y) = f y
     exact Subst.act_inst.id α Δ Shape.nil (f y)
   · exact nomatch z
 
@@ -342,7 +342,7 @@ private theorem Expr.Subterm.of_arg_ofList_cons {C : Carrier} {Γ : Shape C}
     (Expr.Subterm.of_arg head args j)
 
 private theorem ListSlotAt.sub_single {C : Carrier} {α β : C.Arity}
-    (x : (Shape.nil ⋈ α : Shape C) ∋ β) : Carrier.Sub β α := by
+    (x : (⌊α⌋ : Shape C) ∋ β) : Carrier.Sub β α := by
   cases x with
   | here i => exact ⟨i, rfl⟩
   | there z => nomatch z
@@ -354,8 +354,8 @@ singleton-slot form. -/
 private abbrev Subst.act_inst.instOne {C : Carrier} {pre cod : Shape C}
     (α : C.Arity)
     (fill : (i : C.Binder α) → Expr (pre ⋈* cod ⋈ i.arity)) :
-    Subst C pre (Shape.nil ⋈ α) cod :=
-  Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+    Subst C pre (⌊α⌋) cod :=
+  Subst.inst (⌊α⌋) (fun q => match q with
   | .here i => fill i)
 
 private abbrev Subst.act_inst.UnderList.actThenInst {C : Carrier}
@@ -363,10 +363,10 @@ private abbrev Subst.act_inst.UnderList.actThenInst {C : Carrier}
     (σ : Subst C pre dom cod)
     {α : C.Arity}
     (ρ υ : List C.Arity)
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (pre ⋈* dom ⋈* τ ⋈* Tele.ofList ρ ⋈ β))
     (e : Expr ((pre ⋈* dom ⋈* τ ⋈ α) ⋈* Tele.ofList υ)) :=
-  let κ' : Subst C (pre ⋈* cod ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
+  let κ' : Subst C (pre ⋈* cod ⋈* τ) (⌊α⌋) (Tele.ofList ρ) :=
     Subst.act_inst.instOne α (fun i =>
       σ.act ((τ ⋈* Tele.ofList ρ) ⋈ i.arity) (ι (ListSlotAt.here i)))
   κ'.act (Tele.ofList υ)
@@ -377,10 +377,10 @@ private abbrev Subst.act_inst.UnderList.instThenAct {C : Carrier}
     (σ : Subst C pre dom cod)
     {α : C.Arity}
     (ρ υ : List C.Arity)
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (pre ⋈* dom ⋈* τ ⋈* Tele.ofList ρ ⋈ β))
     (e : Expr ((pre ⋈* dom ⋈* τ ⋈ α) ⋈* Tele.ofList υ)) :=
-  let κ : Subst C (pre ⋈* dom ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
+  let κ : Subst C (pre ⋈* dom ⋈* τ) (⌊α⌋) (Tele.ofList ρ) :=
     Subst.act_inst.instOne α (fun i => ι (ListSlotAt.here i))
   σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
     (κ.act (Tele.ofList υ) e)
@@ -389,14 +389,14 @@ private abbrev Subst.act_inst.PreLift.sequential {C : Carrier}
     {pre τ : Shape C} [ProperTele τ]
     {α β : C.Arity}
     (ρ υ χ : List C.Arity)
-    (ι : ∀ {δ : C.Arity}, (Shape.nil ⋈ α) ∋ δ →
+    (ι : ∀ {δ : C.Arity}, (⌊α⌋) ∋ δ →
       Expr (pre ⋈* τ ⋈* Tele.ofList ρ ⋈ δ))
     (η : (j : C.Binder β) →
       Expr ((pre ⋈* τ ⋈ α) ⋈* Tele.ofList υ ⋈ j.arity))
     (e : Expr ((pre ⋈ β) ⋈* Tele.ofList χ)) :=
-  let κ : Subst C (pre ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
+  let κ : Subst C (pre ⋈* τ) (⌊α⌋) (Tele.ofList ρ) :=
     Subst.act_inst.instOne α (fun i => ι (ListSlotAt.here i))
-  let lam : Subst C pre (Shape.nil ⋈ β) ((τ ⋈ α) ⋈* Tele.ofList υ) :=
+  let lam : Subst C pre (⌊β⌋) ((τ ⋈ α) ⋈* Tele.ofList υ) :=
     Subst.act_inst.instOne β η
   κ.act ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ)
     (lam.act (Tele.ofList χ) e)
@@ -405,14 +405,14 @@ private abbrev Subst.act_inst.PreLift.fused {C : Carrier}
     {pre τ : Shape C} [ProperTele τ]
     {α β : C.Arity}
     (ρ υ χ : List C.Arity)
-    (ι : ∀ {δ : C.Arity}, (Shape.nil ⋈ α) ∋ δ →
+    (ι : ∀ {δ : C.Arity}, (⌊α⌋) ∋ δ →
       Expr (pre ⋈* τ ⋈* Tele.ofList ρ ⋈ δ))
     (η : (j : C.Binder β) →
       Expr ((pre ⋈* τ ⋈ α) ⋈* Tele.ofList υ ⋈ j.arity))
     (e : Expr ((pre ⋈ β) ⋈* Tele.ofList χ)) :=
-  let κ : Subst C (pre ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
+  let κ : Subst C (pre ⋈* τ) (⌊α⌋) (Tele.ofList ρ) :=
     Subst.act_inst.instOne α (fun i => ι (ListSlotAt.here i))
-  let lam' : Subst C pre (Shape.nil ⋈ β)
+  let lam' : Subst C pre (⌊β⌋)
       ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) :=
     Subst.act_inst.instOne β (fun j =>
       κ.act (Tele.ofList υ ⋈ j.arity) (η j))
@@ -423,10 +423,10 @@ private abbrev Subst.act_inst.PreNaturality.sequential {C : Carrier}
     (σ : Subst C pre dom cod)
     {α : C.Arity}
     (ρ υ : List C.Arity)
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (pre ⋈* dom ⋈* Tele.ofList ρ ⋈ β))
     (e : Expr ((pre ⋈ α) ⋈* Tele.ofList υ)) :=
-  let κ : Subst C pre (Shape.nil ⋈ α) (dom ⋈* Tele.ofList ρ) :=
+  let κ : Subst C pre (⌊α⌋) (dom ⋈* Tele.ofList ρ) :=
     Subst.act_inst.instOne α (fun i => ι (ListSlotAt.here i))
   σ.act ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ)
     (κ.act (Tele.ofList υ) e)
@@ -436,10 +436,10 @@ private abbrev Subst.act_inst.PreNaturality.fused {C : Carrier}
     (σ : Subst C pre dom cod)
     {α : C.Arity}
     (ρ υ : List C.Arity)
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (pre ⋈* dom ⋈* Tele.ofList ρ ⋈ β))
     (e : Expr ((pre ⋈ α) ⋈* Tele.ofList υ)) :=
-  let κ' : Subst C pre (Shape.nil ⋈ α) (cod ⋈* Tele.ofList ρ) :=
+  let κ' : Subst C pre (⌊α⌋) (cod ⋈* Tele.ofList ρ) :=
     Subst.act_inst.instOne α (fun i =>
       σ.act (Tele.ofList ρ ⋈ i.arity) (ι (ListSlotAt.here i)))
   κ'.act (Tele.ofList υ) e
@@ -448,25 +448,25 @@ private abbrev Subst.act_inst.Interchange.actThenInst {C : Carrier}
     {pre dom cod τ : Shape C} [ProperTele dom] [ProperTele cod] [ProperTele τ]
     (σ : Subst C pre dom cod)
     {α : C.Arity}
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (pre ⋈* dom ⋈* τ ⋈ β))
     (ρ : List C.Arity)
-    (e : Expr (pre ⋈* dom ⋈* (Shape.nil ⋈ α) ⋈* Tele.ofList ρ)) :=
-  let κ' : Subst C (pre ⋈* cod) (Shape.nil ⋈ α) τ :=
+    (e : Expr (pre ⋈* dom ⋈* (⌊α⌋) ⋈* Tele.ofList ρ)) :=
+  let κ' : Subst C (pre ⋈* cod) (⌊α⌋) τ :=
     Subst.act_inst.instOne α (fun i =>
       σ.act (τ ⋈ i.arity) (ι (ListSlotAt.here i)))
   κ'.act (Tele.ofList ρ)
-    (σ.act ((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) e)
+    (σ.act ((⌊α⌋) ⋈* Tele.ofList ρ) e)
 
 private abbrev Subst.act_inst.Interchange.instThenAct {C : Carrier}
     {pre dom cod τ : Shape C} [ProperTele dom] [ProperTele cod] [ProperTele τ]
     (σ : Subst C pre dom cod)
     {α : C.Arity}
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (pre ⋈* dom ⋈* τ ⋈ β))
     (ρ : List C.Arity)
-    (e : Expr (pre ⋈* dom ⋈* (Shape.nil ⋈ α) ⋈* Tele.ofList ρ)) :=
-  let κ : Subst C (pre ⋈* dom) (Shape.nil ⋈ α) τ :=
+    (e : Expr (pre ⋈* dom ⋈* (⌊α⌋) ⋈* Tele.ofList ρ)) :=
+  let κ : Subst C (pre ⋈* dom) (⌊α⌋) τ :=
     Subst.act_inst.instOne α (fun i => ι (ListSlotAt.here i))
   σ.act (τ ⋈* Tele.ofList ρ)
     (κ.act (Tele.ofList ρ) e)
@@ -556,16 +556,16 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
     (σ : Subst C pre dom cod)
     {α : C.Arity}
     (ρ υ : List C.Arity)
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (pre ⋈* dom ⋈* τ ⋈* Tele.ofList ρ ⋈ β))
     (e : Expr ((pre ⋈* dom ⋈* τ ⋈ α) ⋈* Tele.ofList υ)) :
     Subst.act_inst.UnderList.actThenInst σ ρ υ ι e =
     Subst.act_inst.UnderList.instThenAct σ ρ υ ι e := by
-  let κ : Subst C (pre ⋈* dom ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
-    Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+  let κ : Subst C (pre ⋈* dom ⋈* τ) (⌊α⌋) (Tele.ofList ρ) :=
+    Subst.inst (⌊α⌋) (fun q => match q with
     | .here i => ι (ListSlotAt.here i))
-  let κ' : Subst C (pre ⋈* cod ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
-    Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+  let κ' : Subst C (pre ⋈* cod ⋈* τ) (⌊α⌋) (Tele.ofList ρ) :=
+    Subst.inst (⌊α⌋) (fun q => match q with
     | .here i =>
         σ.act ((τ ⋈* Tele.ofList ρ) ⋈ i.arity) (ι (ListSlotAt.here i)))
   change κ'.act (Tele.ofList υ)
@@ -588,7 +588,7 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
         refine (congrArg (κ'.act (Tele.ofList υ))
           (Subst.act_apply_inr σ
             ((τ ⋈ α) ⋈* Tele.ofList υ)
-            ((ProperTele.inr (τ ⋈ α)).apply xυ) args)).trans ?_
+            ((ProperTele.inr (τ ⋈ α)) xυ) args)).trans ?_
         rw [ProperTele.extendList_inr_inr (τ ⋈ α) υ (pre ⋈* cod) xυ]
         refine (Subst.act_apply_inr κ' (Tele.ofList υ) xυ
           (fun j => σ.act (((τ ⋈ α) ⋈* Tele.ofList υ) ⋈ j.arity)
@@ -596,22 +596,22 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
         have hκ :
             κ.act (Tele.ofList υ)
               (Expr.apply
-                ((ProperTele.inr ((pre ⋈* dom) ⋈* (τ ⋈ α))).apply xυ)
+                ((ProperTele.inr ((pre ⋈* dom) ⋈* (τ ⋈ α))) xυ)
                 args)
             =
             Expr.apply
-              ((ProperTele.inr ((pre ⋈* dom ⋈* τ) ⋈* Tele.ofList ρ)).apply xυ)
+              ((ProperTele.inr ((pre ⋈* dom ⋈* τ) ⋈* Tele.ofList ρ)) xυ)
               (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)) := by
           exact Subst.act_apply_inr κ (Tele.ofList υ) xυ args
         have hκ_nested :
             κ.act (Tele.ofList υ)
               (Expr.apply
-                ((ProperTele.inr (pre ⋈* dom)).apply
-                  ((ProperTele.inr (τ ⋈ α)).apply xυ))
+                ((ProperTele.inr (pre ⋈* dom))
+                  ((ProperTele.inr (τ ⋈ α)) xυ))
                 args)
             =
             Expr.apply
-              ((ProperTele.inr ((pre ⋈* dom ⋈* τ) ⋈* Tele.ofList ρ)).apply xυ)
+              ((ProperTele.inr ((pre ⋈* dom ⋈* τ) ⋈* Tele.ofList ρ)) xυ)
               (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)) := by
           rw [ProperTele.extendList_inr_inr (τ ⋈ α) υ (pre ⋈* dom) xυ]
           exact hκ
@@ -619,22 +619,22 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
           (σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ))
           hκ_nested).symm
         change Expr.apply
-            ((ProperTele.inr ((pre ⋈* cod) ⋈* (τ ⋈* Tele.ofList ρ))).apply xυ)
+            ((ProperTele.inr ((pre ⋈* cod) ⋈* (τ ⋈* Tele.ofList ρ))) xυ)
             (fun j => κ'.act (Tele.ofList υ ⋈ j.arity)
               (σ.act (((τ ⋈ α) ⋈* Tele.ofList υ) ⋈ j.arity) (args j)))
           =
           σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
             (Expr.apply
-              ((ProperTele.inr ((pre ⋈* dom) ⋈* (τ ⋈* Tele.ofList ρ))).apply xυ)
+              ((ProperTele.inr ((pre ⋈* dom) ⋈* (τ ⋈* Tele.ofList ρ))) xυ)
               (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)))
         have hσ :
             σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
               (Expr.apply
-                ((ProperTele.inr ((pre ⋈* dom) ⋈* (τ ⋈* Tele.ofList ρ))).apply xυ)
+                ((ProperTele.inr ((pre ⋈* dom) ⋈* (τ ⋈* Tele.ofList ρ))) xυ)
                 (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)))
             =
             Expr.apply
-              ((ProperTele.inr ((pre ⋈* cod) ⋈* (τ ⋈* Tele.ofList ρ))).apply xυ)
+              ((ProperTele.inr ((pre ⋈* cod) ⋈* (τ ⋈* Tele.ofList ρ))) xυ)
               (fun j =>
                 σ.act (((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) ⋈ j.arity)
                   (κ.act (Tele.ofList υ ⋈ j.arity) (args j))) := by
@@ -642,7 +642,7 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
             (τ ⋈* Tele.ofList ρ) υ (pre ⋈* dom) xυ]
           rw [Subst.act_apply_inr σ
             ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
-            ((ProperTele.inr (τ ⋈* Tele.ofList ρ)).apply xυ)
+            ((ProperTele.inr (τ ⋈* Tele.ofList ρ)) xυ)
             (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j))]
           rw [ProperTele.extendList_inr_inr
             (τ ⋈* Tele.ofList ρ) υ (pre ⋈* cod) xυ]
@@ -657,7 +657,7 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
             (κ.act (Tele.ofList (j.arity :: υ)) (args j))
         exact Subst.act_inst.underListAt σ ρ (j.arity :: υ) ι (args j)
       · subst h_xt
-        rcases @ProperTele.cover C (Shape.nil ⋈ α) inferInstance
+        rcases @ProperTele.cover C (⌊α⌋) inferInstance
             τ β xt with
           ⟨xα, h_xα⟩ | ⟨xτ, h_xτ⟩
         · subst h_xα
@@ -678,21 +678,21 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
           refine (congrArg (κ'.act (Tele.ofList υ))
             (Subst.act_apply_inr σ
               ((τ ⋈ α) ⋈* Tele.ofList υ)
-              ((ProperTele.inl (τ ⋈ α)).apply
-                ((ProperTele.inr τ).apply xα))
+              ((ProperTele.inl (τ ⋈ α))
+                ((ProperTele.inr τ) xα))
               args)).trans ?_
           have hheadCod :
-              ((ProperTele.inr (pre ⋈* cod)).apply
+              ((ProperTele.inr (pre ⋈* cod))
                 (((ProperTele.inl (τ ⋈ α)) :
-                    (τ ⋈ α) →ʳ (τ ⋈ α) ⋈* Tele.ofList υ).apply
-                  ((ProperTele.inr τ).apply xα)))
+                    (τ ⋈ α) →ʳ (τ ⋈ α) ⋈* Tele.ofList υ)
+                  ((ProperTele.inr τ) xα)))
               =
-              ((ProperTele.inl ((pre ⋈* cod) ⋈* (τ ⋈ α))).apply
-                ((ProperTele.inr (pre ⋈* cod)).apply
-                  ((ProperTele.inr τ).apply xα))) :=
+              ((ProperTele.inl ((pre ⋈* cod) ⋈* (τ ⋈ α)))
+                ((ProperTele.inr (pre ⋈* cod))
+                  ((ProperTele.inr τ) xα))) :=
             ProperTele.extendList_inr_inl
               (τ ⋈ α) υ (pre ⋈* cod)
-              ((ProperTele.inr τ).apply xα)
+              ((ProperTele.inr τ) xα)
           refine (congrArg
             (fun head => κ'.act (Tele.ofList υ)
               (Expr.apply head
@@ -702,25 +702,25 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
           have hheadCod' :
               (((ProperTele.inl ((pre ⋈* cod) ⋈* (τ ⋈ α))) :
                   ((pre ⋈* cod) ⋈* (τ ⋈ α)) →ʳ
-                    ((pre ⋈* cod) ⋈* (τ ⋈ α)) ⋈* Tele.ofList υ).apply
-                ((ProperTele.inr (pre ⋈* cod)).apply
-                  ((ProperTele.inr τ).apply xα)))
+                    ((pre ⋈* cod) ⋈* (τ ⋈ α)) ⋈* Tele.ofList υ)
+                ((ProperTele.inr (pre ⋈* cod))
+                  ((ProperTele.inr τ) xα)))
               =
-              (((ProperTele.inl ((pre ⋈* cod ⋈* τ) ⋈* (Shape.nil ⋈ α))) :
-                  ((pre ⋈* cod ⋈* τ) ⋈* (Shape.nil ⋈ α)) →ʳ
-                    ((pre ⋈* cod ⋈* τ) ⋈* (Shape.nil ⋈ α)) ⋈* Tele.ofList υ).apply
-                ((ProperTele.inr (pre ⋈* cod ⋈* τ)).apply xα)) := by
+              (((ProperTele.inl ((pre ⋈* cod ⋈* τ) ⋈* (⌊α⌋))) :
+                  ((pre ⋈* cod ⋈* τ) ⋈* (⌊α⌋)) →ʳ
+                    ((pre ⋈* cod ⋈* τ) ⋈* (⌊α⌋)) ⋈* Tele.ofList υ)
+                ((ProperTele.inr (pre ⋈* cod ⋈* τ)) xα)) := by
             change
               (((ProperTele.inl ((pre ⋈* cod) ⋈* (τ ⋈ α))) :
                   ((pre ⋈* cod) ⋈* (τ ⋈ α)) →ʳ
-                    ((pre ⋈* cod) ⋈* (τ ⋈ α)) ⋈* Tele.ofList υ).apply
-                ((ProperTele.inr (pre ⋈* cod)).apply
-                  ((ProperTele.inr τ).apply xα)))
+                    ((pre ⋈* cod) ⋈* (τ ⋈ α)) ⋈* Tele.ofList υ)
+                ((ProperTele.inr (pre ⋈* cod))
+                  ((ProperTele.inr τ) xα)))
               =
-              (((ProperTele.inl ((pre ⋈* cod ⋈* τ) ⋈* (Shape.nil ⋈ α))) :
-                  ((pre ⋈* cod ⋈* τ) ⋈* (Shape.nil ⋈ α)) →ʳ
-                    ((pre ⋈* cod ⋈* τ) ⋈* (Shape.nil ⋈ α)) ⋈* Tele.ofList υ).apply
-                ((ProperTele.inr (pre ⋈* cod ⋈* τ)).apply xα))
+              (((ProperTele.inl ((pre ⋈* cod ⋈* τ) ⋈* (⌊α⌋))) :
+                  ((pre ⋈* cod ⋈* τ) ⋈* (⌊α⌋)) →ʳ
+                    ((pre ⋈* cod ⋈* τ) ⋈* (⌊α⌋)) ⋈* Tele.ofList υ)
+                ((ProperTele.inr (pre ⋈* cod ⋈* τ)) xα))
             cases xα with
             | here i => rfl
             | there z => nomatch z
@@ -741,39 +741,39 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
             | there z => nomatch z
           rw [hκ'sub]
           have hheadDom :
-              ((ProperTele.inr (pre ⋈* dom)).apply
+              ((ProperTele.inr (pre ⋈* dom))
                 (((ProperTele.inl (τ ⋈ α)) :
-                    (τ ⋈ α) →ʳ (τ ⋈ α) ⋈* Tele.ofList υ).apply
-                  ((ProperTele.inr τ).apply xα)))
+                    (τ ⋈ α) →ʳ (τ ⋈ α) ⋈* Tele.ofList υ)
+                  ((ProperTele.inr τ) xα)))
               =
-              ((ProperTele.inl ((pre ⋈* dom) ⋈* (τ ⋈ α))).apply
-                ((ProperTele.inr (pre ⋈* dom)).apply
-                  ((ProperTele.inr τ).apply xα))) :=
+              ((ProperTele.inl ((pre ⋈* dom) ⋈* (τ ⋈ α)))
+                ((ProperTele.inr (pre ⋈* dom))
+                  ((ProperTele.inr τ) xα))) :=
             ProperTele.extendList_inr_inl
               (τ ⋈ α) υ (pre ⋈* dom)
-              ((ProperTele.inr τ).apply xα)
+              ((ProperTele.inr τ) xα)
           have hheadDom' :
               (((ProperTele.inl ((pre ⋈* dom) ⋈* (τ ⋈ α))) :
                   ((pre ⋈* dom) ⋈* (τ ⋈ α)) →ʳ
-                    ((pre ⋈* dom) ⋈* (τ ⋈ α)) ⋈* Tele.ofList υ).apply
-                ((ProperTele.inr (pre ⋈* dom)).apply
-                  ((ProperTele.inr τ).apply xα)))
+                    ((pre ⋈* dom) ⋈* (τ ⋈ α)) ⋈* Tele.ofList υ)
+                ((ProperTele.inr (pre ⋈* dom))
+                  ((ProperTele.inr τ) xα)))
               =
-              (((ProperTele.inl ((pre ⋈* dom ⋈* τ) ⋈* (Shape.nil ⋈ α))) :
-                  ((pre ⋈* dom ⋈* τ) ⋈* (Shape.nil ⋈ α)) →ʳ
-                    ((pre ⋈* dom ⋈* τ) ⋈* (Shape.nil ⋈ α)) ⋈* Tele.ofList υ).apply
-                ((ProperTele.inr (pre ⋈* dom ⋈* τ)).apply xα)) := by
+              (((ProperTele.inl ((pre ⋈* dom ⋈* τ) ⋈* (⌊α⌋))) :
+                  ((pre ⋈* dom ⋈* τ) ⋈* (⌊α⌋)) →ʳ
+                    ((pre ⋈* dom ⋈* τ) ⋈* (⌊α⌋)) ⋈* Tele.ofList υ)
+                ((ProperTele.inr (pre ⋈* dom ⋈* τ)) xα)) := by
             change
               (((ProperTele.inl ((pre ⋈* dom) ⋈* (τ ⋈ α))) :
                   ((pre ⋈* dom) ⋈* (τ ⋈ α)) →ʳ
-                    ((pre ⋈* dom) ⋈* (τ ⋈ α)) ⋈* Tele.ofList υ).apply
-                ((ProperTele.inr (pre ⋈* dom)).apply
-                  ((ProperTele.inr τ).apply xα)))
+                    ((pre ⋈* dom) ⋈* (τ ⋈ α)) ⋈* Tele.ofList υ)
+                ((ProperTele.inr (pre ⋈* dom))
+                  ((ProperTele.inr τ) xα)))
               =
-              (((ProperTele.inl ((pre ⋈* dom ⋈* τ) ⋈* (Shape.nil ⋈ α))) :
-                  ((pre ⋈* dom ⋈* τ) ⋈* (Shape.nil ⋈ α)) →ʳ
-                    ((pre ⋈* dom ⋈* τ) ⋈* (Shape.nil ⋈ α)) ⋈* Tele.ofList υ).apply
-                ((ProperTele.inr (pre ⋈* dom ⋈* τ)).apply xα))
+              (((ProperTele.inl ((pre ⋈* dom ⋈* τ) ⋈* (⌊α⌋))) :
+                  ((pre ⋈* dom ⋈* τ) ⋈* (⌊α⌋)) →ʳ
+                    ((pre ⋈* dom ⋈* τ) ⋈* (⌊α⌋)) ⋈* Tele.ofList υ)
+                ((ProperTele.inr (pre ⋈* dom ⋈* τ)) xα))
             cases xα with
             | here i => rfl
             | there z => nomatch z
@@ -793,7 +793,7 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
             | here i => rfl
             | there z => nomatch z
           rw [hκsub]
-          let ιβ : ∀ {δ : C.Arity}, (Shape.nil ⋈ β) ∋ δ →
+          let ιβ : ∀ {δ : C.Arity}, (⌊β⌋) ∋ δ →
               Expr (pre ⋈* dom ⋈* (τ ⋈* Tele.ofList ρ) ⋈*
                 Tele.ofList υ ⋈ δ) :=
             fun q => match q with
@@ -807,90 +807,90 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
           refine (congrArg (κ'.act (Tele.ofList υ))
             (Subst.act_apply_inr σ
               ((τ ⋈ α) ⋈* Tele.ofList υ)
-              ((ProperTele.inl (τ ⋈ α)).apply
-                ((ProperTele.inl τ).apply xτ))
+              ((ProperTele.inl (τ ⋈ α))
+                ((ProperTele.inl τ) xτ))
               args)).trans ?_
           change κ'.act (Tele.ofList υ)
               (Expr.apply
-                ((ProperTele.inr (pre ⋈* cod)).apply
-                  ((ProperTele.inl (τ ⋈ α)).apply
-                    ((ProperTele.inl τ).apply xτ)))
+                ((ProperTele.inr (pre ⋈* cod))
+                  ((ProperTele.inl (τ ⋈ α))
+                    ((ProperTele.inl τ) xτ)))
                 (fun j => σ.act (((τ ⋈ α) ⋈* Tele.ofList υ) ⋈ j.arity)
                   (args j)))
             =
             σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
               (κ.act (Tele.ofList υ)
                 (Expr.apply
-                  ((ProperTele.inr (pre ⋈* dom)).apply
-                    ((ProperTele.inl (τ ⋈ α)).apply
-                      ((ProperTele.inl τ).apply xτ)))
+                  ((ProperTele.inr (pre ⋈* dom))
+                    ((ProperTele.inl (τ ⋈ α))
+                      ((ProperTele.inl τ) xτ)))
                   args))
           rw [ProperTele.extendList_inr_inl
-            (τ ⋈ α) υ (pre ⋈* cod) ((ProperTele.inl τ).apply xτ)]
+            (τ ⋈ α) υ (pre ⋈* cod) ((ProperTele.inl τ) xτ)]
           refine (Subst.act_apply_inl_pre κ' (Tele.ofList υ)
-            ((ProperTele.inr (pre ⋈* cod)).apply xτ)
+            ((ProperTele.inr (pre ⋈* cod)) xτ)
             (fun j => σ.act (((τ ⋈ α) ⋈* Tele.ofList υ) ⋈ j.arity)
               (args j))).trans ?_
           have hκ :
               κ.act (Tele.ofList υ)
                 (Expr.apply
-                  ((ProperTele.inr (pre ⋈* dom)).apply
-                    ((ProperTele.inl (τ ⋈ α)).apply
-                      ((ProperTele.inl τ).apply xτ)))
+                  ((ProperTele.inr (pre ⋈* dom))
+                    ((ProperTele.inl (τ ⋈ α))
+                      ((ProperTele.inl τ) xτ)))
                   args)
               =
               Expr.apply
-                ((ProperTele.inl ((pre ⋈* dom ⋈* τ) ⋈* Tele.ofList ρ)).apply
-                  ((ProperTele.inl (pre ⋈* dom ⋈* τ)).apply
-                    ((ProperTele.inr (pre ⋈* dom)).apply xτ)))
+                ((ProperTele.inl ((pre ⋈* dom ⋈* τ) ⋈* Tele.ofList ρ))
+                  ((ProperTele.inl (pre ⋈* dom ⋈* τ))
+                    ((ProperTele.inr (pre ⋈* dom)) xτ)))
                 (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)) := by
             rw [ProperTele.extendList_inr_inl
-              (τ ⋈ α) υ (pre ⋈* dom) ((ProperTele.inl τ).apply xτ)]
+              (τ ⋈ α) υ (pre ⋈* dom) ((ProperTele.inl τ) xτ)]
             exact Subst.act_apply_inl_pre κ (Tele.ofList υ)
-              ((ProperTele.inr (pre ⋈* dom)).apply xτ) args
+              ((ProperTele.inr (pre ⋈* dom)) xτ) args
           refine Eq.trans ?_
             (congrArg (σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)) hκ).symm
           unfold Subst.weakenCod
           rw [← ProperTele.extendList_inr_inl τ ρ (pre ⋈* dom) xτ]
           change Expr.apply
-              ((ProperTele.inl (pre ⋈* cod ⋈* τ ⋈* Tele.ofList ρ)).apply
-                ((ProperTele.inl (pre ⋈* cod ⋈* τ)).apply
-                  ((ProperTele.inr (pre ⋈* cod)).apply xτ)))
+              ((ProperTele.inl (pre ⋈* cod ⋈* τ ⋈* Tele.ofList ρ))
+                ((ProperTele.inl (pre ⋈* cod ⋈* τ))
+                  ((ProperTele.inr (pre ⋈* cod)) xτ)))
               (fun j => κ'.act (Tele.ofList υ ⋈ j.arity)
                 (σ.act (((τ ⋈ α) ⋈* Tele.ofList υ) ⋈ j.arity) (args j)))
             =
             σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
               (Expr.apply
-                ((ProperTele.inl ((pre ⋈* dom) ⋈* (τ ⋈* Tele.ofList ρ))).apply
-                  ((ProperTele.inr (pre ⋈* dom)).apply
-                    ((ProperTele.inl τ).apply xτ)))
+                ((ProperTele.inl ((pre ⋈* dom) ⋈* (τ ⋈* Tele.ofList ρ)))
+                  ((ProperTele.inr (pre ⋈* dom))
+                    ((ProperTele.inl τ) xτ)))
                 (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)))
           rw [← ProperTele.extendList_inr_inl
             (τ ⋈* Tele.ofList ρ) υ (pre ⋈* dom)
-            ((ProperTele.inl τ).apply xτ)]
+            ((ProperTele.inl τ) xτ)]
           refine Eq.trans ?_ (Subst.act_apply_inr σ
             ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
-            ((ProperTele.inl (τ ⋈* Tele.ofList ρ)).apply
-              ((ProperTele.inl τ).apply xτ))
+            ((ProperTele.inl (τ ⋈* Tele.ofList ρ))
+              ((ProperTele.inl τ) xτ))
             (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j))).symm
           rw [← ProperTele.extendList_inr_inl τ ρ (pre ⋈* cod) xτ]
           change Expr.apply
-              ((ProperTele.inl (pre ⋈* cod ⋈* (τ ⋈* Tele.ofList ρ))).apply
-                ((ProperTele.inr (pre ⋈* cod)).apply
-                  ((ProperTele.inl τ).apply xτ)))
+              ((ProperTele.inl (pre ⋈* cod ⋈* (τ ⋈* Tele.ofList ρ)))
+                ((ProperTele.inr (pre ⋈* cod))
+                  ((ProperTele.inl τ) xτ)))
               (fun j => κ'.act (Tele.ofList υ ⋈ j.arity)
                 (σ.act (((τ ⋈ α) ⋈* Tele.ofList υ) ⋈ j.arity) (args j)))
             =
             Expr.apply
-              ((ProperTele.inr (pre ⋈* cod)).apply
-                ((ProperTele.inl (τ ⋈* Tele.ofList ρ)).apply
-                  ((ProperTele.inl τ).apply xτ)))
+              ((ProperTele.inr (pre ⋈* cod))
+                ((ProperTele.inl (τ ⋈* Tele.ofList ρ))
+                  ((ProperTele.inl τ) xτ)))
               (fun j =>
                 σ.act (((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) ⋈ j.arity)
                   (κ.act (Tele.ofList υ ⋈ j.arity) (args j)))
           rw [← ProperTele.extendList_inr_inl
             (τ ⋈* Tele.ofList ρ) υ (pre ⋈* cod)
-            ((ProperTele.inl τ).apply xτ)]
+            ((ProperTele.inl τ) xτ)]
           congr 1
           funext j
           change κ'.act (Tele.ofList (j.arity :: υ))
@@ -908,7 +908,7 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
         let η : (j : C.Binder β) →
             Expr (((pre ⋈* cod) ⋈* τ ⋈ α) ⋈* Tele.ofList υ ⋈ j.arity) :=
           fun j => σ.act (((τ ⋈ α) ⋈* Tele.ofList υ) ⋈ j.arity) (args j)
-        let ιcod : ∀ {δ : C.Arity}, (Shape.nil ⋈ α) ∋ δ →
+        let ιcod : ∀ {δ : C.Arity}, (⌊α⌋) ∋ δ →
             Expr ((pre ⋈* cod) ⋈* τ ⋈* Tele.ofList ρ ⋈ δ) :=
           fun q => match q with
           | .here i => σ.act ((τ ⋈* Tele.ofList ρ) ⋈ i.arity)
@@ -931,7 +931,7 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
               (κ.act (Tele.ofList (j.arity :: υ)) (args j))
           exact Subst.act_inst.underListAt σ ρ (j.arity :: υ) ι (args j)
         simp only [η, ιcod]
-        let ζ₀ : ∀ {δ : C.Arity}, (Shape.nil ⋈ β) ∋ δ →
+        let ζ₀ : ∀ {δ : C.Arity}, (⌊β⌋) ∋ δ →
             Expr ((pre ⋈* cod) ⋈*
               ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) ⋈ δ) :=
           fun q => match q with
@@ -939,7 +939,7 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
               κ'.act (Tele.ofList υ ⋈ j.arity)
                 (σ.act (((τ ⋈ α) ⋈* Tele.ofList υ) ⋈ j.arity)
                   (args j))
-        let ζ₁ : ∀ {δ : C.Arity}, (Shape.nil ⋈ β) ∋ δ →
+        let ζ₁ : ∀ {δ : C.Arity}, (⌊β⌋) ∋ δ →
             Expr ((pre ⋈* cod) ⋈*
               ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) ⋈ δ) :=
           fun q => match q with
@@ -947,26 +947,26 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
               σ.act (((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) ⋈ j.arity)
                 (κ.act (Tele.ofList υ ⋈ j.arity) (args j))
         have hζ :
-            (fun {δ : C.Arity} (q : (Shape.nil ⋈ β) ∋ δ) => ζ₀ q)
+            (fun {δ : C.Arity} (q : (⌊β⌋) ∋ δ) => ζ₀ q)
               =
-            (fun {δ : C.Arity} (q : (Shape.nil ⋈ β) ∋ δ) => ζ₁ q) := by
+            (fun {δ : C.Arity} (q : (⌊β⌋) ∋ δ) => ζ₁ q) := by
           funext δ q
           cases q with
           | here j =>
               exact hfill j
           | there q => nomatch q
-        change (Subst.inst (C := C) (pre := pre ⋈* cod)
-              (dom := Shape.nil ⋈ β)
+        change ⟦Subst.inst (C := C) (pre := pre ⋈* cod)
+              (dom := ⌊β⌋)
               (cod := (τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
-              ζ₀).act Shape.nil (σ z)
+              ζ₀⟧ˢ (σ z)
             =
             σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
               (κ.act (Tele.ofList υ)
                 (Expr.apply
                   (((ProperTele.inl (pre ⋈* dom)) :
                       (pre ⋈* dom) →ʳ
-                        (pre ⋈* dom) ⋈* ((τ ⋈ α) ⋈* Tele.ofList υ)).apply
-                    ((ProperTele.inr pre).apply z))
+                        (pre ⋈* dom) ⋈* ((τ ⋈ α) ⋈* Tele.ofList υ))
+                    ((ProperTele.inr pre) z))
                   args))
         rw [hζ]
         have hκ :
@@ -974,42 +974,42 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
               (Expr.apply
                 (((ProperTele.inl (pre ⋈* dom)) :
                     (pre ⋈* dom) →ʳ
-                      (pre ⋈* dom) ⋈* ((τ ⋈ α) ⋈* Tele.ofList υ)).apply
-                  ((ProperTele.inr pre).apply z))
+                      (pre ⋈* dom) ⋈* ((τ ⋈ α) ⋈* Tele.ofList υ))
+                  ((ProperTele.inr pre) z))
                 args)
             =
             Expr.apply
-              ((ProperTele.inl ((pre ⋈* dom ⋈* τ) ⋈* Tele.ofList ρ)).apply
-                ((ProperTele.inl (pre ⋈* dom ⋈* τ)).apply
-                  ((ProperTele.inl (pre ⋈* dom)).apply
-                    ((ProperTele.inr pre).apply z))))
+              ((ProperTele.inl ((pre ⋈* dom ⋈* τ) ⋈* Tele.ofList ρ))
+                ((ProperTele.inl (pre ⋈* dom ⋈* τ))
+                  ((ProperTele.inl (pre ⋈* dom))
+                    ((ProperTele.inr pre) z))))
               (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)) := by
           rw [ProperTele.extendList_inl
-            (τ ⋈ α) υ (pre ⋈* dom) ((ProperTele.inr pre).apply z)]
+            (τ ⋈ α) υ (pre ⋈* dom) ((ProperTele.inr pre) z)]
           exact Subst.act_apply_inl_pre κ (Tele.ofList υ)
-            ((ProperTele.inl (pre ⋈* dom)).apply
-              ((ProperTele.inr pre).apply z)) args
+            ((ProperTele.inl (pre ⋈* dom))
+              ((ProperTele.inr pre) z)) args
         refine Eq.trans ?_
           (congrArg (σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)) hκ).symm
         rw [← ProperTele.extendList_inl τ ρ (pre ⋈* dom)
-          ((ProperTele.inr pre).apply z)]
-        change (Subst.inst (C := C) (pre := pre ⋈* cod)
-              (dom := Shape.nil ⋈ β)
+          ((ProperTele.inr pre) z)]
+        change ⟦Subst.inst (C := C) (pre := pre ⋈* cod)
+              (dom := ⌊β⌋)
               (cod := (τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
-              (fun {δ} q => ζ₁ (δ := δ) q)).act Shape.nil (σ z)
+              (fun {δ} q => ζ₁ (δ := δ) q)⟧ˢ (σ z)
             =
             σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
               (Expr.apply
                 ((ProperTele.inl
-                    (pre ⋈* dom ⋈* (τ ⋈* Tele.ofList ρ))).apply
+                    (pre ⋈* dom ⋈* (τ ⋈* Tele.ofList ρ)))
                   (((ProperTele.inl (pre ⋈* dom)) :
                       (pre ⋈* dom) →ʳ
-                        pre ⋈* dom ⋈* (τ ⋈* Tele.ofList ρ)).apply
-                    ((ProperTele.inr pre).apply z)))
+                        pre ⋈* dom ⋈* (τ ⋈* Tele.ofList ρ))
+                    ((ProperTele.inr pre) z)))
                 (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)))
         rw [← ProperTele.extendList_inl
           (τ ⋈* Tele.ofList ρ) υ (pre ⋈* dom)
-          ((ProperTele.inr pre).apply z)]
+          ((ProperTele.inr pre) z)]
         exact (Subst.act_apply_inl_dom σ
           ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) z
           (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j))).symm
@@ -1018,10 +1018,10 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
           (Subst.act_apply_inl_pre σ
             ((τ ⋈ α) ⋈* Tele.ofList υ) z args)).trans ?_
         rw [ProperTele.extendList_inl
-          (τ ⋈ α) υ (pre ⋈* cod) ((Subst.weakenCod σ).apply z)]
+          (τ ⋈ α) υ (pre ⋈* cod) ((Subst.weakenCod σ) z)]
         refine (Subst.act_apply_inl_pre κ' (Tele.ofList υ)
-          ((ProperTele.inl (pre ⋈* cod)).apply
-            ((Subst.weakenCod σ).apply z))
+          ((ProperTele.inl (pre ⋈* cod))
+            ((Subst.weakenCod σ) z))
           (fun j => σ.act (((τ ⋈ α) ⋈* Tele.ofList υ) ⋈ j.arity)
             (args j))).trans ?_
         have hκ :
@@ -1029,55 +1029,55 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
               (Expr.apply
                 (((ProperTele.inl (pre ⋈* dom)) :
                     (pre ⋈* dom) →ʳ
-                      (pre ⋈* dom) ⋈* ((τ ⋈ α) ⋈* Tele.ofList υ)).apply
-                  ((ProperTele.inl pre).apply z))
+                      (pre ⋈* dom) ⋈* ((τ ⋈ α) ⋈* Tele.ofList υ))
+                  ((ProperTele.inl pre) z))
                 args)
             =
             Expr.apply
-              ((ProperTele.inl ((pre ⋈* dom ⋈* τ) ⋈* Tele.ofList ρ)).apply
-                ((ProperTele.inl (pre ⋈* dom ⋈* τ)).apply
-                  ((ProperTele.inl (pre ⋈* dom)).apply
-                    ((ProperTele.inl pre).apply z))))
+              ((ProperTele.inl ((pre ⋈* dom ⋈* τ) ⋈* Tele.ofList ρ))
+                ((ProperTele.inl (pre ⋈* dom ⋈* τ))
+                  ((ProperTele.inl (pre ⋈* dom))
+                    ((ProperTele.inl pre) z))))
               (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)) := by
           rw [ProperTele.extendList_inl
-            (τ ⋈ α) υ (pre ⋈* dom) ((ProperTele.inl pre).apply z)]
+            (τ ⋈ α) υ (pre ⋈* dom) ((ProperTele.inl pre) z)]
           exact Subst.act_apply_inl_pre κ (Tele.ofList υ)
-            ((ProperTele.inl (pre ⋈* dom)).apply
-              ((ProperTele.inl pre).apply z)) args
+            ((ProperTele.inl (pre ⋈* dom))
+              ((ProperTele.inl pre) z)) args
         refine Eq.trans ?_
           (congrArg (σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)) hκ).symm
         unfold Subst.weakenCod
         rw [← ProperTele.extendList_inl τ ρ (pre ⋈* cod)
-          ((ProperTele.inl pre).apply z)]
+          ((ProperTele.inl pre) z)]
         change (Expr.apply
             ((ProperTele.inl
-                (pre ⋈* cod ⋈* (τ ⋈* Tele.ofList ρ))).apply
+                (pre ⋈* cod ⋈* (τ ⋈* Tele.ofList ρ)))
               (((ProperTele.inl (pre ⋈* cod)) :
                   (pre ⋈* cod) →ʳ
-                    pre ⋈* cod ⋈* (τ ⋈* Tele.ofList ρ)).apply
-                ((ProperTele.inl pre).apply z)))
+                    pre ⋈* cod ⋈* (τ ⋈* Tele.ofList ρ))
+                ((ProperTele.inl pre) z)))
             (fun i => κ'.act (Tele.ofList υ ⋈ i.arity)
               (σ.act (((τ ⋈ α) ⋈* Tele.ofList υ) ⋈ i.arity)
                 (args i)))
           =
           σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
             (Expr.apply
-              ((ProperTele.inl (pre ⋈* dom ⋈* τ ⋈* Tele.ofList ρ)).apply
-                ((ProperTele.inl (pre ⋈* dom ⋈* τ)).apply
-                  ((ProperTele.inl (pre ⋈* dom)).apply
-                    ((ProperTele.inl pre).apply z))))
+              ((ProperTele.inl (pre ⋈* dom ⋈* τ ⋈* Tele.ofList ρ))
+                ((ProperTele.inl (pre ⋈* dom ⋈* τ))
+                  ((ProperTele.inl (pre ⋈* dom))
+                    ((ProperTele.inl pre) z))))
               (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j))))
         rw [← ProperTele.extendList_inl
           (τ ⋈* Tele.ofList ρ) υ (pre ⋈* cod)
-          ((ProperTele.inl pre).apply z)]
+          ((ProperTele.inl pre) z)]
         rw [← ProperTele.extendList_inl τ ρ (pre ⋈* dom)
-          ((ProperTele.inl pre).apply z)]
+          ((ProperTele.inl pre) z)]
         change Expr.apply
             (((ProperTele.inl (pre ⋈* cod)) :
                 (pre ⋈* cod) →ʳ
                   (pre ⋈* cod) ⋈*
-                    ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)).apply
-              ((ProperTele.inl pre).apply z))
+                    ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ))
+              ((ProperTele.inl pre) z))
             (fun i => κ'.act (Tele.ofList υ ⋈ i.arity)
               (σ.act (((τ ⋈ α) ⋈* Tele.ofList υ) ⋈ i.arity)
                 (args i)))
@@ -1085,15 +1085,15 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
           σ.act ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
             (Expr.apply
               ((ProperTele.inl
-                  (pre ⋈* dom ⋈* (τ ⋈* Tele.ofList ρ))).apply
+                  (pre ⋈* dom ⋈* (τ ⋈* Tele.ofList ρ)))
                 (((ProperTele.inl (pre ⋈* dom)) :
                     (pre ⋈* dom) →ʳ
-                      pre ⋈* dom ⋈* (τ ⋈* Tele.ofList ρ)).apply
-                  ((ProperTele.inl pre).apply z)))
+                      pre ⋈* dom ⋈* (τ ⋈* Tele.ofList ρ))
+                  ((ProperTele.inl pre) z)))
               (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)))
         rw [← ProperTele.extendList_inl
           (τ ⋈* Tele.ofList ρ) υ (pre ⋈* dom)
-          ((ProperTele.inl pre).apply z)]
+          ((ProperTele.inl pre) z)]
         refine Eq.trans ?_
           (Subst.act_apply_inl_pre σ
             ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) z
@@ -1127,22 +1127,22 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
     {pre τ : Shape C} [ProperTele τ]
     {α β : C.Arity}
     (ρ υ χ : List C.Arity)
-    (ι : ∀ {δ : C.Arity}, (Shape.nil ⋈ α) ∋ δ →
+    (ι : ∀ {δ : C.Arity}, (⌊α⌋) ∋ δ →
       Expr (pre ⋈* τ ⋈* Tele.ofList ρ ⋈ δ))
     (η : (j : C.Binder β) →
       Expr ((pre ⋈* τ ⋈ α) ⋈* Tele.ofList υ ⋈ j.arity))
     (e : Expr ((pre ⋈ β) ⋈* Tele.ofList χ)) :
     Subst.act_inst.PreLift.sequential ρ υ χ ι η e =
     Subst.act_inst.PreLift.fused ρ υ χ ι η e := by
-  let κ : Subst C (pre ⋈* τ) (Shape.nil ⋈ α) (Tele.ofList ρ) :=
-    Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+  let κ : Subst C (pre ⋈* τ) (⌊α⌋) (Tele.ofList ρ) :=
+    Subst.inst (⌊α⌋) (fun q => match q with
     | .here i => ι (ListSlotAt.here i))
-  let lam : Subst C pre (Shape.nil ⋈ β) ((τ ⋈ α) ⋈* Tele.ofList υ) :=
-    Subst.inst (Shape.nil ⋈ β) (fun q => match q with
+  let lam : Subst C pre (⌊β⌋) ((τ ⋈ α) ⋈* Tele.ofList υ) :=
+    Subst.inst (⌊β⌋) (fun q => match q with
     | .here j => η j)
-  let lam' : Subst C pre (Shape.nil ⋈ β)
+  let lam' : Subst C pre (⌊β⌋)
       ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) :=
-    Subst.inst (Shape.nil ⋈ β) (fun q => match q with
+    Subst.inst (⌊β⌋) (fun q => match q with
     | .here j => κ.act (Tele.ofList υ ⋈ j.arity) (η j))
   change κ.act ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ)
       (lam.act (Tele.ofList χ) e)
@@ -1174,26 +1174,26 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
         (Subst.act_apply_inr lam (Tele.ofList χ) xχ args)).trans ?_
       change κ.act ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ)
           (Expr.apply
-            ((ProperTele.inr ((pre ⋈* (τ ⋈ α)) ⋈* Tele.ofList υ)).apply xχ)
+            ((ProperTele.inr ((pre ⋈* (τ ⋈ α)) ⋈* Tele.ofList υ)) xχ)
             (fun j => lam.act (Tele.ofList χ ⋈ j.arity) (args j)))
         =
         lam'.act (Tele.ofList χ)
-          (Expr.apply ((ProperTele.inr (pre ⋈ β)).apply xχ) args)
+          (Expr.apply ((ProperTele.inr (pre ⋈ β)) xχ) args)
       rw [← ProperTele.extendList_inr_inr
         (Tele.ofList υ : Shape C) χ (pre ⋈* (τ ⋈ α)) xχ]
       refine (Subst.act_apply_inr κ
         ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ)
-        ((ProperTele.inr (Tele.ofList υ : Shape C)).apply xχ)
+        ((ProperTele.inr (Tele.ofList υ : Shape C)) xχ)
         (fun j => lam.act (Tele.ofList χ ⋈ j.arity) (args j))).trans ?_
       change Expr.apply
-          ((ProperTele.inr (pre ⋈* (τ ⋈* Tele.ofList ρ))).apply
-            ((ProperTele.inr (Tele.ofList υ : Shape C)).apply xχ))
+          ((ProperTele.inr (pre ⋈* (τ ⋈* Tele.ofList ρ)))
+            ((ProperTele.inr (Tele.ofList υ : Shape C)) xχ))
           (fun j =>
             κ.act (((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ) ⋈ j.arity)
               (lam.act (Tele.ofList χ ⋈ j.arity) (args j)))
         =
         lam'.act (Tele.ofList χ)
-          (Expr.apply ((ProperTele.inr (pre ⋈ β)).apply xχ) args)
+          (Expr.apply ((ProperTele.inr (pre ⋈ β)) xχ) args)
       rw [ProperTele.extendList_inr_inr
         (Tele.ofList υ : Shape C) χ (pre ⋈* (τ ⋈* Tele.ofList ρ)) xχ]
       refine Eq.trans ?_
@@ -1215,12 +1215,12 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
               (κ.act ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ))
               (Subst.act_apply_inl_dom lam (Tele.ofList χ)
                 (ListSlotAt.here j) args)).trans ?_
-            let θ : ∀ {δ : C.Arity}, (Shape.nil ⋈ j.arity) ∋ δ →
-                Expr ((pre ⋈* τ) ⋈* (Shape.nil ⋈ α) ⋈*
+            let θ : ∀ {δ : C.Arity}, (⌊j.arity⌋) ∋ δ →
+                Expr ((pre ⋈* τ) ⋈* (⌊α⌋) ⋈*
                   (Tele.ofList υ : Shape C) ⋈* Tele.ofList χ ⋈ δ) :=
               fun q => match q with
               | .here k => lam.act (Tele.ofList χ ⋈ k.arity) (args k)
-            let θ' : ∀ {δ : C.Arity}, (Shape.nil ⋈ j.arity) ∋ δ →
+            let θ' : ∀ {δ : C.Arity}, (⌊j.arity⌋) ∋ δ →
                 Expr ((pre ⋈* τ ⋈* Tele.ofList ρ) ⋈*
                   (Tele.ofList υ : Shape C) ⋈* Tele.ofList χ ⋈ δ) :=
               fun q => match q with
@@ -1238,7 +1238,7 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
                 lam'.act (Tele.ofList (k.arity :: χ)) (args k)
               exact ih_args k
             have hunder := Subst.act_inst.underListAt
-              (pre := pre ⋈* τ) (dom := Shape.nil ⋈ α)
+              (pre := pre ⋈* τ) (dom := ⌊α⌋)
               (cod := Tele.ofList ρ) (τ := (Tele.ofList υ : Shape C))
               κ χ [] (ι := θ) (e := η j)
             unfold Subst.act_inst.UnderList.actThenInst
@@ -1258,32 +1258,32 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
         rw [ProperTele.extendList_inl (τ ⋈ α) υ pre z]
         change κ.act ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ)
             (Expr.apply
-              ((ProperTele.inl ((pre ⋈* (τ ⋈ α)) ⋈* Tele.ofList υ)).apply
-                ((ProperTele.inl (pre ⋈* (τ ⋈ α))).apply
-                  ((ProperTele.inl pre).apply z)))
+              ((ProperTele.inl ((pre ⋈* (τ ⋈ α)) ⋈* Tele.ofList υ))
+                ((ProperTele.inl (pre ⋈* (τ ⋈ α)))
+                  ((ProperTele.inl pre) z)))
               (fun i => lam.act (Tele.ofList χ ⋈ i.arity) (args i)))
           =
           lam'.act (Tele.ofList χ)
             (Expr.apply
-              ((ProperTele.inl (pre ⋈ β)).apply ((ProperTele.inl pre).apply z))
+              ((ProperTele.inl (pre ⋈ β)) ((ProperTele.inl pre) z))
               args)
         rw [← ProperTele.extendList_inl
           (Tele.ofList υ : Shape C) χ (pre ⋈* (τ ⋈ α))
-          ((ProperTele.inl pre).apply z)]
+          ((ProperTele.inl pre) z)]
         change κ.act ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ)
             (Expr.apply
-              ((ProperTele.inl ((pre ⋈* τ) ⋈* (Shape.nil ⋈ α))).apply
-                ((ProperTele.inl (pre ⋈* τ)).apply
-                  ((ProperTele.inl pre).apply z)))
+              ((ProperTele.inl ((pre ⋈* τ) ⋈* (⌊α⌋)))
+                ((ProperTele.inl (pre ⋈* τ))
+                  ((ProperTele.inl pre) z)))
               (fun i => lam.act (Tele.ofList χ ⋈ i.arity) (args i)))
           =
           lam'.act (Tele.ofList χ)
             (Expr.apply
-              ((ProperTele.inl (pre ⋈ β)).apply ((ProperTele.inl pre).apply z))
+              ((ProperTele.inl (pre ⋈ β)) ((ProperTele.inl pre) z))
               args)
         rw [Subst.act_apply_inl_pre κ
           ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ)
-          ((ProperTele.inl pre).apply z)]
+          ((ProperTele.inl pre) z)]
         refine Eq.trans ?_
           (Subst.act_apply_inl_pre lam' (Tele.ofList χ) z args).symm
         congr 1
@@ -1295,23 +1295,23 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
             ((ProperTele.inl (pre ⋈* (τ ⋈* Tele.ofList ρ))) :
                 (pre ⋈* (τ ⋈* Tele.ofList ρ)) →ʳ
                   (pre ⋈* (τ ⋈* Tele.ofList ρ)) ⋈*
-                    ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ)).apply
-              ((ProperTele.inl pre).apply z)
+                    ((Tele.ofList υ : Shape C) ⋈* Tele.ofList χ))
+              ((ProperTele.inl pre) z)
             =
             ((ProperTele.inl ((pre ⋈* (τ ⋈* Tele.ofList ρ)) ⋈*
                 Tele.ofList υ)) :
                 ((pre ⋈* (τ ⋈* Tele.ofList ρ)) ⋈* Tele.ofList υ) →ʳ
                   ((pre ⋈* (τ ⋈* Tele.ofList ρ)) ⋈* Tele.ofList υ) ⋈*
-                    Tele.ofList χ).apply
+                    Tele.ofList χ)
               (((ProperTele.inl (pre ⋈* (τ ⋈* Tele.ofList ρ))) :
                   (pre ⋈* (τ ⋈* Tele.ofList ρ)) →ʳ
                     (pre ⋈* (τ ⋈* Tele.ofList ρ)) ⋈*
-                      Tele.ofList υ).apply
-                ((ProperTele.inl pre).apply z))
+                      Tele.ofList υ)
+                ((ProperTele.inl pre) z))
           rw [← ProperTele.extendList_inl
             (Tele.ofList υ : Shape C) χ
             (pre ⋈* (τ ⋈* Tele.ofList ρ))
-            ((ProperTele.inl pre).apply z)]
+            ((ProperTele.inl pre) z)]
         funext k
         change κ.act ((Tele.ofList υ : Shape C) ⋈*
               Tele.ofList (k.arity :: χ))
@@ -1337,7 +1337,7 @@ private theorem Subst.act_inst.preNaturalityLift {C : Carrier}
     {pre τ : Shape C} [ProperTele τ]
     {α β : C.Arity}
     (ρ υ : List C.Arity)
-    (ι : ∀ {δ : C.Arity}, (Shape.nil ⋈ α) ∋ δ →
+    (ι : ∀ {δ : C.Arity}, (⌊α⌋) ∋ δ →
       Expr (pre ⋈* τ ⋈* Tele.ofList ρ ⋈ δ))
     (η : (j : C.Binder β) →
       Expr ((pre ⋈* τ ⋈ α) ⋈* Tele.ofList υ ⋈ j.arity))
@@ -1353,7 +1353,7 @@ private theorem Subst.act_inst.underList {C : Carrier}
     (σ : Subst C pre dom cod)
     {α : C.Arity}
     (ρ : List C.Arity)
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (pre ⋈* dom ⋈* τ ⋈* Tele.ofList ρ ⋈ β))
     (e : Expr (pre ⋈* dom ⋈* τ ⋈ α)) :
     Subst.act_inst.UnderList.actThenInst σ ρ [] ι e =
@@ -1365,16 +1365,16 @@ private theorem Subst.act_inst.preNaturalityAt {C : Carrier}
     (σ : Subst C pre dom cod)
     {α : C.Arity}
     (ρ υ : List C.Arity)
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (pre ⋈* dom ⋈* Tele.ofList ρ ⋈ β))
     (e : Expr ((pre ⋈ α) ⋈* Tele.ofList υ)) :
     Subst.act_inst.PreNaturality.sequential σ ρ υ ι e =
     Subst.act_inst.PreNaturality.fused σ ρ υ ι e := by
-  let κ : Subst C pre (Shape.nil ⋈ α) (dom ⋈* Tele.ofList ρ) :=
-    Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+  let κ : Subst C pre (⌊α⌋) (dom ⋈* Tele.ofList ρ) :=
+    Subst.inst (⌊α⌋) (fun q => match q with
     | .here i => ι (ListSlotAt.here i))
-  let κ' : Subst C pre (Shape.nil ⋈ α) (cod ⋈* Tele.ofList ρ) :=
-    Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+  let κ' : Subst C pre (⌊α⌋) (cod ⋈* Tele.ofList ρ) :=
+    Subst.inst (⌊α⌋) (fun q => match q with
     | .here i =>
         σ.act (Tele.ofList ρ ⋈ i.arity) (ι (ListSlotAt.here i)))
   change σ.act ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ)
@@ -1383,33 +1383,33 @@ private theorem Subst.act_inst.preNaturalityAt {C : Carrier}
     κ'.act (Tele.ofList υ) e
   match e with
   | Expr.apply (α := β) head args =>
-    rcases @ProperTele.cover C ((Shape.nil ⋈ α) ⋈* Tele.ofList υ)
-        (by exact ProperTele.extendList (Shape.nil ⋈ α) υ)
+    rcases @ProperTele.cover C ((⌊α⌋) ⋈* Tele.ofList υ)
+        (by exact ProperTele.extendList (⌊α⌋) υ)
         pre β head with
       ⟨top, h_top⟩ | ⟨below, h_below⟩
     · subst h_top
       rcases @ProperTele.cover C (Tele.ofList υ)
           (by exact ProperTele.ofList υ)
-          (Shape.nil ⋈ α) β top with
+          (⌊α⌋) β top with
         ⟨xυ, h_xυ⟩ | ⟨xα, h_xα⟩
       · subst h_xυ
-        rw [ProperTele.extendList_inr_inr (Shape.nil ⋈ α) υ pre xυ]
+        rw [ProperTele.extendList_inr_inr (⌊α⌋) υ pre xυ]
         refine (congrArg (σ.act ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ))
           (Subst.act_apply_inr κ (Tele.ofList υ) xυ args)).trans ?_
         refine Eq.trans ?_ (Subst.act_apply_inr κ' (Tele.ofList υ) xυ args).symm
         change σ.act ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ)
             (Expr.apply
-              ((ProperTele.inr ((pre ⋈* dom) ⋈* Tele.ofList ρ)).apply xυ)
+              ((ProperTele.inr ((pre ⋈* dom) ⋈* Tele.ofList ρ)) xυ)
               (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)))
           =
           Expr.apply
-            ((ProperTele.inr ((pre ⋈* cod) ⋈* Tele.ofList ρ)).apply xυ)
+            ((ProperTele.inr ((pre ⋈* cod) ⋈* Tele.ofList ρ)) xυ)
             (fun j => κ'.act (Tele.ofList υ ⋈ j.arity) (args j))
         rw [← ProperTele.extendList_inr_inr
           (Tele.ofList ρ : Shape C) υ (pre ⋈* dom) xυ]
         rw [Subst.act_apply_inr σ
           ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ)
-          ((ProperTele.inr (Tele.ofList ρ : Shape C)).apply xυ)
+          ((ProperTele.inr (Tele.ofList ρ : Shape C)) xυ)
           (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j))]
         rw [ProperTele.extendList_inr_inr
           (Tele.ofList ρ : Shape C) υ (pre ⋈* cod) xυ]
@@ -1422,7 +1422,7 @@ private theorem Subst.act_inst.preNaturalityAt {C : Carrier}
         exact Subst.act_inst.preNaturalityAt σ ρ (j.arity :: υ) ι (args j)
       · subst h_xα
         rw [ProperTele.extendList_inr_inl
-          (Shape.nil ⋈ α) υ pre xα]
+          (⌊α⌋) υ pre xα]
         refine (congrArg
           (σ.act ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ))
           (Subst.act_apply_inl_dom κ (Tele.ofList υ)
@@ -1436,7 +1436,7 @@ private theorem Subst.act_inst.preNaturalityAt {C : Carrier}
           | here i => rfl
           | there z => nomatch z
         rw [hsub]
-        let ιβ : ∀ {δ : C.Arity}, (Shape.nil ⋈ β) ∋ δ →
+        let ιβ : ∀ {δ : C.Arity}, (⌊β⌋) ∋ δ →
             Expr (pre ⋈* dom ⋈* Tele.ofList ρ ⋈* Tele.ofList υ ⋈ δ) :=
           fun q => match q with
           | .here j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)
@@ -1459,7 +1459,7 @@ private theorem Subst.act_inst.preNaturalityAt {C : Carrier}
           (ι := ιβ)
           (e := κ.sub xα)).symm
     · subst h_below
-      rw [ProperTele.extendList_inl (Shape.nil ⋈ α) υ pre below]
+      rw [ProperTele.extendList_inl (⌊α⌋) υ pre below]
       refine (congrArg
         (σ.act ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ))
         (Subst.act_apply_inl_pre κ (Tele.ofList υ)
@@ -1471,17 +1471,17 @@ private theorem Subst.act_inst.preNaturalityAt {C : Carrier}
       rw [ProperTele.extendList_inl dom ρ pre below]
       change σ.act ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ)
           (Expr.apply
-            ((ProperTele.inl ((pre ⋈* dom) ⋈* Tele.ofList ρ)).apply
-              ((ProperTele.inl (pre ⋈* dom)).apply
-                ((ProperTele.inl pre).apply below)))
+            ((ProperTele.inl ((pre ⋈* dom) ⋈* Tele.ofList ρ))
+              ((ProperTele.inl (pre ⋈* dom))
+                ((ProperTele.inl pre) below)))
             (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (args j)))
         =
         Expr.apply
-          ((ProperTele.inl (pre ⋈* (cod ⋈* Tele.ofList ρ))).apply
-            ((ProperTele.inl pre).apply below))
+          ((ProperTele.inl (pre ⋈* (cod ⋈* Tele.ofList ρ)))
+            ((ProperTele.inl pre) below))
           (fun j => κ'.act (Tele.ofList υ ⋈ j.arity) (args j))
       rw [← ProperTele.extendList_inl (Tele.ofList ρ : Shape C) υ
-        (pre ⋈* dom) ((ProperTele.inl pre).apply below)]
+        (pre ⋈* dom) ((ProperTele.inl pre) below)]
       refine (Subst.act_apply_inl_pre σ
         ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ)
         below
@@ -1491,17 +1491,17 @@ private theorem Subst.act_inst.preNaturalityAt {C : Carrier}
       have hHead :
           ((ProperTele.inl (pre ⋈* cod) :
               (pre ⋈* cod) →ʳ
-                (pre ⋈* cod) ⋈* ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ)).apply
-            ((ProperTele.inl pre).apply below))
+                (pre ⋈* cod) ⋈* ((Tele.ofList ρ : Shape C) ⋈* Tele.ofList υ))
+            ((ProperTele.inl pre) below))
             =
           ((ProperTele.inl (pre ⋈* (cod ⋈* Tele.ofList ρ)) :
               (pre ⋈* (cod ⋈* Tele.ofList ρ)) →ʳ
-                (pre ⋈* (cod ⋈* Tele.ofList ρ)) ⋈* Tele.ofList υ).apply
+                (pre ⋈* (cod ⋈* Tele.ofList ρ)) ⋈* Tele.ofList υ)
             ((ProperTele.inl (pre ⋈* cod) :
-              (pre ⋈* cod) →ʳ (pre ⋈* cod) ⋈* Tele.ofList ρ).apply
-              ((ProperTele.inl pre).apply below))) := by
+              (pre ⋈* cod) →ʳ (pre ⋈* cod) ⋈* Tele.ofList ρ)
+              ((ProperTele.inl pre) below))) := by
         exact ProperTele.extendList_inl (Tele.ofList ρ : Shape C) υ
-          (pre ⋈* cod) ((ProperTele.inl pre).apply below)
+          (pre ⋈* cod) ((ProperTele.inl pre) below)
       rw [← hHead]
       congr 1
       funext j
@@ -1526,7 +1526,7 @@ private theorem Subst.act_inst.preNaturality {C : Carrier}
     (σ : Subst C pre dom cod)
     {α : C.Arity}
     (ρ : List C.Arity)
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (pre ⋈* dom ⋈* Tele.ofList ρ ⋈ β))
     (e : Expr (pre ⋈ α)) :
     Subst.act_inst.PreNaturality.sequential σ ρ [] ι e =
@@ -1537,58 +1537,58 @@ private theorem Subst.act_inst.interchange {C : Carrier}
     {pre dom cod τ : Shape C} [ProperTele dom] [ProperTele cod] [ProperTele τ]
     (σ : Subst C pre dom cod)
     {α : C.Arity}
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (pre ⋈* dom ⋈* τ ⋈ β))
     (ρ : List C.Arity)
-    (e : Expr (pre ⋈* dom ⋈* (Shape.nil ⋈ α) ⋈* Tele.ofList ρ)) :
+    (e : Expr (pre ⋈* dom ⋈* (⌊α⌋) ⋈* Tele.ofList ρ)) :
     Subst.act_inst.Interchange.actThenInst σ ι ρ e =
     Subst.act_inst.Interchange.instThenAct σ ι ρ e := by
   unfold Subst.act_inst.Interchange.actThenInst
     Subst.act_inst.Interchange.instThenAct
     Subst.act_inst.instOne
   dsimp only
-  let κ : Subst C (pre ⋈* dom) (Shape.nil ⋈ α) τ :=
-    Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+  let κ : Subst C (pre ⋈* dom) (⌊α⌋) τ :=
+    Subst.inst (⌊α⌋) (fun q => match q with
       | .here i => ι (ListSlotAt.here i))
-  let κ' : Subst C (pre ⋈* cod) (Shape.nil ⋈ α) τ :=
-    Subst.inst (Shape.nil ⋈ α) (fun q => match q with
+  let κ' : Subst C (pre ⋈* cod) (⌊α⌋) τ :=
+    Subst.inst (⌊α⌋) (fun q => match q with
       | .here i => σ.act (τ ⋈ i.arity) (ι (ListSlotAt.here i)))
   change κ'.act (Tele.ofList ρ)
-      (σ.act ((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) e)
+      (σ.act ((⌊α⌋) ⋈* Tele.ofList ρ) e)
     =
     σ.act (τ ⋈* Tele.ofList ρ)
       (κ.act (Tele.ofList ρ) e)
   match e with
   | Expr.apply (α := β) head args =>
-    rcases @ProperTele.cover C ((Shape.nil ⋈ α) ⋈* Tele.ofList ρ)
-        (by exact ProperTele.extendList (Shape.nil ⋈ α) ρ)
+    rcases @ProperTele.cover C ((⌊α⌋) ⋈* Tele.ofList ρ)
+        (by exact ProperTele.extendList (⌊α⌋) ρ)
         (pre ⋈* dom) β head with
       ⟨top, h_top⟩ | ⟨below, h_below⟩
     · subst h_top
       rcases @ProperTele.cover C (Tele.ofList ρ)
           (by exact ProperTele.ofList ρ)
-          (Shape.nil ⋈ α) β top with
+          (⌊α⌋) β top with
         ⟨xρ, h_xρ⟩ | ⟨xα, h_xα⟩
       · subst h_xρ
         refine (congrArg (κ'.act (Tele.ofList ρ))
           (@Subst.act_apply_inr C pre dom cod inferInstance inferInstance
-            σ ((Shape.nil ⋈ α) ⋈* Tele.ofList ρ)
-            (ProperTele.extendList (Shape.nil ⋈ α) ρ)
-            β ((ProperTele.inr (Shape.nil ⋈ α)).apply xρ) args)).trans ?_
-        rw [ProperTele.extendList_inr_inr (Shape.nil ⋈ α) ρ (pre ⋈* dom) xρ]
-        rw [ProperTele.extendList_inr_inr (Shape.nil ⋈ α) ρ (pre ⋈* cod) xρ]
+            σ ((⌊α⌋) ⋈* Tele.ofList ρ)
+            (ProperTele.extendList (⌊α⌋) ρ)
+            β ((ProperTele.inr (⌊α⌋)) xρ) args)).trans ?_
+        rw [ProperTele.extendList_inr_inr (⌊α⌋) ρ (pre ⋈* dom) xρ]
+        rw [ProperTele.extendList_inr_inr (⌊α⌋) ρ (pre ⋈* cod) xρ]
         refine (Subst.act_apply_inr κ' (Tele.ofList ρ) xρ
-          (fun j => σ.act (((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) ⋈ j.arity) (args j))).trans ?_
+          (fun j => σ.act (((⌊α⌋) ⋈* Tele.ofList ρ) ⋈ j.arity) (args j))).trans ?_
         rw [Subst.act_apply_inr κ (Tele.ofList ρ) xρ args]
         rw [← ProperTele.extendList_inr_inr τ ρ (pre ⋈* dom) xρ]
         refine Eq.trans ?_ (Subst.act_apply_inr σ (τ ⋈* Tele.ofList ρ)
-          ((ProperTele.inr τ).apply xρ)
+          ((ProperTele.inr τ) xρ)
           (fun j => κ.act (Tele.ofList ρ ⋈ j.arity) (args j))).symm
         rw [ProperTele.extendList_inr_inr τ ρ (pre ⋈* cod) xρ]
         congr 1
         funext j
         change κ'.act (Tele.ofList (j.arity :: ρ))
-            (σ.act ((Shape.nil ⋈ α) ⋈* Tele.ofList (j.arity :: ρ)) (args j))
+            (σ.act ((⌊α⌋) ⋈* Tele.ofList (j.arity :: ρ)) (args j))
           =
           σ.act (τ ⋈* Tele.ofList (j.arity :: ρ))
             (κ.act (Tele.ofList (j.arity :: ρ)) (args j))
@@ -1596,14 +1596,14 @@ private theorem Subst.act_inst.interchange {C : Carrier}
       · subst h_xα
         have hfillTop : ∀ (j : C.Binder β),
             κ'.act (Tele.ofList ρ ⋈ j.arity)
-                (σ.act (((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) ⋈ j.arity)
+                (σ.act (((⌊α⌋) ⋈* Tele.ofList ρ) ⋈ j.arity)
                   (args j))
               =
             σ.act ((τ ⋈* Tele.ofList ρ) ⋈ j.arity)
                 (κ.act (Tele.ofList ρ ⋈ j.arity) (args j)) := by
           intro j
           change κ'.act (Tele.ofList (j.arity :: ρ))
-              (σ.act ((Shape.nil ⋈ α) ⋈* Tele.ofList (j.arity :: ρ))
+              (σ.act ((⌊α⌋) ⋈* Tele.ofList (j.arity :: ρ))
                 (args j))
             =
             σ.act (τ ⋈* Tele.ofList (j.arity :: ρ))
@@ -1613,31 +1613,31 @@ private theorem Subst.act_inst.interchange {C : Carrier}
         | here i =>
             refine (congrArg (κ'.act (Tele.ofList ρ))
               (@Subst.act_apply_inr C pre dom cod inferInstance inferInstance
-                σ ((Shape.nil ⋈ α) ⋈* Tele.ofList ρ)
-                (ProperTele.extendList (Shape.nil ⋈ α) ρ)
-                i.arity ((ProperTele.inl (Shape.nil ⋈ α)).apply
+                σ ((⌊α⌋) ⋈* Tele.ofList ρ)
+                (ProperTele.extendList (⌊α⌋) ρ)
+                i.arity ((ProperTele.inl (⌊α⌋))
                   (ListSlotAt.here i)) args)).trans ?_
             rw [ProperTele.extendList_inr_inl
-              (Shape.nil ⋈ α) ρ (pre ⋈* cod) (ListSlotAt.here i)]
+              (⌊α⌋) ρ (pre ⋈* cod) (ListSlotAt.here i)]
             refine (Subst.act_apply_inl_dom κ' (Tele.ofList ρ)
               (ListSlotAt.here i)
-              (fun j => σ.act (((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) ⋈ j.arity)
+              (fun j => σ.act (((⌊α⌋) ⋈* Tele.ofList ρ) ⋈ j.arity)
                 (args j))).trans ?_
             rw [ProperTele.extendList_inr_inl
-              (Shape.nil ⋈ α) ρ (pre ⋈* dom) (ListSlotAt.here i)]
+              (⌊α⌋) ρ (pre ⋈* dom) (ListSlotAt.here i)]
             rw [Subst.act_apply_inl_dom κ (Tele.ofList ρ)
               (ListSlotAt.here i) args]
             rw [show κ'.sub (ListSlotAt.here i)
                   = σ.act (τ ⋈ i.arity) (ι (ListSlotAt.here i)) from rfl]
             rw [show κ.sub (ListSlotAt.here i)
                   = ι (ListSlotAt.here i) from rfl]
-            let ιβ : ∀ {δ : C.Arity}, (Shape.nil ⋈ i.arity) ∋ δ →
+            let ιβ : ∀ {δ : C.Arity}, (⌊i.arity⌋) ∋ δ →
                 Expr (pre ⋈* dom ⋈* τ ⋈* Tele.ofList ρ ⋈ δ) :=
               fun q => match q with
               | .here j => κ.act (Tele.ofList ρ ⋈ j.arity) (args j)
             have hfill : ∀ (j : C.Binder i.arity),
                 κ'.act (Tele.ofList ρ ⋈ j.arity)
-                    (σ.act (((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) ⋈ j.arity)
+                    (σ.act (((⌊α⌋) ⋈* Tele.ofList ρ) ⋈ j.arity)
                       (args j))
                   =
                 σ.act ((τ ⋈* Tele.ofList ρ) ⋈ j.arity)
@@ -1654,12 +1654,12 @@ private theorem Subst.act_inst.interchange {C : Carrier}
       · subst h_z
         refine (congrArg (κ'.act (Tele.ofList ρ))
           (Subst.act_apply_inl_dom σ
-            ((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) z args)).trans ?_
-        let ιβ : ∀ {δ : C.Arity}, (Shape.nil ⋈ β) ∋ δ →
-            Expr (pre ⋈* cod ⋈* (Shape.nil ⋈ α) ⋈* Tele.ofList ρ ⋈ δ) :=
+            ((⌊α⌋) ⋈* Tele.ofList ρ) z args)).trans ?_
+        let ιβ : ∀ {δ : C.Arity}, (⌊β⌋) ∋ δ →
+            Expr (pre ⋈* cod ⋈* (⌊α⌋) ⋈* Tele.ofList ρ ⋈ δ) :=
           fun q => match q with
           | .here j =>
-              σ.act (((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) ⋈ j.arity) (args j)
+              σ.act (((⌊α⌋) ⋈* Tele.ofList ρ) ⋈ j.arity) (args j)
         have hpre := Subst.act_inst.preNaturality κ' ρ
           (ι := ιβ) (e := σ z)
         unfold Subst.act_inst.PreNaturality.sequential
@@ -1675,7 +1675,7 @@ private theorem Subst.act_inst.interchange {C : Carrier}
                 (κ.act (Tele.ofList ρ ⋈ j.arity) (args j)) := by
           intro j
           change κ'.act (Tele.ofList (j.arity :: ρ))
-              (σ.act ((Shape.nil ⋈ α) ⋈* Tele.ofList (j.arity :: ρ))
+              (σ.act ((⌊α⌋) ⋈* Tele.ofList (j.arity :: ρ))
                 (args j))
             =
             σ.act (τ ⋈* Tele.ofList (j.arity :: ρ))
@@ -1683,40 +1683,40 @@ private theorem Subst.act_inst.interchange {C : Carrier}
           exact Subst.act_inst.interchange σ ι (j.arity :: ρ) (args j)
         simp only [hfill]
         rw [ProperTele.extendList_inl
-          (Shape.nil ⋈ α) ρ (pre ⋈* dom) ((ProperTele.inr pre).apply z)]
+          (⌊α⌋) ρ (pre ⋈* dom) ((ProperTele.inr pre) z)]
         rw [Subst.act_apply_inl_pre κ (Tele.ofList ρ)
-          ((ProperTele.inr pre).apply z) args]
+          ((ProperTele.inr pre) z) args]
         unfold Subst.weakenCod
         rw [← ProperTele.extendList_inl τ ρ (pre ⋈* dom)
-          ((ProperTele.inr pre).apply z)]
+          ((ProperTele.inr pre) z)]
         exact (Subst.act_apply_inl_dom σ (τ ⋈* Tele.ofList ρ) z
           (fun j => κ.act (Tele.ofList ρ ⋈ j.arity) (args j))).symm
       · subst h_z
         refine (congrArg (κ'.act (Tele.ofList ρ))
           (Subst.act_apply_inl_pre σ
-            ((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) z args)).trans ?_
+            ((⌊α⌋) ⋈* Tele.ofList ρ) z args)).trans ?_
         rw [ProperTele.extendList_inl
-          (Shape.nil ⋈ α) ρ (pre ⋈* cod) ((Subst.weakenCod σ).apply z)]
+          (⌊α⌋) ρ (pre ⋈* cod) ((Subst.weakenCod σ) z)]
         refine (Subst.act_apply_inl_pre κ' (Tele.ofList ρ)
-          ((Subst.weakenCod σ).apply z)
-          (fun j => σ.act (((Shape.nil ⋈ α) ⋈* Tele.ofList ρ) ⋈ j.arity)
+          ((Subst.weakenCod σ) z)
+          (fun j => σ.act (((⌊α⌋) ⋈* Tele.ofList ρ) ⋈ j.arity)
             (args j))).trans ?_
         rw [ProperTele.extendList_inl
-          (Shape.nil ⋈ α) ρ (pre ⋈* dom) ((ProperTele.inl pre).apply z)]
+          (⌊α⌋) ρ (pre ⋈* dom) ((ProperTele.inl pre) z)]
         rw [Subst.act_apply_inl_pre κ (Tele.ofList ρ)
-          ((ProperTele.inl pre).apply z) args]
+          ((ProperTele.inl pre) z) args]
         unfold Subst.weakenCod
         rw [← ProperTele.extendList_inl τ ρ (pre ⋈* dom)
-          ((ProperTele.inl pre).apply z)]
+          ((ProperTele.inl pre) z)]
         refine Eq.trans ?_ (Subst.act_apply_inl_pre σ (τ ⋈* Tele.ofList ρ) z
           (fun j => κ.act (Tele.ofList ρ ⋈ j.arity) (args j))).symm
         unfold Subst.weakenCod
         rw [← ProperTele.extendList_inl τ ρ (pre ⋈* cod)
-          ((ProperTele.inl pre).apply z)]
+          ((ProperTele.inl pre) z)]
         congr 1
         funext j
         change κ'.act (Tele.ofList (j.arity :: ρ))
-            (σ.act ((Shape.nil ⋈ α) ⋈* Tele.ofList (j.arity :: ρ)) (args j))
+            (σ.act ((⌊α⌋) ⋈* Tele.ofList (j.arity :: ρ)) (args j))
           =
           σ.act (τ ⋈* Tele.ofList (j.arity :: ρ))
             (κ.act (Tele.ofList (j.arity :: ρ)) (args j))
@@ -1734,7 +1734,7 @@ private theorem Subst.act_inst.fusion {C : Carrier} {Δ Ε τ : Shape C}
     [ProperTele Δ] [ProperTele Ε] [ProperTele τ]
     (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ε ⋈ β))
     {α : C.Arity}
-    (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β →
+    (ι : ∀ {β : C.Arity}, (⌊α⌋) ∋ β →
       Expr (Δ ⋈* τ ⋈ β))
     (e : Expr (Δ ⋈ α)) :
     Subst.act_inst.Interchange.actThenInst (τ := τ) (toSubst g) ι [] e =
@@ -1760,12 +1760,12 @@ theorem Subst.act_kcomp {C : Carrier} {Γ Δ Ξ : Shape C}
     · subst h_x
       refine (Subst.act_apply_inr (toSubst (Subst.kcomp f g)) τ x args).trans ?_
       change
-        Expr.apply ((ProperTele.inr (Shape.nil ⋈* Ξ)).apply x)
+        Expr.apply ((ProperTele.inr (Shape.nil ⋈* Ξ)) x)
           (fun j => (toSubst (Subst.kcomp f g)).act (τ ⋈ j.arity) (args j))
         =
         (toSubst g).act τ
           ((toSubst f).act τ
-            (Expr.apply ((ProperTele.inr (Shape.nil ⋈* Γ)).apply x) args))
+            (Expr.apply ((ProperTele.inr (Shape.nil ⋈* Γ)) x) args))
       rw [Subst.act_apply_inr (toSubst f) τ x args]
       rw [Subst.act_apply_inr (toSubst g) τ x
         (fun i => (toSubst f).act (τ ⋈ i.arity) (args i))]
@@ -1783,25 +1783,25 @@ theorem Subst.act_kcomp {C : Carrier} {Γ Δ Ξ : Shape C}
             ((toSubst f).act (τ ⋈ i.arity) (args i)) :=
         fun i => Subst.act_kcomp f g (τ ⋈ i.arity) (args i)
       rw [show (toSubst (Subst.kcomp f g)).sub y
-            = (toSubst g).act (Shape.nil ⋈ β) (f y) from rfl]
+            = (toSubst g).act (⌊β⌋) (f y) from rfl]
       simp only [ih_args]
       change
-        (Subst.inst (Shape.nil ⋈ β)
-          (fun {δ} (q : (Shape.nil ⋈ β) ∋ δ) => match q with
+        ⟦Subst.inst (⌊β⌋)
+          (fun {δ} (q : (⌊β⌋) ∋ δ) => match q with
           | .here i =>
             (toSubst g).act (τ ⋈ i.arity)
-              ((toSubst f).act (τ ⋈ i.arity) (args i)))).act Shape.nil
-          ((toSubst g).act (Shape.nil ⋈ β) (f y))
+              ((toSubst f).act (τ ⋈ i.arity) (args i)))⟧ˢ
+          ((toSubst g).act (⌊β⌋) (f y))
         =
         (toSubst g).act τ
           ((toSubst f).act τ
             (Expr.apply
-              ((ProperTele.inl (Shape.nil ⋈* Γ)).apply
-                ((ProperTele.inr Shape.nil).apply y)) args))
+              ((ProperTele.inl (Shape.nil ⋈* Γ))
+                ((ProperTele.inr Shape.nil) y)) args))
       rw [Subst.act_apply_inl_dom (toSubst f) τ y args]
       exact Subst.act_inst.fusion g
         (τ := τ)
-        (ι := fun {δ} (q : (Shape.nil ⋈ β) ∋ δ) => match q with
+        (ι := fun {δ} (q : (⌊β⌋) ∋ δ) => match q with
           | .here i => (toSubst f).act (τ ⋈ i.arity) (args i))
         (e := f y)
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)

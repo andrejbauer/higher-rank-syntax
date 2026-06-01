@@ -51,11 +51,11 @@ class ProperTele {C : Carrier} (S : Tele C.Arity) : Type 1 where
                     classify Γ X (inl Γ y) f g = g y
   /-- Cover: every slot is in the image of `inr` or `inl`. -/
   cover : ∀ (Γ : Shape C) {α : C.Arity} (p : Γ ⋈* S ∋ α),
-          (∃ x : S ∋ α, p = (inr Γ).apply x)
-            ∨ (∃ y : Γ ∋ α, p = (inl Γ).apply y)
+          (∃ x : S ∋ α, p = (inr Γ) x)
+            ∨ (∃ y : Γ ∋ α, p = (inl Γ) y)
   /-- The right injection at empty base is the identity renaming. -/
   inr_nil_id : ∀ {α : C.Arity} (x : S ∋ α),
-    (inr Shape.nil).apply x = x
+    (inr Shape.nil) x = x
 
 namespace ProperTele
 
@@ -72,11 +72,11 @@ instance instId {C : Carrier} : ProperTele (Tele.id : Tele C.Arity) where
 /-- Extend a `ProperTele` by one arity at the top. -/
 instance instCons {C : Carrier} (a : C.Arity) (T : Tele C.Arity) [ProperTele T] :
     ProperTele (Tele.cons a ∘ᵗ T) where
-  inl := fun Γ => ⟨fun {_} p => .there ((ProperTele.inl Γ).apply p)⟩
+  inl := fun Γ => ⟨fun {_} p => .there ((ProperTele.inl Γ) p)⟩
   inr := fun Γ => ⟨fun {_} p =>
     match p with
     | .here i  => .here i
-    | .there x => .there ((ProperTele.inr Γ).apply x)⟩
+    | .there x => .there ((ProperTele.inr Γ) x)⟩
   classify := fun Γ _α X p f g =>
     match p with
     | .here i   => f (.here i)
@@ -97,16 +97,16 @@ instance instCons {C : Carrier} (a : C.Arity) (T : Tele C.Arity) [ProperTele T] 
     | there p' =>
       rcases ProperTele.cover Γ p' with ⟨x, h⟩ | ⟨y, h⟩
       · refine Or.inl ⟨ListSlotAt.there x, ?_⟩
-        show ListSlotAt.there p' = ListSlotAt.there ((ProperTele.inr Γ).apply x)
+        show ListSlotAt.there p' = ListSlotAt.there ((ProperTele.inr Γ) x)
         congr 1
       · refine Or.inr ⟨y, ?_⟩
-        show ListSlotAt.there p' = ListSlotAt.there ((ProperTele.inl Γ).apply y)
+        show ListSlotAt.there p' = ListSlotAt.there ((ProperTele.inl Γ) y)
         congr 1
   inr_nil_id := fun x => by
     cases x with
     | here _i => rfl
     | there x' =>
-      show ListSlotAt.there ((ProperTele.inr Shape.nil).apply x') = .there x'
+      show ListSlotAt.there ((ProperTele.inr Shape.nil) x') = .there x'
       rw [ProperTele.inr_nil_id x']
 
 /-- A singleton telescope.  Definitionally the same shape as
@@ -155,10 +155,10 @@ composite. -/
 theorem extendList_inr_inr {C : Carrier} (S : Shape C) [ProperTele S]
     (ρ : List C.Arity) (Γ : Shape C)
     {α : C.Arity} (x : Tele.ofList ρ ∋ α) :
-    (ProperTele.inr Γ : S ⋈* Tele.ofList ρ →ʳ Γ ⋈* (S ⋈* Tele.ofList ρ)).apply
-      ((ProperTele.inr S : Tele.ofList ρ →ʳ S ⋈* Tele.ofList ρ).apply x)
+    (ProperTele.inr Γ : S ⋈* Tele.ofList ρ →ʳ Γ ⋈* (S ⋈* Tele.ofList ρ))
+      ((ProperTele.inr S : Tele.ofList ρ →ʳ S ⋈* Tele.ofList ρ) x)
       =
-    (ProperTele.inr (Γ ⋈* S) : Tele.ofList ρ →ʳ Γ ⋈* S ⋈* Tele.ofList ρ).apply x := by
+    (ProperTele.inr (Γ ⋈* S) : Tele.ofList ρ →ʳ Γ ⋈* S ⋈* Tele.ofList ρ) x := by
   induction ρ with
   | nil => exact nomatch x
   | cons β rest ih =>
@@ -168,13 +168,13 @@ theorem extendList_inr_inr {C : Carrier} (S : Shape C) [ProperTele S]
           change
             ListSlotAt.there
               ((ProperTele.inr Γ : S ⋈* Tele.ofList rest →ʳ
-                Γ ⋈* (S ⋈* Tele.ofList rest)).apply
+                Γ ⋈* (S ⋈* Tele.ofList rest))
                 ((ProperTele.inr S : Tele.ofList rest →ʳ
-                  S ⋈* Tele.ofList rest).apply x'))
+                  S ⋈* Tele.ofList rest) x'))
             =
             ListSlotAt.there
               ((ProperTele.inr (Γ ⋈* S) : Tele.ofList rest →ʳ
-                Γ ⋈* S ⋈* Tele.ofList rest).apply x')
+                Γ ⋈* S ⋈* Tele.ofList rest) x')
           congr 1
           exact ih x'
 
@@ -184,26 +184,26 @@ the list. -/
 theorem extendList_inr_inl {C : Carrier} (S : Shape C) [ProperTele S]
     (ρ : List C.Arity) (Γ : Shape C)
     {α : C.Arity} (x : S ∋ α) :
-    (ProperTele.inr Γ : S ⋈* Tele.ofList ρ →ʳ Γ ⋈* (S ⋈* Tele.ofList ρ)).apply
-      ((ProperTele.inl S : S →ʳ S ⋈* Tele.ofList ρ).apply x)
+    (ProperTele.inr Γ : S ⋈* Tele.ofList ρ →ʳ Γ ⋈* (S ⋈* Tele.ofList ρ))
+      ((ProperTele.inl S : S →ʳ S ⋈* Tele.ofList ρ) x)
       =
-    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* Tele.ofList ρ).apply
-      ((ProperTele.inr Γ : S →ʳ Γ ⋈* S).apply x) := by
+    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* Tele.ofList ρ)
+      ((ProperTele.inr Γ : S →ʳ Γ ⋈* S) x) := by
   induction ρ with
   | nil =>
-      change (ProperTele.inr Γ).apply x = (ProperTele.inr Γ).apply x
+      change (ProperTele.inr Γ) x = (ProperTele.inr Γ) x
       rfl
   | cons β rest ih =>
       change
         ListSlotAt.there
           ((ProperTele.inr Γ : S ⋈* Tele.ofList rest →ʳ
-            Γ ⋈* (S ⋈* Tele.ofList rest)).apply
-            ((ProperTele.inl S : S →ʳ S ⋈* Tele.ofList rest).apply x))
+            Γ ⋈* (S ⋈* Tele.ofList rest))
+            ((ProperTele.inl S : S →ʳ S ⋈* Tele.ofList rest) x))
         =
         ListSlotAt.there
           ((ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ
-            Γ ⋈* S ⋈* Tele.ofList rest).apply
-            ((ProperTele.inr Γ : S →ʳ Γ ⋈* S).apply x))
+            Γ ⋈* S ⋈* Tele.ofList rest)
+            ((ProperTele.inr Γ : S →ʳ Γ ⋈* S) x))
       congr 1
 
 /-- Weakening through a concrete list extension is the iterated weakening
@@ -211,21 +211,21 @@ through that list. -/
 theorem extendList_inl {C : Carrier} (S : Shape C) [ProperTele S]
     (ρ : List C.Arity) (Γ : Shape C)
     {α : C.Arity} (x : Γ ∋ α) :
-    (ProperTele.inl Γ : Γ →ʳ Γ ⋈* (S ⋈* Tele.ofList ρ)).apply x
+    (ProperTele.inl Γ : Γ →ʳ Γ ⋈* (S ⋈* Tele.ofList ρ)) x
       =
-    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* Tele.ofList ρ).apply
-      ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* S).apply x) := by
+    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* Tele.ofList ρ)
+      ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* S) x) := by
   induction ρ with
   | nil => rfl
   | cons β rest ih =>
       change
         ListSlotAt.there
-          ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* (S ⋈* Tele.ofList rest)).apply x)
+          ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* (S ⋈* Tele.ofList rest)) x)
         =
         ListSlotAt.there
           ((ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ
-            Γ ⋈* S ⋈* Tele.ofList rest).apply
-            ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* S).apply x))
+            Γ ⋈* S ⋈* Tele.ofList rest)
+            ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* S) x))
       congr 1
 
 /-- Compose two proper telescopes, keeping the structural operations coherent
@@ -240,14 +240,14 @@ def compose {C : Carrier} (S T : Shape C) [ProperTele S] [ProperTele T] :
       (ProperTele.inl Γ : Γ →ʳ Γ ⋈* S)
   inr := fun Γ => ⟨fun {_} p =>
     ProperTele.classify S _ p
-      (fun t => (ProperTele.inr (Γ ⋈* S)).apply t)
-      (fun s => (ProperTele.inl (Γ ⋈* S)).apply
-        ((ProperTele.inr Γ).apply s))⟩
+      (fun t => (ProperTele.inr (Γ ⋈* S)) t)
+      (fun s => (ProperTele.inl (Γ ⋈* S))
+        ((ProperTele.inr Γ) s))⟩
   classify := fun Γ _α X p f g =>
     ProperTele.classify (Γ ⋈* S) X p
-      (fun t => f ((ProperTele.inr S).apply t))
+      (fun t => f ((ProperTele.inr S) t))
       (fun q => ProperTele.classify Γ X q
-        (fun s => f ((ProperTele.inl S).apply s))
+        (fun s => f ((ProperTele.inl S) s))
         g)
   classify_inr := fun Γ X _α x f g => by
     rcases ProperTele.cover S x with ⟨t, h_t⟩ | ⟨s, h_s⟩
@@ -256,13 +256,13 @@ def compose {C : Carrier} (S T : Shape C) [ProperTele S] [ProperTele T] :
           ({
             apply := fun {x} p =>
               ProperTele.classify S (Γ ⋈* (S ⋈* T) ∋ x) p
-                (fun t => (ProperTele.inr (Γ ⋈* S)).apply t)
-                (fun s => (ProperTele.inl (Γ ⋈* S)).apply
-                  ((ProperTele.inr Γ).apply s))
-          } : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
-            ((ProperTele.inr S).apply t)
+                (fun t => (ProperTele.inr (Γ ⋈* S)) t)
+                (fun s => (ProperTele.inl (Γ ⋈* S))
+                  ((ProperTele.inr Γ) s))
+          } : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T))
+            ((ProperTele.inr S) t)
           =
-          (ProperTele.inr (Γ ⋈* S)).apply t :=
+          (ProperTele.inr (Γ ⋈* S)) t :=
         ProperTele.classify_inr S _ t _ _
       rw [h_embed]
       rw [ProperTele.classify_inr (Γ ⋈* S)]
@@ -271,13 +271,13 @@ def compose {C : Carrier} (S T : Shape C) [ProperTele S] [ProperTele T] :
           ({
             apply := fun {x} p =>
               ProperTele.classify S (Γ ⋈* (S ⋈* T) ∋ x) p
-                (fun t => (ProperTele.inr (Γ ⋈* S)).apply t)
-                (fun s => (ProperTele.inl (Γ ⋈* S)).apply
-                  ((ProperTele.inr Γ).apply s))
-          } : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
-            ((ProperTele.inl S).apply s)
+                (fun t => (ProperTele.inr (Γ ⋈* S)) t)
+                (fun s => (ProperTele.inl (Γ ⋈* S))
+                  ((ProperTele.inr Γ) s))
+          } : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T))
+            ((ProperTele.inl S) s)
           =
-          (ProperTele.inl (Γ ⋈* S)).apply ((ProperTele.inr Γ).apply s) :=
+          (ProperTele.inl (Γ ⋈* S)) ((ProperTele.inr Γ) s) :=
         ProperTele.classify_inl S _ s _ _
       rw [h_weaken]
       rw [ProperTele.classify_inl (Γ ⋈* S)]
@@ -285,46 +285,46 @@ def compose {C : Carrier} (S T : Shape C) [ProperTele S] [ProperTele T] :
   classify_inl := fun Γ X _α y f g => by
     change
       ProperTele.classify (Γ ⋈* S) X
-        ((ProperTele.inl (Γ ⋈* S)).apply ((ProperTele.inl Γ).apply y))
-        (fun t => f ((ProperTele.inr S).apply t))
+        ((ProperTele.inl (Γ ⋈* S)) ((ProperTele.inl Γ) y))
+        (fun t => f ((ProperTele.inr S) t))
         (fun q => ProperTele.classify Γ X q
-          (fun s => f ((ProperTele.inl S).apply s)) g)
+          (fun s => f ((ProperTele.inl S) s)) g)
       =
       g y
     rw [ProperTele.classify_inl (Γ ⋈* S)]
     rw [ProperTele.classify_inl Γ]
   cover := fun Γ _α p => by
     rcases ProperTele.cover (Γ ⋈* S) p with ⟨t, h_t⟩ | ⟨q, h_q⟩
-    · refine Or.inl ⟨(ProperTele.inr S).apply t, ?_⟩
+    · refine Or.inl ⟨(ProperTele.inr S) t, ?_⟩
       subst h_t
       have h_embed :
           ({
             apply := fun {x} p =>
               ProperTele.classify S (Γ ⋈* (S ⋈* T) ∋ x) p
-                (fun t => (ProperTele.inr (Γ ⋈* S)).apply t)
-                (fun s => (ProperTele.inl (Γ ⋈* S)).apply
-                  ((ProperTele.inr Γ).apply s))
-          } : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
-            ((ProperTele.inr S).apply t)
+                (fun t => (ProperTele.inr (Γ ⋈* S)) t)
+                (fun s => (ProperTele.inl (Γ ⋈* S))
+                  ((ProperTele.inr Γ) s))
+          } : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T))
+            ((ProperTele.inr S) t)
           =
-          (ProperTele.inr (Γ ⋈* S)).apply t :=
+          (ProperTele.inr (Γ ⋈* S)) t :=
         ProperTele.classify_inr S _ t _ _
       exact h_embed.symm
     · subst h_q
       rcases ProperTele.cover Γ q with ⟨s, h_s⟩ | ⟨y, h_y⟩
-      · refine Or.inl ⟨(ProperTele.inl S).apply s, ?_⟩
+      · refine Or.inl ⟨(ProperTele.inl S) s, ?_⟩
         subst h_s
         have h_weaken :
             ({
               apply := fun {x} p =>
                 ProperTele.classify S (Γ ⋈* (S ⋈* T) ∋ x) p
-                  (fun t => (ProperTele.inr (Γ ⋈* S)).apply t)
-                  (fun s => (ProperTele.inl (Γ ⋈* S)).apply
-                    ((ProperTele.inr Γ).apply s))
-            } : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
-              ((ProperTele.inl S).apply s)
+                  (fun t => (ProperTele.inr (Γ ⋈* S)) t)
+                  (fun s => (ProperTele.inl (Γ ⋈* S))
+                    ((ProperTele.inr Γ) s))
+            } : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T))
+              ((ProperTele.inl S) s)
             =
-            (ProperTele.inl (Γ ⋈* S)).apply ((ProperTele.inr Γ).apply s) :=
+            (ProperTele.inl (Γ ⋈* S)) ((ProperTele.inr Γ) s) :=
           ProperTele.classify_inl S _ s _ _
         exact h_weaken.symm
       · refine Or.inr ⟨y, ?_⟩
@@ -337,13 +337,13 @@ def compose {C : Carrier} (S T : Shape C) [ProperTele S] [ProperTele T] :
           ({
             apply := fun {x} p =>
               ProperTele.classify S (Shape.nil ⋈* (S ⋈* T) ∋ x) p
-                (fun t => (ProperTele.inr (Shape.nil ⋈* S)).apply t)
-                (fun s => (ProperTele.inl (Shape.nil ⋈* S)).apply
-                  ((ProperTele.inr Shape.nil).apply s))
-          } : (S ⋈* T) →ʳ Shape.nil ⋈* (S ⋈* T)).apply
-            ((ProperTele.inr S).apply t)
+                (fun t => (ProperTele.inr (Shape.nil ⋈* S)) t)
+                (fun s => (ProperTele.inl (Shape.nil ⋈* S))
+                  ((ProperTele.inr Shape.nil) s))
+          } : (S ⋈* T) →ʳ Shape.nil ⋈* (S ⋈* T))
+            ((ProperTele.inr S) t)
           =
-          (ProperTele.inr (Shape.nil ⋈* S)).apply t :=
+          (ProperTele.inr (Shape.nil ⋈* S)) t :=
         ProperTele.classify_inr S _ t _ _
       exact h_embed
     · subst h_s
@@ -351,18 +351,18 @@ def compose {C : Carrier} (S T : Shape C) [ProperTele S] [ProperTele T] :
           ({
             apply := fun {x} p =>
               ProperTele.classify S (Shape.nil ⋈* (S ⋈* T) ∋ x) p
-                (fun t => (ProperTele.inr (Shape.nil ⋈* S)).apply t)
-                (fun s => (ProperTele.inl (Shape.nil ⋈* S)).apply
-                  ((ProperTele.inr Shape.nil).apply s))
-          } : (S ⋈* T) →ʳ Shape.nil ⋈* (S ⋈* T)).apply
-            ((ProperTele.inl S).apply s)
+                (fun t => (ProperTele.inr (Shape.nil ⋈* S)) t)
+                (fun s => (ProperTele.inl (Shape.nil ⋈* S))
+                  ((ProperTele.inr Shape.nil) s))
+          } : (S ⋈* T) →ʳ Shape.nil ⋈* (S ⋈* T))
+            ((ProperTele.inl S) s)
           =
-          (ProperTele.inl (Shape.nil ⋈* S)).apply
-            ((ProperTele.inr Shape.nil).apply s) :=
+          (ProperTele.inl (Shape.nil ⋈* S))
+            ((ProperTele.inr Shape.nil) s) :=
         ProperTele.classify_inl S _ s _ _
       rw [h_weaken]
       rw [ProperTele.inr_nil_id s]
-      change (ProperTele.inl S).apply s = (ProperTele.inl S).apply s
+      change (ProperTele.inl S) s = (ProperTele.inl S) s
       rfl
 
 /-- In the composed `ProperTele`, the right injection of a `T`-slot factors
@@ -371,10 +371,10 @@ theorem compose_inr_inr {C : Carrier} (S T : Shape C)
     [ProperTele S] [ProperTele T] (Γ : Shape C)
     {α : C.Arity} (x : T ∋ α) :
     letI : ProperTele (S ⋈* T) := ProperTele.compose S T
-    (ProperTele.inr Γ : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
-      ((ProperTele.inr S : T →ʳ S ⋈* T).apply x)
+    (ProperTele.inr Γ : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T))
+      ((ProperTele.inr S : T →ʳ S ⋈* T) x)
       =
-    (ProperTele.inr (Γ ⋈* S) : T →ʳ Γ ⋈* S ⋈* T).apply x := by
+    (ProperTele.inr (Γ ⋈* S) : T →ʳ Γ ⋈* S ⋈* T) x := by
   exact ProperTele.classify_inr S _ x _ _
 
 /-- In the composed `ProperTele`, the right injection of an `inl_S`-slot is
@@ -383,11 +383,11 @@ theorem compose_inr_inl {C : Carrier} (S T : Shape C)
     [ProperTele S] [ProperTele T] (Γ : Shape C)
     {α : C.Arity} (x : S ∋ α) :
     letI : ProperTele (S ⋈* T) := ProperTele.compose S T
-    (ProperTele.inr Γ : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T)).apply
-      ((ProperTele.inl S : S →ʳ S ⋈* T).apply x)
+    (ProperTele.inr Γ : (S ⋈* T) →ʳ Γ ⋈* (S ⋈* T))
+      ((ProperTele.inl S : S →ʳ S ⋈* T) x)
       =
-    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* T).apply
-      ((ProperTele.inr Γ : S →ʳ Γ ⋈* S).apply x) := by
+    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* T)
+      ((ProperTele.inr Γ : S →ʳ Γ ⋈* S) x) := by
   exact ProperTele.classify_inl S _ x _ _
 
 /-- Weakening (`inl`) through the composed `ProperTele` is the two-stage
@@ -396,10 +396,10 @@ theorem compose_inl {C : Carrier} (S T : Shape C)
     [ProperTele S] [ProperTele T] (Γ : Shape C)
     {α : C.Arity} (x : Γ ∋ α) :
     letI : ProperTele (S ⋈* T) := ProperTele.compose S T
-    (ProperTele.inl Γ : Γ →ʳ Γ ⋈* (S ⋈* T)).apply x
+    (ProperTele.inl Γ : Γ →ʳ Γ ⋈* (S ⋈* T)) x
       =
-    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* T).apply
-      ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* S).apply x) := by
+    (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* T)
+      ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* S) x) := by
   rfl
 
 end ProperTele

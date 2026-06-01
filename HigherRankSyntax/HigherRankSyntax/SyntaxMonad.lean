@@ -17,7 +17,7 @@ lemmas without manually threading instance args.
 
 With cons-style telescopes, the Kleisli ↔ Subst bridge is cast-free:
 `Shape.nil ⋈* X = X` definitionally, so `lift f` is just
-`(toSubst f).act (Shape.nil ⋈ α)`.
+`(toSubst f).act (⌊α⌋)`.
 -/
 
 
@@ -79,11 +79,11 @@ def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
   map := (T C).obj
   η Γ := fun _ p => Expr.η p
   lift {Γ Δ} f := fun α e =>
-    (toSubst (fun {β} p => f β p)).act (Shape.nil ⋈ α) e
+    (toSubst (fun {β} p => f β p)).act (⌊α⌋) e
   unit_right := by
     intro Γ
     funext α e
-    exact Subst.act_id Γ.tele (Shape.nil ⋈ α) e
+    exact Subst.act_id Γ.tele (⌊α⌋) e
   unit_left := by
     intro Γ Δ f
     funext α p
@@ -91,4 +91,4 @@ def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
   comp_lift := by
     intro Γ Δ Ξ f g
     funext α e
-    exact Subst.act_kcomp (fun {β} p => f β p) (fun {β} q => g β q) (Shape.nil ⋈ α) e
+    exact Subst.act_kcomp (fun {β} p => f β p) (fun {β} q => g β q) (⌊α⌋) e
