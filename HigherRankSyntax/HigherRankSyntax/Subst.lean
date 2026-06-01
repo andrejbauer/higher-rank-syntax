@@ -149,10 +149,10 @@ def Subst.act {C : Carrier} : {pre dom cod : Shape C} →
     (σ : Subst C pre dom cod) →
     (τ : Shape C) → [ProperTele τ] →
     Expr (pre ⋈* dom ⋈* τ) → Expr (pre ⋈* cod ⋈* τ)
-  | pre, dom, cod, _, _, σ, τ, _, .apply (α := α) p args =>
+  | pre, dom, cod, _, _, σ, τ, _, .ap (α := α) p args =>
       ProperTele.classify (pre ⋈* dom) (Expr (pre ⋈* cod ⋈* τ)) p
         (fun x =>
-          Expr.apply (ProperTele.inr (pre ⋈* cod) x)
+          .ap (ProperTele.inr (pre ⋈* cod) x)
             (fun i => σ.act (τ ⋈ i.arity) (args i)))
         (fun y =>
           match σ.classifyDom y with
@@ -160,7 +160,7 @@ def Subst.act {C : Carrier} : {pre dom cod : Shape C} →
               (Subst.inst (⌊α⌋) (fun q => match q with
                 | .here i => σ.act (τ ⋈ i.arity) (args i))).act Shape.nil (σ z)
           | PreOrDom.pre z =>
-              Expr.apply
+              .ap
                 (ProperTele.inl (pre ⋈* cod)
                   ((Subst.weakenCod σ) z))
                 (fun i => σ.act (τ ⋈ i.arity) (args i)))
