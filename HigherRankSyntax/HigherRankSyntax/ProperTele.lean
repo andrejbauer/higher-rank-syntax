@@ -93,10 +93,10 @@ instance instCons {C : Carrier} (a : C.Arity) (T : Tele C.Arity) [ProperTele T] 
             (fun z => f (.there z)) g
   cover := fun Γ _α p => by
     cases p with
-    | here i  => exact Or.inl ⟨ListSlotAt.here i, rfl⟩
+    | here i  => exact Or.inl ⟨.here i, rfl⟩
     | there p' =>
       rcases ProperTele.cover Γ p' with ⟨x, h⟩ | ⟨y, h⟩
-      · refine Or.inl ⟨ListSlotAt.there x, ?_⟩
+      · refine Or.inl ⟨.there x, ?_⟩
         show ListSlotAt.there p' = ListSlotAt.there ((ProperTele.inr Γ) x)
         congr 1
       · refine Or.inr ⟨y, ?_⟩
