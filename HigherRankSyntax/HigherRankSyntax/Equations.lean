@@ -167,75 +167,10 @@ private theorem Subst.act_inst.idOf {C : Carrier} (α : C.Arity) (Δ : Shape C)
 termination_by τ _ e => (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg head argFam _
 
-/-- The β-for-η property and the identity-instantiation property, proved
-together by well-founded recursion on arities; projected as `act_inst.η`
-and `act_inst.id`. -/
-private theorem Subst.act_inst {C : Carrier} (α : C.Arity) :
-    (∀ {pre cod : Shape C} [ProperTele cod]
-      (ι : ∀ {β : C.Arity}, (Shape.nil ⋈ α) ∋ β → Expr (pre ⋈* cod ⋈ β))
-      (p : pre ∋ α),
-      (Subst.inst (Shape.nil ⋈ α) ι).act Shape.nil (Expr.η p)
-        = Expr.apply ((ProperTele.inl pre).apply p) (fun i => ι (ListSlotAt.here i)))
-    ∧ (∀ (Δ τ : Shape C) [ProperTele τ] (e : Expr ((Δ ⋈ α) ⋈* τ)),
-      (Subst.instId Δ α).act τ e = e) := by
-  refine ⟨?eta_pre, ?inst_id⟩
-  · intro pre cod _ ι p
-    rw [Expr.η.eq_1]
-    change (Subst.inst (Shape.nil ⋈ α) ι).act Shape.nil
-        (Expr.apply ((ProperTele.inl (pre ⋈* (Shape.nil ⋈ α))).apply
-          ((ProperTele.inl pre).apply p)) (fun i => Expr.η (ListSlotAt.here i))) = _
-    rw [Subst.act_apply_inl_pre]
-    change
-      Expr.apply ((Subst.inst (Shape.nil ⋈ α) ι).weakenCod.apply p)
-        (fun i => (Subst.inst (Shape.nil ⋈ α) ι).act
-          (Shape.nil ⋈ i.arity) (Expr.η (ListSlotAt.here i)))
-      =
-      Expr.apply ((ProperTele.inl pre).apply p)
-        (fun i => ι (ListSlotAt.here i))
-    change
-      Expr.apply ((ProperTele.inl pre).apply p)
-        (fun i => (Subst.inst (Shape.nil ⋈ α) ι).act
-          (Shape.nil ⋈ i.arity) (Expr.η (ListSlotAt.here i)))
-      =
-      Expr.apply ((ProperTele.inl pre).apply p)
-        (fun i => ι (ListSlotAt.here i))
-    congr
-    funext i
-    rw [Expr.η.eq_1]
-    change (Subst.inst (Shape.nil ⋈ α) ι).act (Shape.nil ⋈ i.arity)
-        (Expr.apply ((ProperTele.inl (pre ⋈* (Shape.nil ⋈ α))).apply
-          ((ProperTele.inr pre).apply (ListSlotAt.here i)))
-          (fun k =>
-            @Expr.η C
-              ((pre ⋈* (Shape.nil ⋈ α)) ⋈* (Shape.nil ⋈ i.arity))
-              k.arity (ListSlotAt.here k))) = _
-    rw [Subst.act_apply_inl_dom]
-    rw [show (Subst.inst (Shape.nil ⋈ α) ι).sub (ListSlotAt.here i)
-          = ι (ListSlotAt.here i) from rfl]
-    have hfill : ∀ (k : C.Binder i.arity),
-        (Subst.inst (Shape.nil ⋈ α) ι).act
-          ((Shape.nil ⋈ i.arity) ⋈ k.arity)
-            (@Expr.η C
-              ((pre ⋈* (Shape.nil ⋈ α)) ⋈* (Shape.nil ⋈ i.arity))
-              k.arity (ListSlotAt.here k))
-        =
-          @Expr.η C
-            ((pre ⋈* cod) ⋈* (Shape.nil ⋈ i.arity))
-            k.arity (ListSlotAt.here k) := by
-      intro k
-      exact Subst.act_η_inr (Subst.inst (Shape.nil ⋈ α) ι)
-        (Shape.nil ⋈ i.arity) (x := ListSlotAt.here k)
-    simp only [hfill]
-    change (Subst.instId (pre ⋈* cod) i.arity).act Shape.nil
-      (ι (ListSlotAt.here i)) = ι (ListSlotAt.here i)
-    exact (Subst.act_inst i.arity).2 (pre ⋈* cod) Shape.nil
-      (ι (ListSlotAt.here i))
-  · intro Δ τ _ e
-    exact Subst.act_inst.idOf α Δ
-      (fun i => (Subst.act_inst i.arity).1) τ e
-termination_by α
-decreasing_by
-  all_goals exact ⟨i, rfl⟩
+-- β-for-η and identity-act, proved together by well-founded recursion on
+-- arities: β-for-η at α invokes identity-act at i.arity ≺ α, and identity-act
+-- at α invokes β-for-η at i.arity ≺ α (via `idOf`'s hypothesis).
+mutual
 
 /-- β-for-η for a one-binder instantiation: instantiating the η-expansion
 of a pre-slot exposes the kit. -/
@@ -247,14 +182,70 @@ theorem Subst.act_inst.η {C : Carrier} {pre cod : Shape C} [ProperTele cod]
     (Subst.inst (Shape.nil ⋈ α) ι).act Shape.nil (Expr.η p)
       =
     Expr.apply ((ProperTele.inl pre).apply p)
-      (fun i => ι (ListSlotAt.here i)) :=
-  (Subst.act_inst α).1 ι p
+      (fun i => ι (ListSlotAt.here i)) := by
+  rw [Expr.η.eq_1]
+  change (Subst.inst (Shape.nil ⋈ α) ι).act Shape.nil
+      (Expr.apply ((ProperTele.inl (pre ⋈* (Shape.nil ⋈ α))).apply
+        ((ProperTele.inl pre).apply p)) (fun i => Expr.η (ListSlotAt.here i))) = _
+  rw [Subst.act_apply_inl_pre]
+  change
+    Expr.apply ((Subst.inst (Shape.nil ⋈ α) ι).weakenCod.apply p)
+      (fun i => (Subst.inst (Shape.nil ⋈ α) ι).act
+        (Shape.nil ⋈ i.arity) (Expr.η (ListSlotAt.here i)))
+    =
+    Expr.apply ((ProperTele.inl pre).apply p)
+      (fun i => ι (ListSlotAt.here i))
+  change
+    Expr.apply ((ProperTele.inl pre).apply p)
+      (fun i => (Subst.inst (Shape.nil ⋈ α) ι).act
+        (Shape.nil ⋈ i.arity) (Expr.η (ListSlotAt.here i)))
+    =
+    Expr.apply ((ProperTele.inl pre).apply p)
+      (fun i => ι (ListSlotAt.here i))
+  congr
+  funext i
+  rw [Expr.η.eq_1]
+  change (Subst.inst (Shape.nil ⋈ α) ι).act (Shape.nil ⋈ i.arity)
+      (Expr.apply ((ProperTele.inl (pre ⋈* (Shape.nil ⋈ α))).apply
+        ((ProperTele.inr pre).apply (ListSlotAt.here i)))
+        (fun k =>
+          @Expr.η C
+            ((pre ⋈* (Shape.nil ⋈ α)) ⋈* (Shape.nil ⋈ i.arity))
+            k.arity (ListSlotAt.here k))) = _
+  rw [Subst.act_apply_inl_dom]
+  rw [show (Subst.inst (Shape.nil ⋈ α) ι).sub (ListSlotAt.here i)
+        = ι (ListSlotAt.here i) from rfl]
+  have hfill : ∀ (k : C.Binder i.arity),
+      (Subst.inst (Shape.nil ⋈ α) ι).act
+        ((Shape.nil ⋈ i.arity) ⋈ k.arity)
+          (@Expr.η C
+            ((pre ⋈* (Shape.nil ⋈ α)) ⋈* (Shape.nil ⋈ i.arity))
+            k.arity (ListSlotAt.here k))
+      =
+        @Expr.η C
+          ((pre ⋈* cod) ⋈* (Shape.nil ⋈ i.arity))
+          k.arity (ListSlotAt.here k) := by
+    intro k
+    exact Subst.act_η_inr (Subst.inst (Shape.nil ⋈ α) ι)
+      (Shape.nil ⋈ i.arity) (x := ListSlotAt.here k)
+  simp only [hfill]
+  change (Subst.instId (pre ⋈* cod) i.arity).act Shape.nil
+    (ι (ListSlotAt.here i)) = ι (ListSlotAt.here i)
+  exact Subst.act_inst.id i.arity (pre ⋈* cod) Shape.nil
+    (ι (ListSlotAt.here i))
+termination_by α
+decreasing_by exact ⟨i, rfl⟩
 
 /-- Identity instantiation acts as the identity. -/
 theorem Subst.act_inst.id {C : Carrier} (α : C.Arity) (Δ : Shape C) :
     ∀ (τ : Shape C) [ProperTele τ] (e : Expr ((Δ ⋈ α) ⋈* τ)),
       (Subst.instId Δ α).act τ e = e :=
-  (Subst.act_inst α).2 Δ
+  fun τ _ e =>
+    Subst.act_inst.idOf α Δ (fun i => Subst.act_inst.η) τ e
+termination_by α
+decreasing_by exact ⟨i, rfl⟩
+
+end
 
 /-! ## Monad laws -/
 
