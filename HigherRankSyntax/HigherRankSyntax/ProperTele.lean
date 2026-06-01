@@ -133,14 +133,28 @@ def ofList {C : Carrier} (ρ : List C.Arity) :
     ProperTele (Tele.ofList ρ : Shape C) :=
   extendList (Shape.nil : Shape C) ρ
 
+/-- Instance form of `extendList` so typeclass synthesis can supply
+`ProperTele (Γ ⋈* Tele.ofList ρ)` automatically whenever `Γ` is already a proper
+telescope. -/
+@[reducible]
+instance instExtendList {C : Carrier} (Γ : Shape C) [ProperTele Γ]
+    (ρ : List C.Arity) :
+    ProperTele (Γ ⋈* Tele.ofList ρ) :=
+  extendList Γ ρ
+
+/-- Instance form of `ofList` so typeclass synthesis can supply
+`ProperTele (Tele.ofList ρ)` automatically. -/
+@[reducible]
+instance instOfList {C : Carrier} (ρ : List C.Arity) :
+    ProperTele (Tele.ofList ρ : Shape C) :=
+  ofList ρ
+
 /-- In a concrete list extension, the right injection of a list-side slot is
 the same as first injecting it into `S ⋈* Tele.ofList ρ` and then injecting the
 composite. -/
 theorem extendList_inr_inr {C : Carrier} (S : Shape C) [ProperTele S]
     (ρ : List C.Arity) (Γ : Shape C)
     {α : C.Arity} (x : Tele.ofList ρ ∋ α) :
-    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
-    letI : ProperTele (S ⋈* Tele.ofList ρ) := ProperTele.extendList S ρ
     (ProperTele.inr Γ : S ⋈* Tele.ofList ρ →ʳ Γ ⋈* (S ⋈* Tele.ofList ρ)).apply
       ((ProperTele.inr S : Tele.ofList ρ →ʳ S ⋈* Tele.ofList ρ).apply x)
       =
@@ -148,8 +162,6 @@ theorem extendList_inr_inr {C : Carrier} (S : Shape C) [ProperTele S]
   induction ρ with
   | nil => exact nomatch x
   | cons β rest ih =>
-      letI : ProperTele (Tele.ofList rest : Shape C) := ProperTele.ofList rest
-      letI : ProperTele (S ⋈* Tele.ofList rest) := ProperTele.extendList S rest
       cases x with
       | here i => rfl
       | there x' =>
@@ -172,8 +184,6 @@ the list. -/
 theorem extendList_inr_inl {C : Carrier} (S : Shape C) [ProperTele S]
     (ρ : List C.Arity) (Γ : Shape C)
     {α : C.Arity} (x : S ∋ α) :
-    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
-    letI : ProperTele (S ⋈* Tele.ofList ρ) := ProperTele.extendList S ρ
     (ProperTele.inr Γ : S ⋈* Tele.ofList ρ →ʳ Γ ⋈* (S ⋈* Tele.ofList ρ)).apply
       ((ProperTele.inl S : S →ʳ S ⋈* Tele.ofList ρ).apply x)
       =
@@ -184,8 +194,6 @@ theorem extendList_inr_inl {C : Carrier} (S : Shape C) [ProperTele S]
       change (ProperTele.inr Γ).apply x = (ProperTele.inr Γ).apply x
       rfl
   | cons β rest ih =>
-      letI : ProperTele (Tele.ofList rest : Shape C) := ProperTele.ofList rest
-      letI : ProperTele (S ⋈* Tele.ofList rest) := ProperTele.extendList S rest
       change
         ListSlotAt.there
           ((ProperTele.inr Γ : S ⋈* Tele.ofList rest →ʳ
@@ -203,8 +211,6 @@ through that list. -/
 theorem extendList_inl {C : Carrier} (S : Shape C) [ProperTele S]
     (ρ : List C.Arity) (Γ : Shape C)
     {α : C.Arity} (x : Γ ∋ α) :
-    letI : ProperTele (Tele.ofList ρ : Shape C) := ProperTele.ofList ρ
-    letI : ProperTele (S ⋈* Tele.ofList ρ) := ProperTele.extendList S ρ
     (ProperTele.inl Γ : Γ →ʳ Γ ⋈* (S ⋈* Tele.ofList ρ)).apply x
       =
     (ProperTele.inl (Γ ⋈* S) : Γ ⋈* S →ʳ Γ ⋈* S ⋈* Tele.ofList ρ).apply
@@ -212,8 +218,6 @@ theorem extendList_inl {C : Carrier} (S : Shape C) [ProperTele S]
   induction ρ with
   | nil => rfl
   | cons β rest ih =>
-      letI : ProperTele (Tele.ofList rest : Shape C) := ProperTele.ofList rest
-      letI : ProperTele (S ⋈* Tele.ofList rest) := ProperTele.extendList S rest
       change
         ListSlotAt.there
           ((ProperTele.inl Γ : Γ →ʳ Γ ⋈* (S ⋈* Tele.ofList rest)).apply x)
