@@ -639,8 +639,7 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
         funext j
         exact Subst.act_inst.underListAt σ ρ (j.arity :: υ) ι (args j)
       · subst h_xt
-        rcases @ProperTele.cover C (⌊α⌋) inferInstance
-            τ β xt with
+        rcases ProperTele.cover (S := ⌊α⌋) τ xt with
           ⟨xα, h_xα⟩ | ⟨xτ, h_xτ⟩
         · subst h_xα
           have hfillTop : ∀ (j : C.Binder β),
@@ -1486,10 +1485,8 @@ private theorem Subst.act_inst.interchange {C : Carrier}
         ⟨xρ, h_xρ⟩ | ⟨xα, h_xα⟩
       · subst h_xρ
         refine (congrArg (κ'.act (Tele.ofList ρ))
-          (@Subst.act_ap_inr C pre dom cod inferInstance inferInstance
-            σ ((⌊α⌋) ⋈* Tele.ofList ρ)
-            (ProperTele.extendList (⌊α⌋) ρ)
-            β ((ProperTele.inr (⌊α⌋)) xρ) args)).trans ?_
+          (Subst.act_ap_inr σ ((⌊α⌋) ⋈* Tele.ofList ρ)
+            ((ProperTele.inr (⌊α⌋)) xρ) args)).trans ?_
         rw [ProperTele.extendList_inr_inr (⌊α⌋) ρ (pre ⋈* dom) xρ]
         rw [ProperTele.extendList_inr_inr (⌊α⌋) ρ (pre ⋈* cod) xρ]
         refine (Subst.act_ap_inr κ' (Tele.ofList ρ) xρ
@@ -1516,11 +1513,8 @@ private theorem Subst.act_inst.interchange {C : Carrier}
         cases xα with
         | here i =>
             refine (congrArg (κ'.act (Tele.ofList ρ))
-              (@Subst.act_ap_inr C pre dom cod inferInstance inferInstance
-                σ ((⌊α⌋) ⋈* Tele.ofList ρ)
-                (ProperTele.extendList (⌊α⌋) ρ)
-                i.arity ((ProperTele.inl (⌊α⌋))
-                  (.here i)) args)).trans ?_
+              (Subst.act_ap_inr σ ((⌊α⌋) ⋈* Tele.ofList ρ)
+                ((ProperTele.inl (⌊α⌋)) (.here i)) args)).trans ?_
             rw [ProperTele.extendList_inr_inl
               (⌊α⌋) ρ (pre ⋈* cod) (.here i)]
             refine (Subst.act_ap_inl_dom κ' (Tele.ofList ρ)
