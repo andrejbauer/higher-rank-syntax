@@ -113,8 +113,8 @@ abbrev Subst.inst {C : Carrier} {pre : Shape C} (dom : Shape C) {cod : Shape C}
 /-- The identity instantiation for the one-binder telescope `⌊α⌋`,
 with an arbitrary fixed prefix `Δ`. -/
 def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) :
-    Subst C Δ (⌊α⌋) (⌊α⌋) :=
-  Subst.inst (⌊α⌋) (fun q => match q with
+    Subst C Δ ⌊α⌋ ⌊α⌋ :=
+  Subst.inst ⌊α⌋ (fun q => match q with
     | .here i => Expr.η (.here i))
 
 /-! ### Kleisli ↔ Subst correspondence
@@ -157,7 +157,7 @@ def Subst.act {C : Carrier} : {pre dom cod : Shape C} →
         (fun y =>
           match σ.classifyDom y with
           | PreOrDom.dom z =>
-              (Subst.inst (⌊α⌋) (fun q => match q with
+              (Subst.inst ⌊α⌋ (fun q => match q with
                 | .here i => σ.act (τ ⋈ i.arity) (args i))).act Shape.nil (σ z)
           | PreOrDom.pre z =>
               .ap
