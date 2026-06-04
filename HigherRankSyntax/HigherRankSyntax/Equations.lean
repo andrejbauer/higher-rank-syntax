@@ -584,12 +584,10 @@ private theorem Subst.act_inst.underListAt {C : Carrier}
     Subst.act_inst.UnderList.instThenAct σ ρ υ ι e
     := by
   let κ : Subst C (pre ⋈* dom ⋈* τ) ⌊α⌋ (Tele.ofList ρ) :=
-    Subst.inst ⌊α⌋ (fun q => match q with
-    | .here i => ι (.here i))
+    Subst.act_inst.instOne α (Tele.ofList ρ) (fun i => ι (.here i))
   let κ' : Subst C (pre ⋈* cod ⋈* τ) ⌊α⌋ (Tele.ofList ρ) :=
-    Subst.inst ⌊α⌋ (fun q => match q with
-    | .here i =>
-        σ.act ((τ ⋈* Tele.ofList ρ) ⋈ i.arity) (ι (.here i)))
+    Subst.act_inst.instOne α (Tele.ofList ρ)
+      (fun i => σ.act ((τ ⋈* Tele.ofList ρ) ⋈ i.arity) (ι (.here i)))
   match e with
   | .ap (α := β) head args =>
     rcases ProperTele.cover (S := (τ ⋈ α) ⋈* Tele.ofList υ) (pre ⋈* dom) head with
@@ -1135,15 +1133,12 @@ private theorem Subst.act_inst.preNaturalityLiftAt {C : Carrier}
     Subst.act_inst.PreLift.fused ρ υ χ ι η e
     := by
   let κ : Subst C (pre ⋈* τ) ⌊α⌋ (Tele.ofList ρ) :=
-    Subst.inst ⌊α⌋ (fun q => match q with
-    | .here i => ι (.here i))
-  let lam : Subst C pre (⌊β⌋) ((τ ⋈ α) ⋈* Tele.ofList υ) :=
-    Subst.inst (⌊β⌋) (fun q => match q with
-    | .here j => η j)
-  let lam' : Subst C pre (⌊β⌋)
-      ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) :=
-    Subst.inst (⌊β⌋) (fun q => match q with
-    | .here j => κ.act (Tele.ofList υ ⋈ j.arity) (η j))
+    Subst.act_inst.instOne α (Tele.ofList ρ) (fun i => ι (.here i))
+  let lam : Subst C pre ⌊β⌋ ((τ ⋈ α) ⋈* Tele.ofList υ) :=
+    Subst.act_inst.instOne β ((τ ⋈ α) ⋈* Tele.ofList υ) η
+  let lam' : Subst C pre ⌊β⌋ ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ) :=
+    Subst.act_inst.instOne β ((τ ⋈* Tele.ofList ρ) ⋈* Tele.ofList υ)
+      (fun j => κ.act (Tele.ofList υ ⋈ j.arity) (η j))
   change κ.act ((Tele.ofList υ) ⋈* Tele.ofList χ)
       (lam.act (Tele.ofList χ) e)
     =
@@ -1357,12 +1352,10 @@ private theorem Subst.act_inst.preNaturalityAt {C : Carrier}
     Subst.act_inst.PreNaturality.fused σ ρ υ ι e
     := by
   let κ : Subst C pre ⌊α⌋ (dom ⋈* Tele.ofList ρ) :=
-    Subst.inst ⌊α⌋ (fun q => match q with
-    | .here i => ι (.here i))
+    Subst.act_inst.instOne α (dom ⋈* Tele.ofList ρ) (fun i => ι (.here i))
   let κ' : Subst C pre ⌊α⌋ (cod ⋈* Tele.ofList ρ) :=
-    Subst.inst ⌊α⌋ (fun q => match q with
-    | .here i =>
-        σ.act (Tele.ofList ρ ⋈ i.arity) (ι (.here i)))
+    Subst.act_inst.instOne α (cod ⋈* Tele.ofList ρ)
+      (fun i => σ.act (Tele.ofList ρ ⋈ i.arity) (ι (.here i)))
   change σ.act ((Tele.ofList ρ) ⋈* Tele.ofList υ)
       (κ.act (Tele.ofList υ) e)
     =
@@ -1523,11 +1516,9 @@ private theorem Subst.act_inst.interchange {C : Carrier}
     Subst.act_inst.instOne
   dsimp only
   let κ : Subst C (pre ⋈* dom) ⌊α⌋ τ :=
-    Subst.inst ⌊α⌋ (fun q => match q with
-      | .here i => ι (.here i))
+    Subst.act_inst.instOne α τ (fun i => ι (.here i))
   let κ' : Subst C (pre ⋈* cod) ⌊α⌋ τ :=
-    Subst.inst ⌊α⌋ (fun q => match q with
-      | .here i => σ.act (τ ⋈ i.arity) (ι (.here i)))
+    Subst.act_inst.instOne α τ (fun i => σ.act (τ ⋈ i.arity) (ι (.here i)))
   change κ'.act (Tele.ofList ρ)
       (σ.act (⌊α⌋ ⋈* Tele.ofList ρ) e)
     =
