@@ -43,6 +43,15 @@ abbrev Shape.extList {C : Carrier} (Γ Δ : Shape C) : Shape C := Δ ∘ᵗ Γ
 @[inherit_doc Shape.extList]
 infixl:65 " ⧺ " => Shape.extList
 
+/-- Extension by a `List C.Arity` accumulator: `Γ ⧺ᴸ τ := Γ ⧺ Tele.ofList τ`.
+Used when τ is a `List C.Arity` (e.g. `Subst.act`'s depth accumulator). -/
+notation:65 Γ:65 " ⧺ᴸ " τ:66 => Γ ⧺ Tele.ofList τ
+
+/-- Extension by a singleton arity in the list-accumulator world:
+`Γ ∷ᴸ α := Γ ⧺ Tele.ofList [α]`.  Definitionally `Γ ∷ α`; the
+`ᴸ` annotation indicates the shape arose from the τ-as-list convention. -/
+notation:65 Γ:65 " ∷ᴸ " α:66 => Γ ⧺ Tele.ofList [α]
+
 /-- A slot of a list of arities with its arity tracked as a type index.  The
 inductive lives on `List`; `SlotAt` on `Shape` is `abbrev`'d to this via the
 underlying-list. -/

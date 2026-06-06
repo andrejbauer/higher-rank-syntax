@@ -143,28 +143,29 @@ def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Shape.nil Γ Γ :=
 /-- Apply the substitution `σ` to an expression at depth `τ`.  Uses
 `Proper.classify` for the τ/below-τ dispatch and `σ.classifyDom` for
 the pre/dom dispatch.  All renamings used to rebuild new heads in the
-target come from `[Proper τ]` / `[Proper cod]`. -/
+target come from the auto-`Proper` instance on `Tele.ofList τ` /
+`[Proper cod]`. -/
 def Subst.act {C : Carrier} : {pre dom cod : Shape C} →
     [Proper dom] → [Proper cod] →
     (σ : Subst C pre dom cod) →
-    (τ : Shape C) → [Proper τ] →
-    Expr (pre ⧺ dom ⧺ τ) → Expr (pre ⧺ cod ⧺ τ)
-  | pre, dom, cod, _, _, σ, τ, _, .ap (α := α) p args =>
-      Proper.classify (pre ⧺ dom) (Expr (pre ⧺ cod ⧺ τ)) p
+    (τ : List C.Arity) →
+    Expr (pre ⧺ dom ⧺ Tele.ofList τ) → Expr (pre ⧺ cod ⧺ Tele.ofList τ)
+  | pre, dom, cod, _, _, σ, τ, .ap (α := α) p args =>
+      Proper.classify (pre ⧺ dom) (Expr (pre ⧺ cod ⧺ Tele.ofList τ)) p
         (fun x =>
           .ap (Proper.inr (pre ⧺ cod) x)
-            (fun i => σ.act (τ ∷ i.arity) (args i)))
+            (fun i => σ.act (i.arity :: τ) (args i)))
         (fun y =>
           match σ.classifyDom y with
           | PreOrDom.dom z =>
               (Subst.inst ⌊α⌋ (fun q => match q with
-                | .here i => σ.act (τ ∷ i.arity) (args i))).act Shape.nil (σ z)
+                | .here i => σ.act (i.arity :: τ) (args i))).act [] (σ z)
           | PreOrDom.pre z =>
               .ap
                 (Proper.inl (pre ⧺ cod)
                   ((Subst.weakenCod σ) z))
-                (fun i => σ.act (τ ∷ i.arity) (args i)))
-termination_by pre dom _ _ _ _ _ _ e =>
+                (fun i => σ.act (i.arity :: τ) (args i)))
+termination_by pre dom _ _ _ _ _ e =>
   ((⟨dom.toList⟩ : DomMeasure C), (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
   all_goals (
@@ -174,12 +175,12 @@ decreasing_by
          obtain ⟨β, h_mem, h_sub⟩ := SlotAt.subWitness z
          exact DomLt.step β h_mem _ h_sub))
 
-/-- The ground substitution action `σ.act Shape.nil e`, mirroring `⟦ρ⟧ʳ e`. -/
-notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ Shape.nil e
+/-- The ground substitution action `σ.act [] e`, mirroring `⟦ρ⟧ʳ e`. -/
+notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ [] e
 
 /-- Kleisli composition of two Kleisli maps via `Subst.act`. -/
 def Subst.kcomp {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ∷ β))
     (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ξ ∷ β)) :
     ∀ {β : C.Arity}, Γ ∋ β → Expr (Ξ ∷ β) :=
-  fun {β} p => (toSubst g).act ⌊β⌋ (f p)
+  fun {β} p => (toSubst g).act [β] (f p)

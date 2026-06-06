@@ -24,11 +24,11 @@ dispatch to a clean right-hand side.  The reflection lemmas
 theorem Subst.act_ap_inr
     {C : Carrier} {pre dom cod : Shape C}
     [Proper dom] [Proper cod]
-    (σ : Subst C pre dom cod) (τ : Shape C) [Proper τ]
-    {α} (x : τ ∋ α)
-    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ τ ∷ i.arity)) :
+    (σ : Subst C pre dom cod) (τ : List C.Arity)
+    {α} (x : Tele.ofList τ ∋ α)
+    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ Tele.ofList τ ∷ i.arity)) :
   σ.act τ (.ap (ι₂ x) args)
-    = .ap (ι₂ x) (fun j => σ.act (τ ∷ j.arity) (args j))
+    = .ap (ι₂ x) (fun j => σ.act (j.arity :: τ) (args j))
   := by
   conv => lhs; unfold Subst.act
   rw [Proper.classify_inr]
@@ -38,11 +38,11 @@ classified to the dom side: fires the dom-branch instantiation. -/
 theorem Subst.act_ap_inl_dom
     {C : Carrier} {pre dom cod : Shape C}
     [Proper dom] [Proper cod]
-    (σ : Subst C pre dom cod) (τ : Shape C) [Proper τ]
+    (σ : Subst C pre dom cod) (τ : List C.Arity)
     {α} (y : dom ∋ α)
-    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ τ ∷ i.arity)) :
+    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ Tele.ofList τ ∷ i.arity)) :
   σ.act τ (.ap ((Proper.inl (pre ⧺ dom)) ((Proper.inr pre) y)) args)
-    = ⟦ Subst.inst ⌊α⌋ (fun q => match q with | .here i => σ.act (τ ∷ i.arity) (args i)) ⟧ˢ (σ y)
+    = ⟦ Subst.inst ⌊α⌋ (fun q => match q with | .here i => σ.act (i.arity :: τ) (args i)) ⟧ˢ (σ y)
   := by
   conv => lhs; unfold Subst.act
   rw [Proper.classify_inl]
@@ -55,11 +55,11 @@ classified to the pre side: rebuilds the head in the pre branch. -/
 theorem Subst.act_ap_inl_pre
     {C : Carrier} {pre dom cod : Shape C}
     [Proper dom] [Proper cod]
-    (σ : Subst C pre dom cod) (τ : Shape C) [Proper τ]
+    (σ : Subst C pre dom cod) (τ : List C.Arity)
     {α} (z : pre ∋ α)
-    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ τ ∷ i.arity)) :
+    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ Tele.ofList τ ∷ i.arity)) :
   σ.act τ (.ap ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) z)) args)
-    = .ap ((Proper.inl (pre ⧺ cod)) ((Subst.weakenCod σ) z)) (fun i => σ.act (τ ∷ i.arity) (args i))
+    = .ap ((Proper.inl (pre ⧺ cod)) ((Subst.weakenCod σ) z)) (fun i => σ.act (i.arity :: τ) (args i))
   := by
   conv => lhs; unfold Subst.act
   rw [Proper.classify_inl]
@@ -74,24 +74,24 @@ the η in the target shape.  By WF recursion on the slot's arity `α`; uses
 theorem Subst.act_η_inr
     {C : Carrier} {pre dom cod : Shape C}
     [Proper dom] [Proper cod]
-    (σ : Subst C pre dom cod) (τ : Shape C) [Proper τ]
-    {α} (x : τ ∋ α) :
-  σ.act (τ ∷ α) (.η ((Proper.inr (pre ⧺ dom)) x))
+    (σ : Subst C pre dom cod) (τ : List C.Arity)
+    {α} (x : Tele.ofList τ ∋ α) :
+  σ.act (α :: τ) (.η ((Proper.inr (pre ⧺ dom)) x))
     = .η ((Proper.inr (pre ⧺ cod)) x)
   := by
   rw [Expr.η.eq_1]
   -- `.there ((inr τ) x) = (inr (τ ∷ α)) (.there x)` holds
   -- definitionally (instCons.inr); `change` accepts the defeq.
-  change σ.act (τ ∷ α)
+  change σ.act (α :: τ)
       (.ap ((Proper.inr (pre ⧺ dom))
                      (.there x))
                   (fun i => .η (.here i))) = _
-  rw [Subst.act_ap_inr σ (τ ∷ α) (.there x)]
+  rw [Subst.act_ap_inr σ (α :: τ) (.there x)]
   rw [Expr.η.eq_1]
   congr 1
   funext i
-  exact Subst.act_η_inr σ (τ ∷ α)
-          (x := @ListSlotAt.here C α τ.toList i)
+  exact Subst.act_η_inr σ (α :: τ)
+          (x := @ListSlotAt.here C α (Tele.ofList τ).toList i)
 termination_by α
 decreasing_by exact ⟨i, rfl⟩
 
@@ -107,12 +107,12 @@ private theorem idOf
       (p : pre ∋ i.arity),
       ⟦Subst.inst (⌊i.arity⌋) ι⟧ˢ (.η p)
         = .ap ((Proper.inl pre) p) (fun j => ι (.here j))) :
-  ∀ (τ : Shape C) [Proper τ] (e : Expr ((Δ ∷ α) ⧺ τ)),
+  ∀ (τ : List C.Arity) (e : Expr ((Δ ∷ α) ⧺ Tele.ofList τ)),
     (Subst.instId Δ α).act τ e = e
-  | τ, _, .ap (α := β) head argFam => by
+  | τ, .ap (α := β) head argFam => by
       have ih_all : ∀ (k : C.Binder β),
-          (Subst.instId Δ α).act (τ ∷ k.arity) (argFam k) = argFam k :=
-        fun k => idOf α Δ hη (τ ∷ k.arity) (argFam k)
+          (Subst.instId Δ α).act (k.arity :: τ) (argFam k) = argFam k :=
+        fun k => idOf α Δ hη (k.arity :: τ) (argFam k)
       rcases Proper.cover (Δ ∷ α) head with ⟨y, h_y⟩ | ⟨y, h_y⟩
       · subst h_y
         refine (Subst.act_ap_inr (Subst.instId Δ α) τ y argFam).trans ?_
@@ -128,12 +128,12 @@ private theorem idOf
                 (Subst.instId Δ α) τ (.here i) argFam).trans ?_
               rw [show (Subst.instId Δ α).sub (.here i)
                     = @Expr.η C (Δ ∷ α) i.arity (.here i) from rfl]
-              refine (hη i (pre := Δ ∷ α) (cod := τ)
+              refine (hη i (pre := Δ ∷ α) (cod := Tele.ofList τ)
                 (ι := _) (p := .here i)).trans ?_
               change
                 Expr.ap ((Proper.inl (Δ ∷ α))
                     (.here i))
-                  (fun k => (Subst.instId Δ α).act (τ ∷ k.arity) (argFam k))
+                  (fun k => (Subst.instId Δ α).act (k.arity :: τ) (argFam k))
                 =
                 Expr.ap ((Proper.inl (Δ ∷ α))
                     (.here i)) argFam
@@ -146,14 +146,14 @@ private theorem idOf
           change
             Expr.ap ((Proper.inl (Δ ∷ α))
                 ((Proper.inl Δ) z))
-              (fun k => (Subst.instId Δ α).act (τ ∷ k.arity) (argFam k))
+              (fun k => (Subst.instId Δ α).act (k.arity :: τ) (argFam k))
             =
             Expr.ap ((Proper.inl (Δ ∷ α))
                 ((Proper.inl Δ) z)) argFam
           congr 1
           funext k
           exact ih_all k
-termination_by τ _ e => (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
+termination_by τ e => (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg head argFam _
 
 -- β-for-η and identity-act, proved together by well-founded recursion on
@@ -178,21 +178,21 @@ theorem Subst.act_inst.η
   change
     Expr.ap ((Subst.inst ⌊α⌋ ι).weakenCod p)
       (fun i => (Subst.inst ⌊α⌋ ι).act
-        (⌊i.arity⌋) (.η (.here i)))
+        [i.arity] (.η (.here i)))
     =
     Expr.ap ((Proper.inl pre) p)
       (fun i => ι (.here i))
   change
     Expr.ap ((Proper.inl pre) p)
       (fun i => (Subst.inst ⌊α⌋ ι).act
-        (⌊i.arity⌋) (.η (.here i)))
+        [i.arity] (.η (.here i)))
     =
     Expr.ap ((Proper.inl pre) p)
       (fun i => ι (.here i))
   congr
   funext i
   rw [Expr.η.eq_1]
-  change (Subst.inst ⌊α⌋ ι).act (⌊i.arity⌋)
+  change (Subst.inst ⌊α⌋ ι).act [i.arity]
       (.ap ((Proper.inl (pre ⧺ ⌊α⌋))
         ((Proper.inr pre) (.here i)))
         (fun k =>
@@ -204,7 +204,7 @@ theorem Subst.act_inst.η
         = ι (.here i) from rfl]
   have hfill : ∀ (k : C.Binder i.arity),
       (Subst.inst ⌊α⌋ ι).act
-        ((⌊i.arity⌋) ∷ k.arity)
+        (k.arity :: [i.arity])
           (@Expr.η C
             ((pre ⧺ ⌊α⌋) ⧺ (⌊i.arity⌋))
             k.arity (.here k))
@@ -215,9 +215,9 @@ theorem Subst.act_inst.η
           := by
     intro k
     exact Subst.act_η_inr (Subst.inst ⌊α⌋ ι)
-      (⌊i.arity⌋) (x := .here k)
+      [i.arity] (x := .here k)
   simp only [hfill]
-  exact Subst.act_inst.id i.arity (pre ⧺ cod) Shape.nil
+  exact Subst.act_inst.id i.arity (pre ⧺ cod) []
     (ι (.here i))
 termination_by α
 decreasing_by exact ⟨i, rfl⟩
@@ -225,10 +225,10 @@ decreasing_by exact ⟨i, rfl⟩
 /-- Identity instantiation acts as the identity. -/
 theorem Subst.act_inst.id
     {C : Carrier} (α : C.Arity) (Δ : Shape C) :
-  ∀ (τ : Shape C) [Proper τ] (e : Expr ((Δ ∷ α) ⧺ τ)),
+  ∀ (τ : List C.Arity) (e : Expr ((Δ ∷ α) ⧺ Tele.ofList τ)),
     (Subst.instId Δ α).act τ e = e
   :=
-  fun τ _ e =>
+  fun τ e =>
     idOf α Δ (fun i => Subst.act_inst.η) τ e
 termination_by α
 decreasing_by exact ⟨i, rfl⟩
@@ -242,8 +242,8 @@ Translates to `lift η = 𝟙` (unit_right).  Generalised over τ so the
 recursive call on each arg fits the same statement. -/
 theorem Subst.act_id
     {C : Carrier} (Γ : Shape C) [Proper Γ]
-    (τ : Shape C) [Proper τ]
-    (e : Expr (Γ ⧺ τ)) :
+    (τ : List C.Arity)
+    (e : Expr (Γ ⧺ Tele.ofList τ)) :
   (Subst.id Γ).act τ e = e
   := by
   match e with
@@ -262,19 +262,19 @@ theorem Subst.act_id
         refine (Subst.act_ap_inl_dom (Subst.id Γ) τ y args).trans ?_
         -- Simplify (Subst.id Γ) y = Expr.η y (rfl via toSubst_sub).
         show ⟦Subst.inst ⌊β⌋ (fun q => match q with
-              | .here k => (Subst.id Γ).act (τ ∷ k.arity) (args k))⟧ˢ
+              | .here k => (Subst.id Γ).act (k.arity :: τ) (args k))⟧ˢ
               (.η y) = _
         -- IH on each argument:
         have h_args : ∀ (k : C.Binder β),
-            (Subst.id Γ).act (τ ∷ k.arity) (args k) = args k :=
-          fun k => Subst.act_id Γ (τ ∷ k.arity) (args k)
+            (Subst.id Γ).act (k.arity :: τ) (args k) = args k :=
+          fun k => Subst.act_id Γ (k.arity :: τ) (args k)
         -- Simplify (inr Shape.nil) y = y on the RHS.
         rw [Proper.inr_nil_id y]
         refine (Subst.act_inst.η
-          (pre := Γ) (cod := τ) (α := β) (ι := _) (p := y)).trans ?_
+          (pre := Γ) (cod := Tele.ofList τ) (α := β) (ι := _) (p := y)).trans ?_
         change
           Expr.ap ((Proper.inl Γ) y)
-            (fun k => (Subst.id Γ).act (τ ∷ k.arity) (args k))
+            (fun k => (Subst.id Γ).act (k.arity :: τ) (args k))
           =
           Expr.ap ((Proper.inl Γ) y) args
         congr 1
@@ -290,35 +290,35 @@ theorem Subst.act_η
     {C : Carrier} {Γ Δ : Shape C} [Proper Γ] [Proper Δ]
     (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ∷ β))
     (α : C.Arity) (p : Γ ∋ α) :
-  (toSubst f).act ⌊α⌋ (.η p) = f p
+  (toSubst f).act [α] (.η p) = f p
   := by
   rw [Expr.η.eq_1]
   -- `.there p = (weaken_{⌊α⌋} _) p` by instCons.weaken (rfl).
   -- Cover p at base Shape.nil: p must be in the right image (inl-from-nil empty).
   rcases Proper.cover Shape.nil p with ⟨y, h_q⟩ | ⟨z, _⟩
   · subst h_q
-    show (toSubst f).act ⌊α⌋
+    show (toSubst f).act [α]
         (.ap ((Proper.inl (Shape.nil ⧺ Γ))
                       ((Proper.inr Shape.nil) y))
                     (fun i => .η (.here i))) = _
-    rw [Subst.act_ap_inl_dom (toSubst f) ⌊α⌋ y]
+    rw [Subst.act_ap_inl_dom (toSubst f) [α] y]
     have hfill : ∀ (i : C.Binder α),
-        (toSubst f).act (⌊α⌋ ∷ i.arity)
+        (toSubst f).act (i.arity :: [α])
           (@Expr.η C
-            ((Shape.nil ⧺ Γ) ⧺ ⌊α⌋)
+            (Shape.nil ⧺ Γ ∷ᴸ α)
             i.arity (.here i))
         =
         @Expr.η C
-          ((Shape.nil ⧺ Δ) ⧺ ⌊α⌋)
+          (Shape.nil ⧺ Δ ∷ᴸ α)
           i.arity (.here i)
           := by
       intro i
-      exact Subst.act_η_inr (toSubst f) ⌊α⌋
+      exact Subst.act_η_inr (toSubst f) [α]
         (x := .here i)
     simp only [hfill]
     rw [toSubst_sub]
     rw [Proper.inr_nil_id y]
-    exact Subst.act_inst.id α Δ Shape.nil (f y)
+    exact Subst.act_inst.id α Δ [] (f y)
   · exact nomatch z
 
 /-- `Expr.Subterm.of_arg` repackaged for the descent shape
@@ -359,27 +359,27 @@ private abbrev instOne
 /-- LHS of `underListAt`: σ acts on `e`, then `κ' = σ-acted ι` instantiates the
 α-slot.  Reads as "act σ first, then instantiate". -/
 private abbrev UnderList.actThenInst
-    {C : Carrier} {pre dom cod τ : Shape C} [Proper dom] [Proper cod] [Proper τ]
-    (σ : Subst C pre dom cod) {α} (ρ υ : List C.Arity)
-    (ι : ∀ {β : C.Arity}, ⌊α⌋ ∋ β → Expr (pre ⧺ dom ⧺ τ ⧺ Tele.ofList ρ ∷ β))
-    (e : Expr ((pre ⧺ dom ⧺ τ ∷ α) ⧺ Tele.ofList υ))
+    {C : Carrier} {pre dom cod : Shape C} [Proper dom] [Proper cod]
+    (σ : Subst C pre dom cod) {α} {τ : List C.Arity} (ρ υ : List C.Arity)
+    (ι : ∀ {β : C.Arity}, ⌊α⌋ ∋ β → Expr (pre ⧺ dom ⧺ᴸ τ ⧺ᴸ ρ ∷ β))
+    (e : Expr ((pre ⧺ dom ⧺ᴸ τ ∷ α) ⧺ᴸ υ))
   :=
-  (instOne (pre := pre ⧺ cod ⧺ τ) α (Tele.ofList ρ)
+  (instOne (pre := pre ⧺ cod ⧺ᴸ τ) α (Tele.ofList ρ)
       (fun i =>
-        σ.act ((τ ⧺ Tele.ofList ρ) ∷ i.arity) (ι (.here i)))).act
-    (Tele.ofList υ) (σ.act ((τ ∷ α) ⧺ Tele.ofList υ) e)
+        σ.act (i.arity :: ρ ++ τ) (ι (.here i)))).act
+    υ (σ.act (υ ++ (α :: τ)) e)
 
 /-- RHS of `underListAt`: `κ = raw ι` instantiates the α-slot, then σ acts at the
 combined depth `(τ ⧺ ρ) ⧺ υ`.  Reads as "instantiate first, then act σ". -/
 private abbrev UnderList.instThenAct
-    {C : Carrier} {pre dom cod τ : Shape C} [Proper dom] [Proper cod] [Proper τ]
-    (σ : Subst C pre dom cod) {α} (ρ υ : List C.Arity)
-    (ι : ∀ {β : C.Arity}, ⌊α⌋ ∋ β → Expr (pre ⧺ dom ⧺ τ ⧺ Tele.ofList ρ ∷ β))
-    (e : Expr ((pre ⧺ dom ⧺ τ ∷ α) ⧺ Tele.ofList υ))
+    {C : Carrier} {pre dom cod : Shape C} [Proper dom] [Proper cod]
+    (σ : Subst C pre dom cod) {α} {τ : List C.Arity} (ρ υ : List C.Arity)
+    (ι : ∀ {β : C.Arity}, ⌊α⌋ ∋ β → Expr (pre ⧺ dom ⧺ᴸ τ ⧺ᴸ ρ ∷ β))
+    (e : Expr ((pre ⧺ dom ⧺ᴸ τ ∷ α) ⧺ᴸ υ))
   :=
-  σ.act ((τ ⧺ Tele.ofList ρ) ⧺ Tele.ofList υ)
+  σ.act (υ ++ ρ ++ τ)
     ((instOne α (Tele.ofList ρ)
-        (fun i => ι (.here i))).act (Tele.ofList υ) e)
+        (fun i => ι (.here i))).act υ e)
 
 /-- LHS of `preNaturalityLiftAt`: apply `lam` (β-instantiator from η), then apply
 `κ` (α-instantiator from ι) at the outer depth. -/
