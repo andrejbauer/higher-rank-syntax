@@ -17,81 +17,109 @@ dispatch to a clean right-hand side.  The reflection lemmas
 -/
 
 
-/-! ## Computation lemmas — `Subst.act` on a specific apply head -/
+/-! ## Computation lemmas — `Subst.act` on a specific apply head
 
-/-- Computing `σ.act` on an apply whose head is right-injected into the
-τ-side: collapses to the S-side reconstruction. -/
-theorem Subst.act_ap_inr
-    {C : Carrier} {pre dom cod : Shape C}
-    [Proper dom] [Proper cod]
-    (σ : Subst C pre dom cod) (τ : List C.Arity)
-    {α} (x : Tele.ofList τ ∋ α)
-    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ Tele.ofList τ ∷ i.arity)) :
-  σ.act τ (.ap (ι₂ x) args)
-    = .ap (ι₂ x) (fun j => σ.act (j.arity :: τ) (args j))
+One lemma per `SubstSite` case.  Each unfolds `Subst.act` and rewrites
+with the matching `Subst.classifySlot_*` reflection lemma. -/
+
+/-- `σ.act` on an apply whose head sits in the `inner` accumulator. -/
+theorem Subst.act_ap_inner
+    {C : Carrier} {pre dom cod : Shape C} [Proper dom] [Proper cod]
+    (σ : Subst C pre dom cod) (outer : Shape C) [Proper outer]
+    (inner : List C.Arity)
+    {α} (y : ListSlotAt inner α)
+    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ outer ⧺ Tele.ofList inner ∷ i.arity)) :
+  σ.act outer inner
+      (.ap (Subst.embedInner (pre := pre) (cod := dom) (outer := outer) y) args)
+    = .ap (Subst.embedInner (pre := pre) (cod := cod) (outer := outer) y)
+        (fun j => σ.act outer (j.arity :: inner) (args j))
   := by
   conv => lhs; unfold Subst.act
-  rw [Proper.classify_inr]
+  rw [Subst.classifySlot_embedInner]
 
-/-- Computing `σ.act` on an apply whose head is left-injected below τ and
-classified to the dom side: fires the dom-branch instantiation. -/
-theorem Subst.act_ap_inl_dom
-    {C : Carrier} {pre dom cod : Shape C}
-    [Proper dom] [Proper cod]
-    (σ : Subst C pre dom cod) (τ : List C.Arity)
-    {α} (y : dom ∋ α)
-    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ Tele.ofList τ ∷ i.arity)) :
-  σ.act τ (.ap ((Proper.inl (pre ⧺ dom)) ((Proper.inr pre) y)) args)
-    = ⟦ Subst.inst ⌊α⌋ (fun q => match q with | .here i => σ.act (i.arity :: τ) (args i)) ⟧ˢ (σ y)
+/-- `σ.act` on an apply whose head sits in `outer`. -/
+theorem Subst.act_ap_outer
+    {C : Carrier} {pre dom cod : Shape C} [Proper dom] [Proper cod]
+    (σ : Subst C pre dom cod) (outer : Shape C) [Proper outer]
+    (inner : List C.Arity)
+    {α} (x : outer ∋ α)
+    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ outer ⧺ Tele.ofList inner ∷ i.arity)) :
+  σ.act outer inner
+      (.ap ((Proper.inl (pre ⧺ dom ⧺ outer))
+            ((Proper.inr (pre ⧺ dom)) x)) args)
+    = .ap ((Proper.inl (pre ⧺ cod ⧺ outer))
+            ((Proper.inr (pre ⧺ cod)) x))
+        (fun j => σ.act outer (j.arity :: inner) (args j))
   := by
   conv => lhs; unfold Subst.act
-  rw [Proper.classify_inl]
-  unfold Subst.classifyDom
-  rw [Proper.classify_inr]
+  rw [Subst.classifySlot_outer]
+
+/-- `σ.act` on an apply whose head sits in `dom`: fires the substitution
+and inserts the recursively-acted args as the kit. -/
+theorem Subst.act_ap_dom
+    {C : Carrier} {pre dom cod : Shape C} [Proper dom] [Proper cod]
+    (σ : Subst C pre dom cod) (outer : Shape C) [Proper outer]
+    (inner : List C.Arity)
+    {α} (z : dom ∋ α)
+    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ outer ⧺ Tele.ofList inner ∷ i.arity)) :
+  σ.act outer inner
+      (.ap ((Proper.inl (pre ⧺ dom ⧺ outer))
+            ((Proper.inl (pre ⧺ dom)) ((Proper.inr pre) z))) args)
+    = (Subst.inst (pre := pre ⧺ cod) (cod := outer ⧺ Tele.ofList inner)
+        ⌊α⌋ (fun q => match q with
+          | .here i => σ.act outer (i.arity :: inner) (args i))).act
+        Shape.nil [] (σ z)
+  := by
+  conv => lhs; unfold Subst.act
+  rw [Subst.classifySlot_dom]
   rfl
 
-/-- Computing `σ.act` on an apply whose head is left-injected below τ and
-classified to the pre side: rebuilds the head in the pre branch. -/
-theorem Subst.act_ap_inl_pre
-    {C : Carrier} {pre dom cod : Shape C}
-    [Proper dom] [Proper cod]
-    (σ : Subst C pre dom cod) (τ : List C.Arity)
-    {α} (z : pre ∋ α)
-    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ Tele.ofList τ ∷ i.arity)) :
-  σ.act τ (.ap ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) z)) args)
-    = .ap ((Proper.inl (pre ⧺ cod)) ((Subst.weakenCod σ) z)) (fun i => σ.act (i.arity :: τ) (args i))
+/-- `σ.act` on an apply whose head sits in `pre`: rebuilds with the
+pre-side weakened all the way back. -/
+theorem Subst.act_ap_pre
+    {C : Carrier} {pre dom cod : Shape C} [Proper dom] [Proper cod]
+    (σ : Subst C pre dom cod) (outer : Shape C) [Proper outer]
+    (inner : List C.Arity)
+    {α} (w : pre ∋ α)
+    (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ outer ⧺ Tele.ofList inner ∷ i.arity)) :
+  σ.act outer inner
+      (.ap ((Proper.inl (pre ⧺ dom ⧺ outer))
+            ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) w))) args)
+    = .ap ((Proper.inl (pre ⧺ cod ⧺ outer))
+            ((Proper.inl (pre ⧺ cod)) ((Proper.inl pre) w)))
+        (fun j => σ.act outer (j.arity :: inner) (args j))
   := by
   conv => lhs; unfold Subst.act
-  rw [Proper.classify_inl]
-  unfold Subst.classifyDom
-  rw [Proper.classify_inl]
+  rw [Subst.classifySlot_pre]
 
-/-! ## Auxiliary: η-action on a right-injected slot -/
+/-! ## Auxiliary: η-action on an inner-side slot -/
 
-/-- Acting on the η-expansion of a right-injected (S-side) slot reproduces
-the η in the target shape.  By WF recursion on the slot's arity `α`; uses
-`act_apply_inr` as a black-box computation lemma. -/
-theorem Subst.act_η_inr
+/-- Acting on the η-expansion of an inner-side slot reproduces the η in
+the target shape.  By WF recursion on the slot's arity `α`. -/
+theorem Subst.act_η_inner
     {C : Carrier} {pre dom cod : Shape C}
     [Proper dom] [Proper cod]
-    (σ : Subst C pre dom cod) (τ : List C.Arity)
-    {α} (x : Tele.ofList τ ∋ α) :
-  σ.act (α :: τ) (.η ((Proper.inr (pre ⧺ dom)) x))
-    = .η ((Proper.inr (pre ⧺ cod)) x)
+    (σ : Subst C pre dom cod) (outer : Shape C) [Proper outer]
+    (inner : List C.Arity)
+    {α} (y : ListSlotAt inner α) :
+  σ.act outer (α :: inner)
+      (.η (Subst.embedInner (pre := pre) (cod := dom) (outer := outer) y))
+    = .η (Subst.embedInner (pre := pre) (cod := cod) (outer := outer) y)
   := by
   rw [Expr.η.eq_1]
-  -- `.there ((inr τ) x) = (inr (τ ∷ α)) (.there x)` holds
-  -- definitionally (instCons.inr); `change` accepts the defeq.
-  change σ.act (α :: τ)
-      (.ap ((Proper.inr (pre ⧺ dom))
-                     (.there x))
-                  (fun i => .η (.here i))) = _
-  rw [Subst.act_ap_inr σ (α :: τ) (.there x)]
+  -- `.there (embedInner y) = embedInner (.there y)` definitionally.
+  change σ.act outer (α :: inner)
+      (.ap (Subst.embedInner (pre := pre) (cod := dom) (outer := outer)
+              (.there y : ListSlotAt (α :: inner) α))
+           (fun i => .η (.here i))) = _
+  rw [Subst.act_ap_inner σ outer (α :: inner)
+        (.there y : ListSlotAt (α :: inner) α)
+        (fun i => .η (.here i))]
   rw [Expr.η.eq_1]
   congr 1
   funext i
-  exact Subst.act_η_inr σ (α :: τ)
-          (x := @ListSlotAt.here C α (Tele.ofList τ).toList i)
+  exact Subst.act_η_inner σ outer (α :: inner)
+          (y := @ListSlotAt.here C α inner i)
 termination_by α
 decreasing_by exact ⟨i, rfl⟩
 
