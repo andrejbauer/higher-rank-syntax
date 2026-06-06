@@ -175,7 +175,7 @@ decreasing_by
          exact DomLt.step β h_mem _ h_sub))
 
 /-- The ground substitution action `σ.act Shape.nil e`, mirroring `⟦ρ⟧ʳ e`. -/
-notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ _ e
+notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ Shape.nil e
 
 /-- Kleisli composition of two Kleisli maps via `Subst.act`. -/
 def Subst.kcomp {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]

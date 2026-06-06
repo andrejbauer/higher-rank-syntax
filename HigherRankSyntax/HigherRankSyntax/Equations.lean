@@ -560,10 +560,10 @@ private theorem underListAt
       (fun i => σ.act ((τ ++ Tele.ofList ρ) ∷ i.arity) (ι (.here i)))
   match e with
   | .ap (α := β) head args =>
-    rcases Proper.cover (S := (τ ∷ α) ++ Tele.ofList υ) (pre ++ dom) head with
+    rcases Proper.cover (Γ :=(τ ∷ α) ++ Tele.ofList υ) (pre ++ dom) head with
       ⟨top, h_top⟩ | ⟨below, h_below⟩
     · subst h_top
-      rcases Proper.cover (S := Tele.ofList υ) (τ ∷ α) top with
+      rcases Proper.cover (Γ :=Tele.ofList υ) (τ ∷ α) top with
         ⟨xυ, h_xυ⟩ | ⟨xt, h_xt⟩
       · subst h_xυ
         refine (congrArg (κ'.act (Tele.ofList υ))
@@ -635,7 +635,7 @@ private theorem underListAt
         funext j
         exact underListAt σ ρ (j.arity :: υ) ι (args j)
       · subst h_xt
-        rcases Proper.cover (S := ⌊α⌋) τ xt with
+        rcases Proper.cover (Γ :=⌊α⌋) τ xt with
           ⟨xα, h_xα⟩ | ⟨xτ, h_xτ⟩
         · subst h_xα
           have hfillTop : ∀ (j : C.Binder β),
@@ -1121,7 +1121,7 @@ private theorem preNaturalityLiftAt
       intro j
       exact preNaturalityLiftAt ρ υ (j.arity :: χ) ι η
         (args j)
-    rcases Proper.cover (S := Tele.ofList χ) (pre ∷ β) head with
+    rcases Proper.cover (Γ :=Tele.ofList χ) (pre ∷ β) head with
       ⟨xχ, h_xχ⟩ | ⟨below, h_below⟩
     · subst h_xχ
       refine (congrArg
@@ -1316,10 +1316,10 @@ private theorem preNaturalityAt
     κ'.act (Tele.ofList υ) e
   match e with
   | .ap (α := β) head args =>
-    rcases Proper.cover (S := ⌊α⌋ ++ Tele.ofList υ) pre head with
+    rcases Proper.cover (Γ :=⌊α⌋ ++ Tele.ofList υ) pre head with
       ⟨top, h_top⟩ | ⟨below, h_below⟩
     · subst h_top
-      rcases Proper.cover (S := Tele.ofList υ) ⌊α⌋ top with
+      rcases Proper.cover (Γ :=Tele.ofList υ) ⌊α⌋ top with
         ⟨xυ, h_xυ⟩ | ⟨xα, h_xα⟩
       · subst h_xυ
         rw [Proper.extendList_inr_inr ⌊α⌋ υ pre xυ]
@@ -1472,10 +1472,10 @@ private theorem interchange
       (κ.act (Tele.ofList ρ) e)
   match e with
   | .ap (α := β) head args =>
-    rcases Proper.cover (S := ⌊α⌋ ++ Tele.ofList ρ) (pre ++ dom) head with
+    rcases Proper.cover (Γ :=⌊α⌋ ++ Tele.ofList ρ) (pre ++ dom) head with
       ⟨top, h_top⟩ | ⟨below, h_below⟩
     · subst h_top
-      rcases Proper.cover (S := Tele.ofList ρ) ⌊α⌋ top with
+      rcases Proper.cover (Γ :=Tele.ofList ρ) ⌊α⌋ top with
         ⟨xρ, h_xρ⟩ | ⟨xα, h_xα⟩
       · subst h_xρ
         refine (congrArg (κ'.act (Tele.ofList ρ))
