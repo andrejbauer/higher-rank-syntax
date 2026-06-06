@@ -74,8 +74,8 @@ inductive PreOrDom {C : Carrier} (pre dom : Shape C) (α : C.Arity) : Type where
 
 /-- Four-way dispatch of a slot of `pre ⧺ dom ⧺ outer ⧺ Tele.ofList inner`.
 The first three carry slots of the corresponding `Shape`; the inner case
-carries a slot of `Tele.ofList inner` (which is `ListSlotAt inner α` definitionally
-for the concrete cons-shape, modulo `Tele.ofList`'s `.toList`). -/
+carries a `ListSlotAt inner α` — a pure list slot, not coupled to any
+surrounding Shape context. -/
 inductive SubstSite {C : Carrier} (pre dom outer : Shape C)
     (inner : List C.Arity) (α : C.Arity) : Type where
   /-- The slot belongs to `pre`. -/
@@ -85,7 +85,7 @@ inductive SubstSite {C : Carrier} (pre dom outer : Shape C)
   /-- The slot belongs to `outer`. -/
   | outer (q : outer ∋ α)
   /-- The slot belongs to the list-shaped accumulator `inner`. -/
-  | inner (q : Tele.ofList inner ∋ α)
+  | inner (q : ListSlotAt inner α)
 
 /-- A substitution record.  Source shape is `pre ⧺ dom`, target is
 `pre ⧺ cod`.  The `sub` field is the only data; slot dispatch and
@@ -123,13 +123,22 @@ def Subst.classifySlot
             (fun z => SubstSite.dom z)
             (fun w => SubstSite.pre w))
   | β :: rest, _, .here i =>
-      SubstSite.inner (@ListSlotAt.here C β (Tele.ofList rest).toList i)
+      SubstSite.inner (@ListSlotAt.here C β rest i)
   | β :: rest, _, .there p =>
       match Subst.classifySlot rest p with
       | SubstSite.pre   q => SubstSite.pre q
       | SubstSite.dom   q => SubstSite.dom q
       | SubstSite.outer q => SubstSite.outer q
-      | SubstSite.inner q => SubstSite.inner (.there q)
+      | SubstSite.inner q => SubstSite.inner (@ListSlotAt.there C β _ rest q)
+
+/-- Embed a pure `ListSlotAt inner α` slot into the inner region of any
+`pre ⧺ cod ⧺ outer ⧺ Tele.ofList inner ∋ α`.  Structural recursion on the
+slot — each `.here`/`.there` re-emerges at the wider underlying-list level. -/
+def Subst.embedInner {C : Carrier} {pre cod outer : Shape C} :
+    {inner : List C.Arity} → {α : C.Arity} →
+    ListSlotAt inner α → pre ⧺ cod ⧺ outer ⧺ Tele.ofList inner ∋ α
+  | _ :: _, _, .here i  => .here i
+  | _ :: _, _, .there q => .there (Subst.embedInner q)
 
 /-- Embedding `pre` into `pre ⧺ cod`, via `[Proper cod]`. -/
 def Subst.weakenCod {C : Carrier} {pre dom cod : Shape C}
@@ -194,7 +203,7 @@ def Subst.act {C : Carrier} : {pre dom cod : Shape C} →
   | pre, dom, cod, _, _, σ, outer, _, inner, .ap (α := α) p args =>
       match Subst.classifySlot inner p with
       | SubstSite.inner y =>
-          .ap ((Proper.inr (pre ⧺ cod ⧺ outer)) y)
+          .ap (Subst.embedInner (pre := pre) (cod := cod) (outer := outer) y)
             (fun i => σ.act outer (i.arity :: inner) (args i))
       | SubstSite.outer x =>
           .ap ((Proper.inl (pre ⧺ cod ⧺ outer))
