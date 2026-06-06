@@ -10,7 +10,7 @@ current proof work.  The Tele version uses cons-style representable endomaps:
 
 - `Tele α` is an endomap on `List α`.
 - `Shape C` is `Tele C.Arity`.
-- `Shape.nil`, `Γ ∷ α`, and `Γ ++ τ` are strict endomap operations.
+- `Shape.nil`, `Γ ∷ α`, and `Γ ⧺ τ` are strict endomap operations.
 - `Proper` supplies `inl`, `inr`, classification, and cover data for
   telescopes that behave like proper context extensions.
 

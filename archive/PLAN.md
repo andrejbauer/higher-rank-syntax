@@ -235,7 +235,7 @@ def arityArity (α : Arity) : ArSlots α → Arity
 In OCaml the carrier has `shape_shift`, `arity_shift`, `slot_sort` plus axiomatic laws (image, disjoint cover, two cancellations).  In Lean all of this is a single equivalence:
 
 ```lean
-slotsExtIso (γ : Shape) (α : Arity) : Slots (γ ** α) ≃ Slots γ ++ ArSlots α
+slotsExtIso (γ : Shape) (α : Arity) : Slots (γ ** α) ≃ Slots γ ⧺ ArSlots α
 ```
 
 `shape_shift` is `(slotsExtIso γ α).symm ∘ Sum.inl`; `arity_shift` is `(slotsExtIso γ α).symm ∘ Sum.inr`; `slot_sort` is `slotsExtIso γ α`.  The four OCaml laws become the inverse properties of an `Equiv` (free from `Mathlib.Logic.Equiv.Basic`).  Two compatibility laws remain — `shapeArity` of an image equals the corresponding arity-side lookup:
@@ -273,7 +273,7 @@ structure Substitution where
   sub : (x : Slots (pre *** dom)) → Expr ((pre *** cod) ** shapeArity _ x)
 ```
 
-This is the standard *relative-monad* form — a section of a dependent type, indexed by an input slot and producing an expression of matching arity in the output shape.  The OCaml list-mirroring-list shape is the same data after unrolling `Slots (pre *** dom) ≃ Slots pre ++ ⋯` via repeated `slotsExtIso`.
+This is the standard *relative-monad* form — a section of a dependent type, indexed by an input slot and producing an expression of matching arity in the output shape.  The OCaml list-mirroring-list shape is the same data after unrolling `Slots (pre *** dom) ≃ Slots pre ⧺ ⋯` via repeated `slotsExtIso`.
 
 The "identity on `pre`" requirement — that `sub x` for `x` lifted from `pre` is the variable-as-expression image of `x` in `pre *** cod` — is a separable equation, enforceable by construction.
 

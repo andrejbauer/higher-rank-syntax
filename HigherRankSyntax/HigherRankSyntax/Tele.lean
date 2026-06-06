@@ -11,7 +11,7 @@ Telescopes form a strict monoid under function composition (with `id` as unit):
 - function composition is definitionally associative;
 - η-equivalence makes `id ∘ f` and `f ∘ id` definitionally `f`.
 
-The cons-style convention (vs. snoc-style `xs ↦ xs ++ lst`) is chosen so that
+The cons-style convention (vs. snoc-style `xs ↦ xs ⧺ lst`) is chosen so that
 `(Tele.cons α ∘ᵗ Γ).toList = α :: Γ.toList` reduces *definitionally* — this is
 what makes `SlotAt`-via-underlying-list work cleanly under pattern matching.
 -/

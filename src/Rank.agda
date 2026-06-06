@@ -16,7 +16,7 @@ module Rank (Class : Set) where
   rank : Shape → ℕ
   rank 𝟘 = 0
   rank [ γ , _ ] = suc (rank γ)
-  rank (γ ++ δ) = (rank γ) ⊔ (rank δ)
+  rank (γ ⧺ δ) = (rank γ) ⊔ (rank δ)
 
   rank-< : ∀ {γ δ cl} (x : (γ , cl) ∈ δ) → rank γ < rank δ
   rank-< var-here = n<1+n _

@@ -33,20 +33,20 @@ module Renaming where
 
   -- canonical renamings
 
-  assoc-right : ∀ {γ δ θ} → (γ ++ δ) ++ θ →ʳ γ ++ (δ ++ θ)
+  assoc-right : ∀ {γ δ θ} → (γ ⧺ δ) ⧺ θ →ʳ γ ⧺ (δ ⧺ θ)
   assoc-right = tabulate λ { (var-left (var-left x)) → var-left x ;
                              (var-left (var-right x)) → var-right (var-left x) ;
                              (var-right x) → var-right (var-right x)}
 
-  assoc-left : ∀ {γ δ θ} → γ ++ (δ ++ θ) →ʳ (γ ++ δ) ++ θ
+  assoc-left : ∀ {γ δ θ} → γ ⧺ (δ ⧺ θ) →ʳ (γ ⧺ δ) ⧺ θ
   assoc-left = tabulate λ { (var-left x) → var-left (var-left x) ;
                             (var-right (var-left x)) → var-left (var-right x) ;
                             (var-right (var-right x)) → var-right x}
 
-  in-left : ∀ {γ δ} → γ →ʳ γ ++ δ
+  in-left : ∀ {γ δ} → γ →ʳ γ ⧺ δ
   in-left = tabulate var-left
 
-  in-right : ∀ {γ δ} → δ →ʳ γ ++ δ
+  in-right : ∀ {γ δ} → δ →ʳ γ ⧺ δ
   in-right = tabulate var-right
 
   in-𝟘 : ∀ {γ} → 𝟘 →ʳ γ
@@ -54,19 +54,19 @@ module Renaming where
 
   -- renaming extension
 
-  ⇑ʳ : ∀ {γ} {δ} {θ} → (γ →ʳ δ) → (γ ++ θ →ʳ δ ++ θ)
-  ⇑ʳ ρ = map var-left ρ ++ in-right
+  ⇑ʳ : ∀ {γ} {δ} {θ} → (γ →ʳ δ) → (γ ⧺ θ →ʳ δ ⧺ θ)
+  ⇑ʳ ρ = map var-left ρ ⧺ in-right
 
   -- extension respects identity
 
   ⇑ʳ-resp-𝟙ʳ : ∀ {γ} {δ} → ⇑ʳ {θ = δ} (𝟙ʳ {γ = γ}) ≡ 𝟙ʳ
-  ⇑ʳ-resp-𝟙ʳ = cong₂ _++_ map-tabulate refl
+  ⇑ʳ-resp-𝟙ʳ = cong₂ _⧺_ map-tabulate refl
 
   -- extension commutes with composition
 
   ⇑ʳ-resp-∘ʳ : ∀ {γ δ η θ} {ρ : γ →ʳ δ} {τ : δ →ʳ η} → ⇑ʳ {θ = θ} (τ ∘ʳ ρ) ≡ ⇑ʳ τ ∘ʳ ⇑ʳ ρ
   ⇑ʳ-resp-∘ʳ {γ = γ} {θ = θ} {ρ = ρ} {τ = τ} =
-    cong₂ _++_
+    cong₂ _⧺_
      (trans map-tabulate (tabulate-ext ξ₁))
      (tabulate-ext ξ₂)
     where
@@ -97,13 +97,13 @@ module Renaming where
   _ˢ∘ʳ_ : ∀ {γ δ η} → (δ →ˢ η) → (γ →ʳ δ) → (γ →ˢ η)
   f ˢ∘ʳ 𝟘 = 𝟘
   f ˢ∘ʳ [ x ] = [ f ∙ x ]
-  f ˢ∘ʳ (ρ₁ ++ ρ₂) = (f ˢ∘ʳ ρ₁) ++ (f ˢ∘ʳ ρ₂)
+  f ˢ∘ʳ (ρ₁ ⧺ ρ₂) = (f ˢ∘ʳ ρ₁) ⧺ (f ˢ∘ʳ ρ₂)
 
   ˢ∘ʳ-∙ : ∀ {γ δ η} (f : δ →ˢ η) (ρ : γ →ʳ δ) {a} (x : a ∈ γ) →
              (f ˢ∘ʳ ρ) ∙ x ≡ f ∙ (ρ ∙ x)
   ˢ∘ʳ-∙ f [ y ] var-here = refl
-  ˢ∘ʳ-∙ f (ρ₁ ++ ρ₂) (var-left x) = ˢ∘ʳ-∙ f ρ₁ x
-  ˢ∘ʳ-∙ f (ρ₁ ++ ρ₂) (var-right y) = ˢ∘ʳ-∙ f ρ₂ y
+  ˢ∘ʳ-∙ f (ρ₁ ⧺ ρ₂) (var-left x) = ˢ∘ʳ-∙ f ρ₁ x
+  ˢ∘ʳ-∙ f (ρ₁ ⧺ ρ₂) (var-right y) = ˢ∘ʳ-∙ f ρ₂ y
 
   -- the action of a renaming on an expression
 
@@ -117,27 +117,27 @@ module Renaming where
 
   ρ ʳ∘ˢ 𝟘 = 𝟘
   ρ ʳ∘ˢ [ t ] = [ [ ⇑ʳ ρ ]ʳ t ]
-  ρ ʳ∘ˢ (ts₁ ++ ts₂) = (ρ ʳ∘ˢ ts₁) ++ (ρ ʳ∘ˢ ts₂)
+  ρ ʳ∘ˢ (ts₁ ⧺ ts₂) = (ρ ʳ∘ˢ ts₁) ⧺ (ρ ʳ∘ˢ ts₂)
 
   ʳ∘ˢ-∙ : ∀ {γ δ η} {ρ : δ →ʳ η} {ts : γ →ˢ δ} {α} {x : α ∈ γ} →
           (ρ ʳ∘ˢ ts) ∙ x ≡ [ ⇑ʳ ρ ]ʳ (ts ∙ x)
   ʳ∘ˢ-∙ {ts = [ _ ]} {x = var-here} = refl
-  ʳ∘ˢ-∙ {ts = ts₁ ++ ts₂} {x = var-left x₁} = ʳ∘ˢ-∙ {ts = ts₁}
-  ʳ∘ˢ-∙ {ts = ts₁ ++ ts₂} {x = var-right x₂} = ʳ∘ˢ-∙ {ts = ts₂}
+  ʳ∘ˢ-∙ {ts = ts₁ ⧺ ts₂} {x = var-left x₁} = ʳ∘ˢ-∙ {ts = ts₁}
+  ʳ∘ˢ-∙ {ts = ts₁ ⧺ ts₂} {x = var-right x₂} = ʳ∘ˢ-∙ {ts = ts₂}
 
   𝟙ʳ-ʳ∘ˢ : ∀ {γ δ} → {ts : γ →ˢ δ} → 𝟙ʳ ʳ∘ˢ ts ≡ ts
   [𝟙ʳ] : ∀ {γ} {t : Expr γ} → [ 𝟙ʳ ]ʳ t ≡ t
 
   𝟙ʳ-ʳ∘ˢ {ts = 𝟘} = refl
-  𝟙ʳ-ʳ∘ˢ {ts = [ x ]} = cong [_] (trans (cong₂ [_]ʳ_ (cong₂ _++_ map-tabulate refl) refl) [𝟙ʳ])
-  𝟙ʳ-ʳ∘ˢ {ts = ts ++ ts₁} = cong₂ _++_ 𝟙ʳ-ʳ∘ˢ 𝟙ʳ-ʳ∘ˢ
+  𝟙ʳ-ʳ∘ˢ {ts = [ x ]} = cong [_] (trans (cong₂ [_]ʳ_ (cong₂ _⧺_ map-tabulate refl) refl) [𝟙ʳ])
+  𝟙ʳ-ʳ∘ˢ {ts = ts ⧺ ts₁} = cong₂ _⧺_ 𝟙ʳ-ʳ∘ˢ 𝟙ʳ-ʳ∘ˢ
 
   [𝟙ʳ] {t = x ` ts} = ≡-` 𝟙ʳ-≡ λ z → cong-∙ {f = 𝟙ʳ ʳ∘ˢ ts} 𝟙ʳ-ʳ∘ˢ refl
 
   ʳ∘ˢ-map : ∀ {γ δ η} {ρ : δ →ʳ η} {ts : γ →ˢ δ} → ρ ʳ∘ˢ ts ≡ map [ ⇑ʳ ρ ]ʳ_ ts
   ʳ∘ˢ-map {ts = 𝟘} = refl
   ʳ∘ˢ-map {ts = [ x ]} = refl
-  ʳ∘ˢ-map {ts = ts₁ ++ ts₂} = cong₂ _++_ ʳ∘ˢ-map ʳ∘ˢ-map
+  ʳ∘ˢ-map {ts = ts₁ ⧺ ts₂} = cong₂ _⧺_ ʳ∘ˢ-map ʳ∘ˢ-map
 
   -- the action is functorial
 
@@ -146,7 +146,7 @@ module Renaming where
 
   ∘ʳ-ʳ∘ˢ {σ = 𝟘} = refl
   ∘ʳ-ʳ∘ˢ {ρ = ρ} {τ = τ} {σ = [ t ]} = cong [_] (trans (cong (λ η → [ η ]ʳ t) (⇑ʳ-resp-∘ʳ {ρ = ρ} {τ = τ})) ([∘ʳ] t))
-  ∘ʳ-ʳ∘ˢ {σ = σ₁ ++ σ₂} = cong₂ _++_ ∘ʳ-ʳ∘ˢ ∘ʳ-ʳ∘ˢ
+  ∘ʳ-ʳ∘ˢ {σ = σ₁ ⧺ σ₂} = cong₂ _⧺_ ∘ʳ-ʳ∘ˢ ∘ʳ-ʳ∘ˢ
 
   [∘ʳ] {ρ = ρ} {τ = τ} (x ` ts) = ≡-` (tabulate-∙ (λ z → τ ∙ (ρ ∙ z))) λ z → cong (_∙ z) (∘ʳ-ʳ∘ˢ {σ = ts})
 

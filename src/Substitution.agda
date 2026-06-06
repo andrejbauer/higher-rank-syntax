@@ -24,14 +24,14 @@ module Substitution where
 
   lift 𝟘 = 𝟘
   lift [ x ] = [ η x ]
-  lift (ρ₁ ++ ρ₂) = lift ρ₁ ++ lift ρ₂
+  lift (ρ₁ ⧺ ρ₂) = lift ρ₁ ⧺ lift ρ₂
 
   η x = var-left x ` lift (tabulate var-right)
 
   lift-map-η : ∀ {γ δ} (ρ : γ →ʳ δ) → lift ρ ≡ map η ρ
   lift-map-η 𝟘 = refl
   lift-map-η [ x ] = refl
-  lift-map-η (ρ₁ ++ ρ₂) = cong₂ _++_ (lift-map-η ρ₁) (lift-map-η ρ₂)
+  lift-map-η (ρ₁ ⧺ ρ₂) = cong₂ _⧺_ (lift-map-η ρ₁) (lift-map-η ρ₂)
 
   lift-𝟙ʳ : ∀ {γ} → lift 𝟙ʳ ≡ tabulate (η {γ = γ})
   lift-𝟙ʳ = trans (lift-map-η 𝟙ʳ) map-tabulate
@@ -43,16 +43,16 @@ module Substitution where
 
   -- Substitution extension
 
-  ⇑ˢ : ∀ {γ δ θ} → γ →ˢ δ → γ ++ θ →ˢ δ ++ θ
-  ⇑ˢ {θ = θ} f =  map [ ⇑ʳ (tabulate var-left) ]ʳ_ f ++ lift (tabulate var-right)
+  ⇑ˢ : ∀ {γ δ θ} → γ →ˢ δ → γ ⧺ θ →ˢ δ ⧺ θ
+  ⇑ˢ {θ = θ} f =  map [ ⇑ʳ (tabulate var-left) ]ʳ_ f ⧺ lift (tabulate var-right)
 
   -- The interaction of lifting with various operations
 
   lift-∙ : ∀ {γ δ} (ρ : γ →ʳ δ) {a} (x : a ∈ γ) →
            lift ρ ∙ x ≡ η (ρ ∙ x)
   lift-∙ [ _ ] var-here = refl
-  lift-∙ (ρ₁ ++ ρ₂) (var-left x) = lift-∙ ρ₁ x
-  lift-∙ (ρ₁ ++ ρ₂) (var-right y) = lift-∙ ρ₂ y
+  lift-∙ (ρ₁ ⧺ ρ₂) (var-left x) = lift-∙ ρ₁ x
+  lift-∙ (ρ₁ ⧺ ρ₂) (var-right y) = lift-∙ ρ₂ y
 
   𝟙ˢ-∙ : ∀ {γ a} {x : a ∈ γ} → 𝟙ˢ ∙ x ≡ η x
   𝟙ˢ-∙ {x = x} = trans (lift-∙ 𝟙ʳ x) (cong η 𝟙ʳ-≡)
@@ -69,15 +69,15 @@ module Substitution where
   ∘ʳ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) →
              lift (τ ∘ʳ ρ) ∙ x ≡  lift τ ∙ (ρ ∙ x)
   ∘ʳ-lift [ x ] τ var-here = sym (lift-∙ τ x)
-  ∘ʳ-lift (ρ₁ ++ ρ₂) τ (var-left x) = ∘ʳ-lift ρ₁ τ x
-  ∘ʳ-lift (ρ₁ ++ ρ₂) τ (var-right y) = ∘ʳ-lift ρ₂ τ y
+  ∘ʳ-lift (ρ₁ ⧺ ρ₂) τ (var-left x) = ∘ʳ-lift ρ₁ τ x
+  ∘ʳ-lift (ρ₁ ⧺ ρ₂) τ (var-right y) = ∘ʳ-lift ρ₂ τ y
 
   []ʳ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) → [ ⇑ʳ τ ]ʳ (lift ρ ∙ x) ≡  lift (τ ∘ʳ ρ) ∙ x
   []ʳ-η : ∀ {γ δ} (ρ : γ →ʳ δ) {a} (x : a ∈ γ) → [ ⇑ʳ ρ ]ʳ η x ≡ η (ρ ∙ x)
 
   []ʳ-lift [ x ] τ var-here = []ʳ-η τ x
-  []ʳ-lift (ρ₁ ++ ρ₂) τ (var-left x) = []ʳ-lift ρ₁ τ x
-  []ʳ-lift (ρ₁ ++ ρ₂) τ (var-right x) = []ʳ-lift ρ₂ τ x
+  []ʳ-lift (ρ₁ ⧺ ρ₂) τ (var-left x) = []ʳ-lift ρ₁ τ x
+  []ʳ-lift (ρ₁ ⧺ ρ₂) τ (var-right x) = []ʳ-lift ρ₂ τ x
 
   ⇑ʳ-∘ʳ-tabulate-var-right : ∀ {γ δ θ} (ρ : γ →ʳ δ) →
                              (⇑ʳ {θ = θ} ρ ∘ʳ tabulate var-right) ≡ tabulate var-right
@@ -106,25 +106,25 @@ module Substitution where
   ʳ∘ˢ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) →
              (τ ʳ∘ˢ lift ρ) ∙ x ≡ lift (τ ∘ʳ ρ) ∙ x
   ʳ∘ˢ-lift [ x ] τ var-here = ≡-` ( map-∙ {f = var-left} {ps = τ}) λ z → ʳ∘ˢ-lift-var-right τ z
-  ʳ∘ˢ-lift (ρ₁ ++ ρ₂) τ (var-left x) = ʳ∘ˢ-lift ρ₁ τ x
-  ʳ∘ˢ-lift (ρ₁ ++ ρ₂) τ (var-right x) = ʳ∘ˢ-lift ρ₂ τ x
+  ʳ∘ˢ-lift (ρ₁ ⧺ ρ₂) τ (var-left x) = ʳ∘ˢ-lift ρ₁ τ x
+  ʳ∘ˢ-lift (ρ₁ ⧺ ρ₂) τ (var-right x) = ʳ∘ˢ-lift ρ₂ τ x
 
   lift-map : ∀ {γ δ θ} (f : ∀ {α} → α ∈ γ → α ∈ δ) (ρ : θ →ʳ γ) →
              lift (map f ρ) ≡ map [ ⇑ʳ (tabulate f) ]ʳ_ (lift ρ)
   lift-map f 𝟘 = refl
   lift-map f [ x ] = cong [_] (trans (cong η (sym (tabulate-∙ f))) (sym ([]ʳ-η (tabulate f) x)))
-  lift-map f (ρ₁ ++ ρ₂) = cong₂ _++_ (lift-map f ρ₁) (lift-map f ρ₂)
+  lift-map f (ρ₁ ⧺ ρ₂) = cong₂ _⧺_ (lift-map f ρ₁) (lift-map f ρ₂)
 
   ⇑ˢ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) → ⇑ˢ {θ = θ} (lift ρ) ≡ lift (⇑ʳ ρ)
-  ⇑ˢ-lift ρ = cong₂ _++_ (sym (lift-map var-left ρ)) refl
+  ⇑ˢ-lift ρ = cong₂ _⧺_ (sym (lift-map var-left ρ)) refl
 
-  lift-++ : ∀ {γ δ θ} (ρ : γ →ʳ θ) (τ : δ →ʳ θ) →
-           lift (ρ ++ τ) ≡ lift ρ ++ lift τ
-  lift-++ ρ τ = refl
+  lift-⧺ : ∀ {γ δ θ} (ρ : γ →ʳ θ) (τ : δ →ʳ θ) →
+           lift (ρ ⧺ τ) ≡ lift ρ ⧺ lift τ
+  lift-⧺ ρ τ = refl
 
   -- Auxiliary substitution function
   -- {-# TERMINATING #-}
-  -- sbs : ∀ {γ δ θ} (ρ : γ →ʳ θ) (f : δ →ˢ θ) → Expr (γ ++ δ) → Expr θ
+  -- sbs : ∀ {γ δ θ} (ρ : γ →ʳ θ) (f : δ →ˢ θ) → Expr (γ ⧺ δ) → Expr θ
   -- sbs ρ f (var-left x ` ts) = ρ ∙ x `` λ z → sbs (in-left ∘ʳ ρ) (⇑ˢ f) ([ assoc-right ]ʳ ts ∙ z)
   -- sbs ρ f (var-right x ` ts) = sbs 𝟙ʳ (tabulate (λ z → sbs (in-left ∘ʳ ρ) (⇑ˢ f) ([ assoc-right ]ʳ ts ∙ z))) (f ∙ x)
 
@@ -135,8 +135,8 @@ module Substitution where
 
   focus-shape : Shape → Focus → Shape
   focus-shape θ focus-here = θ
-  focus-shape θ (focus-left f γ) = focus-shape θ f ++ γ
-  focus-shape θ (focus-right γ f) = γ ++ focus-shape θ f
+  focus-shape θ (focus-left f γ) = focus-shape θ f ⧺ γ
+  focus-shape θ (focus-right γ f) = γ ⧺ focus-shape θ f
 
   infixr 6 [_]ˢ_
   infixl 6 _∘ˢ_
@@ -165,8 +165,8 @@ module Substitution where
   --        [ g ∘ˢ f ]ˢ e ≡ [ g ]ˢ [ f ]ˢ e
   -- [∘]ˢ f g (x ` ts) = {!!}
 
-  -- sbs-lift : ∀ {γ δ θ} (ρ : γ →ʳ θ) (τ : δ →ʳ θ) (e : Expr (γ ++ δ)) →
-  --             sbs ρ (lift τ) e ≡ [ ρ ++ τ ]ʳ e
+  -- sbs-lift : ∀ {γ δ θ} (ρ : γ →ʳ θ) (τ : δ →ʳ θ) (e : Expr (γ ⧺ δ)) →
+  --             sbs ρ (lift τ) e ≡ [ ρ ⧺ τ ]ʳ e
   -- sbs-lift ρ τ (var-left x ` ts) =
   --   ≡-`
   --     refl
@@ -174,7 +174,7 @@ module Substitution where
   --              (tabulate-∙ (λ z → sbs (in-left ∘ʳ ρ) (⇑ˢ (lift τ)) ([ assoc-right ]ʳ ts ∙ z)))
   --              (trans
   --                 {!!}
-  --                 (sym (ʳ∘ˢ-∙ {ρ = ρ ++ τ} {ts = ts} {x = z}))))
+  --                 (sym (ʳ∘ˢ-∙ {ρ = ρ ⧺ τ} {ts = ts} {x = z}))))
   -- sbs-lift ρ τ (var-right x ` ts) =
   --   trans
   --     (cong (sbs 𝟙ʳ _) (lift-∙ τ x))
@@ -203,4 +203,4 @@ module Substitution where
 
 
   -- -- [𝟙]ˢ : ∀ {γ cl} {e : Expr γ cl} → [ 𝟙ˢ ]ˢ e ≡ e
-  -- -- [𝟙]ˢ {e = x ` ts} = trans (cong [ 𝟙ˢ ++ (𝟙ˢ ∘ˢ ts) ]ˢ_ 𝟙ˢ-∙) {!!}
+  -- -- [𝟙]ˢ {e = x ` ts} = trans (cong [ 𝟙ˢ ⧺ (𝟙ˢ ∘ˢ ts) ]ˢ_ 𝟙ˢ-∙) {!!}

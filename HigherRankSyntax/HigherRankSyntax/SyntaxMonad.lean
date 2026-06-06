@@ -16,7 +16,7 @@ whenever `Γ : PShape C` is in scope, so `lift`, `unit_right`,
 lemmas without manually threading instance args.
 
 With cons-style telescopes, the Kleisli ↔ Subst bridge is cast-free:
-`Shape.nil ++ X = X` definitionally, so `lift f` is just
+`Shape.nil ⧺ X = X` definitionally, so `lift f` is just
 `(toSubst f).act ⌊α⌋`.
 -/
 

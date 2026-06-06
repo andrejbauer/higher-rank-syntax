@@ -54,7 +54,7 @@ constructors
 
   - empty:           `𝟘`,
   - a single slot:   `[α]`  (one arity at the leaf),
-  - concatenation:   `γ ++ δ`.
+  - concatenation:   `γ ⧺ δ`.
 
 A position in a shape is a path from the root to a leaf
 (`Here | Left p | Right p` in the OCaml; `var_in` / `Var` /
@@ -62,7 +62,7 @@ A position in a shape is a path from the root to a leaf
 
 An *expression in shape γ* applies a variable `x : α ∈ γ` to a tree of
 sub-expressions, one for each leaf of α, recursively shape-checked
-against `γ ++ β` (where β is the binder shape at that leaf).  This is
+against `γ ⧺ β` (where β is the binder shape at that leaf).  This is
 the higher-rank analogue of "head normal form": every term is a
 variable applied to as many sub-trees as the variable's arity
 demands.
@@ -90,10 +90,10 @@ Given a substitution `f` with
   - `f.dom`  — the domain shape,
   - `f.cod`  — the codomain shape,
   - `f.sub`  — for each `x : α ∈ f.dom`, an expression in
-               `(f.pre ++ f.cod) ++ α`,
+               `(f.pre ⧺ f.cod) ⧺ α`,
 
-we define `subst f γ e`, taking `e` valid in `(f.pre ++ f.dom) ++ γ` and
-producing an expression in `(f.pre ++ f.cod) ++ γ`.
+we define `subst f γ e`, taking `e` valid in `(f.pre ⧺ f.dom) ⧺ γ` and
+producing an expression in `(f.pre ⧺ f.cod) ⧺ γ`.
 
 The recursion splits on **where the head variable `x` lives** —
 encoded directly by which branch of the path `x` takes:
@@ -105,10 +105,10 @@ encoded directly by which branch of the path `x` takes:
   | `Left (Left y)`    | `x` is in `f.pre`      | re-index, recurse into arguments |
 
 The interesting case is the middle one.  After the recursive call on
-the children of `x` (which lowers them to `(f.pre ++ f.cod) ++ α`), we
+the children of `x` (which lowers them to `(f.pre ⧺ f.cod) ⧺ α`), we
 build an auxiliary substitution `g` whose domain is the arity `α`
 itself and whose `sub` is the recursively substituted children; we
-then apply `g` to `e' = f.sub[x]` (extracted in shape `(f.pre ++ f.cod) ++ α`)
+then apply `g` to `e' = f.sub[x]` (extracted in shape `(f.pre ⧺ f.cod) ⧺ α`)
 and return the result.
 
 In OCaml this is implemented twice:
@@ -122,7 +122,7 @@ In OCaml this is implemented twice:
                             shape of the path.
 
 Throughout, the recursive `subst` calls happen at strictly smaller
-`(f.pre ++ f.dom) ++ (γ ++ α)` *trees*, but the smallness is not on a
+`(f.pre ⧺ f.dom) ⧺ (γ ⧺ α)` *trees*, but the smallness is not on a
 single argument: the outer recursion changes `γ` (going under
 binders), and the inner one changes both `f.dom` and `e`.  This is
 exactly the place where the formalizations have repeatedly hit
@@ -249,7 +249,7 @@ f30dfde  lifting done
 
 The narrative arc is interesting: commit `56ea3ae` briefly tried
 making `Shape` a *quotient inductive type*, with path constructors for
-the unitality/associativity of `++`, but `ffc6037` walked that back
+the unitality/associativity of `⧺`, but `ffc6037` walked that back
 and replaced the whole edifice with plain de-Bruijn indices.
 
 ### 6.1 The current (post-`24d0ab6`) data layout
@@ -266,14 +266,14 @@ In `HigherRankSyntax/HigherRankSyntax/Syntax.lean`:
     ```
     i.e. a well-founded tree where each node has finitely many
     children and each child is itself an arity.  `Shape := Arity`.
-  - Concatenation `α ++ β` is defined by adding the domain sizes and
+  - Concatenation `α ⧺ β` is defined by adding the domain sizes and
     splitting `Fin (m + n)` into the two halves.  `Arity.unitR`,
     `Arity.unitL`, `Arity.assoc` are *proven lemmas* (propositional
     equalities), not constructors.
   - `Expr σ γ α` is a plain inductive (not a QIT) with three
     constructors `sym`, `free`, `bound`.  The signature `Expr σ γ α`
     has *both* an ambient signature `σ`, a context `γ`, and a target
-    arity `α`, and the recursive children live in `α ++ β` for
+    arity `α`, and the recursive children live in `α ⧺ β` for
     sub-arities β (so the binder shape grows on the *right* of the
     target arity, not on the context).
 
@@ -331,7 +331,7 @@ two different syntactic representations:
     `sym`/`free`/`bound` three-way split of `Expr`.
 
 Both representations make the unitality lemmas
-`α ++ 𝟘 = α`, `𝟘 ++ α = α` provable but not definitional;
+`α ⧺ 𝟘 = α`, `𝟘 ⧺ α = α` provable but not definitional;
 Ivan paid that cost up-front and built shift operators that thread
 the equalities through, while your OCaml side dodges the cost by
 not having to type-check the recursive call.
