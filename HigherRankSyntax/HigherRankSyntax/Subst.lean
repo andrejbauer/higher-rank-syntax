@@ -140,6 +140,44 @@ def Subst.embedInner {C : Carrier} {pre cod outer : Shape C} :
   | _ :: _, _, .here i  => .here i
   | _ :: _, _, .there q => .there (Subst.embedInner q)
 
+/-- Embed a `SubstSite` back into a slot of `pre ⧺ dom ⧺ outer ⧺ Tele.ofList inner`.
+The four-way inverse of `Subst.classifySlot`. -/
+def Subst.embed {C : Carrier} {pre dom outer : Shape C}
+    [Proper dom] [Proper outer] {inner : List C.Arity} {α : C.Arity} :
+    SubstSite pre dom outer inner α →
+    pre ⧺ dom ⧺ outer ⧺ Tele.ofList inner ∋ α
+  | .pre w   =>
+      (Proper.inl (pre ⧺ dom ⧺ outer))
+        ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) w))
+  | .dom z   =>
+      (Proper.inl (pre ⧺ dom ⧺ outer))
+        ((Proper.inl (pre ⧺ dom)) ((Proper.inr pre) z))
+  | .outer x =>
+      (Proper.inl (pre ⧺ dom ⧺ outer)) ((Proper.inr (pre ⧺ dom)) x)
+  | .inner y => Subst.embedInner y
+
+/-- Every slot of `pre ⧺ dom ⧺ outer ⧺ Tele.ofList inner` is the embedding of
+some `SubstSite`.  Use via `obtain ⟨s, h⟩ := Subst.coverSlot inner p`. -/
+theorem Subst.coverSlot
+    {C : Carrier} {pre dom outer : Shape C} [Proper dom] [Proper outer] :
+    (inner : List C.Arity) → {α : C.Arity} →
+    (p : pre ⧺ dom ⧺ outer ⧺ Tele.ofList inner ∋ α) →
+    ∃ s : SubstSite pre dom outer inner α, p = Subst.embed s
+  | [], _, p => by
+      rcases Proper.cover (pre ⧺ dom) p with ⟨x, h_x⟩ | ⟨y, h_y⟩
+      · exact ⟨.outer x, by rw [h_x]; rfl⟩
+      · rcases Proper.cover pre y with ⟨z, h_z⟩ | ⟨w, h_w⟩
+        · exact ⟨.dom z, by rw [h_y, h_z]; rfl⟩
+        · exact ⟨.pre w, by rw [h_y, h_w]; rfl⟩
+  | _ :: _, _, .here i  => ⟨.inner (.here i), rfl⟩
+  | β :: rest, _, .there q => by
+      obtain ⟨s, h⟩ := Subst.coverSlot rest q
+      cases s with
+      | pre   w => exact ⟨.pre w,   by rw [h]; rfl⟩
+      | dom   z => exact ⟨.dom z,   by rw [h]; rfl⟩
+      | outer x => exact ⟨.outer x, by rw [h]; rfl⟩
+      | inner y => exact ⟨.inner (.there y), by rw [h]; rfl⟩
+
 /-! ### Reflection lemmas: `classifySlot` on each of the four embeddings -/
 
 /-- Classifying the embedding of an inner-slot returns `SubstSite.inner`. -/
