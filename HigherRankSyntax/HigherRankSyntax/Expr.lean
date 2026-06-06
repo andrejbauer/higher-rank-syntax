@@ -15,16 +15,16 @@ inductive Expr {C : Carrier} : Shape C → Type where
   /-- An application of a head slot `p : Γ ∋ α` to a dependent family of children, one
       per binder of `α`. -/
   | ap : {Γ : Shape C} → {α : C.Arity} → Γ ∋ α →
-         ((i : C.Binder α) → Expr (Γ ⋈ i.arity)) → Expr Γ
+         ((i : C.Binder α) → Expr (Γ ∷ i.arity)) → Expr Γ
 
 /-- `Expr.Subterm e' e` holds when `e = ap p args` and `e'` is one of its arguments
 `args j`. -/
 inductive Expr.Subterm {C : Carrier} :
     (Σ Γ : Shape C, Expr Γ) → (Σ Γ : Shape C, Expr Γ) → Prop where
   | of_arg {Γ : Shape C} {α : C.Arity} (p : Γ ∋ α)
-      (args : (i : C.Binder α) → Expr (Γ ⋈ i.arity))
+      (args : (i : C.Binder α) → Expr (Γ ∷ i.arity))
       (j : C.Binder α) :
-      Expr.Subterm ⟨Γ ⋈ j.arity, args j⟩ ⟨Γ, Expr.ap p args⟩
+      Expr.Subterm ⟨Γ ∷ j.arity, args j⟩ ⟨Γ, Expr.ap p args⟩
 
 theorem Expr.Subterm.wf {C : Carrier} : WellFounded (@Expr.Subterm C) := by
   refine ⟨fun ⟨Γ, e⟩ => ?_⟩
@@ -41,7 +41,7 @@ instance Expr.Subterm.wellFoundedRelation {C : Carrier} :
   wf := Expr.Subterm.wf
 
 /-- The relative monad's target: expressions with free shape `Γ` under one outer α-binder. -/
-abbrev Expr.T {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type := Expr (Γ ⋈ α)
+abbrev Expr.T {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type := Expr (Γ ∷ α)
 
 /-- η-expansion: a variable `p : Γ ∋ α` becomes the fully-applied tree
 `ap (.there p) (fun i => η (.here i))`. -/
@@ -61,7 +61,7 @@ notation:60 "⟦" ρ "⟧ʳ " e:61 => Renaming.actExpr ρ e
 @[simp]
 theorem Renaming.actExpr_ap {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
     {α : C.Arity} (p : Γ ∋ α)
-    (args : (i : C.Binder α) → Expr (Γ ⋈ i.arity)) :
+    (args : (i : C.Binder α) → Expr (Γ ∷ i.arity)) :
     ⟦ ρ ⟧ʳ (Expr.ap p args)
       = Expr.ap (ρ p) (fun i => ⟦ ρ ⇑ʳ i.arity ⟧ʳ (args i)) := rfl
 

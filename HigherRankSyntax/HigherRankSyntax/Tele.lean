@@ -5,7 +5,7 @@ A *telescope* over `α` is an endofunction `f : List α → List α`.  We use
 them to represent "prepend some list to the input", but Tele itself
 imposes no such restriction — it's just the carrier of the strict-monoid
 structure.  Cons-preservation properties (where needed) are imposed
-externally via the `ProperTele` type class.
+externally via the `Proper` type class.
 
 Telescopes form a strict monoid under function composition (with `id` as unit):
 - function composition is definitionally associative;

@@ -21,9 +21,9 @@ F2=`subst_after_ren`, F3=`ren_after_subst`, F4=`comp_lift.aux` modulo L5).
 
 We have two recursive walkers:
 
-* `lift.aux σ τ : Expr (Γ⋈*τ) → Expr (Δ⋈*τ)` for σ : Subst Γ Δ.  Substitution
+* `lift.aux σ τ : Expr (Γ++τ) → Expr (Δ++τ)` for σ : Subst Γ Δ.  Substitution
   with a τ-stack of binders that have already been passed.
-* `inst.aux ρ ι τ : Expr ((Δ⋈α)⋈*τ) → Expr (Ξ⋈*τ)` for ρ : Δ →ʳ Ξ,
+* `inst.aux ρ ι τ : Expr ((Δ∷α)++τ) → Expr (Ξ++τ)` for ρ : Δ →ʳ Ξ,
   ι : Inst α Ξ.  Plugs the α-binder via ι; renames Δ-slots via ρ.
 
 They interact at exactly one place: `lift.aux`'s `.base` case unfolds to a call
@@ -113,7 +113,7 @@ Commit `401712c` adds the equation
 inst.aux ρ ι τ e = lift.aux (ι.toSubst ρ) τ e
 ```
 
-where `ι.toSubst ρ : Subst (Δ⋈α) Ξ` maps `.here i` to `ι i` and `.there r` to
+where `ι.toSubst ρ : Subst (Δ∷α) Ξ` maps `.here i` to `ι i` and `.there r` to
 `η (ρ r)`.  Proof: structural induction on `e`; three cases close via the
 per-case unfolders and `inst_aux_η`.
 
@@ -268,7 +268,7 @@ inst case) or (b) lift through external structure (the lift case).
 ## Files
 
 * `HigherRankSyntax/Carrier.lean` — the carrier interface.
-* `HigherRankSyntax/Shape.lean` — shapes (binding contexts) and ⋈, ⋈*.
+* `HigherRankSyntax/Shape.lean` — shapes (binding contexts) and ∷, ++.
 * `HigherRankSyntax/Renaming.lean` — Renaming and notation.
 * `HigherRankSyntax/Expr.lean` — Expr W-type, η, renaming action ⟦·⟧ʳ.
 * `HigherRankSyntax/Subst.lean` — Subst, Inst, the two walkers, all

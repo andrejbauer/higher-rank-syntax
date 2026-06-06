@@ -10,8 +10,8 @@ current proof work.  The Tele version uses cons-style representable endomaps:
 
 - `Tele α` is an endomap on `List α`.
 - `Shape C` is `Tele C.Arity`.
-- `Shape.nil`, `Γ ⋈ α`, and `Γ ⋈* τ` are strict endomap operations.
-- `ProperTele` supplies `inl`, `inr`, classification, and cover data for
+- `Shape.nil`, `Γ ∷ α`, and `Γ ++ τ` are strict endomap operations.
+- `Proper` supplies `inl`, `inr`, classification, and cover data for
   telescopes that behave like proper context extensions.
 
 The strict associativity and unit behavior of `Tele` is the reason this branch
@@ -26,7 +26,7 @@ avoids the list-append reassociation transports that blocked earlier attempts.
 - `Shape.lean`: shapes and slots as telescope list views.
 - `Renaming.lean`: renamings, extension, and expression action.
 - `Expr.lean`: expressions and eta expansion.
-- `ProperTele.lean`: structural operations for classifying extension slots.
+- `Proper.lean`: structural operations for classifying extension slots.
 - `Subst.lean`: the single fixed-shape substitution walker `Subst.act`.
 - `Equations.lean`: substitution equations and monad-law proof work.
 - `SyntaxMonad.lean`: the relative monad packaging.
@@ -59,7 +59,7 @@ list-indexed form through the auxiliary layer:
 
 The theorem statements are written through private statement facades, so the
 main lemmas read as equations between named constructions rather than exposing
-all local `ProperTele` instances and singleton-instantiation plumbing inline:
+all local `Proper` instances and singleton-instantiation plumbing inline:
 
 - `Subst.act_inst.UnderList.actThenInst = UnderList.instThenAct`
 - `Subst.act_inst.PreLift.sequential = PreLift.fused`
@@ -89,12 +89,12 @@ There are currently no `sorry`s or `axiom`s in `HigherRankSyntax`.
 ## Next Realistic Formalization Targets
 
 1. Be careful with telescope-composition coherence.
-   A naive fully arbitrary extra-τ statement compares the `ProperTele` instance
-   for a composite telescope with nested `ProperTele` instances; the current
-   class does not expose such coherence.  `ProperTele.compose` now packages the
+   A naive fully arbitrary extra-τ statement compares the `Proper` instance
+   for a composite telescope with nested `Proper` instances; the current
+   class does not expose such coherence.  `Proper.compose` now packages the
    canonical two-stage composition, with `compose_inr_inr`,
    `compose_inr_inl`, and `compose_inl` as named rewrites.  For recursive
-   binder extensions under concrete lists, use `ProperTele.extendList` and its
+   binder extensions under concrete lists, use `Proper.extendList` and its
    `extendList_inr_inr`, `extendList_inr_inl`, and `extendList_inl` rewrites.
 
 2. Keep Andrej's cleaned-up naming and comments as the baseline.

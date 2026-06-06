@@ -58,7 +58,7 @@ theorem Renaming.comp_assoc {C : Carrier} {Γ Δ Ξ Θ : Shape C}
 
 /-- Extend a renaming through a fresh binder of arity `β`. -/
 def Renaming.extend {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ) (β : C.Arity) :
-    Γ ⋈ β →ʳ Δ ⋈ β :=
+    Γ ∷ β →ʳ Δ ∷ β :=
   ⟨fun
     | .here i  => .here i
     | .there p => .there (f p)⟩

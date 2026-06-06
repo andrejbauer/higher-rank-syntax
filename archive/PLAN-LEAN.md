@@ -25,23 +25,23 @@ The Carrier exposes **two containers** in the standard "shapes-and-positions" se
 
 The two containers share **the same position-decoration type** (`Arity`), which is what lets the action structure couple them.
 
-On top of these two containers sits the **action** `⋈ : Shape × Arity → Shape`, with the slot-equivalence
+On top of these two containers sits the **action** `∷ : Shape × Arity → Shape`, with the slot-equivalence
 
 ```
-slots (γ ⋈ α) ≃ slots γ ⊕ AritySlots α
+slots (γ ∷ α) ≃ slots γ ++ AritySlots α
 ```
 
 and the single `shapeArity` compatibility law
 
 ```
-shapeArity (γ ⋈ α) = Sum.elim (shapeArity γ) (arityArity α) ∘ slotsExt γ α
+shapeArity (γ ∷ α) = Sum.elim (shapeArity γ) (arityArity α) ∘ slotsExt γ α
 ```
 
 i.e. the decoration of the extended container is the **copair** of the two original decorations along `slotsExt`.  In container language this is *naturality of the position-decoration under the action* — a coherence on top of the two-container data.
 
 What this perspective predicts:
 
-  - **`Expr` is the free relative monad of `Shape ◅ ShapeSlots` (with `shapeArity` decoration), with the action handling binding.**  The inductive `Expr γ α = apply x args …` is the standard W-type for that container, with the recursive call's *shape index* shifted by `⋈ (arityArity _ y)` — the difference between the free monad of a plain container (no binding) and the free relative monad of a container with an action (binding).
+  - **`Expr` is the free relative monad of `Shape ◅ ShapeSlots` (with `shapeArity` decoration), with the action handling binding.**  The inductive `Expr γ α = apply x args …` is the standard W-type for that container, with the recursive call's *shape index* shifted by `∷ (arityArity _ y)` — the difference between the free monad of a plain container (no binding) and the free relative monad of a container with an action (binding).
   - **`subst` is the Kleisli extension of that relative monad.**  Termination is the lex product of the W-types' well-founded sub-structure relations: descend on the arity container (the aux step) or on the shape-container-W-type (the children step).
   - **`ηVar` is constructed by recursion on the arity container.**  A variable-as-expression at slot `x` of arity `α = shapeArity γ x` is `apply x (η-expanded children)`, where each child is built by induction on the *arity*-W-type — exactly the unit of a free relative monad.
   - **The three relative-monad laws** follow from container-theoretic naturality plus the carrier's compatibility laws.  The hardest one (`comp_lift`) is essentially distributivity of Kleisli extension over container morphisms.
@@ -73,7 +73,7 @@ class Carrier where
     (fun α' α => ∃ y : AritySlots α, arityArity α y = α')
   ext : Shape → Arity → Shape
   slotsExt : (γ : Shape) → (α : Arity) →
-              ShapeSlots (ext γ α) ≃ ShapeSlots γ ⊕ AritySlots α
+              ShapeSlots (ext γ α) ≃ ShapeSlots γ ++ AritySlots α
   /-- The decoration of the extended container is the copair (along
       `slotsExt`) of the two original decorations on the left and
       right summands. -/
@@ -83,23 +83,23 @@ class Carrier where
 
 The algorithm builds dependent families `(y : AritySlots α) → …` without enumeration, so no finiteness is assumed on `AritySlots` or `ShapeSlots`.  Termination consumes `aritySubWf` directly.
 
-Notation `γ ⋈ α := Carrier.ext γ α`.  The infix character is open — anything that doesn't clash with mathlib (`**` clashes with `HPow`).
+Notation `γ ∷ α := Carrier.ext γ α`.  The infix character is open — anything that doesn't clash with mathlib (`**` clashes with `HPow`).
 
 Derived:
 
 ```lean
 def extList (γ : Shape) : List Arity → Shape
   | [] => γ
-  | α :: rest => extList γ rest ⋈ α    -- cons-as-snoc
-infixl:67 " ⋈* " => extList
+  | α :: rest => extList γ rest ∷ α    -- cons-as-snoc
+infixl:67 " ++ " => extList
 ```
 
-`γ ⋈* [] = γ` and `γ ⋈* (α :: rest) = (γ ⋈* rest) ⋈ α` hold by `rfl`.
+`γ ++ [] = γ` and `γ ++ (α :: rest) = (γ ++ rest) ∷ α` hold by `rfl`.
 
 Two example instances:
 
-  - `ListCarrier` — `Shape = List Arity`, `AritySlots α = Fin α.length`, `ShapeSlots γ = Fin γ.length`, `ext xs α := xs ++ α.toList`, `slotsExt` is `Fin.addCases`-shaped.  `γ ⋈ emptyArity = γ` definitionally.
-  - `TreeCarrier` — `Shape`/`Arity` are mutually inductive trees, `ShapeSlots`/`AritySlots` defined by recursion on the tree, `ext` builds `Oplus`, `slotsExt` matches the `L`/`R` structure.  `γ ⋈ emptyArity` is not `rfl`-equal to `γ` — the honest case, no smart constructors involved.
+  - `ListCarrier` — `Shape = List Arity`, `AritySlots α = Fin α.length`, `ShapeSlots γ = Fin γ.length`, `ext xs α := xs ++ α.toList`, `slotsExt` is `Fin.addCases`-shaped.  `γ ∷ emptyArity = γ` definitionally.
+  - `TreeCarrier` — `Shape`/`Arity` are mutually inductive trees, `ShapeSlots`/`AritySlots` defined by recursion on the tree, `ext` builds `Oplus`, `slotsExt` matches the `L`/`R` structure.  `γ ∷ emptyArity` is not `rfl`-equal to `γ` — the honest case, no smart constructors involved.
 
 For both instances `aritySubWf` is automatic from the inductive structure of `Arity`.
 
@@ -111,7 +111,7 @@ Arity-indexed, to land properly in the relative monad:
 inductive Expr [C : Carrier] : C.Shape → C.Arity → Type where
   | apply (γ : C.Shape) (x : C.ShapeSlots γ)
           (args : (y : C.AritySlots (C.shapeArity γ x)) →
-                  Expr (γ ⋈ C.arityArity _ y) (C.arityArity _ y))
+                  Expr (γ ∷ C.arityArity _ y) (C.arityArity _ y))
         : Expr γ (C.shapeArity γ x)
 ```
 
@@ -126,17 +126,17 @@ Two well-founded relations carry termination for the development:
 
 ## 3. The substitution
 
-A substitution from `γ ⋈ α` to `γ ⋈* δ` is a dependent function on slots:
+A substitution from `γ ∷ α` to `γ ++ δ` is a dependent function on slots:
 
 ```lean
 def Substitution [C : Carrier] (γ : C.Shape) (α : C.Arity) (δ : List C.Arity) : Type :=
-  (s : C.ShapeSlots (γ ⋈ α)) →
-    Expr (γ ⋈* δ) (C.shapeArity (γ ⋈ α) s)
+  (s : C.ShapeSlots (γ ∷ α)) →
+    Expr (γ ++ δ) (C.shapeArity (γ ∷ α) s)
 ```
 
-`σ` assigns, to every slot of the input shape `γ ⋈ α`, an expression of matching arity in the output shape `γ ⋈* δ`.  Split along `slotsExt γ α`:
+`σ` assigns, to every slot of the input shape `γ ∷ α`, an expression of matching arity in the output shape `γ ++ δ`.  Split along `slotsExt γ α`:
 
-  - For a slot in the γ-summand (`(slotsExt γ α).symm (.inl _)`), `σ` typically returns the η-expansion of that slot as a variable in `γ ⋈* δ` — γ-slots map to themselves.
+  - For a slot in the γ-summand (`(slotsExt γ α).symm (.inl _)`), `σ` typically returns the η-expansion of that slot as a variable in `γ ++ δ` — γ-slots map to themselves.
   - For a slot in the α-summand (`(slotsExt γ α).symm (.inr _)`), `σ` returns the substitution image — the expression that replaces the α-binder's slot.
 
 The `α`-parameter carries the termination measure for §4: it shrinks along the sub-arity relation in the aux step.
@@ -146,8 +146,8 @@ The `α`-parameter carries the termination measure for §4: it shrinks along the
 ```lean
 def subst {γ : C.Shape} {α : C.Arity} {δ : List C.Arity}
           (σ : Substitution γ α δ) (τ : List C.Arity) {β : C.Arity}
-          (e : Expr ((γ ⋈ α) ⋈* τ) β) :
-          Expr ((γ ⋈* δ) ⋈* τ) β
+          (e : Expr ((γ ∷ α) ++ τ) β) :
+          Expr ((γ ++ δ) ++ τ) β
 ```
 
 `β` rides through — substitution preserves the head's arity.
@@ -160,7 +160,7 @@ The recursion:
   - Three reassembly cases:
       - **γ-side**: head becomes `shiftThrough γ δ p` (the iterated `slotsExt .inl`-injection through the δ-extensions); reassemble as `apply head newArgs`.
       - **τ-layer**: head stays at the relevant τ-position (with per-layer shifts applied during classify); reassemble as `apply head newArgs`.
-      - **α-side**: let `ez := σ ((slotsExt γ α).symm (.inr z)) : Expr (γ ⋈* δ) (arityArity α z)`.  Build `σ' : Substitution (γ ⋈* δ) (arityArity α z) τ` inline: `slotsExt`-decompose a slot of `(γ ⋈* δ) ⋈ arityArity α z`; on the `(γ ⋈* δ)`-side return `ηVar` lifted through `τ` via `shiftThrough`; on the `arityArity α z`-side return `newArgs`.  Recurse: `subst σ' [] ez`.
+      - **α-side**: let `ez := σ ((slotsExt γ α).symm (.inr z)) : Expr (γ ++ δ) (arityArity α z)`.  Build `σ' : Substitution (γ ++ δ) (arityArity α z) τ` inline: `slotsExt`-decompose a slot of `(γ ++ δ) ∷ arityArity α z`; on the `(γ ++ δ)`-side return `ηVar` lifted through `τ` via `shiftThrough`; on the `arityArity α z`-side return `newArgs`.  Recurse: `subst σ' [] ez`.
 
 Termination: `termination_by α e` with `Prod.Lex` of the sub-arity and sub-expression relations from §2.  The children call holds `α` fixed and shrinks `e` (each `args y` is a direct subterm).  The aux call uses `α' := arityArity α z`, a one-step sub-arity of `α` with witness `⟨y, rfl⟩` for `aritySubWf`.
 
@@ -197,7 +197,7 @@ def lift {γ δ : C.Shape}
          (α : C.Arity) (e : Expr γ α) : Expr δ α := …
 ```
 
-`Substitution γ α δ` (§3) is the Kleisli morphism for source `γ ⋈ α` and target `γ ⋈* δ`.  `subst` (§4) is `lift` specialised to that source, with `α` carrying the termination measure.  The general `lift` runs the same algorithm with `α := emptyArity` — no aux step then arises on the α-side.
+`Substitution γ α δ` (§3) is the Kleisli morphism for source `γ ∷ α` and target `γ ++ δ`.  `subst` (§4) is `lift` specialised to that source, with `α` carrying the termination measure.  The general `lift` runs the same algorithm with `α := emptyArity` — no aux step then arises on the α-side.
 
 ## 6. Theorems
 
@@ -205,8 +205,8 @@ In order of dependency:
 
 **Carrier-level lemmas** (mostly `rfl` or one-line `Equiv` cancellations):
 
-  - `extListNil : γ ⋈* [] = γ`     `(rfl)`
-  - `extListCons : γ ⋈* (α :: rest) = (γ ⋈* rest) ⋈ α`     `(rfl)`
+  - `extListNil : γ ++ [] = γ`     `(rfl)`
+  - `extListCons : γ ++ (α :: rest) = (γ ++ rest) ∷ α`     `(rfl)`
   - `slotsExtInlApplySymm : (slotsExt γ α).symm (.inl s) = …`     (inverse property of `Equiv`)
 
 **Well-foundedness facts**:
@@ -217,7 +217,7 @@ In order of dependency:
 **`subst` lemmas** (equational):
 
   - `substApply : subst σ τ (apply x args) = apply head (subst σ (β :: τ) ∘ args)` — for the appropriate `head` per classify case.
-  - `substVarDom : subst σ [] (ηVar (γ ⋈ α) … ((slotsExt γ α).symm (.inr z))) = σ (.inr z)`.
+  - `substVarDom : subst σ [] (ηVar (γ ∷ α) … ((slotsExt γ α).symm (.inr z))) = σ (.inr z)`.
   - `substVarPre : subst σ τ (ηVar … (slot in γ)) = …` — matching the γ-side lifting.
 
 **Three relative-monad laws**:
@@ -231,8 +231,8 @@ Estimated proof difficulty: `unit_left` trivial, `unit_right` moderate (well-fou
 ## 7. Design decisions
 
   - **Finiteness of `AritySlots`**: not assumed.  The algorithm builds dependent families pointwise; termination needs only the sub-arity well-founded relation (`aritySubWf`).
-  - **Category structure on `Shape`**: arity-respecting slot maps.  Morphisms `γ ⟶ δ` are `(f : ShapeSlots γ → ShapeSlots δ)` with `∀ s, shapeArity γ s = shapeArity δ (f s)`.  Required for renamings (the inclusions `γ ⟶ γ ⋈ α`, σ.cod-shifts) to be morphisms.
-  - **Substitution form**: a single dependent function on slots — `Substitution γ α δ` is the relative-monad Kleisli morphism for source `γ ⋈ α`, target `γ ⋈* δ`.
+  - **Category structure on `Shape`**: arity-respecting slot maps.  Morphisms `γ ⟶ δ` are `(f : ShapeSlots γ → ShapeSlots δ)` with `∀ s, shapeArity γ s = shapeArity δ (f s)`.  Required for renamings (the inclusions `γ ⟶ γ ∷ α`, σ.cod-shifts) to be morphisms.
+  - **Substitution form**: a single dependent function on slots — `Substitution γ α δ` is the relative-monad Kleisli morphism for source `γ ∷ α`, target `γ ++ δ`.
 
 ## 8. Open issues
 
@@ -286,7 +286,7 @@ Apart from the general advice in global memory:
   with dot prefixes (`Renaming.id`, `Renaming.comp`,
   `Renaming.extend`, `Carrier.extList`) stay — the dot is just
   punctuation in the identifier, not a namespace-block requirement.
-  Scoped notations (`⋈`, `⋈*`, `→ʳ`) live at the `Action` scope;
+  Scoped notations (`∷`, `++`, `→ʳ`) live at the `Action` scope;
   consumers `open scoped Action` to bring them in.
 
   At call sites, **use dot notation**: write `f.extend β`,
@@ -358,11 +358,11 @@ Apart from the general advice in global memory:
 
   ```lean
   def Carrier.inlSlot (C : Carrier) (γ : C.Shape) (α : C.Arity) :
-      C.ShapeSlots γ → C.ShapeSlots (γ ⋈ α) :=
+      C.ShapeSlots γ → C.ShapeSlots (γ ∷ α) :=
     fun p => (C.slotsExt γ α).symm (.inl p)
 
   def Carrier.inrSlot (C : Carrier) (γ : C.Shape) (α : C.Arity) :
-      C.AritySlots α → C.ShapeSlots (γ ⋈ α) :=
+      C.AritySlots α → C.ShapeSlots (γ ∷ α) :=
     fun y => (C.slotsExt γ α).symm (.inr y)
   ```
 
@@ -377,8 +377,8 @@ Apart from the general advice in global memory:
   decompose direction (forward `slotsExt`).  Companion simp lemmas:
 
   ```lean
-  @[simp] theorem shapeArity_inlSlot : shapeArity (γ ⋈ α) (inlSlot γ α p) = shapeArity γ p
-  @[simp] theorem shapeArity_inrSlot : shapeArity (γ ⋈ α) (inrSlot γ α y) = arityArity α y
+  @[simp] theorem shapeArity_inlSlot : shapeArity (γ ∷ α) (inlSlot γ α p) = shapeArity γ p
+  @[simp] theorem shapeArity_inrSlot : shapeArity (γ ∷ α) (inrSlot γ α y) = arityArity α y
   ```
 
   These subsume the current private `shapeArity_symm_inl/inr`.
@@ -418,7 +418,7 @@ def Expr.J {C : Carrier} (γ : C.Shape) (α : C.Arity) : Type :=
 
 ```lean
 abbrev Expr.T {C : Carrier} (γ : C.Shape) (α : C.Arity) : Type :=
-  Expr (γ ⋈ α)
+  Expr (γ ∷ α)
 ```
 
 (Already defined.)
@@ -444,12 +444,12 @@ where `Subst γ δ` is defined in §13.2 as
 
 ### 13.1 `Renaming.weaken`
 
-The canonical inclusion of `γ` into `γ ⋈ β` as the γ-summand of
+The canonical inclusion of `γ` into `γ ∷ β` as the γ-summand of
 the slot equivalence.
 
 ```lean
 def Renaming.weaken {C : Carrier} (γ : C.Shape) (β : C.Arity) :
-    γ →ʳ γ ⋈ β
+    γ →ʳ γ ∷ β
 ```
 
 ### 13.2 `Subst`
@@ -468,7 +468,7 @@ Extension of a substitution through a fresh binder of arity `β`:
 
 ```lean
 def Subst.extend {C : Carrier} {γ δ : C.Shape}
-    (σ : Subst γ δ) (β : C.Arity) : Subst (γ ⋈ β) (δ ⋈ β)
+    (σ : Subst γ δ) (β : C.Arity) : Subst (γ ∷ β) (δ ∷ β)
 ```
 
 The body — which γ-side and β-side cases produce, and what
@@ -485,7 +485,7 @@ def lift {C : Carrier} {γ δ : C.Shape}
     (σ : Subst γ δ) : (α : C.Arity) → Expr.T γ α → Expr.T δ α
 ```
 
-i.e. `lift σ α e : Expr (δ ⋈ α)` for `e : Expr (γ ⋈ α)`.
+i.e. `lift σ α e : Expr (δ ∷ α)` for `e : Expr (γ ∷ α)`.
 
 The body, the recursion strategy, the termination measure, and
 whether an auxiliary "graft" operation is needed (and if so what

@@ -7,32 +7,32 @@ import HigherRankSyntax.RelativeMonad.Basic
 
 `SyntaxMonad C` packages `Expr` over a carrier `C` as a relative monad
 over the "slots" functor `J : PShape C ⥤ ArityFunc C`, with
-`T Γ α = Expr (Γ.tele ⋈ α)`.
+`T Γ α = Expr (Γ.tele ∷ α)`.
 
 The category objects are `PShape C`: a `Tele C.Arity` bundled with a
-`ProperTele` instance.  This makes `[ProperTele Γ.tele]` auto-synthesized
+`Proper` instance.  This makes `[Proper Γ.tele]` auto-synthesized
 whenever `Γ : PShape C` is in scope, so `lift`, `unit_right`,
 `unit_left`, and `comp_lift` can call `Subst.act` and the monad-law
 lemmas without manually threading instance args.
 
 With cons-style telescopes, the Kleisli ↔ Subst bridge is cast-free:
-`Shape.nil ⋈* X = X` definitionally, so `lift f` is just
+`Shape.nil ++ X = X` definitionally, so `lift f` is just
 `(toSubst f).act ⌊α⌋`.
 -/
 
 
 open CategoryTheory
 
-/-- A shape with a `ProperTele` instance bundled — the category object
+/-- A shape with a `Proper` instance bundled — the category object
 type for `SyntaxMonad`. -/
 @[ext] structure PShape (C : Carrier) : Type 1 where
   /-- The underlying telescope. -/
   tele : Shape C
   /-- The structural-ops instance for the telescope. -/
-  proper : ProperTele tele
+  proper : Proper tele
 
-/-- Auto-synthesise `[ProperTele Γ.tele]` from `Γ : PShape C`. -/
-instance (C : Carrier) (Γ : PShape C) : ProperTele Γ.tele := Γ.proper
+/-- Auto-synthesise `[Proper Γ.tele]` from `Γ : PShape C`. -/
+instance (C : Carrier) (Γ : PShape C) : Proper Γ.tele := Γ.proper
 
 /-- Category structure on `PShape C` with renamings between underlying
 telescopes as morphisms. -/
@@ -59,9 +59,9 @@ def J (C : Carrier) : PShape C ⥤ ArityFunc C where
   obj Γ := ⟨fun α => Γ.tele ∋ α⟩
   map {Γ Δ} (ρ : Γ.tele →ʳ Δ.tele) := fun _ p => ρ p
 
-/-- The "expressions" functor: shape `Γ ↦ α ↦ Expr (Γ.tele ⋈ α)`. -/
+/-- The "expressions" functor: shape `Γ ↦ α ↦ Expr (Γ.tele ∷ α)`. -/
 def T (C : Carrier) : PShape C ⥤ ArityFunc C where
-  obj Γ := ⟨fun α => Expr (Γ.tele ⋈ α)⟩
+  obj Γ := ⟨fun α => Expr (Γ.tele ∷ α)⟩
   map {Γ Δ} (ρ : Γ.tele →ʳ Δ.tele) := fun α e => ⟦ ρ ⇑ʳ α ⟧ʳ e
   map_id Γ := by
     funext α e

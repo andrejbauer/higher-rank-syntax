@@ -4,17 +4,17 @@ import HigherRankSyntax.ProperTele
 /-!
 # Substitution
 
-`Subst C pre dom cod` (with `[ProperTele dom]` `[ProperTele cod]` in
+`Subst C pre dom cod` (with `[Proper dom]` `[Proper cod]` in
 scope) carries one field, `sub`, mapping each `dom`-slot to an
-expression in `pre ⋈* cod`.
+expression in `pre ++ cod`.
 
 `Subst.act σ τ` applies the substitution `σ` to an expression at depth
-`τ : Shape C` (with `[ProperTele τ]`).  It dispatches each head slot with
-`ProperTele.classify` (τ-side vs. below τ) and then `Subst.classifyDom`
-(pre vs. dom); pre-slots reinject into the target via `ProperTele.inl`.
+`τ : Shape C` (with `[Proper τ]`).  It dispatches each head slot with
+`Proper.classify` (τ-side vs. below τ) and then `Subst.classifyDom`
+(pre vs. dom); pre-slots reinject into the target via `Proper.inl`.
 
 `Subst.classifyDom` and `Subst.weakenCod` are *projections* through
-the `[ProperTele dom]` and `[ProperTele cod]` instances, not struct
+the `[Proper dom]` and `[Proper cod]` instances, not struct
 fields — they are determined by the structural data on dom and cod.
 -/
 
@@ -64,7 +64,7 @@ instance (C : Carrier) : WellFoundedRelation (DomMeasure C) where
   rel := fun a b => DomLt a.unwrap b.unwrap
   wf := InvImage.wf DomMeasure.unwrap DomLt.wf
 
-/-- Dispatching a slot of `pre ⋈* dom` into pre vs dom.  Returned by
+/-- Dispatching a slot of `pre ++ dom` into pre vs dom.  Returned by
 `Subst.classifyDom`. -/
 inductive PreOrDom {C : Carrier} (pre dom : Shape C) (α : C.Arity) : Type where
   /-- The slot belongs to `pre`. -/
@@ -72,30 +72,30 @@ inductive PreOrDom {C : Carrier} (pre dom : Shape C) (α : C.Arity) : Type where
   /-- The slot belongs to `dom`. -/
   | dom (q : dom ∋ α)
 
-/-- A substitution record.  Source shape is `pre ⋈* dom`, target is
-`pre ⋈* cod`.  The `sub` field is the only data; slot dispatch and
-pre-weakening are derived from `[ProperTele dom]` and `[ProperTele cod]`
+/-- A substitution record.  Source shape is `pre ++ dom`, target is
+`pre ++ cod`.  The `sub` field is the only data; slot dispatch and
+pre-weakening are derived from `[Proper dom]` and `[Proper cod]`
 at the operations that need them (see `Subst.classifyDom`,
 `Subst.weakenCod`, `Subst.act`). -/
 structure Subst (C : Carrier) (pre dom cod : Shape C) : Type where
-  sub : ∀ {α : C.Arity}, dom ∋ α → Expr (pre ⋈* cod ⋈ α)
+  sub : ∀ {α : C.Arity}, dom ∋ α → Expr (pre ++ cod ∷ α)
 
 instance {C : Carrier} {pre dom cod : Shape C} :
     CoeFun (Subst C pre dom cod)
-      (fun _ => ∀ {α : C.Arity}, dom ∋ α → Expr (pre ⋈* cod ⋈ α)) :=
+      (fun _ => ∀ {α : C.Arity}, dom ∋ α → Expr (pre ++ cod ∷ α)) :=
   ⟨Subst.sub⟩
 
-/-- Dispatching a `pre ⋈* dom`-slot into pre vs dom, via `[ProperTele dom]`. -/
+/-- Dispatching a `pre ++ dom`-slot into pre vs dom, via `[Proper dom]`. -/
 def Subst.classifyDom {C : Carrier} {pre dom cod : Shape C}
-    [ProperTele dom] (_σ : Subst C pre dom cod)
-    {α : C.Arity} (p : pre ⋈* dom ∋ α) : PreOrDom pre dom α :=
-  ProperTele.classify pre _ p PreOrDom.dom PreOrDom.pre
+    [Proper dom] (_σ : Subst C pre dom cod)
+    {α : C.Arity} (p : pre ++ dom ∋ α) : PreOrDom pre dom α :=
+  Proper.classify pre _ p PreOrDom.dom PreOrDom.pre
 
-/-- Embedding `pre` into `pre ⋈* cod`, via `[ProperTele cod]`. -/
+/-- Embedding `pre` into `pre ++ cod`, via `[Proper cod]`. -/
 def Subst.weakenCod {C : Carrier} {pre dom cod : Shape C}
-    [ProperTele cod] (_σ : Subst C pre dom cod) :
-    pre →ʳ pre ⋈* cod :=
-  ProperTele.inl pre
+    [Proper cod] (_σ : Subst C pre dom cod) :
+    pre →ʳ pre ++ cod :=
+  Proper.inl pre
 
 /-! ### Instantiation Subst
 
@@ -106,7 +106,7 @@ with the recursive arg results as fillers. -/
 
 /-- Subst constructor from a slot-keyed function. -/
 abbrev Subst.inst {C : Carrier} {pre : Shape C} (dom : Shape C) {cod : Shape C}
-    (f : ∀ {α : C.Arity}, dom ∋ α → Expr (pre ⋈* cod ⋈ α)) :
+    (f : ∀ {α : C.Arity}, dom ∋ α → Expr (pre ++ cod ∷ α)) :
     Subst C pre dom cod where
   sub := f
 
@@ -119,18 +119,18 @@ def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) :
 
 /-! ### Kleisli ↔ Subst correspondence
 
-A Kleisli map of the syntax relative monad is `∀ {α}, (Γ ∋ α) → Expr (Δ ⋈ α)`.
+A Kleisli map of the syntax relative monad is `∀ {α}, (Γ ∋ α) → Expr (Δ ∷ α)`.
 With cons-style telescopes and `pre := Shape.nil`, the correspondence to
-`Subst` is *definitional*: `Shape.nil ⋈* X = X` by Tele's strict left unit. -/
+`Subst` is *definitional*: `Shape.nil ++ X = X` by Tele's strict left unit. -/
 
 /-- Wrap a Kleisli map as a `Subst` with empty `pre`. -/
 def toSubst {C : Carrier} {Γ Δ : Shape C}
-    (f : ∀ {α : C.Arity}, Γ ∋ α → Expr (Δ ⋈ α)) :
+    (f : ∀ {α : C.Arity}, Γ ∋ α → Expr (Δ ∷ α)) :
     Subst C Shape.nil Γ Δ where
   sub := f
 
 @[simp] theorem toSubst_sub {C : Carrier} {Γ Δ : Shape C}
-    (f : ∀ {α : C.Arity}, Γ ∋ α → Expr (Δ ⋈ α))
+    (f : ∀ {α : C.Arity}, Γ ∋ α → Expr (Δ ∷ α))
     {α : C.Arity} (p : Γ ∋ α) :
     (toSubst f).sub p = f p := rfl
 
@@ -141,29 +141,29 @@ def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Shape.nil Γ Γ :=
 /-! ### The substitution action -/
 
 /-- Apply the substitution `σ` to an expression at depth `τ`.  Uses
-`ProperTele.classify` for the τ/below-τ dispatch and `σ.classifyDom` for
+`Proper.classify` for the τ/below-τ dispatch and `σ.classifyDom` for
 the pre/dom dispatch.  All renamings used to rebuild new heads in the
-target come from `[ProperTele τ]` / `[ProperTele cod]`. -/
+target come from `[Proper τ]` / `[Proper cod]`. -/
 def Subst.act {C : Carrier} : {pre dom cod : Shape C} →
-    [ProperTele dom] → [ProperTele cod] →
+    [Proper dom] → [Proper cod] →
     (σ : Subst C pre dom cod) →
-    (τ : Shape C) → [ProperTele τ] →
-    Expr (pre ⋈* dom ⋈* τ) → Expr (pre ⋈* cod ⋈* τ)
+    (τ : Shape C) → [Proper τ] →
+    Expr (pre ++ dom ++ τ) → Expr (pre ++ cod ++ τ)
   | pre, dom, cod, _, _, σ, τ, _, .ap (α := α) p args =>
-      ProperTele.classify (pre ⋈* dom) (Expr (pre ⋈* cod ⋈* τ)) p
+      Proper.classify (pre ++ dom) (Expr (pre ++ cod ++ τ)) p
         (fun x =>
-          .ap (ProperTele.inr (pre ⋈* cod) x)
-            (fun i => σ.act (τ ⋈ i.arity) (args i)))
+          .ap (Proper.inr (pre ++ cod) x)
+            (fun i => σ.act (τ ∷ i.arity) (args i)))
         (fun y =>
           match σ.classifyDom y with
           | PreOrDom.dom z =>
               (Subst.inst ⌊α⌋ (fun q => match q with
-                | .here i => σ.act (τ ⋈ i.arity) (args i))).act Shape.nil (σ z)
+                | .here i => σ.act (τ ∷ i.arity) (args i))).act Shape.nil (σ z)
           | PreOrDom.pre z =>
               .ap
-                (ProperTele.inl (pre ⋈* cod)
+                (Proper.inl (pre ++ cod)
                   ((Subst.weakenCod σ) z))
-                (fun i => σ.act (τ ⋈ i.arity) (args i)))
+                (fun i => σ.act (τ ∷ i.arity) (args i)))
 termination_by pre dom _ _ _ _ _ _ e =>
   ((⟨dom.toList⟩ : DomMeasure C), (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
@@ -175,12 +175,11 @@ decreasing_by
          exact DomLt.step β h_mem _ h_sub))
 
 /-- The ground substitution action `σ.act Shape.nil e`, mirroring `⟦ρ⟧ʳ e`. -/
-notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ Shape.nil e
-
+notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ _ e
 
 /-- Kleisli composition of two Kleisli maps via `Subst.act`. -/
-def Subst.kcomp {C : Carrier} {Γ Δ Ξ : Shape C} [ProperTele Δ] [ProperTele Ξ]
-    (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ⋈ β))
-    (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ξ ⋈ β)) :
-    ∀ {β : C.Arity}, Γ ∋ β → Expr (Ξ ⋈ β) :=
-  fun {β} p => (toSubst g).act (⌊β⌋) (f p)
+def Subst.kcomp {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
+    (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ∷ β))
+    (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ξ ∷ β)) :
+    ∀ {β : C.Arity}, Γ ∋ β → Expr (Ξ ∷ β) :=
+  fun {β} p => (toSubst g).act ⌊β⌋ (f p)
