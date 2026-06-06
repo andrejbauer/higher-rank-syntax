@@ -140,6 +140,91 @@ def Subst.embedInner {C : Carrier} {pre cod outer : Shape C} :
   | _ :: _, _, .here i  => .here i
   | _ :: _, _, .there q => .there (Subst.embedInner q)
 
+/-! ### Reflection lemmas: `classifySlot` on each of the four embeddings -/
+
+/-- Classifying the embedding of an inner-slot returns `SubstSite.inner`. -/
+theorem Subst.classifySlot_embedInner
+    {C : Carrier} {pre dom outer : Shape C} [Proper dom] [Proper outer] :
+    (inner : List C.Arity) → {α : C.Arity} → (y : ListSlotAt inner α) →
+    Subst.classifySlot (pre := pre) (dom := dom) (outer := outer) inner
+        (@Subst.embedInner C pre dom outer inner α y) = SubstSite.inner y
+  | _ :: _, _, .here _ => rfl
+  | β :: rest, _, .there q => by
+      show (match Subst.classifySlot rest
+              (@Subst.embedInner C pre dom outer rest _ q) with
+            | SubstSite.pre   q' => SubstSite.pre q'
+            | SubstSite.dom   q' => SubstSite.dom q'
+            | SubstSite.outer q' => SubstSite.outer q'
+            | SubstSite.inner q' =>
+                SubstSite.inner (@ListSlotAt.there C β _ rest q')) = _
+      rw [Subst.classifySlot_embedInner rest q]
+
+/-- Classifying the embedding of an outer-slot returns `SubstSite.outer`. -/
+theorem Subst.classifySlot_outer
+    {C : Carrier} {pre dom outer : Shape C} [Proper dom] [Proper outer] :
+    (inner : List C.Arity) → {α : C.Arity} → (x : outer ∋ α) →
+    Subst.classifySlot (pre := pre) (dom := dom) (outer := outer) inner
+        ((Proper.inl (pre ⧺ dom ⧺ outer)) ((Proper.inr (pre ⧺ dom)) x))
+        = SubstSite.outer x
+  | [], _, x => by
+      show Proper.classify (pre ⧺ dom) _ ((Proper.inr (pre ⧺ dom)) x) _ _ = _
+      rw [Proper.classify_inr]
+  | β :: rest, _, x => by
+      show (match Subst.classifySlot rest
+              ((Proper.inl (pre ⧺ dom ⧺ outer)) ((Proper.inr (pre ⧺ dom)) x)) with
+            | SubstSite.pre   q' => SubstSite.pre q'
+            | SubstSite.dom   q' => SubstSite.dom q'
+            | SubstSite.outer q' => SubstSite.outer q'
+            | SubstSite.inner q' =>
+                SubstSite.inner (@ListSlotAt.there C β _ rest q')) = _
+      rw [Subst.classifySlot_outer rest x]
+
+/-- Classifying the embedding of a dom-slot returns `SubstSite.dom`. -/
+theorem Subst.classifySlot_dom
+    {C : Carrier} {pre dom outer : Shape C} [Proper dom] [Proper outer] :
+    (inner : List C.Arity) → {α : C.Arity} → (z : dom ∋ α) →
+    Subst.classifySlot (pre := pre) (dom := dom) (outer := outer) inner
+        ((Proper.inl (pre ⧺ dom ⧺ outer))
+          ((Proper.inl (pre ⧺ dom)) ((Proper.inr pre) z)))
+        = SubstSite.dom z
+  | [], _, z => by
+      show Proper.classify (pre ⧺ dom) _
+              ((Proper.inl (pre ⧺ dom)) ((Proper.inr pre) z)) _ _ = _
+      rw [Proper.classify_inl, Proper.classify_inr]
+  | β :: rest, _, z => by
+      show (match Subst.classifySlot rest
+              ((Proper.inl (pre ⧺ dom ⧺ outer))
+                ((Proper.inl (pre ⧺ dom)) ((Proper.inr pre) z))) with
+            | SubstSite.pre   q' => SubstSite.pre q'
+            | SubstSite.dom   q' => SubstSite.dom q'
+            | SubstSite.outer q' => SubstSite.outer q'
+            | SubstSite.inner q' =>
+                SubstSite.inner (@ListSlotAt.there C β _ rest q')) = _
+      rw [Subst.classifySlot_dom rest z]
+
+/-- Classifying the embedding of a pre-slot returns `SubstSite.pre`. -/
+theorem Subst.classifySlot_pre
+    {C : Carrier} {pre dom outer : Shape C} [Proper dom] [Proper outer] :
+    (inner : List C.Arity) → {α : C.Arity} → (w : pre ∋ α) →
+    Subst.classifySlot (pre := pre) (dom := dom) (outer := outer) inner
+        ((Proper.inl (pre ⧺ dom ⧺ outer))
+          ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) w)))
+        = SubstSite.pre w
+  | [], _, w => by
+      show Proper.classify (pre ⧺ dom) _
+              ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) w)) _ _ = _
+      rw [Proper.classify_inl, Proper.classify_inl]
+  | β :: rest, _, w => by
+      show (match Subst.classifySlot rest
+              ((Proper.inl (pre ⧺ dom ⧺ outer))
+                ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) w))) with
+            | SubstSite.pre   q' => SubstSite.pre q'
+            | SubstSite.dom   q' => SubstSite.dom q'
+            | SubstSite.outer q' => SubstSite.outer q'
+            | SubstSite.inner q' =>
+                SubstSite.inner (@ListSlotAt.there C β _ rest q')) = _
+      rw [Subst.classifySlot_pre rest w]
+
 /-- Embedding `pre` into `pre ⧺ cod`, via `[Proper cod]`. -/
 def Subst.weakenCod {C : Carrier} {pre dom cod : Shape C}
     [Proper cod] (_σ : Subst C pre dom cod) :
