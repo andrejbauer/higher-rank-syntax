@@ -18,22 +18,30 @@
 
 ## Domain Behavior Guardrails
 1. **[2026-05-31] Interchange termination uses paired fuel plus subterms**
-   Do instead: for `Subst.act_inst.underListAt`/`preNaturalityLiftAt`, keep the private `InterchangeFuel` measure; use `DomLt` for filler jumps and `Expr.Subterm.of_arg_ofList_cons` for ordinary argument recursion.
-2. **[2026-05-31] Interchange statements use private facades**
-   Do instead: state interchange lemmas through `UnderList`, `PreLift`, `PreNaturality`, and `Interchange` facade abbreviations; expand them inside proofs when needed.
-3. **[2026-05-27] `act_kcomp` reduces to adjacent instantiation interchange**
-   Do instead: keep the proved list-indexed `Subst.act_inst.interchange` stack; `Subst.act_inst.fusion` bridges it into `act_kcomp`, and `ProperTele.extendList` keeps recursive binder extension definitional.
-4. **[2026-05-27] Keep singleton α-slots abstract in under-list proofs**
+   Do instead: for `Subst.act_inst.oneDiamondAt`/`oneLiftAt`, keep the private `InterchangeFuel` measure; use `DomLt` for filler jumps and `Expr.Subterm.of_arg_ofList_cons` for ordinary argument recursion.
+2. **[2026-06-15] General diamonds need explicit composite witnesses**
+   Do instead: parameterize `Diamond`/`Lift` facades by the exact `Proper (τ ⧺ src)` and `Proper (τ ⧺ dst)` witnesses; the `src` recursive call needs `Proper.extendList (τ ⧺ dst) υ`, not `Proper.compose (τ ⧺ dst) (Tele.ofList υ)`.
+3. **[2026-06-08] `Proper` composition witnesses are computational data**
+   Do instead: generalize `OneDiamond`/`OneLift` with a small target-coherence package, not just a bare `Proper (τ ⧺ dst)` witness; alpha/beta recursion must keep `Proper.compose` and `Proper.extendList` choices aligned. `PreLiftSite` is useful for `preNaturalityLiftAt`, but `preNaturalityAt` wants the nested `pre ⧺ ⌊α⌋` normal form.
+4. **[2026-06-08] Core interchange is a one-binder mutual pair**
+   Do instead: state the central commute through `OneDiamond`/`OneLift`; keep `PreNaturality` and `Interchange` only for remaining derived stages.
+5. **[2026-05-27] `act_kcomp` reduces to general substitution composition**
+   Do instead: use public `Subst.comp` and `Subst.act_comp`; the old `fusion` wrapper is deleted, while `interchange` still supports the `dom` branch of `act_comp`.
+6. **[2026-05-27] Keep singleton α-slots abstract in under-list proofs**
    Do instead: avoid case-splitting the whole α-head branch on `xα`; use `ListSlotAt.sub_single xα` for termination and only case-split inside local definitional sub lemmas.
-5. **[2026-05-25] Tele unit proofs need one-binder instantiation bundle**
+7. **[2026-06-07] Single `diamondAt` facade is not enough**
+   Do instead: replace the interchange stack only with a mutual `oneDiamondAt`/`oneLiftAt` pair; the `dom` branch needs the lifted companion theorem, not just the main diamond.
+8. **[2026-05-25] Tele unit proofs need one-binder instantiation bundle**
    Do instead: prove beta-for-eta and identity instantiation together by arity; keep expression recursion in a separate fixed-shape helper like `Subst.act_inst.idOf`.
-6. **[2026-05-19] `inst.aux` carries target renaming**
+9. **[2026-05-19] `inst.aux` carries target renaming**
    Do instead: in `lift.aux`'s Γ-slot branch, call `inst.aux q.arity (Renaming.weakenList Δ τ) new_args [] (σ q)`; do not pre-weaken `σ q`.
-7. **[2026-05-19] WF-recursive walker equations need `_unary.eq_1`**
+10. **[2026-05-19] WF-recursive walker equations need `_unary.eq_1`**
    Do instead: prove one-step equations by `delta inst.aux`/`delta lift.aux`, `rw [*.aux._unary.eq_1, WellFounded.fix_eq]`, then `simp [classify_*]`.
-8. **[2026-05-19] Avoid rejected substitution designs**
-   Do instead: keep the indexed `XPos` classifier, avoid transports/`Eq.rec`, Sum classifiers returning expressions, and `Subst.extend`-style wrapping.
 
 ## User Directives
-1. **[2026-05-19] Collaborator onboarding matters**
+1. **[2026-06-14] Present `Equations.lean` thesis-style**
+   Do instead: organize explanations/refactors around action, unit/generic application, action-instantiation interaction, composition, and relative-monad laws; use `HigherRankSyntax/equations-math.tex` and `HigherRankSyntax/equations-refactor-plan.md` as the current guide.
+2. **[2026-06-14] Treat `preNaturalityLiftAt` as a readability hotspot**
+   Do instead: target the PreLift/β-side interaction with named head cases and branch helpers before retrying arbitrary-target diamonds.
+3. **[2026-05-19] Collaborator onboarding matters**
    Do instead: keep `PLAN.md` aligned with the active formalization after implementation changes.

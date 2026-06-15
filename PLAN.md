@@ -26,10 +26,17 @@ avoids the list-append reassociation transports that blocked earlier attempts.
 - `Shape.lean`: shapes and slots as telescope list views.
 - `Renaming.lean`: renamings, extension, and expression action.
 - `Expr.lean`: expressions and eta expansion.
-- `Proper.lean`: structural operations for classifying extension slots.
-- `Subst.lean`: the single fixed-shape substitution walker `Subst.act`.
-- `Equations.lean`: substitution equations and monad-law proof work.
+- `ProperTele.lean`: structural operations for classifying extension slots.
+- `Subst.lean`: the single fixed-shape substitution walker `Subst.act`, plus
+  the `SubstSite` facade for the τ/dom/pre head split.
+- `Equations.lean`: substitution equations and monad-law proof work, with
+  proof-facing head classifiers for the larger interchange case splits.
 - `SyntaxMonad.lean`: the relative monad packaging.
+- `equations-math.tex`: code-companion notes matching the mathematical
+  statements in `Equations.lean` to their Lean declarations.
+- `equations-refactor-plan.md`: thesis-style refactor plan for making
+  `Equations.lean` read as action, interaction lemmas, composition, and
+  relative-monad laws.
 
 The two unit laws are now proved through the substitution layer:
 
@@ -46,45 +53,71 @@ The key helper layer is the one-binder identity-instantiation bundle:
 These are proved without axioms by bundling the beta-for-eta and identity facts
 by arity, then using expression recursion only in `Subst.act_inst.idOf`.
 
-## Interchange Status
+## Diamond/Lift Interaction Status
 
-The adjacent substitution/instantiation interchange is now proved in its
-list-indexed form through the auxiliary layer:
+The adjacent substitution/instantiation interaction is now organized around one
+private generalized mutual pair in `Equations.lean`:
 
-- `Subst.act_inst.underListAt`
-- `Subst.act_inst.underList`
-- `Subst.act_inst.preNaturalityAt`
-- `Subst.act_inst.preNaturality`
-- `Subst.act_inst.interchange`
+- `diamondAt`
+- `liftAt`
 
-The theorem statements are written through private statement facades, so the
-main lemmas read as equations between named constructions rather than exposing
-all local `Proper` instances and singleton-instantiation plumbing inline:
+The old private stack has been deleted: `UnderList`, `PreLift`,
+`PreNaturality`, `Interchange`, `underListAt`, `preNaturalityLiftAt`,
+`preNaturalityAt`, and `interchange` are no longer part of the file.
 
-- `Subst.act_inst.UnderList.actThenInst = UnderList.instThenAct`
-- `Subst.act_inst.PreLift.sequential = PreLift.fused`
-- `Subst.act_inst.PreNaturality.sequential = PreNaturality.fused`
-- `Subst.act_inst.Interchange.actThenInst = Interchange.instThenAct`
+The core statement is expressed through private facades:
 
-The algebraic proof of the lifted commute is now in place:
+- `Diamond.acted` applies a substitution to every filler of another
+  substitution;
+- `Diamond.actThenInst` means act first, then instantiate with acted fillers;
+- `Diamond.instThenAct` means instantiate first, then act;
+- `Lift.sequential` and `Lift.fused` express the lifted beta-instantiation
+  companion needed by the domain branch.
 
-- `Subst.act_inst.preNaturalityLiftAt` proves the under-list version with an
-  added list depth `χ`.
-- `Subst.act_inst.preNaturalityLift` is the `χ = []` wrapper.
-- `Subst.act_inst.underListAt` and `preNaturalityLiftAt` are mutually recursive,
-  because the dom branch of `underListAt` needs the lifted commute, while the
-  β-head branch of the lift needs `underListAt` on the substituted filler.
+The key proof-engineering layer is `TargetProper`.  It carries the exact
+`Proper` witnesses and decomposition laws for `τ`, `src`, `dst`, `τ ⧺ src`,
+and `τ ⧺ dst`.  Under-list witnesses are computed canonically with
+`Proper.extendList`.  This is necessary because `Proper` witnesses are
+computational data, not proof-irrelevant propositions.
 
-The private mutual block now has a checked termination argument.  It uses
-`InterchangeFuel`, a pair of domain measures considered up to swapping, together
-with expression-subterm descent:
+The visible `diamondAt` proof is organized by the five mathematical head cases
+through `DiamondSite`:
 
-- filler jumps decrease one side of the fuel by `Carrier.Sub`/`DomLt`;
-- the β-head call from `preNaturalityLiftAt` into `underListAt` uses the swapped
-  fuel order;
+- `under`: head comes from the concrete list depth `υ`;
+- `src`: head is substituted by the auxiliary substitution `κ`;
+- `tau`: head comes from the ambient depth `τ`;
+- `dom`: head is substituted by `σ` and calls `liftAt`;
+- `pre`: head is preserved from the untouched prefix.
+
+The visible `liftAt` proof is organized by the three mathematical head cases
+through `LiftSite`:
+
+- `under`: head comes from the concrete list depth `χ`;
+- `beta`: head is the singleton binder instantiated by `lam` and calls back
+  into `diamondAt`;
+- `pre`: head is preserved from the untouched prefix.
+
+The private mutual block uses `InterchangeFuel`, a pair of domain measures
+considered up to swapping, together with expression-subterm descent:
+
+- `diamondAt.src` decreases the second fuel component by `SlotAt.subWitness`;
+- `diamondAt.dom` decreases the first fuel component and calls `liftAt`;
+- `liftAt.beta` uses `InterchangeFuel.Lt.left_swap`;
 - ordinary recursive calls into arguments use `Expr.Subterm.of_arg_ofList_cons`.
 
-There are currently no `sorry`s or `axiom`s in `HigherRankSyntax`.
+The composition chapter now has the intended public shape:
+
+- `Subst.comp` composes arbitrary substitutions by acting with the second
+  substitution on each filler of the first;
+- `Subst.act_comp` proves that action preserves arbitrary substitution
+  composition and calls `diamondAt` directly in the `dom` branch;
+- `Subst.act_kcomp` is a short specialization of `Subst.act_comp` to
+  `toSubst` and `Subst.kcomp`.
+
+This pass improved the conceptual architecture, but not the line count: after
+deleting the old stack and installing explicit target witnesses,
+`Equations.lean` is about 1693 lines.  The target-witness coherence layer is
+the main new size cost.
 
 ## Next Realistic Formalization Targets
 
@@ -99,8 +132,8 @@ There are currently no `sorry`s or `axiom`s in `HigherRankSyntax`.
 
 2. Keep Andrej's cleaned-up naming and comments as the baseline.
    Use `inr` for the telescope/right side, `inl` for the base/left side, and
-   the computation lemmas `Subst.act_apply_inr`, `Subst.act_apply_inl_dom`, and
-   `Subst.act_apply_inl_pre`.
+   the computation lemmas `Subst.act_ap_inr`, `Subst.act_ap_inl_dom`, and
+   `Subst.act_ap_inl_pre`.
 
 ## Validation Commands
 

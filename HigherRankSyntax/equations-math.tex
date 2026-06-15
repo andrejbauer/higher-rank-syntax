@@ -1,0 +1,384 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{array,longtable,booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{definition}{Definition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+
+\newcommand{\Code}[1]{\texttt{#1}}
+\newcommand{\Shape}{\mathsf{Shape}}
+\newcommand{\Tele}{\mathsf{Tele}}
+\newcommand{\Expr}{\mathsf{Expr}}
+\newcommand{\Slot}{\mathsf{Slot}}
+\newcommand{\Subst}{\mathsf{Subst}}
+\newcommand{\Proper}{\mathsf{Proper}}
+\newcommand{\nil}{\mathsf{nil}}
+\newcommand{\pre}{\mathsf{pre}}
+\newcommand{\dom}{\mathsf{dom}}
+\newcommand{\cod}{\mathsf{cod}}
+\newcommand{\mshape}{\mathsf{mid}}
+\newcommand{\Act}[3]{#1^{\ast}_{#2}(#3)}
+\newcommand{\Eta}{\eta}
+\newcommand{\comp}{\mathbin{+\!\!+}}
+\newcommand{\cons}{\mathbin{::}}
+\newcommand{\ofList}{\mathsf{ofList}}
+\newcommand{\one}{\langle - \rangle}
+
+\title{Higher-Rank Syntax as a Relative Monad}
+\author{Code companion for \Code{HigherRankSyntax/HigherRankSyntax/Equations.lean}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Purpose and influence}
+
+This note explains the mathematical content of
+\Code{HigherRankSyntax/HigherRankSyntax/Equations.lean}.  It is written in the
+same spirit as the development of syntactic transformations in Anja Petkovic
+Komel's thesis, especially the part beginning with the desiderata for
+syntactic transformations and continuing through the relative-monad proof for
+syntax.\footnote{\url{https://repozitorij.uni-lj.si/Dokument.php?id=152351&lang=slv}}
+
+The guiding idea is the same.  First one defines a purely syntactic action on
+expressions.  Then one proves that the action is compatible with the other
+syntactic operations, especially instantiation/substitution.  Finally the
+relative monad laws become short consequences of those interaction lemmas.
+
+Our setting is a higher-rank generalization.  The role of a signature or
+metacontext is played by a telescope-shaped object \(\Gamma : \Shape C\).  A
+slot \(x : \Gamma \ni \alpha\) has an arity \(\alpha\), and each binder
+\(j : C.\mathsf{Binder}\,\alpha\) carries its own arity \(j.\mathsf{arity}\).
+Thus the application case is not simply a finite list of ordinary arguments:
+each argument lives below a fresh binder specified by the head arity.  This is
+the source of most of the proof engineering in \Code{Equations.lean}.
+
+\section{Relative monads for this syntax}
+
+The general relative-monad pattern is as follows.  The functor \(J\) gives the
+generators of a syntactic context, while \(T\) gives expressions over that
+context.  The unit embeds a generator as its generic expression.  A Kleisli map
+assigns to each generator an expression in a target context, and its Kleisli
+extension is the action of that assignment on all expressions.
+
+\begin{definition}[Higher-rank generators and expressions]
+For a shape \(\Gamma : \Shape C\), the generators of arity \(\alpha\) are slots
+\[
+  J\Gamma(\alpha) = \{x \mid x : \Gamma \ni \alpha\}.
+\]
+The corresponding expressions are
+\[
+  T\Gamma(\alpha) = \Expr(\Gamma \cons \alpha).
+\]
+The unit sends a slot to its eta-expansion:
+\[
+  \Eta_\Gamma(x) = \Code{Expr.eta}\;x.
+\]
+\end{definition}
+
+\begin{definition}[Kleisli substitutions]
+A Kleisli map from \(\Gamma\) to \(\Delta\) is a family
+\[
+  f : \prod_{\alpha}(\Gamma \ni \alpha) \to \Expr(\Delta \cons \alpha).
+\]
+In the Lean code this is wrapped as
+\[
+  \Code{toSubst}\;f : \Subst\,C\,\Shape.\nil\,\Gamma\,\Delta.
+\]
+The more general record
+\[
+  \sigma : \Subst\,C\,\pre\,\dom\,\cod
+\]
+keeps a fixed prefix \(\pre\), replaces slots from \(\dom\), and leaves the
+prefix slots untouched:
+\[
+  \sigma(x) : \Expr(\pre \comp \cod \cons \alpha)
+  \qquad(x : \dom \ni \alpha).
+\]
+\end{definition}
+
+\begin{definition}[Substitution action]
+For
+\[
+  \sigma : \Subst\,C\,\pre\,\dom\,\cod
+\]
+and a current binder depth \(\tau\), the action is
+\[
+  \Act{\sigma}{\tau}{-} :
+  \Expr(\pre \comp \dom \comp \tau)
+    \to
+  \Expr(\pre \comp \cod \comp \tau).
+\]
+In Lean this is \Code{Subst.act}.  The depth \(\tau\) records binders already
+entered by the recursive traversal.
+\end{definition}
+
+Mathematically, \Code{Subst.act} has three cases for an application head in
+\(\pre \comp \dom \comp \tau\).
+
+\begin{itemize}
+\item If the head comes from \(\tau\), it is locally bound and is preserved.
+\item If the head comes from \(\dom\), the substitution fires.
+\item If the head comes from \(\pre\), it is outside the substitution domain
+  and is only weakened through the new codomain.
+\end{itemize}
+
+The Lean classifier \Code{SubstSite} names exactly these cases:
+\[
+  \Code{tau},\quad \Code{dom},\quad \Code{pre}.
+\]
+The associated computation lemmas are
+\Code{Subst.act\_ap\_inr}, \Code{Subst.act\_ap\_inl\_dom}, and
+\Code{Subst.act\_ap\_inl\_pre}.
+
+\section{Unit laws}
+
+The first two relative-monad equations are the two unit laws.  In the thesis
+style, these are proved after isolating the fact that the generic application
+acts like the identity transformation.
+
+\begin{lemma}[Action preserves eta at a bound head]
+Let \(x : \tau \ni \alpha\).  Then
+\[
+  \Act{\sigma}{\tau \cons \alpha}
+    {\Eta_{\pre \comp \dom \comp \tau}(x)}
+  =
+  \Eta_{\pre \comp \cod \comp \tau}(x).
+\]
+This is \Code{Subst.act\_eta\_inr}.
+\end{lemma}
+
+\begin{lemma}[Identity one-binder instantiation]
+The identity instantiation for the singleton telescope \(\langle\alpha\rangle\)
+acts as the identity on expressions.  This is the private recursion
+\Code{idOf}, packaged as \Code{Subst.act\_inst.id}.
+\end{lemma}
+
+\begin{lemma}[Beta for eta]
+Instantiating the eta-expansion of the singleton head by a one-binder kit
+returns the corresponding kit application.  This is
+\Code{Subst.act\_inst.eta}.
+\end{lemma}
+
+\begin{theorem}[Right unit]
+For every expression \(e : \Expr(\Gamma \comp \tau)\),
+\[
+  \Act{\Code{Subst.id}\,\Gamma}{\tau}{e} = e.
+\]
+This is \Code{Subst.act\_id}.
+\end{theorem}
+
+\begin{theorem}[Left unit]
+For a Kleisli map \(f\) and slot \(p : \Gamma \ni \alpha\),
+\[
+  \Act{\Code{toSubst}\,f}{\langle\alpha\rangle}{\Eta(p)} = f(p).
+\]
+This is \Code{Subst.act\_eta}.
+\end{theorem}
+
+\section{The main interaction lemma}
+
+The thesis proves that a syntactic transformation commutes with
+instantiation before using that fact to prove composition.  The direct analogue
+in this file is the one-binder diamond:
+
+\[
+\begin{array}{ccc}
+  \Expr((\pre\comp\dom\comp\tau\cons\alpha)\comp\ofList(\upsilon))
+    & \xrightarrow{\Act{\sigma}{(\tau\cons\alpha)\comp\ofList(\upsilon)}{-}}
+    & \Expr((\pre\comp\cod\comp\tau\cons\alpha)\comp\ofList(\upsilon))
+\\
+  \downarrow \kappa
+    && \downarrow \kappa'
+\\
+  \Expr(\pre\comp\dom\comp(\tau\comp\ofList(\rho))\comp\ofList(\upsilon))
+    & \xrightarrow{\Act{\sigma}{(\tau\comp\ofList(\rho))\comp\ofList(\upsilon)}{-}}
+    & \Expr(\pre\comp\cod\comp(\tau\comp\ofList(\rho))\comp\ofList(\upsilon)).
+\end{array}
+\]
+
+Here \(\kappa\) instantiates the source telescope with fillers
+\(\iota\), while \(\kappa'\) instantiates it with the pointwise
+\(\sigma\)-acted fillers.
+
+\begin{theorem}[One-binder action/instantiation diamond]
+Acting by \(\sigma\) and then instantiating the source telescope by
+the acted fillers agrees with first instantiating that source telescope and then
+acting by \(\sigma\).  In Lean:
+\[
+  \Code{Diamond.actThenInst}\;\sigma\;\rho\;\upsilon\;\iota\;e
+  =
+  \Code{Diamond.instThenAct}\;\sigma\;\rho\;\upsilon\;\iota\;e.
+\]
+This is \Code{diamondAt}.
+\end{theorem}
+
+The proof has five head cases, and these are the conceptual heart of the file.
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Case & Meaning & Proof behavior \\
+\midrule
+\Code{under} & the head is in \(\ofList(\upsilon)\) & preserve head, recurse on arguments \\
+\Code{src} & the head is in the source telescope being instantiated & descend into the selected filler \\
+\Code{tau} & the head is in the ambient depth \(\tau\) & preserve head, recurse on arguments \\
+\Code{dom} & the head is substituted by \(\sigma\) & call the lifted companion \\
+\Code{pre} & the head is in the fixed prefix & preserve/weaken head, recurse on arguments \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The \Code{dom} case is the reason the proof is mutual.  Substituting a
+\(\dom\)-head exposes an expression \(\sigma(z)\), and the instantiation
+around that expression must be rearranged.  This is handled by the companion
+lemma.
+
+\begin{theorem}[Lifted one-binder diamond]
+Applying one singleton instantiation and then a second singleton instantiation
+agrees with one fused singleton instantiation whose fillers already include
+the first instantiation.  In Lean:
+\[
+  \Code{Lift.sequential}\;\rho\;\upsilon\;\chi\;\iota\;\eta\;e
+  =
+  \Code{Lift.fused}\;\rho\;\upsilon\;\chi\;\iota\;\eta\;e.
+\]
+This is \Code{liftAt}.
+\end{theorem}
+
+The companion has three head cases:
+\[
+  \Code{under},\qquad \Code{beta},\qquad \Code{pre}.
+\]
+The \Code{beta} case calls back into \Code{diamondAt}; ordinary argument
+cases recurse structurally.
+
+\section{Composition}
+
+The substitution-level composition operation is
+\[
+  \Code{Subst.comp}\;\sigma\;\theta : \Subst\,C\,\pre\,\dom\,\cod,
+\]
+where
+\[
+  (\Code{Subst.comp}\;\sigma\;\theta)(x)
+  =
+  \Act{\theta}{\langle\alpha\rangle}{\sigma(x)}
+  \qquad(x : \dom \ni \alpha).
+\]
+This is the general form of Kleisli composition, before specializing to empty
+prefixes.
+
+\begin{theorem}[Action preserves substitution composition]
+For arbitrary substitutions
+\[
+  \sigma : \Subst\,C\,\pre\,\dom\,\mshape,
+  \qquad
+  \theta : \Subst\,C\,\pre\,\mshape\,\cod,
+\]
+and every expression \(e : \Expr(\pre\comp\dom\comp\tau)\),
+\[
+  \Act{\Code{Subst.comp}\;\sigma\;\theta}{\tau}{e}
+  =
+  \Act{\theta}{\tau}{\Act{\sigma}{\tau}{e}}.
+\]
+This is \Code{Subst.act\_comp}.
+\end{theorem}
+
+The proof follows the three head cases for \Code{Subst.act}.  The
+\Code{tau} and \Code{pre} cases are preserved-head cases.  The \Code{dom}
+case is the only substantive one: after \(\sigma\) substitutes the head, one
+must commute \(\theta\) past the one-binder instantiation generated by the
+arguments.  In the current file that bridge is a direct specialization of
+\Code{diamondAt}, using the nil-target witness constructor
+\Code{TargetProper.nil}.
+
+\begin{corollary}[Kleisli composition law]
+For Kleisli maps \(f : \Gamma \to T\Delta\) and
+\(g : \Delta \to T\Xi\),
+\[
+  \Act{\Code{toSubst}(\Code{Subst.kcomp}\;f\;g)}{\tau}{e}
+  =
+  \Act{\Code{toSubst}\;g}{\tau}
+    {\Act{\Code{toSubst}\;f}{\tau}{e}}.
+\]
+This is \Code{Subst.act\_kcomp}, now a short corollary of
+\Code{Subst.act\_comp}.
+\end{corollary}
+
+\section{Code map}
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.27\textwidth}
+                  >{\raggedright\arraybackslash}p{0.44\textwidth}
+                  >{\raggedright\arraybackslash}p{0.21\textwidth}}
+\toprule
+Lean declaration & Mathematical role & Thesis-style analogue \\
+\midrule
+\Code{SubstSite} & Classifies an action head as \(\tau\), \(\dom\), or
+\(\pre\). & Case split for syntax-directed action. \\
+
+\Code{Subst.act\_ap\_inr} & Computation when the head is bound by the
+current depth. & Variable/binder preservation case. \\
+
+\Code{Subst.act\_ap\_inl\_dom} & Computation when substitution fires at a
+domain head. & Nontrivial substitution case. \\
+
+\Code{Subst.act\_ap\_inl\_pre} & Computation when the head is outside the
+domain. & Parameter/prefix preservation case. \\
+
+\Code{Subst.act\_inst.eta} & Beta law for eta-expanded singleton heads. &
+Generic application computes correctly. \\
+
+\Code{Subst.act\_inst.id} & Identity singleton instantiation acts as the
+identity. & Identity instantiation is trivial. \\
+
+\Code{Subst.act\_id} & Identity substitution acts as identity. & Relative
+monad law \(\Eta^\dagger=\mathsf{id}\). \\
+
+\Code{Subst.act\_eta} & Action of a Kleisli map on an eta-generator returns
+the chosen filler. & Relative monad law \(f^\dagger\circ\Eta=f\). \\
+
+\Code{diamondAt} & Action commutes with one-binder instantiation. &
+Action interacts with instantiation. \\
+
+\Code{liftAt} & Lifted companion needed by the domain branch of
+\Code{diamondAt}. & Compatibility of nested instantiations. \\
+
+\Code{Subst.comp} & Substitution-level Kleisli composition. & Composition of
+syntactic transformations. \\
+
+\Code{Subst.act\_comp} & Action preserves arbitrary substitution
+composition. & Action preserves composition. \\
+
+\Code{Subst.act\_kcomp} & Kleisli composition law for \Code{toSubst}. &
+Third relative-monad law. \\
+
+\Code{InterchangeFuel} & Well-founded measure for mutual one-binder
+interaction. & Proof-technical structural induction measure. \\
+\bottomrule
+\end{longtable}
+
+\section{What the Lean file should eventually say}
+
+The current file now follows the intended mathematical ladder:
+
+\begin{enumerate}
+\item define the action and prove its three head computations;
+\item prove the eta and identity-instantiation facts;
+\item prove the one-binder interaction lemma, with its lifted companion;
+\item prove arbitrary substitution composition;
+\item specialize to the relative monad laws.
+\end{enumerate}
+
+The former \Code{PreNaturality} and \Code{Interchange} layers have been
+deleted; their role is covered by the generalized \Code{diamondAt}/\Code{liftAt}
+mutual theorem pair.
+
+\end{document}
