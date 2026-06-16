@@ -409,18 +409,12 @@ Read the fields in pairs:
 -/
 private structure TargetProper {C : Carrier}
     (τ src dst : Shape C) (υ : List C.Arity) where
-  /- Atomic witnesses for the three visible components. -/
   hτ : Proper τ
   hSrcShape : Proper src
   hDstShape : Proper dst
-  /- Composite witnesses used by the facades. -/
   hSrc : Proper (τ ⧺ src)
   hDst : Proper (τ ⧺ dst)
-  /- Source-side reassociation equations. -/
   hSrc_inr_src : ∀ (Γ : Shape C) {α : C.Arity} (x : src ∋ α),
-    letI : Proper τ := hτ
-    letI : Proper src := hSrcShape
-    letI : Proper (τ ⧺ src) := hSrc
     (Proper.inr Γ : (τ ⧺ src) →ʳ Γ ⧺ (τ ⧺ src))
       ((Proper.inr τ : src →ʳ τ ⧺ src) x)
     =
@@ -442,7 +436,6 @@ private structure TargetProper {C : Carrier}
     =
     (Proper.inl (Γ ⧺ τ) : Γ ⧺ τ →ʳ Γ ⧺ τ ⧺ src)
       ((Proper.inl Γ : Γ →ʳ Γ ⧺ τ) x)
-  /- Target-side reassociation equations, same roles as above. -/
   hDst_inr_dst : ∀ (Γ : Shape C) {α : C.Arity} (x : dst ∋ α),
     letI : Proper τ := hτ
     letI : Proper dst := hDstShape
@@ -707,11 +700,9 @@ private abbrev sequential
   letI : Proper τ := target.hτ
   letI : Proper src := target.hSrcShape
   letI : Proper dst := target.hDstShape
-  let lam : Subst C pre ⌊β⌋ ((τ ⧺ src) ⧺ Tele.ofList υ) :=
-    instOne β ((τ ⧺ src) ⧺ Tele.ofList υ) η
   letI : Proper ((τ ⧺ src) ⧺ Tele.ofList υ) := target.hSrcUnder
   κ.act ((Tele.ofList υ) ⧺ Tele.ofList χ)
-    (lam.act (Tele.ofList χ) e)
+    ((instOne β ((τ ⧺ src) ⧺ Tele.ofList υ) η).act (Tele.ofList χ) e)
 
 /- `Lift.fused` is the same operation with the `κ` action pushed into each
 β-filler.  `liftAt` proves `sequential = fused`. -/
@@ -728,11 +719,9 @@ private abbrev fused
   letI : Proper τ := target.hτ
   letI : Proper src := target.hSrcShape
   letI : Proper dst := target.hDstShape
-  let lam' : Subst C pre ⌊β⌋ ((τ ⧺ dst) ⧺ Tele.ofList υ) :=
-    instOne β ((τ ⧺ dst) ⧺ Tele.ofList υ)
-      (fun j => κ.act (Tele.ofList υ ∷ j.arity) (η j))
   letI : Proper ((τ ⧺ dst) ⧺ Tele.ofList υ) := target.hDstUnder
-  lam'.act (Tele.ofList χ) e
+  (instOne β ((τ ⧺ dst) ⧺ Tele.ofList υ)
+      (fun j => κ.act (Tele.ofList υ ∷ j.arity) (η j))).act (Tele.ofList χ) e
 
 end Lift
 
@@ -801,7 +790,7 @@ private theorem DiamondSite.cover {C : Carrier}
       head = DiamondSite.embed target site := by
   letI : Proper ((τ ⧺ src) ⧺ Tele.ofList υ) := target.hSrcUnder
   obtain ⟨site, h_site⟩ :=
-    Subst.coverSite (pre := pre) (dom := dom)
+    Subst.coverSite
       (τ := (τ ⧺ src) ⧺ Tele.ofList υ) head
   subst h_site
   cases site with
@@ -1015,7 +1004,7 @@ private theorem diamondAt
           Diamond.instThenAct σ (target.arg j.arity) κ (args j) :=
         fun j => diamondAt σ (target.arg j.arity) κ (args j)
       obtain ⟨site, h_site⟩ :=
-        DiamondSite.cover (pre := pre) (dom := dom) (τ := τ)
+        DiamondSite.cover
           (src := src) (dst := dst) target head
       subst h_site
       cases site with
@@ -1141,7 +1130,7 @@ private theorem diamondAt
                 exact hargs j
             | there q => nomatch q
           have hSubst :
-              Subst.inst (C := C) (pre := pre ⧺ cod ⧺ τ ⧺ dst)
+              Subst.inst (pre := pre ⧺ cod ⧺ τ ⧺ dst)
                 (dom := ⌊β⌋) (cod := Tele.ofList υ)
                 (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
                   match q with
@@ -1149,13 +1138,13 @@ private theorem diamondAt
                       (Diamond.acted σ target κ).act (Tele.ofList υ ∷ j.arity)
                         (σ.act (τ ⧺ src ⧺ Tele.ofList υ ∷ j.arity) (args j)))
               =
-              Subst.inst (C := C) (pre := pre ⧺ cod ⧺ τ ⧺ dst)
+              Subst.inst (pre := pre ⧺ cod ⧺ τ ⧺ dst)
                 (dom := ⌊β⌋) (cod := Tele.ofList υ)
                 (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
                   σ.act (τ ⧺ dst ⧺ Tele.ofList υ ∷ δ) (κβ.sub q)) := by
             exact congrArg
               (fun filler =>
-                Subst.inst (C := C) (pre := pre ⧺ cod ⧺ τ ⧺ dst)
+                Subst.inst (pre := pre ⧺ cod ⧺ τ ⧺ dst)
                   (dom := ⌊β⌋) (cod := Tele.ofList υ) filler)
               hf
           rw [hSubst]
@@ -1281,7 +1270,7 @@ private theorem diamondAt
             cases q with
             | here j => exact hargs j
             | there q => nomatch q
-          change ⟦Subst.inst (C := C) (pre := pre ⧺ cod)
+          change ⟦Subst.inst (pre := pre ⧺ cod)
                 (dom := ⌊β⌋)
                 (cod := (τ ⧺ dst) ⧺ Tele.ofList υ)
                 ζ₀⟧ˢ (σ z)
@@ -1319,7 +1308,7 @@ private theorem diamondAt
           refine Eq.trans ?_
             (congrArg (σ.act ((τ ⧺ dst) ⧺ Tele.ofList υ)) hκ).symm
           rw [← target.hDst_inl (pre ⧺ dom) ((Proper.inr pre) z)]
-          change ⟦Subst.inst (C := C) (pre := pre ⧺ cod)
+          change ⟦Subst.inst (pre := pre ⧺ cod)
                 (dom := ⌊β⌋)
                 (cod := (τ ⧺ dst) ⧺ Tele.ofList υ)
                 ζ₁⟧ˢ (σ z)
@@ -1488,7 +1477,7 @@ private theorem liftAt
           Lift.fused target κ (j.arity :: χ) η (args j) :=
         fun j => liftAt target κ (j.arity :: χ) η (args j)
       obtain ⟨site, h_site⟩ :=
-        LiftSite.cover (pre := pre) (β := β) (χ := χ) head
+        LiftSite.cover head
       subst h_site
       cases site with
       | under xχ =>
@@ -1563,13 +1552,13 @@ private theorem liftAt
           unfold Diamond.actThenInst Diamond.instThenAct Diamond.acted at hrec
           refine Eq.trans hrec.symm ?_
           have hSubst :
-              Subst.inst (C := C) (pre := pre ⧺ τ ⧺ dst ⧺ Tele.ofList υ)
+              Subst.inst (pre := pre ⧺ τ ⧺ dst ⧺ Tele.ofList υ)
                 (dom := ⌊j.arity⌋) (cod := Tele.ofList χ)
                 (fun {δ : C.Arity} (q : ⌊j.arity⌋ ∋ δ) =>
                   κ.act (((Tele.ofList υ) ⧺ Tele.ofList χ) ∷ δ)
                     (θSubst.sub q))
               =
-              Subst.inst (C := C) (pre := pre ⧺ τ ⧺ dst ⧺ Tele.ofList υ)
+              Subst.inst (pre := pre ⧺ τ ⧺ dst ⧺ Tele.ofList υ)
                 (dom := ⌊j.arity⌋) (cod := Tele.ofList χ)
                 (fun {δ : C.Arity} (q : ⌊j.arity⌋ ∋ δ) =>
                   θ' q) := by
@@ -1704,7 +1693,7 @@ theorem Subst.act_comp
   := by
   match e with
   | .ap (α := β) head args =>
-    obtain ⟨site, h_site⟩ := Subst.coverSite (pre := pre) (dom := dom) (τ := τ) head
+    obtain ⟨site, h_site⟩ := Subst.coverSite head
     subst h_site
     cases site with
     | tau x =>
@@ -1763,7 +1752,7 @@ theorem Subst.act_comp
       unfold instOne at h
       dsimp only at h
       change
-        (Subst.inst (C := C) (pre := pre ⧺ cod)
+        (Subst.inst (pre := pre ⧺ cod)
           (dom := ⌊β⌋) (cod := τ)
           (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
             θ.act (τ ∷ δ)
@@ -1772,21 +1761,21 @@ theorem Subst.act_comp
           (Tele.ofList []) (θ.act ⌊β⌋ (σ y))
         =
         θ.act τ
-          ((Subst.inst (C := C) (pre := pre ⧺ mid)
+          ((Subst.inst (pre := pre ⧺ mid)
             (dom := ⌊β⌋) (cod := τ)
             (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
               match q with
               | .here i => σ.act (τ ∷ i.arity) (args i))).act
             (Tele.ofList []) (σ y)) at h
       have hFiller :
-          Subst.inst (C := C) (pre := pre ⧺ cod)
+          Subst.inst (pre := pre ⧺ cod)
             (dom := ⌊β⌋) (cod := τ)
             (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
               θ.act (τ ∷ δ)
                 (match q with
                 | .here i => σ.act (τ ∷ i.arity) (args i)))
           =
-          Subst.inst (C := C) (pre := pre ⧺ cod)
+          Subst.inst (pre := pre ⧺ cod)
             (dom := ⌊β⌋) (cod := τ)
             (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
               match q with
@@ -1845,6 +1834,4 @@ theorem Subst.act_kcomp
   := by
   -- `toSubst` turns Kleisli arrows into `Subst`s, and `Subst.comp` was defined
   -- to match `Subst.kcomp`; after that, this is just `act_comp`.
-  change (Subst.comp (toSubst f) (toSubst g)).act τ e =
-    (toSubst g).act τ ((toSubst f).act τ e)
   exact Subst.act_comp (toSubst f) (toSubst g) τ e
