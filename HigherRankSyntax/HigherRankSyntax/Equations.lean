@@ -9,6 +9,25 @@ specific head (τ-side, dom-side, pre-side) and reduces the classify
 dispatch to a clean right-hand side.  The reflection lemmas
 `Proper.classify_inr` / `classify_inl` are the rewriting handles.
 
+The file has two conceptual halves.
+
+1. The first half proves the unit laws.  These are mostly structural
+   inductions on expressions, plus a mutual arity induction for the
+   interaction between η-expansion and one-binder instantiation.
+
+2. The second half proves composition.  The hard point is not the
+   mathematical idea, but keeping Lean's `Proper` witnesses aligned.  A
+   shape such as `(τ ⧺ dst) ⧺ Tele.ofList υ` can be equipped with different
+   computational witnesses, and those witnesses determine how `Proper.inl`,
+   `Proper.inr`, and `Proper.cover` reduce.  The private `TargetProper`
+   package below records the exact witnesses and coherence equations used by
+   the composition proof.
+
+The central private theorem in the second half is `diamondAt`: acting by `σ`
+commutes with instantiating an arbitrary source substitution `κ`.  It is
+mutual with `liftAt`, because the `dom` branch of `diamondAt` creates a fresh
+one-binder instantiation, whose β-head case calls back into the diamond.
+
 ## The three monad laws
 
 * `Subst.act_id` — `(Subst.id Γ).act τ e = e` (unit_right).
@@ -122,8 +141,6 @@ private theorem idOf
           | here i =>
               refine (Subst.act_ap_inl_dom
                 (Subst.instId Δ α) τ (.here i) argFam).trans ?_
-              rw [show (Subst.instId Δ α).sub (.here i)
-                    = @Expr.η C (Δ ∷ α) i.arity (.here i) from rfl]
               refine (hη i (pre := Δ ∷ α) (cod := τ)
                 (ι := _) (p := .here i)).trans ?_
               change
@@ -196,8 +213,6 @@ theorem Subst.act_inst.η
             ((pre ⧺ ⌊α⌋) ⧺ (⌊i.arity⌋))
             k.arity (.here k))) = _
   rw [Subst.act_ap_inl_dom]
-  rw [show (Subst.inst ⌊α⌋ ι).sub (.here i)
-        = ι (.here i) from rfl]
   have hfill : ∀ (k : C.Binder i.arity),
       (Subst.inst ⌊α⌋ ι).act
         ((⌊i.arity⌋) ∷ k.arity)
@@ -343,19 +358,65 @@ private theorem ListSlotAt.sub_single
 
 /-! ## General substitution diamond for composition -/
 
+/-!
+The composition proof is expressed as a substitution diamond.  The informal
+picture is:
+
+```
+  act by σ, then instantiate κ acted pointwise
+      =
+  instantiate κ first, then act by σ
+```
+
+The expression being transformed lives over
+`((pre ⧺ dom ⧺ τ) ⧺ src) ⧺ Tele.ofList υ`.
+
+* `pre` is the prefix untouched by `σ`.
+* `dom` is the substitution domain of `σ`.
+* `τ` is a passive target depth under which `σ` is acting.
+* `src` is the domain of the second substitution `κ`.
+* `υ` is a concrete under-list used only for recursive descent into
+  application arguments.
+
+Most of the length below is bookkeeping that says exactly which of these
+regions an application head came from.
+-/
+
+/- A singleton-instantiation substitution.  This is the local "substitute the
+arguments of one application head" operation used in the `src`, `dom`, and
+β branches. -/
 private abbrev instOne
     {C : Carrier} {pre : Shape C} (α : C.Arity) (cod : Shape C)
     (f : (i : C.Binder α) → Expr (pre ⧺ cod ∷ i.arity)) :
     Subst C pre ⌊α⌋ cod :=
   Subst.inst ⌊α⌋ (fun q => match q with | .here i => f i)
 
+/- `TargetProper` is proof-facing infrastructure, not mathematics.
+
+It fixes the particular `Proper` witnesses for `τ ⧺ src` and `τ ⧺ dst`, and
+records how their injections reassociate.  Without carrying these equations,
+Lean sees the same telescope through incompatible computational witnesses
+(`Proper.compose` versus `Proper.extendList`), and simple head rewrites stop
+matching.
+
+Read the fields in pairs:
+
+* `hSrc_*` explains heads before applying `κ`;
+* `hDst_*` explains the corresponding heads after applying `κ`;
+* `inr_src`/`inr_dst` are heads from the active substitution source/target;
+* `inr_tau` are passive `τ` heads;
+* `inl` are external prefix heads.
+-/
 private structure TargetProper {C : Carrier}
     (τ src dst : Shape C) (υ : List C.Arity) where
+  /- Atomic witnesses for the three visible components. -/
   hτ : Proper τ
   hSrcShape : Proper src
   hDstShape : Proper dst
+  /- Composite witnesses used by the facades. -/
   hSrc : Proper (τ ⧺ src)
   hDst : Proper (τ ⧺ dst)
+  /- Source-side reassociation equations. -/
   hSrc_inr_src : ∀ (Γ : Shape C) {α : C.Arity} (x : src ∋ α),
     letI : Proper τ := hτ
     letI : Proper src := hSrcShape
@@ -381,6 +442,7 @@ private structure TargetProper {C : Carrier}
     =
     (Proper.inl (Γ ⧺ τ) : Γ ⧺ τ →ʳ Γ ⧺ τ ⧺ src)
       ((Proper.inl Γ : Γ →ʳ Γ ⧺ τ) x)
+  /- Target-side reassociation equations, same roles as above. -/
   hDst_inr_dst : ∀ (Γ : Shape C) {α : C.Arity} (x : dst ∋ α),
     letI : Proper τ := hτ
     letI : Proper dst := hDstShape
@@ -407,20 +469,23 @@ private structure TargetProper {C : Carrier}
     (Proper.inl (Γ ⧺ τ) : Γ ⧺ τ →ʳ Γ ⧺ τ ⧺ dst)
       ((Proper.inl Γ : Γ →ʳ Γ ⧺ τ) x)
 
+/- Extend the chosen source witness through the concrete argument list `υ`.
+This must use `Proper.extendList`, not `Proper.compose`, because recursive
+argument descent expects the cons-by-cons computation of a concrete list. -/
 private abbrev TargetProper.hSrcUnder {C : Carrier}
     {τ src dst : Shape C} {υ : List C.Arity}
     (target : TargetProper τ src dst υ) :
-    Proper ((τ ⧺ src) ⧺ Tele.ofList υ) := by
-  letI : Proper (τ ⧺ src) := target.hSrc
-  exact Proper.extendList (τ ⧺ src) υ
+    Proper ((τ ⧺ src) ⧺ Tele.ofList υ) :=
+  @Proper.extendList C (τ ⧺ src) target.hSrc υ
 
+/- Same concrete-list extension after `κ` has changed `src` into `dst`. -/
 private abbrev TargetProper.hDstUnder {C : Carrier}
     {τ src dst : Shape C} {υ : List C.Arity}
     (target : TargetProper τ src dst υ) :
-    Proper ((τ ⧺ dst) ⧺ Tele.ofList υ) := by
-  letI : Proper (τ ⧺ dst) := target.hDst
-  exact Proper.extendList (τ ⧺ dst) υ
+    Proper ((τ ⧺ dst) ⧺ Tele.ofList υ) :=
+  @Proper.extendList C (τ ⧺ dst) target.hDst υ
 
+/- The ordinary target package: composites are built by `Proper.compose`. -/
 private abbrev TargetProper.base {C : Carrier}
     (τ src dst : Shape C) [Proper τ] [Proper src] [Proper dst]
     (υ : List C.Arity) :
@@ -430,25 +495,15 @@ private abbrev TargetProper.base {C : Carrier}
   hDstShape := inferInstance
   hSrc := Proper.compose τ src
   hDst := Proper.compose τ dst
-  hSrc_inr_src := by
-    intro Γ α x
-    exact Proper.compose_inr_inr τ src Γ x
-  hSrc_inr_tau := by
-    intro Γ α x
-    exact Proper.compose_inr_inl τ src Γ x
-  hSrc_inl := by
-    intro Γ α x
-    exact Proper.compose_inl τ src Γ x
-  hDst_inr_dst := by
-    intro Γ α x
-    exact Proper.compose_inr_inr τ dst Γ x
-  hDst_inr_tau := by
-    intro Γ α x
-    exact Proper.compose_inr_inl τ dst Γ x
-  hDst_inl := by
-    intro Γ α x
-    exact Proper.compose_inl τ dst Γ x
+  hSrc_inr_src := Proper.compose_inr_inr τ src
+  hSrc_inr_tau := Proper.compose_inr_inl τ src
+  hSrc_inl := Proper.compose_inl τ src
+  hDst_inr_dst := Proper.compose_inr_inr τ dst
+  hDst_inr_tau := Proper.compose_inr_inl τ dst
+  hDst_inl := Proper.compose_inl τ dst
 
+/- Special case for `τ = Shape.nil`.  This is used by `Subst.act_comp`,
+where the diamond is applied at top level. -/
 private abbrev TargetProper.nil {C : Carrier}
     (src dst : Shape C) [Proper src] [Proper dst]
     (υ : List C.Arity) :
@@ -461,7 +516,6 @@ private abbrev TargetProper.nil {C : Carrier}
   hSrc_inr_src := by
     intro Γ α x
     rw [Proper.inr_nil_id x]
-    change (Proper.inr Γ) x = (Proper.inr Γ) x
     rfl
   hSrc_inr_tau := by
     intro Γ α x
@@ -472,7 +526,6 @@ private abbrev TargetProper.nil {C : Carrier}
   hDst_inr_dst := by
     intro Γ α x
     rw [Proper.inr_nil_id x]
-    change (Proper.inr Γ) x = (Proper.inr Γ) x
     rfl
   hDst_inr_tau := by
     intro Γ α x
@@ -481,24 +534,22 @@ private abbrev TargetProper.nil {C : Carrier}
     intro Γ α x
     rfl
 
+/- Witness for descending under one application argument on the source side. -/
 private abbrev TargetProper.hSrcExt {C : Carrier}
     {τ src dst : Shape C} {υ : List C.Arity}
     (target : TargetProper τ src dst υ) (β : C.Arity) :
     Proper ((τ ⧺ src) ∷ β) :=
-  letI : Proper τ := target.hτ
-  letI : Proper src := target.hSrcShape
-  letI : Proper (τ ⧺ src) := target.hSrc
-  inferInstance
+  @Proper.instCons C β (τ ⧺ src) target.hSrc
 
+/- Witness for descending under one application argument on the target side. -/
 private abbrev TargetProper.hDstExt {C : Carrier}
     {τ src dst : Shape C} {υ : List C.Arity}
     (target : TargetProper τ src dst υ) (β : C.Arity) :
     Proper ((τ ⧺ dst) ∷ β) :=
-  letI : Proper τ := target.hτ
-  letI : Proper dst := target.hDstShape
-  letI : Proper (τ ⧺ dst) := target.hDst
-  inferInstance
+  @Proper.instCons C β (τ ⧺ dst) target.hDst
 
+/- Ordinary argument recursion: the under-list grows by one binder, but the
+active `τ/src/dst` decomposition is unchanged. -/
 private abbrev TargetProper.arg {C : Carrier}
     {τ src dst : Shape C} {υ : List C.Arity}
     (target : TargetProper τ src dst υ) (β : C.Arity) :
@@ -515,6 +566,10 @@ private abbrev TargetProper.arg {C : Carrier}
   hDst_inr_tau := target.hDst_inr_tau
   hDst_inl := target.hDst_inl
 
+/- The `src` branch of `diamondAt` fires `κ` and recurses on the selected
+filler.  The old target `(τ ⧺ dst)` becomes the new passive depth, the fresh
+singleton application head becomes the new `src`, and the previous argument
+list `υ` becomes the new `dst`. -/
 private abbrev TargetProper.srcStep {C : Carrier}
     {τ src dst : Shape C} {υ : List C.Arity}
     (target : TargetProper τ src dst υ) (β : C.Arity) :
@@ -535,56 +590,40 @@ private abbrev TargetProper.srcStep {C : Carrier}
   hSrc_inl := by
     intro Γ α x
     rfl
-  hDst_inr_dst := by
-    intro Γ α x
-    letI : Proper (τ ⧺ dst) := target.hDst
-    exact Proper.extendList_inr_inr (τ ⧺ dst) υ Γ x
-  hDst_inr_tau := by
-    intro Γ α x
-    letI : Proper (τ ⧺ dst) := target.hDst
-    exact Proper.extendList_inr_inl (τ ⧺ dst) υ Γ x
-  hDst_inl := by
-    intro Γ α x
-    letI : Proper (τ ⧺ dst) := target.hDst
-    exact Proper.extendList_inl (τ ⧺ dst) υ Γ x
+  hDst_inr_dst :=
+    @Proper.extendList_inr_inr C (τ ⧺ dst) target.hDst υ
+  hDst_inr_tau :=
+    @Proper.extendList_inr_inl C (τ ⧺ dst) target.hDst υ
+  hDst_inl :=
+    @Proper.extendList_inl C (τ ⧺ dst) target.hDst υ
 
+/- The β branch of `liftAt` calls back into `diamondAt`.  There the passive
+depth is the current under-list `υ`, the source is the singleton binder opened
+by the β-head, and the destination is the remaining under-list `χ`. -/
 private abbrev TargetProper.liftBeta {C : Carrier}
     (υ χ : List C.Arity) {β : C.Arity} (j : C.Binder β) :
     TargetProper (Tele.ofList υ) ⌊j.arity⌋ (Tele.ofList χ) [] where
   hτ := inferInstance
   hSrcShape := inferInstance
   hDstShape := inferInstance
-  hSrc := by
-    letI : Proper (Tele.ofList υ : Shape C) := inferInstance
-    exact Proper.extendList (Tele.ofList υ : Shape C) [j.arity]
-  hDst := by
-    letI : Proper (Tele.ofList υ : Shape C) := inferInstance
-    exact Proper.extendList (Tele.ofList υ : Shape C) χ
+  hSrc := Proper.extendList (Tele.ofList υ) [j.arity]
+  hDst := Proper.extendList (Tele.ofList υ) χ
   hSrc_inr_src := by
     intro Γ α x
-    letI : Proper (Tele.ofList υ : Shape C) := inferInstance
-    exact Proper.extendList_inr_inr (Tele.ofList υ : Shape C) [j.arity] Γ x
+    exact Proper.extendList_inr_inr (Tele.ofList υ) [j.arity] Γ x
   hSrc_inr_tau := by
     intro Γ α x
-    letI : Proper (Tele.ofList υ : Shape C) := inferInstance
-    exact Proper.extendList_inr_inl (Tele.ofList υ : Shape C) [j.arity] Γ x
+    exact Proper.extendList_inr_inl (Tele.ofList υ) [j.arity] Γ x
   hSrc_inl := by
     intro Γ α x
-    letI : Proper (Tele.ofList υ : Shape C) := inferInstance
-    exact Proper.extendList_inl (Tele.ofList υ : Shape C) [j.arity] Γ x
-  hDst_inr_dst := by
-    intro Γ α x
-    letI : Proper (Tele.ofList υ : Shape C) := inferInstance
-    exact Proper.extendList_inr_inr (Tele.ofList υ : Shape C) χ Γ x
-  hDst_inr_tau := by
-    intro Γ α x
-    letI : Proper (Tele.ofList υ : Shape C) := inferInstance
-    exact Proper.extendList_inr_inl (Tele.ofList υ : Shape C) χ Γ x
-  hDst_inl := by
-    intro Γ α x
-    letI : Proper (Tele.ofList υ : Shape C) := inferInstance
-    exact Proper.extendList_inl (Tele.ofList υ : Shape C) χ Γ x
+    exact Proper.extendList_inl (Tele.ofList υ) [j.arity] Γ x
+  hDst_inr_dst := Proper.extendList_inr_inr (Tele.ofList υ) χ
+  hDst_inr_tau := Proper.extendList_inr_inl (Tele.ofList υ) χ
+  hDst_inl := Proper.extendList_inl (Tele.ofList υ) χ
 
+/- Apply `σ` at a target depth using an explicitly chosen `Proper` witness.
+This tiny wrapper prevents typeclass search from silently choosing the wrong
+composite witness. -/
 private abbrev actAt
     {C : Carrier} {pre dom cod τ : Shape C}
     [Proper dom] [Proper cod]
@@ -596,6 +635,9 @@ private abbrev actAt
 
 namespace Diamond
 
+/- Pointwise action of `σ` on every filler of `κ`.  If
+`κ : src -> dst` over `pre ⧺ dom ⧺ τ`, then `acted σ κ : src -> dst` over
+`pre ⧺ cod ⧺ τ`. -/
 private abbrev acted
     {C : Carrier} {pre dom cod τ src dst : Shape C}
     [Proper dom] [Proper cod] [Proper τ] [Proper src] [Proper dst]
@@ -611,6 +653,8 @@ private abbrev acted
     actAt (pre := pre) (dom := dom) (cod := cod)
       σ (target.hDstExt β) (κ.sub x))
 
+/- Left side of the diamond: first act on the ambient expression by `σ`, then
+instantiate by the pointwise-acted substitution. -/
 private abbrev actThenInst
     {C : Carrier} {pre dom cod τ src dst : Shape C}
     [Proper dom] [Proper cod] [Proper τ] [Proper src] [Proper dst]
@@ -626,6 +670,8 @@ private abbrev actThenInst
     (actAt (pre := pre) (dom := dom) (cod := cod)
       σ target.hSrcUnder e)
 
+/- Right side of the diamond: instantiate by `κ` first, then act by `σ`.
+`diamondAt` proves this equals `actThenInst`. -/
 private abbrev instThenAct
     {C : Carrier} {pre dom cod τ src dst : Shape C}
     [Proper dom] [Proper cod] [Proper τ] [Proper src] [Proper dst]
@@ -645,6 +691,9 @@ end Diamond
 
 namespace Lift
 
+/- `Lift.sequential` is the companion situation created by a dom-head of
+`diamondAt`: first instantiate a freshly opened β-binder (`lam`), then apply
+`κ` under the additional list `υ`. -/
 private abbrev sequential
     {C : Carrier} {pre τ src dst : Shape C}
     [Proper τ] [Proper src] [Proper dst]
@@ -664,6 +713,8 @@ private abbrev sequential
   κ.act ((Tele.ofList υ) ⧺ Tele.ofList χ)
     (lam.act (Tele.ofList χ) e)
 
+/- `Lift.fused` is the same operation with the `κ` action pushed into each
+β-filler.  `liftAt` proves `sequential = fused`. -/
 private abbrev fused
     {C : Carrier} {pre τ src dst : Shape C}
     [Proper τ] [Proper src] [Proper dst]
@@ -685,6 +736,15 @@ private abbrev fused
 
 end Lift
 
+/- Five possible origins for a head in the diamond expression:
+
+* `under`: one of the concrete recursive argument binders `υ`;
+* `src`: a head that belongs to the domain of `κ`;
+* `tau`: a passive head from the ambient depth `τ`;
+* `dom`: a head substituted by `σ`;
+* `pre`: an untouched prefix head.
+
+Keeping these cases explicit is the main readability device in `diamondAt`. -/
 private inductive DiamondSite {C : Carrier}
     (pre dom τ src : Shape C) (υ : List C.Arity) : C.Arity → Type where
   | under {β} (xυ : Tele.ofList υ ∋ β) : DiamondSite pre dom τ src υ β
@@ -693,13 +753,14 @@ private inductive DiamondSite {C : Carrier}
   | dom {β} (z : dom ∋ β) : DiamondSite pre dom τ src υ β
   | pre {β} (z : pre ∋ β) : DiamondSite pre dom τ src υ β
 
+/- Embed a classified head back into the flattened expression context, using
+the exact witnesses stored in `target`. -/
 private def DiamondSite.embed {C : Carrier}
     {pre dom τ src dst : Shape C} [Proper dom] [Proper τ] [Proper src]
     {β : C.Arity} {υ : List C.Arity}
     (target : TargetProper τ src dst υ) :
     DiamondSite pre dom τ src υ β →
       (((pre ⧺ dom ⧺ τ) ⧺ src) ⧺ Tele.ofList υ) ∋ β :=
-  letI : Proper (τ ⧺ src) := target.hSrc
   letI : Proper ((τ ⧺ src) ⧺ Tele.ofList υ) := target.hSrcUnder
   fun
   | .under xυ =>
@@ -728,6 +789,9 @@ private def DiamondSite.embed {C : Carrier}
           (pre ⧺ dom) ⧺ ((τ ⧺ src) ⧺ Tele.ofList υ))
         ((Proper.inl pre) z)
 
+/- Covering lemma for diamond heads.  The proof is just the nested
+`Proper.cover` split packaged once, so `diamondAt` can read as a five-case
+proof instead of a maze of cover/subst blocks. -/
 private theorem DiamondSite.cover {C : Carrier}
     {pre dom τ src dst : Shape C} [Proper dom] [Proper τ] [Proper src]
     {β : C.Arity} {υ : List C.Arity}
@@ -735,7 +799,6 @@ private theorem DiamondSite.cover {C : Carrier}
     (head : (((pre ⧺ dom ⧺ τ) ⧺ src) ⧺ Tele.ofList υ) ∋ β) :
     ∃ site : DiamondSite pre dom τ src υ β,
       head = DiamondSite.embed target site := by
-  letI : Proper (τ ⧺ src) := target.hSrc
   letI : Proper ((τ ⧺ src) ⧺ Tele.ofList υ) := target.hSrcUnder
   obtain ⟨site, h_site⟩ :=
     Subst.coverSite (pre := pre) (dom := dom)
@@ -769,12 +832,19 @@ private theorem DiamondSite.cover {C : Carrier}
       unfold DiamondSite.embed Subst.embedSource
       rfl
 
+/- Three possible origins for a head in the lifted one-binder companion:
+
+* `under`: a concrete binder from `χ`;
+* `beta`: the freshly opened β-binder;
+* `pre`: an untouched prefix head.
+-/
 private inductive LiftSite {C : Carrier}
     (pre : Shape C) (β : C.Arity) (χ : List C.Arity) : C.Arity → Type where
   | under {γ} (xχ : Tele.ofList χ ∋ γ) : LiftSite pre β χ γ
   | beta (j : C.Binder β) : LiftSite pre β χ j.arity
   | pre {γ} (z : pre ∋ γ) : LiftSite pre β χ γ
 
+/- Embed a `LiftSite` into the flattened context `(pre ∷ β) ⧺ Tele.ofList χ`. -/
 private def LiftSite.embed {C : Carrier}
     {pre : Shape C} {β γ : C.Arity} {χ : List C.Arity} :
     LiftSite pre β χ γ → ((pre ∷ β) ⧺ Tele.ofList χ) ∋ γ
@@ -782,6 +852,7 @@ private def LiftSite.embed {C : Carrier}
   | .beta j => (Proper.inl (pre ∷ β)) ((Proper.inr pre) (.here j))
   | .pre z => (Proper.inl (pre ∷ β)) ((Proper.inl pre) z)
 
+/- Pack the nested cover split for `liftAt`. -/
 private theorem LiftSite.cover {C : Carrier}
     {pre : Shape C} {β γ : C.Arity} {χ : List C.Arity}
     (head : ((pre ∷ β) ⧺ Tele.ofList χ) ∋ γ) :
@@ -882,10 +953,40 @@ private instance {C : Carrier} : WellFoundedRelation (InterchangeFuel C) where
   rel := InterchangeFuel.Lt
   wf := InterchangeFuel.Lt.wf
 
-/-! ### Source-head classifiers for the one-binder interaction -/
+/-! ### The recursive diamond and its lifted companion
+
+The next mutual block is the heart of the composition proof.
+
+`diamondAt` proves the square
+
+```
+act σ after instantiate κ  =  instantiate (act σ on κ) after act σ
+```
+
+for expressions whose context has been flattened as
+`((pre ⧺ dom ⧺ τ) ⧺ src) ⧺ Tele.ofList υ`.
+
+The five `DiamondSite` cases are not five different mathematical ideas.  They
+are the five possible origins of an application head after flattening:
+
+* `under`, `tau`, and `pre` are stable-head cases.  The head is preserved and
+  only the recursive argument family matters.
+* `src` is where `κ` fires.  The proof descends into the selected filler
+  `κ.sub xsrc`, so the source component of the fuel decreases.
+* `dom` is where `σ` fires.  That creates a one-binder instantiation, so the
+  proof switches to `liftAt`.
+
+`liftAt` is the companion theorem for that fresh one-binder instantiation.
+Its only active branch is `beta`; there it calls back into `diamondAt`.
+-/
 
 mutual
 
+/- `diamondAt` is deliberately stated with `TargetProper` rather than asking
+typeclass search for the composite `Proper` witnesses.  The proof needs
+`Proper.extendList` witnesses for the concrete under-list `υ`; a merely
+extensionally equal witness built by `Proper.compose` would not reduce the same
+way in the head computations below. -/
 private theorem diamondAt
     {C : Carrier} {pre dom cod τ src dst : Shape C}
     [Proper dom] [Proper cod] [Proper τ] [Proper src] [Proper dst]
@@ -905,6 +1006,9 @@ private theorem diamondAt
   letI : Proper ((τ ⧺ dst) ⧺ Tele.ofList υ) := target.hDstUnder
   match e with
   | .ap (α := β) head args =>
+      -- Ordinary structural recursion on every application argument.  Every
+      -- branch below eventually reduces to these equalities, except the two
+      -- fuel-changing branches (`src` and `dom`).
       have hargs : ∀ (j : C.Binder β),
           Diamond.actThenInst σ (target.arg j.arity) κ (args j)
             =
@@ -916,6 +1020,8 @@ private theorem diamondAt
       subst h_site
       cases site with
       | under xυ =>
+          -- Stable local-binder head.  Both routes keep the same head `xυ`;
+          -- after normalising the embeddings, the result is pointwise `hargs`.
           change (Diamond.acted σ target κ).act (Tele.ofList υ)
               (σ.act (τ ⧺ src ⧺ Tele.ofList υ)
                 (.ap ((Proper.inr (pre ⧺ dom)) ((Proper.inr (τ ⧺ src)) xυ)) args))
@@ -960,6 +1066,10 @@ private theorem diamondAt
           funext j
           exact hargs j
       | src xsrc =>
+          -- Source head for `κ`.  The right-hand route fires `κ` at `xsrc`.
+          -- The left-hand route first acts on the head and then fires the
+          -- acted substitution.  Both reduce to the smaller diamond on the
+          -- single selected filler `κ.sub xsrc`.
           change (Diamond.acted σ target κ).act (Tele.ofList υ)
               (σ.act (τ ⧺ src ⧺ Tele.ofList υ)
                 (.ap
@@ -992,8 +1102,6 @@ private theorem diamondAt
                   args))
           rw [Subst.act_ap_inl_dom (Diamond.acted σ target κ) (Tele.ofList υ) xsrc
             (fun j => σ.act (τ ⧺ src ⧺ Tele.ofList υ ∷ j.arity) (args j))]
-          rw [show (Diamond.acted σ target κ).sub xsrc =
-              σ.act ((τ ⧺ dst) ∷ β) (κ.sub xsrc) from rfl]
           rw [Proper.extendList_inr_inl (τ ⧺ src) υ (pre ⧺ dom)
             ((Proper.inr τ) xsrc)]
           rw [target.hSrc_inr_src (pre ⧺ dom) xsrc]
@@ -1011,7 +1119,6 @@ private theorem diamondAt
                     ((Proper.inr (pre ⧺ dom ⧺ τ)) xsrc))
                   args))
           rw [Subst.act_ap_inl_dom κ (Tele.ofList υ) xsrc args]
-          rw [show κ.sub xsrc = κ.sub xsrc from rfl]
           let κβ : Subst C (pre ⧺ dom ⧺ (τ ⧺ dst)) ⌊β⌋ (Tele.ofList υ) :=
             instOne β (Tele.ofList υ)
               (fun j => κ.act (Tele.ofList υ ∷ j.arity) (args j))
@@ -1054,6 +1161,9 @@ private theorem diamondAt
           rw [hSubst]
           simpa only [κβ, instOne] using hrec
       | tau xτ =>
+          -- Stable ambient-depth head.  It is not in the domain of either
+          -- substitution; the proof is bookkeeping that shows both sides
+          -- rebuild the same τ-head and recurse on the arguments.
           change (Diamond.acted σ target κ).act (Tele.ofList υ)
               (σ.act (τ ⧺ src ⧺ Tele.ofList υ)
                 (.ap
@@ -1137,6 +1247,10 @@ private theorem diamondAt
           funext j
           exact hargs j
       | dom z =>
+          -- Domain head for `σ`.  Here `σ` fires, producing a term whose
+          -- immediate subterms are the acted arguments.  The needed statement
+          -- is exactly the lifted one-binder theorem `liftAt`; afterwards
+          -- `hargs` aligns the singleton filler family.
           refine (congrArg ((Diamond.acted σ target κ).act (Tele.ofList υ))
             (Subst.act_ap_inl_dom σ
               ((τ ⧺ src) ⧺ Tele.ofList υ) z args)).trans ?_
@@ -1226,6 +1340,9 @@ private theorem diamondAt
             ((τ ⧺ dst) ⧺ Tele.ofList υ) z
             (fun j => κ.act (Tele.ofList υ ∷ j.arity) (args j))).symm
       | pre z =>
+          -- Stable prefix head.  The prefix is preserved by both substitutions.
+          -- The long-looking proof is only reassociation of the same preserved
+          -- head through the two composite target contexts.
           change (Diamond.acted σ target κ).act (Tele.ofList υ)
               (σ.act (τ ⧺ src ⧺ Tele.ofList υ)
                 (.ap
@@ -1314,6 +1431,10 @@ termination_by
   ((⟨⟨dom.toList⟩, ⟨src.toList⟩⟩ : InterchangeFuel C),
     (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
+  -- The measure is lexicographic: first the pair of active substitution
+  -- domains, then expression subterm recursion.  Argument recursion goes right
+  -- in the lexicographic product; `src` decreases the second domain; `dom`
+  -- decreases the first domain by switching to `liftAt`.
   all_goals
     subst_vars
     first
@@ -1326,6 +1447,10 @@ decreasing_by
       | refine Prod.Lex.right _ ?_
         exact Expr.Subterm.of_arg_ofList_cons υ _ _ _
 
+/- `liftAt` is the proof obligation produced when a `dom` head of `diamondAt`
+fires `σ`.  It compares doing `κ` after opening that one binder with first
+pushing `κ` into each β-filler.  The β-head branch is the only branch that
+changes fuel; the stable branches simply recurse through arguments. -/
 private theorem liftAt
     {C : Carrier} {pre τ src dst : Shape C}
     [Proper τ] [Proper src] [Proper dst]
@@ -1355,6 +1480,8 @@ private theorem liftAt
     lam'.act (Tele.ofList χ) e
   match e with
   | .ap (α := γ) head args =>
+      -- Structural recursion through the arguments under the current concrete
+      -- list of binders `χ`.
       have ih_args : ∀ (j : C.Binder γ),
           Lift.sequential target κ (j.arity :: χ) η (args j)
             =
@@ -1365,6 +1492,8 @@ private theorem liftAt
       subst h_site
       cases site with
       | under xχ =>
+          -- Stable local head from `χ`; both substitutions preserve the head
+          -- and the proof closes by the argument induction hypotheses.
           refine (congrArg
             (κ.act ((Tele.ofList υ) ⧺ Tele.ofList χ))
             (Subst.act_ap_inr lam (Tele.ofList χ) xχ args)).trans ?_
@@ -1398,6 +1527,10 @@ private theorem liftAt
           funext j
           exact ih_args j
       | beta j =>
+          -- The fresh β-head fires the one-binder substitution `lam`.  This
+          -- exposes the chosen filler `η j`; the remaining interaction is the
+          -- diamond theorem for the singleton argument substitution built from
+          -- the application arguments.
           refine (congrArg
             (κ.act ((Tele.ofList υ) ⧺ Tele.ofList χ))
             (Subst.act_ap_inl_dom lam (Tele.ofList χ)
@@ -1467,6 +1600,8 @@ private theorem liftAt
           | here i => rfl
           | there q => nomatch q
       | pre z =>
+          -- Stable prefix head.  As in the `pre` branch of `diamondAt`, this
+          -- is mostly witness reassociation plus the argument recursion.
           refine (congrArg
             (κ.act ((Tele.ofList υ) ⧺ Tele.ofList χ))
             (Subst.act_ap_inl_pre lam (Tele.ofList χ) z args)).trans ?_
@@ -1536,6 +1671,9 @@ termination_by
   ((⟨⟨[β]⟩, ⟨src.toList⟩⟩ : InterchangeFuel C),
     (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
+  -- In the β branch we call back to `diamondAt` with the selected binder arity
+  -- as a strictly smaller first fuel component.  The other recursive calls are
+  -- ordinary expression-subterm calls under the extended `χ` list.
   all_goals
     subst_vars
     first
@@ -1546,7 +1684,17 @@ decreasing_by
 
 end
 
-/-- **`act_comp`** — action by a composite substitution factors into two actions. -/
+/-- **`act_comp`** — action by a composite substitution factors into two actions.
+
+This is the public composition theorem for `Subst.act`.  The proof is now a
+small expression recursion with three semantic head cases:
+
+* τ-heads are preserved by both substitutions, so we recurse on arguments;
+* pre-heads are also preserved, again with argument recursion;
+* dom-heads are the real case.  There `σ` fires first, and `diamondAt` says
+  that subsequently acting by `θ` commutes with the one-binder instantiation
+  generated by that firing.
+-/
 theorem Subst.act_comp
     {C : Carrier} {pre dom mid cod : Shape C}
     [Proper dom] [Proper mid] [Proper cod]
@@ -1560,6 +1708,8 @@ theorem Subst.act_comp
     subst h_site
     cases site with
     | tau x =>
+      -- Current-depth variable: both sides rebuild the same head and compare
+      -- the recursively transformed argument family.
       refine (Subst.act_ap_inr (Subst.comp σ θ) τ x args).trans ?_
       change
         .ap ((Proper.inr (pre ⧺ cod)) x)
@@ -1574,6 +1724,10 @@ theorem Subst.act_comp
       funext i
       exact Subst.act_comp σ θ (τ ∷ i.arity) (args i)
     | dom y =>
+      -- Substituted variable: the composite filler is definitionally
+      -- `θ.act ⌊β⌋ (σ y)`.  The remaining question is whether `θ` commutes
+      -- with the instantiation created by firing `σ`; this is exactly the
+      -- nil-τ singleton-source specialization of `diamondAt`.
       refine (Subst.act_ap_inl_dom (Subst.comp σ θ) τ y args).trans ?_
       have ih_args : ∀ (i : C.Binder β),
           (Subst.comp σ θ).act (τ ∷ i.arity) (args i)
@@ -1581,7 +1735,6 @@ theorem Subst.act_comp
           θ.act (τ ∷ i.arity)
             (σ.act (τ ∷ i.arity) (args i)) :=
         fun i => Subst.act_comp σ θ (τ ∷ i.arity) (args i)
-      rw [show (Subst.comp σ θ).sub y = θ.act ⌊β⌋ (σ y) from rfl]
       simp only [ih_args]
       change
         ⟦Subst.inst ⌊β⌋
@@ -1661,6 +1814,8 @@ theorem Subst.act_comp
             (σ y)) at h
       exact h
     | pre z =>
+      -- Prefix variable: neither substitution replaces the head.  Only the
+      -- argument family is transformed recursively.
       refine (Subst.act_ap_inl_pre (Subst.comp σ θ) τ z args).trans ?_
       change
         .ap ((Proper.inl (pre ⧺ cod)) ((Subst.comp σ θ).weakenCod z))
@@ -1688,6 +1843,8 @@ theorem Subst.act_kcomp
     (τ : Shape C) [Proper τ] (e : Expr (Γ ⧺ τ)) :
   (toSubst (Subst.kcomp f g)).act τ e = (toSubst g).act τ ((toSubst f).act τ e)
   := by
+  -- `toSubst` turns Kleisli arrows into `Subst`s, and `Subst.comp` was defined
+  -- to match `Subst.kcomp`; after that, this is just `act_comp`.
   change (Subst.comp (toSubst f) (toSubst g)).act τ e =
     (toSubst g).act τ ((toSubst f).act τ e)
   exact Subst.act_comp (toSubst f) (toSubst g) τ e

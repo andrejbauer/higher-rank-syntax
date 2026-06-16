@@ -21,8 +21,8 @@
    Do instead: for `Subst.act_inst.oneDiamondAt`/`oneLiftAt`, keep the private `InterchangeFuel` measure; use `DomLt` for filler jumps and `Expr.Subterm.of_arg_ofList_cons` for ordinary argument recursion.
 2. **[2026-06-15] General diamonds need explicit composite witnesses**
    Do instead: parameterize `Diamond`/`Lift` facades by the exact `Proper (τ ⧺ src)` and `Proper (τ ⧺ dst)` witnesses; the `src` recursive call needs `Proper.extendList (τ ⧺ dst) υ`, not `Proper.compose (τ ⧺ dst) (Tele.ofList υ)`.
-3. **[2026-06-08] `Proper` composition witnesses are computational data**
-   Do instead: generalize `OneDiamond`/`OneLift` with a small target-coherence package, not just a bare `Proper (τ ⧺ dst)` witness; alpha/beta recursion must keep `Proper.compose` and `Proper.extendList` choices aligned. `PreLiftSite` is useful for `preNaturalityLiftAt`, but `preNaturalityAt` wants the nested `pre ⧺ ⌊α⌋` normal form.
+3. **[2026-06-15] Env-centered singleton interaction still needs canonical spines**
+   Do instead: do not install a private `Env` bridge alone. The hard theorem still needs explicit coherence between `Γ ⧺ (base ∷ α ⧺ υ)` and `((Γ ⧺ base) ⧺ ⌊α⌋) ⧺ υ`; either keep `TargetProper`/diamond or first build a canonical spine layer for these witnesses.
 4. **[2026-06-08] Core interchange is a one-binder mutual pair**
    Do instead: state the central commute through `OneDiamond`/`OneLift`; keep `PreNaturality` and `Interchange` only for remaining derived stages.
 5. **[2026-05-27] `act_kcomp` reduces to general substitution composition**
@@ -39,9 +39,11 @@
    Do instead: prove one-step equations by `delta inst.aux`/`delta lift.aux`, `rw [*.aux._unary.eq_1, WellFounded.fix_eq]`, then `simp [classify_*]`.
 
 ## User Directives
-1. **[2026-06-14] Present `Equations.lean` thesis-style**
+1. **[2026-06-16] Avoid defensive Lean witness boilerplate**
+   Do instead: add `letI`, type ascriptions, or explicit instance arguments only when they select a computationally necessary `Proper` witness; remove no-op `show ... from rfl` rewrites and tiny tactic wrappers when direct terms elaborate.
+2. **[2026-06-14] Present `Equations.lean` thesis-style**
    Do instead: organize explanations/refactors around action, unit/generic application, action-instantiation interaction, composition, and relative-monad laws; use `HigherRankSyntax/equations-math.tex` and `HigherRankSyntax/equations-refactor-plan.md` as the current guide.
-2. **[2026-06-14] Treat `preNaturalityLiftAt` as a readability hotspot**
+3. **[2026-06-14] Treat `preNaturalityLiftAt` as a readability hotspot**
    Do instead: target the PreLift/β-side interaction with named head cases and branch helpers before retrying arbitrary-target diamonds.
-3. **[2026-05-19] Collaborator onboarding matters**
+4. **[2026-05-19] Collaborator onboarding matters**
    Do instead: keep `PLAN.md` aligned with the active formalization after implementation changes.
