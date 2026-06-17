@@ -1309,4 +1309,128 @@ private theorem instOneAt_extendPassiveUnder {C : Carrier} {Γ χ ψ υ : Shape 
   rw [extendPassiveRen_cons, extendPassiveRen_cons] at h
   exact h
 
+/-! ## Passive insertion and contraction -/
+
+/-- Insert a single active binder just below the passive suffix `ψ`.
+
+This is the renaming used when an expression that does not mention `β` is viewed
+in a context where `β` has been added as an older local binder. -/
+private def insertActiveRen {C : Carrier} {ψ base : Shape C}
+    (pψ : ProperSpine ψ) (β : C.Arity) : base ⧺ ψ →ʳ (base ∷ β) ⧺ ψ :=
+  localMapTail pψ (localTail (.cons .nil β) base)
+
+private theorem insertActiveRen_cons {C : Carrier} {ψ base : Shape C}
+    (pψ : ProperSpine ψ) (β γ : C.Arity) :
+    insertActiveRen (.cons pψ γ) (base := base) β =
+      localCons (insertActiveRen pψ (base := base) β) γ := by
+  unfold insertActiveRen
+  rw [localMapTail_cons]
+
+private theorem insertActiveRen_prefix {C : Carrier} {ψ base : Shape C}
+    (pψ : ProperSpine ψ) (β : C.Arity) {γ : C.Arity} (x : ψ ∋ γ) :
+    insertActiveRen pψ (base := base) β (localPrefix pψ base x) =
+      localPrefix pψ (base ∷ β) x := by
+  unfold insertActiveRen
+  rw [localMapTail_prefix]
+
+private theorem insertActiveRen_tail {C : Carrier} {ψ base : Shape C}
+    (pψ : ProperSpine ψ) (β : C.Arity) {γ : C.Arity} (x : base ∋ γ) :
+    insertActiveRen pψ (base := base) β (localTail pψ base x) =
+      localTail pψ (base ∷ β) (.there x) := by
+  unfold insertActiveRen
+  rw [localMapTail_tail]
+  unfold localTail
+  rw [ProperSpine.inl_cons]
+  rw [ProperSpine.inl_nil]
+  rw [Renaming.id_apply]
+  rfl
+
+private theorem insertActiveRen_inr {C : Carrier} {ψ base : Shape C}
+    (pψ : ProperSpine ψ) (β : C.Arity) {γ : C.Arity} (x : ψ ∋ γ) :
+    insertActiveRen pψ (base := base) β ((ProperSpine.inr pψ base) x) =
+      (ProperSpine.inr pψ (base ∷ β)) x := by
+  exact insertActiveRen_prefix pψ β x
+
+private theorem insertActiveRen_inl {C : Carrier} {ψ base : Shape C}
+    (pψ : ProperSpine ψ) (β : C.Arity) {γ : C.Arity} (x : base ∋ γ) :
+    insertActiveRen pψ (base := base) β ((ProperSpine.inl pψ base) x) =
+      (ProperSpine.inl pψ (base ∷ β)) (.there x) := by
+  exact insertActiveRen_tail pψ β x
+
+/-- If `β` was introduced only by weakening, substituting the active `β` does
+nothing except remove that weakening.
+
+There is deliberately no active-`β` local-head branch: after `insertActiveRen`,
+every local head comes either from the passive suffix `ψ` or from the older base.
+This is the scoped analogue of the “absence” part of the old diamond proof. -/
+private theorem instOneAt_contractInserted {C : Carrier} {Γ : Shape C} :
+    {ψ base : Shape C} → (pψ : ProperSpine ψ) → (β : C.Arity) →
+    (fillβ : (j : C.Binder β) → ScopedExpr Γ (base ∷ j.arity)) →
+    (e : ScopedExpr Γ (base ⧺ ψ)) →
+    instOneAt pψ base β fillβ
+        (renameLocal (insertActiveRen pψ (base := base) β) e) = e
+  | ψ, base, pψ, β, fillβ, .ap head args => by
+      have hargs : ∀ j,
+          instOneAt (.cons pψ j.arity) base β fillβ
+              (renameLocal
+                (localCons (insertActiveRen pψ (base := base) β) j.arity)
+                (args j)) = args j := by
+        intro j
+        have h := instOneAt_contractInserted (.cons pψ j.arity) β fillβ
+          (args j)
+        rw [insertActiveRen_cons] at h
+        exact h
+      cases head with
+      | free x =>
+          -- Free head: insertion and contraction only affect local slots.
+          simp only [renameLocal, ScopedHead.renameLocal]
+          rw [instOneAt_freeHead pψ fillβ x]
+          exact ap_args_congr (.free x) hargs
+      | «local» x =>
+          rcases ProperSpine.coverEq pψ base x with ⟨xψ, rfl⟩ | ⟨xbase, rfl⟩
+          · -- Passive head: it remains passive after insertion.
+            simp only [renameLocal, ScopedHead.renameLocal]
+            rw [insertActiveRen_inr]
+            change
+              instOneAt pψ base β fillβ
+                  (.ap (.local (localPrefix pψ (base ∷ β) xψ))
+                    (fun j =>
+                      renameLocal
+                        (localCons (insertActiveRen pψ (base := base) β) j.arity)
+                        (args j))) =
+                .ap (.local (localPrefix pψ base xψ)) args
+            rw [instOneAt_preHead pψ fillβ xψ]
+            exact ap_args_congr (.local (localPrefix pψ base xψ)) hargs
+          · -- Older-tail head: insertion moves it below `β`, so contraction
+            -- preserves it as an older-tail head.
+            simp only [renameLocal, ScopedHead.renameLocal]
+            rw [insertActiveRen_inl]
+            change
+              instOneAt pψ base β fillβ
+                  (.ap (.local (localTail pψ (base ∷ β) (.there xbase)))
+                    (fun j =>
+                      renameLocal
+                        (localCons (insertActiveRen pψ (base := base) β) j.arity)
+                        (args j))) =
+                .ap (.local (localTail pψ base xbase)) args
+            rw [instOneAt_tailHead pψ fillβ xbase]
+            exact ap_args_congr (.local (localTail pψ base xbase)) hargs
+termination_by ψ base _ β _ e =>
+  (β, (⟨base ⧺ ψ, e⟩ : Σ τ : Shape C, ScopedExpr Γ τ))
+decreasing_by
+  all_goals
+    exact Prod.Lex.right _ (Subterm.of_arg_ext _ _ _)
+
+private theorem instOneAt_contractInsertedUnder {C : Carrier} {Γ ψ base : Shape C}
+    (pψ : ProperSpine ψ) (β : C.Arity)
+    (fillβ : (j : C.Binder β) → ScopedExpr Γ (base ∷ j.arity))
+    {γ : C.Arity} (e : ScopedExpr Γ ((base ⧺ ψ) ∷ γ)) :
+    instOneAt (.cons pψ γ) base β fillβ
+        (renameLocal
+          (localCons (insertActiveRen pψ (base := base) β) γ)
+          e) = e := by
+  have h := instOneAt_contractInserted (.cons pψ γ) β fillβ e
+  rw [insertActiveRen_cons] at h
+  exact h
+
 end ScopedExpr

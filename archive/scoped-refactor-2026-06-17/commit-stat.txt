@@ -1,0 +1,8 @@
+7c6935a scoped expressions refactor wip
+ .claude/napkin.md                                 |   32 +-
+ HigherRankSyntax/HigherRankSyntax/Equations.lean  |  389 +++---
+ HigherRankSyntax/HigherRankSyntax/ProperTele.lean |  231 ++++
+ HigherRankSyntax/HigherRankSyntax/ScopedExpr.lean | 1312 +++++++++++++++++++++
+ HigherRankSyntax/HigherRankSyntax/Subst.lean      |  235 ++--
+ HigherRankSyntax/scoped-core-refactor.md          |  254 ++++
+ 6 files changed, 2192 insertions(+), 261 deletions(-)

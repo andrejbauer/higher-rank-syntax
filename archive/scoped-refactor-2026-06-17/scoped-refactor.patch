@@ -1,0 +1,3484 @@
+diff --git a/.claude/napkin.md b/.claude/napkin.md
+index 101ccd3..6f7eae8 100644
+--- a/.claude/napkin.md
++++ b/.claude/napkin.md
+@@ -17,26 +17,26 @@
+    Do instead: exclude `*.agdai` from broad searches and file lists.
+ 
+ ## Domain Behavior Guardrails
+-1. **[2026-05-31] Interchange termination uses paired fuel plus subterms**
++1. **[2026-06-16] Full-context `Subst` still needs active-domain heredity**
++   Do instead: expose `Subst C Γ Δ` as the public Kleisli environment, but keep/replace a backend that measures only active binders for one-binder instantiation; direct self-recursion on fired fillers counts the target prefix and does not terminate cleanly.
++2. **[2026-06-17] Telescope-scoped stacks still hit `Proper` injection coherence**
++   Do instead: `Shape` local stacks fix context associativity, but not proof-relevant `Proper.inl`/`Proper.inr` coherence through `compose`/`cons`; use an exact-witness local-spine layer or redesign proper telescopes so injections compose definitionally before retrying local-local interchange.
++3. **[2026-06-17] Scoped renaming needs argument-shaped recursion**
++   Do instead: prove `renameLocal_instOneAt` equation-style with a private `instOneAtUnder` facade for arguments; stable branches use `hargs`, while the active branch makes the arity-decreasing recursive call before `renameLocal_activeFiller`.
++4. **[2026-06-16] `Env.act_instOneAt` needs passive-extension naturality before interchange**
++   Do instead: before local-local interchange, prove `instOneAt` commutes with weakening by an outer passive `ProperSpine ψ`; the upper-active branch of interchange needs this before `renameLocal_instOneAt` can finish the filler equation.
++5. **[2026-06-17] Scoped local-local active-α needs mutual contraction/interchange**
++   Do instead: plain `instOneAt_contractInserted` proves absence for raw weakened expressions, but the active-α branch needs the same contraction through an inner `instOneAt`; prove that contraction theorem mutually with `LocalInterchange.localLocal`, or add a companion theorem whose active branch calls local-local at smaller arity.
++6. **[2026-06-16] Scoped local algebra should avoid proof-returning cover in recursive theorems**
++   Do instead: state recursive proofs by separate `.free`/`.local` equations and use computational classifier-stability lemmas such as `LocalSite.classify_mapTail`; reserve `LocalSite.cover` for nonrecursive normalization.
++7. **[2026-05-31] Interchange termination uses paired fuel plus subterms**
+    Do instead: for `Subst.act_inst.oneDiamondAt`/`oneLiftAt`, keep the private `InterchangeFuel` measure; use `DomLt` for filler jumps and `Expr.Subterm.of_arg_ofList_cons` for ordinary argument recursion.
+-2. **[2026-06-15] General diamonds need explicit composite witnesses**
++8. **[2026-06-15] General diamonds need explicit composite witnesses**
+    Do instead: parameterize `Diamond`/`Lift` facades by the exact `Proper (τ ⧺ src)` and `Proper (τ ⧺ dst)` witnesses; the `src` recursive call needs `Proper.extendList (τ ⧺ dst) υ`, not `Proper.compose (τ ⧺ dst) (Tele.ofList υ)`.
+-3. **[2026-06-15] Env-centered singleton interaction still needs canonical spines**
++9. **[2026-06-15] Env-centered singleton interaction still needs canonical spines**
+    Do instead: do not install a private `Env` bridge alone. The hard theorem still needs explicit coherence between `Γ ⧺ (base ∷ α ⧺ υ)` and `((Γ ⧺ base) ⧺ ⌊α⌋) ⧺ υ`; either keep `TargetProper`/diamond or first build a canonical spine layer for these witnesses.
+-4. **[2026-06-08] Core interchange is a one-binder mutual pair**
+-   Do instead: state the central commute through `OneDiamond`/`OneLift`; keep `PreNaturality` and `Interchange` only for remaining derived stages.
+-5. **[2026-05-27] `act_kcomp` reduces to general substitution composition**
++10. **[2026-05-27] `act_kcomp` reduces to general substitution composition**
+    Do instead: use public `Subst.comp` and `Subst.act_comp`; the old `fusion` wrapper is deleted, while `interchange` still supports the `dom` branch of `act_comp`.
+-6. **[2026-05-27] Keep singleton α-slots abstract in under-list proofs**
+-   Do instead: avoid case-splitting the whole α-head branch on `xα`; use `ListSlotAt.sub_single xα` for termination and only case-split inside local definitional sub lemmas.
+-7. **[2026-06-07] Single `diamondAt` facade is not enough**
+-   Do instead: replace the interchange stack only with a mutual `oneDiamondAt`/`oneLiftAt` pair; the `dom` branch needs the lifted companion theorem, not just the main diamond.
+-8. **[2026-05-25] Tele unit proofs need one-binder instantiation bundle**
+-   Do instead: prove beta-for-eta and identity instantiation together by arity; keep expression recursion in a separate fixed-shape helper like `Subst.act_inst.idOf`.
+-9. **[2026-05-19] `inst.aux` carries target renaming**
+-   Do instead: in `lift.aux`'s Γ-slot branch, call `inst.aux q.arity (Renaming.weakenList Δ τ) new_args [] (σ q)`; do not pre-weaken `σ q`.
+-10. **[2026-05-19] WF-recursive walker equations need `_unary.eq_1`**
+-   Do instead: prove one-step equations by `delta inst.aux`/`delta lift.aux`, `rw [*.aux._unary.eq_1, WellFounded.fix_eq]`, then `simp [classify_*]`.
+ 
+ ## User Directives
+ 1. **[2026-06-16] Avoid defensive Lean witness boilerplate**
+diff --git a/HigherRankSyntax/HigherRankSyntax/Equations.lean b/HigherRankSyntax/HigherRankSyntax/Equations.lean
+index 621c4e6..5706973 100644
+--- a/HigherRankSyntax/HigherRankSyntax/Equations.lean
++++ b/HigherRankSyntax/HigherRankSyntax/Equations.lean
+@@ -4,7 +4,7 @@ import HigherRankSyntax.Subst
+ # Equations of the substitution action
+ 
+ Auxiliary equations for the three relative-monad laws, built from
+-**computation lemmas**: each takes `Subst.act` on an `Expr.ap` with a
++**computation lemmas**: each takes `PrefixSubst.act` on an `Expr.ap` with a
+ specific head (τ-side, dom-side, pre-side) and reduces the classify
+ dispatch to a clean right-hand side.  The reflection lemmas
+ `Proper.classify_inr` / `classify_inl` are the rewriting handles.
+@@ -30,66 +30,66 @@ one-binder instantiation, whose β-head case calls back into the diamond.
+ 
+ ## The three monad laws
+ 
+-* `Subst.act_id` — `(Subst.id Γ).act τ e = e` (unit_right).
+-* `Subst.act_η` — `(toSubst f).act ⌊α⌋ (Expr.η p) = f p` (unit_left).
+-* `Subst.act_kcomp` — Kleisli composition factors (comp_lift).
++* `PrefixSubst.act_id` — `(PrefixSubst.id Γ).act τ e = e` (unit_right).
++* `PrefixSubst.act_η` — `(toPrefixSubst f).act ⌊α⌋ (Expr.η p) = f p` (unit_left).
++* `PrefixSubst.act_kcomp` — Kleisli composition factors (comp_lift).
+ -/
+ 
+ 
+-/-! ## Computation lemmas — `Subst.act` on a specific apply head -/
++/-! ## Computation lemmas — `PrefixSubst.act` on a specific apply head -/
+ 
+ /-- Computing `σ.act` on an apply whose head is right-injected into the
+ τ-side: collapses to the S-side reconstruction. -/
+-theorem Subst.act_ap_inr
++theorem PrefixSubst.act_ap_inr
+     {C : Carrier} {pre dom cod : Shape C}
+     [Proper dom] [Proper cod]
+-    (σ : Subst C pre dom cod) (τ : Shape C) [Proper τ]
++    (σ : PrefixSubst C pre dom cod) (τ : Shape C) [Proper τ]
+     {α} (x : τ ∋ α)
+     (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ τ ∷ i.arity)) :
+   σ.act τ (.ap (ι₂ x) args)
+     = .ap (ι₂ x) (fun j => σ.act (τ ∷ j.arity) (args j))
+   := by
+-  conv => lhs; unfold Subst.act
+-  rw [Subst.classifySite_inr]
++  conv => lhs; unfold PrefixSubst.act
++  rw [PrefixSubst.classifySite_inr]
+ 
+ /-- Computing `σ.act` on an apply whose head is left-injected below τ and
+ classified to the dom side: fires the dom-branch instantiation. -/
+-theorem Subst.act_ap_inl_dom
++theorem PrefixSubst.act_ap_inl_dom
+     {C : Carrier} {pre dom cod : Shape C}
+     [Proper dom] [Proper cod]
+-    (σ : Subst C pre dom cod) (τ : Shape C) [Proper τ]
++    (σ : PrefixSubst C pre dom cod) (τ : Shape C) [Proper τ]
+     {α} (y : dom ∋ α)
+     (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ τ ∷ i.arity)) :
+   σ.act τ (.ap ((Proper.inl (pre ⧺ dom)) ((Proper.inr pre) y)) args)
+-    = ⟦ Subst.inst ⌊α⌋ (fun q => match q with | .here i => σ.act (τ ∷ i.arity) (args i)) ⟧ˢ (σ y)
++    = ⟦ PrefixSubst.inst ⌊α⌋ (fun q => match q with | .here i => σ.act (τ ∷ i.arity) (args i)) ⟧ˢ (σ y)
+   := by
+-  conv => lhs; unfold Subst.act
+-  rw [Subst.classifySite_inl_dom]
++  conv => lhs; unfold PrefixSubst.act
++  rw [PrefixSubst.classifySite_inl_dom]
+   rfl
+ 
+ /-- Computing `σ.act` on an apply whose head is left-injected below τ and
+ classified to the pre side: rebuilds the head in the pre branch. -/
+-theorem Subst.act_ap_inl_pre
++theorem PrefixSubst.act_ap_inl_pre
+     {C : Carrier} {pre dom cod : Shape C}
+     [Proper dom] [Proper cod]
+-    (σ : Subst C pre dom cod) (τ : Shape C) [Proper τ]
++    (σ : PrefixSubst C pre dom cod) (τ : Shape C) [Proper τ]
+     {α} (z : pre ∋ α)
+     (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ τ ∷ i.arity)) :
+   σ.act τ (.ap ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) z)) args)
+-    = .ap ((Proper.inl (pre ⧺ cod)) ((Subst.weakenCod σ) z)) (fun i => σ.act (τ ∷ i.arity) (args i))
++    = .ap ((Proper.inl (pre ⧺ cod)) ((PrefixSubst.weakenCod σ) z)) (fun i => σ.act (τ ∷ i.arity) (args i))
+   := by
+-  conv => lhs; unfold Subst.act
+-  rw [Subst.classifySite_inl_pre]
++  conv => lhs; unfold PrefixSubst.act
++  rw [PrefixSubst.classifySite_inl_pre]
+ 
+ /-! ## Auxiliary: η-action on a right-injected slot -/
+ 
+ /-- Acting on the η-expansion of a right-injected (S-side) slot reproduces
+ the η in the target shape.  By WF recursion on the slot's arity `α`; uses
+ `act_apply_inr` as a black-box computation lemma. -/
+-theorem Subst.act_η_inr
++theorem PrefixSubst.act_η_inr
+     {C : Carrier} {pre dom cod : Shape C}
+     [Proper dom] [Proper cod]
+-    (σ : Subst C pre dom cod) (τ : Shape C) [Proper τ]
++    (σ : PrefixSubst C pre dom cod) (τ : Shape C) [Proper τ]
+     {α} (x : τ ∋ α) :
+   σ.act (τ ∷ α) (.η ((Proper.inr (pre ⧺ dom)) x))
+     = .η ((Proper.inr (pre ⧺ cod)) x)
+@@ -101,11 +101,11 @@ theorem Subst.act_η_inr
+       (.ap ((Proper.inr (pre ⧺ dom))
+                      (.there x))
+                   (fun i => .η (.here i))) = _
+-  rw [Subst.act_ap_inr σ (τ ∷ α) (.there x)]
++  rw [PrefixSubst.act_ap_inr σ (τ ∷ α) (.there x)]
+   rw [Expr.η.eq_1]
+   congr 1
+   funext i
+-  exact Subst.act_η_inr σ (τ ∷ α)
++  exact PrefixSubst.act_η_inr σ (τ ∷ α)
+           (x := @ListSlotAt.here C α τ.toList i)
+ termination_by α
+ decreasing_by exact ⟨i, rfl⟩
+@@ -120,17 +120,17 @@ private theorem idOf
+     (hη : ∀ (i : C.Binder α), ∀ {pre cod : Shape C} [Proper cod]
+       (ι : ∀ {β : C.Arity}, (⌊i.arity⌋) ∋ β → Expr (pre ⧺ cod ∷ β))
+       (p : pre ∋ i.arity),
+-      ⟦Subst.inst (⌊i.arity⌋) ι⟧ˢ (.η p)
++      ⟦PrefixSubst.inst (⌊i.arity⌋) ι⟧ˢ (.η p)
+         = .ap ((Proper.inl pre) p) (fun j => ι (.here j))) :
+   ∀ (τ : Shape C) [Proper τ] (e : Expr ((Δ ∷ α) ⧺ τ)),
+-    (Subst.instId Δ α).act τ e = e
++    (PrefixSubst.instId Δ α).act τ e = e
+   | τ, _, .ap (α := β) head argFam => by
+       have ih_all : ∀ (k : C.Binder β),
+-          (Subst.instId Δ α).act (τ ∷ k.arity) (argFam k) = argFam k :=
++          (PrefixSubst.instId Δ α).act (τ ∷ k.arity) (argFam k) = argFam k :=
+         fun k => idOf α Δ hη (τ ∷ k.arity) (argFam k)
+       rcases Proper.cover (Δ ∷ α) head with ⟨y, h_y⟩ | ⟨y, h_y⟩
+       · subst h_y
+-        refine (Subst.act_ap_inr (Subst.instId Δ α) τ y argFam).trans ?_
++        refine (PrefixSubst.act_ap_inr (PrefixSubst.instId Δ α) τ y argFam).trans ?_
+         congr
+         funext k
+         exact ih_all k
+@@ -139,14 +139,14 @@ private theorem idOf
+         · subst h_z
+           cases z with
+           | here i =>
+-              refine (Subst.act_ap_inl_dom
+-                (Subst.instId Δ α) τ (.here i) argFam).trans ?_
++              refine (PrefixSubst.act_ap_inl_dom
++                (PrefixSubst.instId Δ α) τ (.here i) argFam).trans ?_
+               refine (hη i (pre := Δ ∷ α) (cod := τ)
+                 (ι := _) (p := .here i)).trans ?_
+               change
+                 Expr.ap ((Proper.inl (Δ ∷ α))
+                     (.here i))
+-                  (fun k => (Subst.instId Δ α).act (τ ∷ k.arity) (argFam k))
++                  (fun k => (PrefixSubst.instId Δ α).act (τ ∷ k.arity) (argFam k))
+                 =
+                 Expr.ap ((Proper.inl (Δ ∷ α))
+                     (.here i)) argFam
+@@ -155,11 +155,11 @@ private theorem idOf
+               exact ih_all k
+           | there z' => nomatch z'
+         · subst h_z
+-          refine (Subst.act_ap_inl_pre (Subst.instId Δ α) τ z argFam).trans ?_
++          refine (PrefixSubst.act_ap_inl_pre (PrefixSubst.instId Δ α) τ z argFam).trans ?_
+           change
+             Expr.ap ((Proper.inl (Δ ∷ α))
+                 ((Proper.inl Δ) z))
+-              (fun k => (Subst.instId Δ α).act (τ ∷ k.arity) (argFam k))
++              (fun k => (PrefixSubst.instId Δ α).act (τ ∷ k.arity) (argFam k))
+             =
+             Expr.ap ((Proper.inl (Δ ∷ α))
+                 ((Proper.inl Δ) z)) argFam
+@@ -176,28 +176,28 @@ mutual
+ 
+ /-- β-for-η for a one-binder instantiation: instantiating the η-expansion
+ of a pre-slot exposes the kit. -/
+-theorem Subst.act_inst.η
++theorem PrefixSubst.act_inst.η
+     {C : Carrier} {pre cod : Shape C} [Proper cod]
+     {α} (ι : ∀ {β : C.Arity}, ⌊α⌋ ∋ β → Expr (pre ⧺ cod ∷ β))
+     (p : pre ∋ α) :
+-  ⟦Subst.inst ⌊α⌋ ι⟧ˢ (.η p)
++  ⟦PrefixSubst.inst ⌊α⌋ ι⟧ˢ (.η p)
+     = .ap ((Proper.inl pre) p) (fun i => ι (.here i))
+   := by
+   rw [Expr.η.eq_1]
+-  change ⟦Subst.inst ⌊α⌋ ι⟧ˢ
++  change ⟦PrefixSubst.inst ⌊α⌋ ι⟧ˢ
+       (.ap ((Proper.inl (pre ⧺ ⌊α⌋))
+         ((Proper.inl pre) p)) (fun i => .η (.here i))) = _
+-  rw [Subst.act_ap_inl_pre]
++  rw [PrefixSubst.act_ap_inl_pre]
+   change
+-    Expr.ap ((Subst.inst ⌊α⌋ ι).weakenCod p)
+-      (fun i => (Subst.inst ⌊α⌋ ι).act
++    Expr.ap ((PrefixSubst.inst ⌊α⌋ ι).weakenCod p)
++      (fun i => (PrefixSubst.inst ⌊α⌋ ι).act
+         (⌊i.arity⌋) (.η (.here i)))
+     =
+     Expr.ap ((Proper.inl pre) p)
+       (fun i => ι (.here i))
+   change
+     Expr.ap ((Proper.inl pre) p)
+-      (fun i => (Subst.inst ⌊α⌋ ι).act
++      (fun i => (PrefixSubst.inst ⌊α⌋ ι).act
+         (⌊i.arity⌋) (.η (.here i)))
+     =
+     Expr.ap ((Proper.inl pre) p)
+@@ -205,16 +205,16 @@ theorem Subst.act_inst.η
+   congr
+   funext i
+   rw [Expr.η.eq_1]
+-  change (Subst.inst ⌊α⌋ ι).act (⌊i.arity⌋)
++  change (PrefixSubst.inst ⌊α⌋ ι).act (⌊i.arity⌋)
+       (.ap ((Proper.inl (pre ⧺ ⌊α⌋))
+         ((Proper.inr pre) (.here i)))
+         (fun k =>
+           @Expr.η C
+             ((pre ⧺ ⌊α⌋) ⧺ (⌊i.arity⌋))
+             k.arity (.here k))) = _
+-  rw [Subst.act_ap_inl_dom]
++  rw [PrefixSubst.act_ap_inl_dom]
+   have hfill : ∀ (k : C.Binder i.arity),
+-      (Subst.inst ⌊α⌋ ι).act
++      (PrefixSubst.inst ⌊α⌋ ι).act
+         ((⌊i.arity⌋) ∷ k.arity)
+           (@Expr.η C
+             ((pre ⧺ ⌊α⌋) ⧺ (⌊i.arity⌋))
+@@ -225,22 +225,22 @@ theorem Subst.act_inst.η
+           k.arity (.here k)
+           := by
+     intro k
+-    exact Subst.act_η_inr (Subst.inst ⌊α⌋ ι)
++    exact PrefixSubst.act_η_inr (PrefixSubst.inst ⌊α⌋ ι)
+       (⌊i.arity⌋) (x := .here k)
+   simp only [hfill]
+-  exact Subst.act_inst.id i.arity (pre ⧺ cod) Shape.nil
++  exact PrefixSubst.act_inst.id i.arity (pre ⧺ cod) Shape.nil
+     (ι (.here i))
+ termination_by α
+ decreasing_by exact ⟨i, rfl⟩
+ 
+ /-- Identity instantiation acts as the identity. -/
+-theorem Subst.act_inst.id
++theorem PrefixSubst.act_inst.id
+     {C : Carrier} (α : C.Arity) (Δ : Shape C) :
+   ∀ (τ : Shape C) [Proper τ] (e : Expr ((Δ ∷ α) ⧺ τ)),
+-    (Subst.instId Δ α).act τ e = e
++    (PrefixSubst.instId Δ α).act τ e = e
+   :=
+   fun τ _ e =>
+-    idOf α Δ (fun i => Subst.act_inst.η) τ e
++    idOf α Δ (fun i => PrefixSubst.act_inst.η) τ e
+ termination_by α
+ decreasing_by exact ⟨i, rfl⟩
+ 
+@@ -251,11 +251,11 @@ end
+ /-- **`act_id`** — the identity substitution acts as the identity.
+ Translates to `lift η = 𝟙` (unit_right).  Generalised over τ so the
+ recursive call on each arg fits the same statement. -/
+-theorem Subst.act_id
++theorem PrefixSubst.act_id
+     {C : Carrier} (Γ : Shape C) [Proper Γ]
+     (τ : Shape C) [Proper τ]
+     (e : Expr (Γ ⧺ τ)) :
+-  (Subst.id Γ).act τ e = e
++  (PrefixSubst.id Γ).act τ e = e
+   := by
+   match e with
+   | .ap (α := β) x args =>
+@@ -263,29 +263,29 @@ theorem Subst.act_id
+       ⟨y, h_y⟩ | ⟨y, h_y⟩
+     · -- head = inr x; the τ-side branch fires.
+       subst h_y
+-      refine (Subst.act_ap_inr (Subst.id Γ) τ y args).trans ?_
+-      congr ; funext k ; apply Subst.act_id
++      refine (PrefixSubst.act_ap_inr (PrefixSubst.id Γ) τ y args).trans ?_
++      congr ; funext k ; apply PrefixSubst.act_id
+     · -- head = inl y; y : Γ ∋ β.  Cover y at base Shape.nil:
+       -- inl-from-nil is empty, so y is necessarily in the right image.
+       subst h_y
+       rcases Proper.cover Shape.nil y with ⟨y, h_q⟩ | ⟨z, _⟩
+       · subst h_q
+-        refine (Subst.act_ap_inl_dom (Subst.id Γ) τ y args).trans ?_
+-        -- Simplify (Subst.id Γ) y = Expr.η y (rfl via toSubst_sub).
+-        show ⟦Subst.inst ⌊β⌋ (fun q => match q with
+-              | .here k => (Subst.id Γ).act (τ ∷ k.arity) (args k))⟧ˢ
++        refine (PrefixSubst.act_ap_inl_dom (PrefixSubst.id Γ) τ y args).trans ?_
++        -- Simplify (PrefixSubst.id Γ) y = Expr.η y (rfl via toPrefixSubst_sub).
++        show ⟦PrefixSubst.inst ⌊β⌋ (fun q => match q with
++              | .here k => (PrefixSubst.id Γ).act (τ ∷ k.arity) (args k))⟧ˢ
+               (.η y) = _
+         -- IH on each argument:
+         have h_args : ∀ (k : C.Binder β),
+-            (Subst.id Γ).act (τ ∷ k.arity) (args k) = args k :=
+-          fun k => Subst.act_id Γ (τ ∷ k.arity) (args k)
++            (PrefixSubst.id Γ).act (τ ∷ k.arity) (args k) = args k :=
++          fun k => PrefixSubst.act_id Γ (τ ∷ k.arity) (args k)
+         -- Simplify (inr Shape.nil) y = y on the RHS.
+         rw [Proper.inr_nil_id y]
+-        refine (Subst.act_inst.η
++        refine (PrefixSubst.act_inst.η
+           (pre := Γ) (cod := τ) (α := β) (ι := _) (p := y)).trans ?_
+         change
+           Expr.ap ((Proper.inl Γ) y)
+-            (fun k => (Subst.id Γ).act (τ ∷ k.arity) (args k))
++            (fun k => (PrefixSubst.id Γ).act (τ ∷ k.arity) (args k))
+           =
+           Expr.ap ((Proper.inl Γ) y) args
+         congr 1
+@@ -297,24 +297,24 @@ decreasing_by all_goals exact Expr.Subterm.of_arg x args _
+ 
+ /-- **`act_η`** — acting on an η-expansion reduces to applying `f`.
+ Translates to `lift f ∘ η = f` (unit_left). -/
+-theorem Subst.act_η
++theorem PrefixSubst.act_η
+     {C : Carrier} {Γ Δ : Shape C} [Proper Γ] [Proper Δ]
+     (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ∷ β))
+     (α : C.Arity) (p : Γ ∋ α) :
+-  (toSubst f).act ⌊α⌋ (.η p) = f p
++  (toPrefixSubst f).act ⌊α⌋ (.η p) = f p
+   := by
+   rw [Expr.η.eq_1]
+   -- `.there p = (weaken_{⌊α⌋} _) p` by instCons.weaken (rfl).
+   -- Cover p at base Shape.nil: p must be in the right image (inl-from-nil empty).
+   rcases Proper.cover Shape.nil p with ⟨y, h_q⟩ | ⟨z, _⟩
+   · subst h_q
+-    show (toSubst f).act ⌊α⌋
++    show (toPrefixSubst f).act ⌊α⌋
+         (.ap ((Proper.inl (Shape.nil ⧺ Γ))
+                       ((Proper.inr Shape.nil) y))
+                     (fun i => .η (.here i))) = _
+-    rw [Subst.act_ap_inl_dom (toSubst f) ⌊α⌋ y]
++    rw [PrefixSubst.act_ap_inl_dom (toPrefixSubst f) ⌊α⌋ y]
+     have hfill : ∀ (i : C.Binder α),
+-        (toSubst f).act (⌊α⌋ ∷ i.arity)
++        (toPrefixSubst f).act (⌊α⌋ ∷ i.arity)
+           (@Expr.η C
+             ((Shape.nil ⧺ Γ) ⧺ ⌊α⌋)
+             i.arity (.here i))
+@@ -324,12 +324,12 @@ theorem Subst.act_η
+           i.arity (.here i)
+           := by
+       intro i
+-      exact Subst.act_η_inr (toSubst f) ⌊α⌋
++      exact PrefixSubst.act_η_inr (toPrefixSubst f) ⌊α⌋
+         (x := .here i)
+     simp only [hfill]
+-    rw [toSubst_sub]
++    rw [toPrefixSubst_sub]
+     rw [Proper.inr_nil_id y]
+-    exact Subst.act_inst.id α Δ Shape.nil (f y)
++    exact PrefixSubst.act_inst.id α Δ Shape.nil (f y)
+   · exact nomatch z
+ 
+ /-- `Expr.Subterm.of_arg` repackaged for the descent shape
+@@ -388,8 +388,8 @@ arguments of one application head" operation used in the `src`, `dom`, and
+ private abbrev instOne
+     {C : Carrier} {pre : Shape C} (α : C.Arity) (cod : Shape C)
+     (f : (i : C.Binder α) → Expr (pre ⧺ cod ∷ i.arity)) :
+-    Subst C pre ⌊α⌋ cod :=
+-  Subst.inst ⌊α⌋ (fun q => match q with | .here i => f i)
++    PrefixSubst C pre ⌊α⌋ cod :=
++  PrefixSubst.inst ⌊α⌋ (fun q => match q with | .here i => f i)
+ 
+ /- `TargetProper` is proof-facing infrastructure, not mathematics.
+ 
+@@ -495,7 +495,7 @@ private abbrev TargetProper.base {C : Carrier}
+   hDst_inr_tau := Proper.compose_inr_inl τ dst
+   hDst_inl := Proper.compose_inl τ dst
+ 
+-/- Special case for `τ = Shape.nil`.  This is used by `Subst.act_comp`,
++/- Special case for `τ = Shape.nil`.  This is used by `PrefixSubst.act_comp`,
+ where the diamond is applied at top level. -/
+ private abbrev TargetProper.nil {C : Carrier}
+     (src dst : Shape C) [Proper src] [Proper dst]
+@@ -620,11 +620,11 @@ composite witness. -/
+ private abbrev actAt
+     {C : Carrier} {pre dom cod τ : Shape C}
+     [Proper dom] [Proper cod]
+-    (σ : Subst C pre dom cod)
++    (σ : PrefixSubst C pre dom cod)
+     (hτ : Proper τ)
+     (e : Expr (pre ⧺ dom ⧺ τ)) :
+     Expr (pre ⧺ cod ⧺ τ) :=
+-  @Subst.act C pre dom cod inferInstance inferInstance σ τ hτ e
++  @PrefixSubst.act C pre dom cod inferInstance inferInstance σ τ hτ e
+ 
+ namespace Diamond
+ 
+@@ -634,15 +634,15 @@ namespace Diamond
+ private abbrev acted
+     {C : Carrier} {pre dom cod τ src dst : Shape C}
+     [Proper dom] [Proper cod] [Proper τ] [Proper src] [Proper dst]
+-    (σ : Subst C pre dom cod)
++    (σ : PrefixSubst C pre dom cod)
+     {υ : List C.Arity}
+     (target : TargetProper τ src dst υ)
+-    (κ : Subst C (pre ⧺ dom ⧺ τ) src dst) :
+-    Subst C (pre ⧺ cod ⧺ τ) src dst :=
++    (κ : PrefixSubst C (pre ⧺ dom ⧺ τ) src dst) :
++    PrefixSubst C (pre ⧺ cod ⧺ τ) src dst :=
+   letI : Proper τ := target.hτ
+   letI : Proper src := target.hSrcShape
+   letI : Proper dst := target.hDstShape
+-  Subst.inst src (fun {β} x =>
++  PrefixSubst.inst src (fun {β} x =>
+     actAt (pre := pre) (dom := dom) (cod := cod)
+       σ (target.hDstExt β) (κ.sub x))
+ 
+@@ -651,10 +651,10 @@ instantiate by the pointwise-acted substitution. -/
+ private abbrev actThenInst
+     {C : Carrier} {pre dom cod τ src dst : Shape C}
+     [Proper dom] [Proper cod] [Proper τ] [Proper src] [Proper dst]
+-    (σ : Subst C pre dom cod)
++    (σ : PrefixSubst C pre dom cod)
+     {υ : List C.Arity}
+     (target : TargetProper τ src dst υ)
+-    (κ : Subst C (pre ⧺ dom ⧺ τ) src dst)
++    (κ : PrefixSubst C (pre ⧺ dom ⧺ τ) src dst)
+     (e : Expr (((pre ⧺ dom ⧺ τ) ⧺ src) ⧺ Tele.ofList υ)) :=
+   letI : Proper τ := target.hτ
+   letI : Proper src := target.hSrcShape
+@@ -668,10 +668,10 @@ private abbrev actThenInst
+ private abbrev instThenAct
+     {C : Carrier} {pre dom cod τ src dst : Shape C}
+     [Proper dom] [Proper cod] [Proper τ] [Proper src] [Proper dst]
+-    (σ : Subst C pre dom cod)
++    (σ : PrefixSubst C pre dom cod)
+     {υ : List C.Arity}
+     (target : TargetProper τ src dst υ)
+-    (κ : Subst C (pre ⧺ dom ⧺ τ) src dst)
++    (κ : PrefixSubst C (pre ⧺ dom ⧺ τ) src dst)
+     (e : Expr (((pre ⧺ dom ⧺ τ) ⧺ src) ⧺ Tele.ofList υ)) :=
+   letI : Proper τ := target.hτ
+   letI : Proper src := target.hSrcShape
+@@ -692,7 +692,7 @@ private abbrev sequential
+     [Proper τ] [Proper src] [Proper dst]
+     {υ : List C.Arity}
+     (target : TargetProper τ src dst υ)
+-    (κ : Subst C (pre ⧺ τ) src dst)
++    (κ : PrefixSubst C (pre ⧺ τ) src dst)
+     {β : C.Arity} (χ : List C.Arity)
+     (η : (j : C.Binder β) →
+       Expr (((pre ⧺ τ) ⧺ src) ⧺ Tele.ofList υ ∷ j.arity))
+@@ -711,7 +711,7 @@ private abbrev fused
+     [Proper τ] [Proper src] [Proper dst]
+     {υ : List C.Arity}
+     (target : TargetProper τ src dst υ)
+-    (κ : Subst C (pre ⧺ τ) src dst)
++    (κ : PrefixSubst C (pre ⧺ τ) src dst)
+     {β : C.Arity} (χ : List C.Arity)
+     (η : (j : C.Binder β) →
+       Expr (((pre ⧺ τ) ⧺ src) ⧺ Tele.ofList υ ∷ j.arity))
+@@ -790,7 +790,7 @@ private theorem DiamondSite.cover {C : Carrier}
+       head = DiamondSite.embed target site := by
+   letI : Proper ((τ ⧺ src) ⧺ Tele.ofList υ) := target.hSrcUnder
+   obtain ⟨site, h_site⟩ :=
+-    Subst.coverSite
++    PrefixSubst.coverSite
+       (τ := (τ ⧺ src) ⧺ Tele.ofList υ) head
+   subst h_site
+   cases site with
+@@ -799,26 +799,26 @@ private theorem DiamondSite.cover {C : Carrier}
+         ⟨xυ, h_xυ⟩ | ⟨base, h_base⟩
+       · subst h_xυ
+         refine ⟨.under xυ, ?_⟩
+-        unfold DiamondSite.embed Subst.embedSource
++        unfold DiamondSite.embed PrefixSubst.embedSource
+         rfl
+       · subst h_base
+         rcases Proper.cover (Γ := src) τ base with
+           ⟨xsrc, h_xsrc⟩ | ⟨xτ, h_xτ⟩
+         · subst h_xsrc
+           refine ⟨.src xsrc, ?_⟩
+-          unfold DiamondSite.embed Subst.embedSource
++          unfold DiamondSite.embed PrefixSubst.embedSource
+           rfl
+         · subst h_xτ
+           refine ⟨.tau xτ, ?_⟩
+-          unfold DiamondSite.embed Subst.embedSource
++          unfold DiamondSite.embed PrefixSubst.embedSource
+           rfl
+   | dom z =>
+       refine ⟨.dom z, ?_⟩
+-      unfold DiamondSite.embed Subst.embedSource
++      unfold DiamondSite.embed PrefixSubst.embedSource
+       rfl
+   | pre z =>
+       refine ⟨.pre z, ?_⟩
+-      unfold DiamondSite.embed Subst.embedSource
++      unfold DiamondSite.embed PrefixSubst.embedSource
+       rfl
+ 
+ /- Three possible origins for a head in the lifted one-binder companion:
+@@ -979,10 +979,10 @@ way in the head computations below. -/
+ private theorem diamondAt
+     {C : Carrier} {pre dom cod τ src dst : Shape C}
+     [Proper dom] [Proper cod] [Proper τ] [Proper src] [Proper dst]
+-    (σ : Subst C pre dom cod)
++    (σ : PrefixSubst C pre dom cod)
+     {υ : List C.Arity}
+     (target : TargetProper τ src dst υ)
+-    (κ : Subst C (pre ⧺ dom ⧺ τ) src dst)
++    (κ : PrefixSubst C (pre ⧺ dom ⧺ τ) src dst)
+     (e : Expr (((pre ⧺ dom ⧺ τ) ⧺ src) ⧺ Tele.ofList υ)) :
+     Diamond.actThenInst σ target κ e = Diamond.instThenAct σ target κ e := by
+   unfold Diamond.actThenInst Diamond.instThenAct
+@@ -1018,7 +1018,7 @@ private theorem diamondAt
+             σ.act (τ ⧺ dst ⧺ Tele.ofList υ)
+               (κ.act (Tele.ofList υ)
+                 (.ap ((Proper.inr (pre ⧺ dom)) ((Proper.inr (τ ⧺ src)) xυ)) args))
+-          rw [Subst.act_ap_inr σ ((τ ⧺ src) ⧺ Tele.ofList υ)
++          rw [PrefixSubst.act_ap_inr σ ((τ ⧺ src) ⧺ Tele.ofList υ)
+             ((Proper.inr (τ ⧺ src)) xυ) args]
+           rw [Proper.extendList_inr_inr (τ ⧺ src) υ (pre ⧺ cod) xυ]
+           change (Diamond.acted σ target κ).act (Tele.ofList υ)
+@@ -1028,7 +1028,7 @@ private theorem diamondAt
+             σ.act (τ ⧺ dst ⧺ Tele.ofList υ)
+               (κ.act (Tele.ofList υ)
+                 (.ap ((Proper.inr (pre ⧺ dom)) ((Proper.inr (τ ⧺ src)) xυ)) args))
+-          rw [Subst.act_ap_inr (Diamond.acted σ target κ) (Tele.ofList υ) xυ
++          rw [PrefixSubst.act_ap_inr (Diamond.acted σ target κ) (Tele.ofList υ) xυ
+             (fun j => σ.act (τ ⧺ src ⧺ Tele.ofList υ ∷ j.arity) (args j))]
+           rw [Proper.extendList_inr_inr (τ ⧺ src) υ (pre ⧺ dom) xυ]
+           change .ap ((Proper.inr ((pre ⧺ cod ⧺ τ) ⧺ dst)) xυ)
+@@ -1038,7 +1038,7 @@ private theorem diamondAt
+             σ.act (τ ⧺ dst ⧺ Tele.ofList υ)
+               (κ.act (Tele.ofList υ)
+                 (.ap ((Proper.inr ((pre ⧺ dom ⧺ τ) ⧺ src)) xυ) args))
+-          rw [Subst.act_ap_inr κ (Tele.ofList υ) xυ args]
++          rw [PrefixSubst.act_ap_inr κ (Tele.ofList υ) xυ args]
+           change .ap ((Proper.inr ((pre ⧺ cod ⧺ τ) ⧺ dst)) xυ)
+                 (fun j => (Diamond.acted σ target κ).act (Tele.ofList υ ∷ j.arity)
+                   (σ.act (τ ⧺ src ⧺ Tele.ofList υ ∷ j.arity) (args j)))
+@@ -1047,7 +1047,7 @@ private theorem diamondAt
+               (.ap ((Proper.inr (pre ⧺ dom ⧺ (τ ⧺ dst))) xυ)
+                 (fun j => κ.act (Tele.ofList υ ∷ j.arity) (args j)))
+           rw [← Proper.extendList_inr_inr (τ ⧺ dst) υ (pre ⧺ dom) xυ]
+-          rw [Subst.act_ap_inr σ ((τ ⧺ dst) ⧺ Tele.ofList υ)
++          rw [PrefixSubst.act_ap_inr σ ((τ ⧺ dst) ⧺ Tele.ofList υ)
+             ((Proper.inr (τ ⧺ dst)) xυ)
+             (fun j => κ.act (Tele.ofList υ ∷ j.arity) (args j))]
+           rw [Proper.extendList_inr_inr (τ ⧺ dst) υ (pre ⧺ cod) xυ]
+@@ -1072,7 +1072,7 @@ private theorem diamondAt
+                   ((Proper.inr (pre ⧺ dom))
+                     ((Proper.inl (τ ⧺ src)) ((Proper.inr τ) xsrc)))
+                   args))
+-          rw [Subst.act_ap_inr σ ((τ ⧺ src) ⧺ Tele.ofList υ)
++          rw [PrefixSubst.act_ap_inr σ ((τ ⧺ src) ⧺ Tele.ofList υ)
+             ((Proper.inl (τ ⧺ src)) ((Proper.inr τ) xsrc)) args]
+           rw [Proper.extendList_inr_inl (τ ⧺ src) υ (pre ⧺ cod)
+             ((Proper.inr τ) xsrc)]
+@@ -1089,12 +1089,12 @@ private theorem diamondAt
+                   ((Proper.inr (pre ⧺ dom))
+                     ((Proper.inl (τ ⧺ src)) ((Proper.inr τ) xsrc)))
+                   args))
+-          rw [Subst.act_ap_inl_dom (Diamond.acted σ target κ) (Tele.ofList υ) xsrc
++          rw [PrefixSubst.act_ap_inl_dom (Diamond.acted σ target κ) (Tele.ofList υ) xsrc
+             (fun j => σ.act (τ ⧺ src ⧺ Tele.ofList υ ∷ j.arity) (args j))]
+           rw [Proper.extendList_inr_inl (τ ⧺ src) υ (pre ⧺ dom)
+             ((Proper.inr τ) xsrc)]
+           rw [target.hSrc_inr_src (pre ⧺ dom) xsrc]
+-          change ⟦Subst.inst ⌊β⌋
++          change ⟦PrefixSubst.inst ⌊β⌋
+                 (fun {δ} q => match q with
+                 | .here j =>
+                     (Diamond.acted σ target κ).act (Tele.ofList υ ∷ j.arity)
+@@ -1107,8 +1107,8 @@ private theorem diamondAt
+                   ((Proper.inl ((pre ⧺ dom ⧺ τ) ⧺ src))
+                     ((Proper.inr (pre ⧺ dom ⧺ τ)) xsrc))
+                   args))
+-          rw [Subst.act_ap_inl_dom κ (Tele.ofList υ) xsrc args]
+-          let κβ : Subst C (pre ⧺ dom ⧺ (τ ⧺ dst)) ⌊β⌋ (Tele.ofList υ) :=
++          rw [PrefixSubst.act_ap_inl_dom κ (Tele.ofList υ) xsrc args]
++          let κβ : PrefixSubst C (pre ⧺ dom ⧺ (τ ⧺ dst)) ⌊β⌋ (Tele.ofList υ) :=
+             instOne β (Tele.ofList υ)
+               (fun j => κ.act (Tele.ofList υ ∷ j.arity) (args j))
+           letI : Proper (τ ⧺ dst) := target.hDst
+@@ -1130,7 +1130,7 @@ private theorem diamondAt
+                 exact hargs j
+             | there q => nomatch q
+           have hSubst :
+-              Subst.inst (pre := pre ⧺ cod ⧺ τ ⧺ dst)
++              PrefixSubst.inst (pre := pre ⧺ cod ⧺ τ ⧺ dst)
+                 (dom := ⌊β⌋) (cod := Tele.ofList υ)
+                 (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
+                   match q with
+@@ -1138,13 +1138,13 @@ private theorem diamondAt
+                       (Diamond.acted σ target κ).act (Tele.ofList υ ∷ j.arity)
+                         (σ.act (τ ⧺ src ⧺ Tele.ofList υ ∷ j.arity) (args j)))
+               =
+-              Subst.inst (pre := pre ⧺ cod ⧺ τ ⧺ dst)
++              PrefixSubst.inst (pre := pre ⧺ cod ⧺ τ ⧺ dst)
+                 (dom := ⌊β⌋) (cod := Tele.ofList υ)
+                 (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
+                   σ.act (τ ⧺ dst ⧺ Tele.ofList υ ∷ δ) (κβ.sub q)) := by
+             exact congrArg
+               (fun filler =>
+-                Subst.inst (pre := pre ⧺ cod ⧺ τ ⧺ dst)
++                PrefixSubst.inst (pre := pre ⧺ cod ⧺ τ ⧺ dst)
+                   (dom := ⌊β⌋) (cod := Tele.ofList υ) filler)
+               hf
+           rw [hSubst]
+@@ -1166,7 +1166,7 @@ private theorem diamondAt
+                   ((Proper.inr (pre ⧺ dom))
+                     ((Proper.inl (τ ⧺ src)) ((Proper.inl τ) xτ)))
+                   args))
+-          rw [Subst.act_ap_inr σ ((τ ⧺ src) ⧺ Tele.ofList υ)
++          rw [PrefixSubst.act_ap_inr σ ((τ ⧺ src) ⧺ Tele.ofList υ)
+             ((Proper.inl (τ ⧺ src)) ((Proper.inl τ) xτ)) args]
+           rw [Proper.extendList_inr_inl (τ ⧺ src) υ (pre ⧺ cod)
+             ((Proper.inl τ) xτ)]
+@@ -1184,7 +1184,7 @@ private theorem diamondAt
+                   ((Proper.inr (pre ⧺ dom))
+                     ((Proper.inl (τ ⧺ src)) ((Proper.inl τ) xτ)))
+                   args))
+-          rw [Subst.act_ap_inl_pre (Diamond.acted σ target κ) (Tele.ofList υ)
++          rw [PrefixSubst.act_ap_inl_pre (Diamond.acted σ target κ) (Tele.ofList υ)
+             ((Proper.inr (pre ⧺ cod)) xτ)
+             (fun j => σ.act (τ ⧺ src ⧺ Tele.ofList υ ∷ j.arity) (args j))]
+           rw [Proper.extendList_inr_inl (τ ⧺ src) υ (pre ⧺ dom)
+@@ -1204,9 +1204,9 @@ private theorem diamondAt
+                     ((Proper.inl (pre ⧺ dom ⧺ τ))
+                       ((Proper.inr (pre ⧺ dom)) xτ)))
+                   args))
+-          rw [Subst.act_ap_inl_pre κ (Tele.ofList υ)
++          rw [PrefixSubst.act_ap_inl_pre κ (Tele.ofList υ)
+             ((Proper.inr (pre ⧺ dom)) xτ) args]
+-          unfold Subst.weakenCod
++          unfold PrefixSubst.weakenCod
+           have hτdom :
+               ((Proper.inl (pre ⧺ dom ⧺ τ)) ((Proper.inr (pre ⧺ dom)) xτ)) =
+               ((Proper.inr (pre ⧺ dom)) ((Proper.inl τ) xτ))
+@@ -1226,7 +1226,7 @@ private theorem diamondAt
+                 (fun i => κ.act (Tele.ofList υ ∷ i.arity) (args i)))
+           rw [← Proper.extendList_inr_inl (τ ⧺ dst) υ (pre ⧺ dom)
+             ((Proper.inl τ) xτ)]
+-          rw [Subst.act_ap_inr σ ((τ ⧺ dst) ⧺ Tele.ofList υ)
++          rw [PrefixSubst.act_ap_inr σ ((τ ⧺ dst) ⧺ Tele.ofList υ)
+             ((Proper.inl (τ ⧺ dst)) ((Proper.inl τ) xτ))
+             (fun j => κ.act (Tele.ofList υ ∷ j.arity) (args j))]
+           rw [Proper.extendList_inr_inl (τ ⧺ dst) υ (pre ⧺ cod)
+@@ -1241,7 +1241,7 @@ private theorem diamondAt
+           -- is exactly the lifted one-binder theorem `liftAt`; afterwards
+           -- `hargs` aligns the singleton filler family.
+           refine (congrArg ((Diamond.acted σ target κ).act (Tele.ofList υ))
+-            (Subst.act_ap_inl_dom σ
++            (PrefixSubst.act_ap_inl_dom σ
+               ((τ ⧺ src) ⧺ Tele.ofList υ) z args)).trans ?_
+           let η : (j : C.Binder β) →
+               Expr (((pre ⧺ cod ⧺ τ) ⧺ src) ⧺ Tele.ofList υ ∷ j.arity) :=
+@@ -1270,7 +1270,7 @@ private theorem diamondAt
+             cases q with
+             | here j => exact hargs j
+             | there q => nomatch q
+-          change ⟦Subst.inst (pre := pre ⧺ cod)
++          change ⟦PrefixSubst.inst (pre := pre ⧺ cod)
+                 (dom := ⌊β⌋)
+                 (cod := (τ ⧺ dst) ⧺ Tele.ofList υ)
+                 ζ₀⟧ˢ (σ z)
+@@ -1302,13 +1302,13 @@ private theorem diamondAt
+             rw [Proper.extendList_inl
+               (τ ⧺ src) υ (pre ⧺ dom) ((Proper.inr pre) z)]
+             rw [target.hSrc_inl (pre ⧺ dom) ((Proper.inr pre) z)]
+-            exact Subst.act_ap_inl_pre κ (Tele.ofList υ)
++            exact PrefixSubst.act_ap_inl_pre κ (Tele.ofList υ)
+               ((Proper.inl (pre ⧺ dom))
+                 ((Proper.inr pre) z)) args
+           refine Eq.trans ?_
+             (congrArg (σ.act ((τ ⧺ dst) ⧺ Tele.ofList υ)) hκ).symm
+           rw [← target.hDst_inl (pre ⧺ dom) ((Proper.inr pre) z)]
+-          change ⟦Subst.inst (pre := pre ⧺ cod)
++          change ⟦PrefixSubst.inst (pre := pre ⧺ cod)
+                 (dom := ⌊β⌋)
+                 (cod := (τ ⧺ dst) ⧺ Tele.ofList υ)
+                 ζ₁⟧ˢ (σ z)
+@@ -1325,7 +1325,7 @@ private theorem diamondAt
+           rw [← Proper.extendList_inl
+             (τ ⧺ dst) υ (pre ⧺ dom)
+             ((Proper.inr pre) z)]
+-          exact (Subst.act_ap_inl_dom σ
++          exact (PrefixSubst.act_ap_inl_dom σ
+             ((τ ⧺ dst) ⧺ Tele.ofList υ) z
+             (fun j => κ.act (Tele.ofList υ ∷ j.arity) (args j))).symm
+       | pre z =>
+@@ -1349,8 +1349,8 @@ private theorem diamondAt
+                       (pre ⧺ dom) ⧺ ((τ ⧺ src) ⧺ Tele.ofList υ))
+                     ((Proper.inl pre) z))
+                   args))
+-          rw [Subst.act_ap_inl_pre σ ((τ ⧺ src) ⧺ Tele.ofList υ) z args]
+-          unfold Subst.weakenCod
++          rw [PrefixSubst.act_ap_inl_pre σ ((τ ⧺ src) ⧺ Tele.ofList υ) z args]
++          unfold PrefixSubst.weakenCod
+           rw [Proper.extendList_inl (τ ⧺ src) υ (pre ⧺ cod)
+             ((Proper.inl pre) z)]
+           rw [target.hSrc_inl (pre ⧺ cod) ((Proper.inl pre) z)]
+@@ -1369,7 +1369,7 @@ private theorem diamondAt
+                       (pre ⧺ dom) ⧺ ((τ ⧺ src) ⧺ Tele.ofList υ))
+                     ((Proper.inl pre) z))
+                   args))
+-          rw [Subst.act_ap_inl_pre (Diamond.acted σ target κ) (Tele.ofList υ)
++          rw [PrefixSubst.act_ap_inl_pre (Diamond.acted σ target κ) (Tele.ofList υ)
+             ((Proper.inl (pre ⧺ cod)) ((Proper.inl pre) z))
+             (fun j => σ.act (τ ⧺ src ⧺ Tele.ofList υ ∷ j.arity) (args j))]
+           rw [Proper.extendList_inl (τ ⧺ src) υ (pre ⧺ dom)
+@@ -1389,9 +1389,9 @@ private theorem diamondAt
+                     ((Proper.inl (pre ⧺ dom ⧺ τ))
+                       ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) z))))
+                   args))
+-          rw [Subst.act_ap_inl_pre κ (Tele.ofList υ)
++          rw [PrefixSubst.act_ap_inl_pre κ (Tele.ofList υ)
+             ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) z)) args]
+-          unfold Subst.weakenCod
++          unfold PrefixSubst.weakenCod
+           rw [← target.hDst_inl (pre ⧺ dom) ((Proper.inl pre) z)]
+           change .ap
+               ((Proper.inl (pre ⧺ cod ⧺ τ ⧺ dst))
+@@ -1407,9 +1407,9 @@ private theorem diamondAt
+                 (fun i => κ.act (Tele.ofList υ ∷ i.arity) (args i)))
+           rw [← Proper.extendList_inl (τ ⧺ dst) υ (pre ⧺ dom)
+             ((Proper.inl pre) z)]
+-          rw [Subst.act_ap_inl_pre σ ((τ ⧺ dst) ⧺ Tele.ofList υ) z
++          rw [PrefixSubst.act_ap_inl_pre σ ((τ ⧺ dst) ⧺ Tele.ofList υ) z
+             (fun j => κ.act (Tele.ofList υ ∷ j.arity) (args j))]
+-          unfold Subst.weakenCod
++          unfold PrefixSubst.weakenCod
+           rw [Proper.extendList_inl (τ ⧺ dst) υ (pre ⧺ cod)
+             ((Proper.inl pre) z)]
+           rw [target.hDst_inl (pre ⧺ cod) ((Proper.inl pre) z)]
+@@ -1445,7 +1445,7 @@ private theorem liftAt
+     [Proper τ] [Proper src] [Proper dst]
+     {υ : List C.Arity}
+     (target : TargetProper τ src dst υ)
+-    (κ : Subst C (pre ⧺ τ) src dst)
++    (κ : PrefixSubst C (pre ⧺ τ) src dst)
+     {β : C.Arity} (χ : List C.Arity)
+     (η : (j : C.Binder β) →
+       Expr (((pre ⧺ τ) ⧺ src) ⧺ Tele.ofList υ ∷ j.arity))
+@@ -1458,9 +1458,9 @@ private theorem liftAt
+   letI : Proper (τ ⧺ dst) := target.hDst
+   letI : Proper ((τ ⧺ src) ⧺ Tele.ofList υ) := target.hSrcUnder
+   letI : Proper ((τ ⧺ dst) ⧺ Tele.ofList υ) := target.hDstUnder
+-  let lam : Subst C pre ⌊β⌋ ((τ ⧺ src) ⧺ Tele.ofList υ) :=
++  let lam : PrefixSubst C pre ⌊β⌋ ((τ ⧺ src) ⧺ Tele.ofList υ) :=
+     instOne β ((τ ⧺ src) ⧺ Tele.ofList υ) η
+-  let lam' : Subst C pre ⌊β⌋ ((τ ⧺ dst) ⧺ Tele.ofList υ) :=
++  let lam' : PrefixSubst C pre ⌊β⌋ ((τ ⧺ dst) ⧺ Tele.ofList υ) :=
+     instOne β ((τ ⧺ dst) ⧺ Tele.ofList υ)
+       (fun j => κ.act (Tele.ofList υ ∷ j.arity) (η j))
+   change κ.act ((Tele.ofList υ) ⧺ Tele.ofList χ)
+@@ -1485,7 +1485,7 @@ private theorem liftAt
+           -- and the proof closes by the argument induction hypotheses.
+           refine (congrArg
+             (κ.act ((Tele.ofList υ) ⧺ Tele.ofList χ))
+-            (Subst.act_ap_inr lam (Tele.ofList χ) xχ args)).trans ?_
++            (PrefixSubst.act_ap_inr lam (Tele.ofList χ) xχ args)).trans ?_
+           change κ.act ((Tele.ofList υ) ⧺ Tele.ofList χ)
+               (.ap
+                 ((Proper.inr (((pre ⧺ τ) ⧺ src) ⧺ Tele.ofList υ)) xχ)
+@@ -1495,7 +1495,7 @@ private theorem liftAt
+               (.ap ((Proper.inr (pre ∷ β)) xχ) args)
+           rw [← Proper.extendList_inr_inr
+             (Tele.ofList υ) χ ((pre ⧺ τ) ⧺ src) xχ]
+-          refine (Subst.act_ap_inr κ
++          refine (PrefixSubst.act_ap_inr κ
+             ((Tele.ofList υ) ⧺ Tele.ofList χ)
+             ((Proper.inr (Tele.ofList υ)) xχ)
+             (fun j => lam.act (Tele.ofList χ ∷ j.arity) (args j))).trans ?_
+@@ -1511,7 +1511,7 @@ private theorem liftAt
+           rw [Proper.extendList_inr_inr
+             (Tele.ofList υ) χ ((pre ⧺ τ) ⧺ dst) xχ]
+           refine Eq.trans ?_
+-            (Subst.act_ap_inr lam' (Tele.ofList χ) xχ args).symm
++            (PrefixSubst.act_ap_inr lam' (Tele.ofList χ) xχ args).symm
+           congr 1
+           funext j
+           exact ih_args j
+@@ -1522,7 +1522,7 @@ private theorem liftAt
+           -- the application arguments.
+           refine (congrArg
+             (κ.act ((Tele.ofList υ) ⧺ Tele.ofList χ))
+-            (Subst.act_ap_inl_dom lam (Tele.ofList χ)
++            (PrefixSubst.act_ap_inl_dom lam (Tele.ofList χ)
+               (.here j) args)).trans ?_
+           let θ : ∀ {δ : C.Arity}, (⌊j.arity⌋) ∋ δ →
+               Expr ((pre ⧺ τ) ⧺ src ⧺
+@@ -1541,24 +1541,24 @@ private theorem liftAt
+               θ' (.here k) := by
+             intro k
+             exact ih_args k
+-          let θSubst : Subst C ((pre ⧺ τ) ⧺ src ⧺ Tele.ofList υ)
++          let θPrefixSubst : PrefixSubst C ((pre ⧺ τ) ⧺ src ⧺ Tele.ofList υ)
+               ⌊j.arity⌋ (Tele.ofList χ) :=
+             instOne j.arity (Tele.ofList χ)
+               (fun k => lam.act (Tele.ofList χ ∷ k.arity) (args k))
+           have hrec := diamondAt (pre := pre ⧺ τ) (dom := src)
+             (cod := dst) (τ := Tele.ofList υ) (src := ⌊j.arity⌋)
+             (dst := Tele.ofList χ) κ (TargetProper.liftBeta υ χ j)
+-            θSubst (e := η j)
++            θPrefixSubst (e := η j)
+           unfold Diamond.actThenInst Diamond.instThenAct Diamond.acted at hrec
+           refine Eq.trans hrec.symm ?_
+           have hSubst :
+-              Subst.inst (pre := pre ⧺ τ ⧺ dst ⧺ Tele.ofList υ)
++              PrefixSubst.inst (pre := pre ⧺ τ ⧺ dst ⧺ Tele.ofList υ)
+                 (dom := ⌊j.arity⌋) (cod := Tele.ofList χ)
+                 (fun {δ : C.Arity} (q : ⌊j.arity⌋ ∋ δ) =>
+                   κ.act (((Tele.ofList υ) ⧺ Tele.ofList χ) ∷ δ)
+-                    (θSubst.sub q))
++                    (θPrefixSubst.sub q))
+               =
+-              Subst.inst (pre := pre ⧺ τ ⧺ dst ⧺ Tele.ofList υ)
++              PrefixSubst.inst (pre := pre ⧺ τ ⧺ dst ⧺ Tele.ofList υ)
+                 (dom := ⌊j.arity⌋) (cod := Tele.ofList χ)
+                 (fun {δ : C.Arity} (q : ⌊j.arity⌋ ∋ δ) =>
+                   θ' q) := by
+@@ -1568,7 +1568,7 @@ private theorem liftAt
+             | here k => exact hfill k
+             | there q => nomatch q
+           rw [hSubst]
+-          change ⟦Subst.inst ⌊j.arity⌋
++          change ⟦PrefixSubst.inst ⌊j.arity⌋
+                 (fun {α : C.Arity} (q : ⌊j.arity⌋ ∋ α) =>
+                   match q with
+                   | .here i => lam'.act (Tele.ofList χ ∷ i.arity) (args i))⟧ˢ
+@@ -1580,8 +1580,8 @@ private theorem liftAt
+                     ((Proper.inr pre) (.here j)))
+                   args)
+           symm
+-          conv => lhs; unfold Subst.act
+-          rw [Subst.classifySite_inl_dom]
++          conv => lhs; unfold PrefixSubst.act
++          rw [PrefixSubst.classifySite_inl_dom]
+           simp only
+           congr
+           funext α q
+@@ -1593,8 +1593,8 @@ private theorem liftAt
+           -- is mostly witness reassociation plus the argument recursion.
+           refine (congrArg
+             (κ.act ((Tele.ofList υ) ⧺ Tele.ofList χ))
+-            (Subst.act_ap_inl_pre lam (Tele.ofList χ) z args)).trans ?_
+-          unfold Subst.weakenCod
++            (PrefixSubst.act_ap_inl_pre lam (Tele.ofList χ) z args)).trans ?_
++          unfold PrefixSubst.weakenCod
+           rw [Proper.extendList_inl (τ ⧺ src) υ pre z]
+           rw [target.hSrc_inl pre z]
+           change κ.act ((Tele.ofList υ) ⧺ Tele.ofList χ)
+@@ -1623,13 +1623,13 @@ private theorem liftAt
+               (.ap
+                 ((Proper.inl (pre ∷ β)) ((Proper.inl pre) z))
+                 args)
+-          rw [Subst.act_ap_inl_pre κ
++          rw [PrefixSubst.act_ap_inl_pre κ
+             ((Tele.ofList υ) ⧺ Tele.ofList χ)
+             ((Proper.inl pre) z)]
+           refine Eq.trans ?_
+-            (Subst.act_ap_inl_pre lam' (Tele.ofList χ) z args).symm
++            (PrefixSubst.act_ap_inl_pre lam' (Tele.ofList χ) z args).symm
+           congr 1
+-          · unfold Subst.weakenCod
++          · unfold PrefixSubst.weakenCod
+             rw [← target.hDst_inl pre z]
+             rw [Proper.extendList_inl
+               (τ ⧺ dst) υ pre z]
+@@ -1675,7 +1675,7 @@ end
+ 
+ /-- **`act_comp`** — action by a composite substitution factors into two actions.
+ 
+-This is the public composition theorem for `Subst.act`.  The proof is now a
++This is the public composition theorem for `PrefixSubst.act`.  The proof is now a
+ small expression recursion with three semantic head cases:
+ 
+ * τ-heads are preserved by both substitutions, so we recurse on arguments;
+@@ -1684,49 +1684,49 @@ small expression recursion with three semantic head cases:
+   that subsequently acting by `θ` commutes with the one-binder instantiation
+   generated by that firing.
+ -/
+-theorem Subst.act_comp
++theorem PrefixSubst.act_comp
+     {C : Carrier} {pre dom mid cod : Shape C}
+     [Proper dom] [Proper mid] [Proper cod]
+-    (σ : Subst C pre dom mid) (θ : Subst C pre mid cod)
++    (σ : PrefixSubst C pre dom mid) (θ : PrefixSubst C pre mid cod)
+     (τ : Shape C) [Proper τ] (e : Expr (pre ⧺ dom ⧺ τ)) :
+-  (Subst.comp σ θ).act τ e = θ.act τ (σ.act τ e)
++  (PrefixSubst.comp σ θ).act τ e = θ.act τ (σ.act τ e)
+   := by
+   match e with
+   | .ap (α := β) head args =>
+-    obtain ⟨site, h_site⟩ := Subst.coverSite head
++    obtain ⟨site, h_site⟩ := PrefixSubst.coverSite head
+     subst h_site
+     cases site with
+     | tau x =>
+       -- Current-depth variable: both sides rebuild the same head and compare
+       -- the recursively transformed argument family.
+-      refine (Subst.act_ap_inr (Subst.comp σ θ) τ x args).trans ?_
++      refine (PrefixSubst.act_ap_inr (PrefixSubst.comp σ θ) τ x args).trans ?_
+       change
+         .ap ((Proper.inr (pre ⧺ cod)) x)
+-          (fun j => (Subst.comp σ θ).act (τ ∷ j.arity) (args j))
++          (fun j => (PrefixSubst.comp σ θ).act (τ ∷ j.arity) (args j))
+         =
+         θ.act τ
+           (σ.act τ
+             (.ap ((Proper.inr (pre ⧺ dom)) x) args))
+-      rw [Subst.act_ap_inr σ τ x args]
+-      rw [Subst.act_ap_inr θ τ x (fun i => σ.act (τ ∷ i.arity) (args i))]
++      rw [PrefixSubst.act_ap_inr σ τ x args]
++      rw [PrefixSubst.act_ap_inr θ τ x (fun i => σ.act (τ ∷ i.arity) (args i))]
+       congr 1
+       funext i
+-      exact Subst.act_comp σ θ (τ ∷ i.arity) (args i)
++      exact PrefixSubst.act_comp σ θ (τ ∷ i.arity) (args i)
+     | dom y =>
+       -- Substituted variable: the composite filler is definitionally
+       -- `θ.act ⌊β⌋ (σ y)`.  The remaining question is whether `θ` commutes
+       -- with the instantiation created by firing `σ`; this is exactly the
+       -- nil-τ singleton-source specialization of `diamondAt`.
+-      refine (Subst.act_ap_inl_dom (Subst.comp σ θ) τ y args).trans ?_
++      refine (PrefixSubst.act_ap_inl_dom (PrefixSubst.comp σ θ) τ y args).trans ?_
+       have ih_args : ∀ (i : C.Binder β),
+-          (Subst.comp σ θ).act (τ ∷ i.arity) (args i)
++          (PrefixSubst.comp σ θ).act (τ ∷ i.arity) (args i)
+             =
+           θ.act (τ ∷ i.arity)
+             (σ.act (τ ∷ i.arity) (args i)) :=
+-        fun i => Subst.act_comp σ θ (τ ∷ i.arity) (args i)
++        fun i => PrefixSubst.act_comp σ θ (τ ∷ i.arity) (args i)
+       simp only [ih_args]
+       change
+-        ⟦Subst.inst ⌊β⌋
++        ⟦PrefixSubst.inst ⌊β⌋
+           (fun {δ} (q : ⌊β⌋ ∋ δ) => match q with
+           | .here i =>
+               θ.act (τ ∷ i.arity)
+@@ -1738,8 +1738,8 @@ theorem Subst.act_comp
+             (.ap
+               ((Proper.inl (pre ⧺ dom)) ((Proper.inr pre) y))
+               args))
+-      rw [Subst.act_ap_inl_dom σ τ y args]
+-      let κβ : Subst C (pre ⧺ mid ⧺ Shape.nil) ⌊β⌋ τ :=
++      rw [PrefixSubst.act_ap_inl_dom σ τ y args]
++      let κβ : PrefixSubst C (pre ⧺ mid ⧺ Shape.nil) ⌊β⌋ τ :=
+         instOne β τ (fun i => σ.act (τ ∷ i.arity) (args i))
+       have h := diamondAt (pre := pre) (dom := mid) (cod := cod)
+         (τ := Shape.nil) (src := ⌊β⌋) (dst := τ)
+@@ -1752,7 +1752,7 @@ theorem Subst.act_comp
+       unfold instOne at h
+       dsimp only at h
+       change
+-        (Subst.inst (pre := pre ⧺ cod)
++        (PrefixSubst.inst (pre := pre ⧺ cod)
+           (dom := ⌊β⌋) (cod := τ)
+           (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
+             θ.act (τ ∷ δ)
+@@ -1761,21 +1761,21 @@ theorem Subst.act_comp
+           (Tele.ofList []) (θ.act ⌊β⌋ (σ y))
+         =
+         θ.act τ
+-          ((Subst.inst (pre := pre ⧺ mid)
++          ((PrefixSubst.inst (pre := pre ⧺ mid)
+             (dom := ⌊β⌋) (cod := τ)
+             (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
+               match q with
+               | .here i => σ.act (τ ∷ i.arity) (args i))).act
+             (Tele.ofList []) (σ y)) at h
+       have hFiller :
+-          Subst.inst (pre := pre ⧺ cod)
++          PrefixSubst.inst (pre := pre ⧺ cod)
+             (dom := ⌊β⌋) (cod := τ)
+             (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
+               θ.act (τ ∷ δ)
+                 (match q with
+                 | .here i => σ.act (τ ∷ i.arity) (args i)))
+           =
+-          Subst.inst (pre := pre ⧺ cod)
++          PrefixSubst.inst (pre := pre ⧺ cod)
+             (dom := ⌊β⌋) (cod := τ)
+             (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
+               match q with
+@@ -1789,7 +1789,7 @@ theorem Subst.act_comp
+         | there q => nomatch q
+       rw [hFiller] at h
+       change
+-        ⟦Subst.inst ⌊β⌋
++        ⟦PrefixSubst.inst ⌊β⌋
+           (fun {δ} (q : ⌊β⌋ ∋ δ) => match q with
+           | .here i =>
+               θ.act (τ ∷ i.arity)
+@@ -1797,7 +1797,7 @@ theorem Subst.act_comp
+           (θ.act ⌊β⌋ (σ y))
+         =
+         θ.act τ
+-          (⟦Subst.inst ⌊β⌋
++          (⟦PrefixSubst.inst ⌊β⌋
+             (fun {δ} (q : ⌊β⌋ ∋ δ) => match q with
+             | .here i => σ.act (τ ∷ i.arity) (args i))⟧ˢ
+             (σ y)) at h
+@@ -1805,26 +1805,75 @@ theorem Subst.act_comp
+     | pre z =>
+       -- Prefix variable: neither substitution replaces the head.  Only the
+       -- argument family is transformed recursively.
+-      refine (Subst.act_ap_inl_pre (Subst.comp σ θ) τ z args).trans ?_
++      refine (PrefixSubst.act_ap_inl_pre (PrefixSubst.comp σ θ) τ z args).trans ?_
+       change
+-        .ap ((Proper.inl (pre ⧺ cod)) ((Subst.comp σ θ).weakenCod z))
+-          (fun i => (Subst.comp σ θ).act (τ ∷ i.arity) (args i))
++        .ap ((Proper.inl (pre ⧺ cod)) ((PrefixSubst.comp σ θ).weakenCod z))
++          (fun i => (PrefixSubst.comp σ θ).act (τ ∷ i.arity) (args i))
+         =
+         θ.act τ
+           (σ.act τ
+             (.ap
+               ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) z))
+               args))
+-      rw [Subst.act_ap_inl_pre σ τ z args]
+-      unfold Subst.weakenCod
+-      rw [Subst.act_ap_inl_pre θ τ z (fun i => σ.act (τ ∷ i.arity) (args i))]
++      rw [PrefixSubst.act_ap_inl_pre σ τ z args]
++      unfold PrefixSubst.weakenCod
++      rw [PrefixSubst.act_ap_inl_pre θ τ z (fun i => σ.act (τ ∷ i.arity) (args i))]
+       congr 1
+       funext i
+-      exact Subst.act_comp σ θ (τ ∷ i.arity) (args i)
++      exact PrefixSubst.act_comp σ θ (τ ∷ i.arity) (args i)
+ termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
+ decreasing_by all_goals exact Expr.Subterm.of_arg head args _
+ 
+-/-- **`act_kcomp`** — Kleisli composition factors through `Subst.act_comp`. -/
++/-- **`act_kcomp`** — Kleisli composition factors through `PrefixSubst.act_comp`. -/
++theorem PrefixSubst.act_kcomp
++    {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Γ] [Proper Δ] [Proper Ξ]
++    (f : ∀ {β}, Γ ∋ β → Expr (Δ ∷ β))
++    (g : ∀ {β}, Δ ∋ β → Expr (Ξ ∷ β))
++    (τ : Shape C) [Proper τ] (e : Expr (Γ ⧺ τ)) :
++  (toPrefixSubst (PrefixSubst.kcomp f g)).act τ e = (toPrefixSubst g).act τ ((toPrefixSubst f).act τ e)
++  := by
++  -- `toPrefixSubst` turns Kleisli arrows into `PrefixSubst`s, and `PrefixSubst.comp` was defined
++  -- to match `PrefixSubst.kcomp`; after that, this is just `act_comp`.
++  exact PrefixSubst.act_comp (toPrefixSubst f) (toPrefixSubst g) τ e
++
++/-! ## Full-context substitution laws
++
++The public `Subst C Γ Δ` API is the full Kleisli-environment presentation.
++Its action is the empty-prefix specialization of `PrefixSubst.act`, so the
++relative-monad laws below are short bridges to the prefix backend.
++-/
++
++/-- **`act_id`** — the identity full-context substitution acts as the identity. -/
++theorem Subst.act_id
++    {C : Carrier} (Γ : Shape C) [Proper Γ]
++    (τ : Shape C) [Proper τ]
++    (e : Expr (Γ ⧺ τ)) :
++  (Subst.id Γ).act τ e = e
++  := by
++  exact PrefixSubst.act_id Γ τ e
++
++/-- **`act_η`** — acting on an η-expansion reduces to applying the Kleisli map. -/
++theorem Subst.act_η
++    {C : Carrier} {Γ Δ : Shape C} [Proper Γ] [Proper Δ]
++    (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ∷ β))
++    (α : C.Arity) (p : Γ ∋ α) :
++  (toSubst f).act ⌊α⌋ (.η p) = f p
++  := by
++  exact PrefixSubst.act_η f α p
++
++/-- **`act_comp`** — action by a composite full-context substitution factors
++into two actions. -/
++theorem Subst.act_comp
++    {C : Carrier} {Γ Δ Ξ : Shape C}
++    [Proper Γ] [Proper Δ] [Proper Ξ]
++    (σ : Subst C Γ Δ) (θ : Subst C Δ Ξ)
++    (τ : Shape C) [Proper τ] (e : Expr (Γ ⧺ τ)) :
++  (Subst.comp σ θ).act τ e = θ.act τ (σ.act τ e)
++  := by
++  exact PrefixSubst.act_comp σ.toPrefix θ.toPrefix τ e
++
++/-- **`act_kcomp`** — Kleisli composition factors through full-context
++substitution composition. -/
+ theorem Subst.act_kcomp
+     {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Γ] [Proper Δ] [Proper Ξ]
+     (f : ∀ {β}, Γ ∋ β → Expr (Δ ∷ β))
+@@ -1832,6 +1881,4 @@ theorem Subst.act_kcomp
+     (τ : Shape C) [Proper τ] (e : Expr (Γ ⧺ τ)) :
+   (toSubst (Subst.kcomp f g)).act τ e = (toSubst g).act τ ((toSubst f).act τ e)
+   := by
+-  -- `toSubst` turns Kleisli arrows into `Subst`s, and `Subst.comp` was defined
+-  -- to match `Subst.kcomp`; after that, this is just `act_comp`.
+   exact Subst.act_comp (toSubst f) (toSubst g) τ e
+diff --git a/HigherRankSyntax/HigherRankSyntax/ProperTele.lean b/HigherRankSyntax/HigherRankSyntax/ProperTele.lean
+index 3db3bb7..46dcd51 100644
+--- a/HigherRankSyntax/HigherRankSyntax/ProperTele.lean
++++ b/HigherRankSyntax/HigherRankSyntax/ProperTele.lean
+@@ -424,6 +424,237 @@ theorem compose_inl {C : Carrier} (S T : Shape C)
+ 
+ end Proper
+ 
++/-! ## Canonical proper spines
++
++`Proper` is a typeclass witness that a telescope behaves like a finite prefix.
++That is convenient for existing code, but typeclass search can construct
++different proof-relevant witnesses for the same telescope.  `ProperSpine Γ`
++records the prefix structure canonically.  Its operations recurse on the
++spine, so injection coherence for composite telescopes becomes ordinary
++structural computation.
++-/
++
++/-- A canonical finite-prefix witness for a telescope. -/
++inductive ProperSpine {C : Carrier} : Shape C → Type where
++  | nil : ProperSpine (Shape.nil : Shape C)
++  | cons {Γ : Shape C} : ProperSpine Γ → (α : C.Arity) → ProperSpine (Γ ∷ α)
++
++namespace ProperSpine
++
++/-- Left injection: weaken a base context through the spine. -/
++def inl {C : Carrier} {S : Shape C} (p : ProperSpine S) (Γ : Shape C) :
++    Γ →ʳ Γ ⧺ S :=
++  match p with
++  | .nil => 𝟙ʳ
++  | .cons p α => ⟨fun x => .there (inl p Γ x)⟩
++
++/-- Right injection: embed the spine's own slots over a base context. -/
++def inr {C : Carrier} {S : Shape C} (p : ProperSpine S) (Γ : Shape C) :
++    S →ʳ Γ ⧺ S :=
++  match p with
++  | .nil => ⟨fun x => nomatch x⟩
++  | .cons p α => ⟨fun
++      | .here i => .here i
++      | .there x => .there (inr p Γ x)⟩
++
++/-- Dispatch a slot of `Γ ⧺ S` into either the spine side or the base side. -/
++def classify {C : Carrier} {S : Shape C} (p : ProperSpine S)
++    (Γ : Shape C) {α : C.Arity} (X : Type)
++    (x : Γ ⧺ S ∋ α) (right : S ∋ α → X) (left : Γ ∋ α → X) : X :=
++  match p with
++  | .nil => left x
++  | .cons p β =>
++      match x with
++      | .here i => right (.here i)
++      | .there x => classify p Γ X x (fun y => right (.there y)) left
++
++/-- Cover a slot of `Γ ⧺ S` by one of the two canonical injections. -/
++def cover {C : Carrier} : {S : Shape C} → (p : ProperSpine S) →
++    (Γ : Shape C) → {α : C.Arity} → (x : Γ ⧺ S ∋ α) →
++    (S ∋ α) ⊕ (Γ ∋ α)
++  | _, .nil, _Γ, _, x => Sum.inr x
++  | _, .cons _p _β, Γ, _, .here i => Sum.inl (.here i)
++  | _, .cons p _β, Γ, _, .there x =>
++      match cover p Γ x with
++      | Sum.inl y => Sum.inl (.there y)
++      | Sum.inr y => Sum.inr y
++
++/-- Proof-carrying cover for the canonical spine injections. -/
++theorem coverEq {C : Carrier} :
++    {S : Shape C} → (p : ProperSpine S) → (Γ : Shape C) →
++    {α : C.Arity} → (x : Γ ⧺ S ∋ α) →
++    (∃ y : S ∋ α, x = inr p Γ y) ∨
++      (∃ y : Γ ∋ α, x = inl p Γ y)
++  | _, .nil, _Γ, _, x => Or.inr ⟨x, rfl⟩
++  | _, .cons _p _β, Γ, _, .here i => Or.inl ⟨.here i, rfl⟩
++  | _, .cons p _β, Γ, _, .there x =>
++      match coverEq p Γ x with
++      | Or.inl ⟨y, h⟩ =>
++          Or.inl ⟨.there y, by rw [h]; rfl⟩
++      | Or.inr ⟨y, h⟩ =>
++          Or.inr ⟨y, by rw [h]; rfl⟩
++
++/-- Canonical append of spines.  Recursing on the right spine makes
++`append p (.cons q α)` compute to `.cons (append p q) α`, matching binder
++descent through `Γ ⧺ (Δ ∷ α)`. -/
++def append {C : Carrier} {S T : Shape C}
++    (pS : ProperSpine S) (pT : ProperSpine T) :
++    ProperSpine (S ⧺ T) :=
++  match pT with
++  | .nil => pS
++  | .cons pT α => .cons (append pS pT) α
++
++/-- A concrete list of arities as a canonical spine. -/
++def ofList {C : Carrier} : (ρ : List C.Arity) →
++    ProperSpine (Tele.ofList ρ : Shape C)
++  | [] => .nil
++  | α :: ρ => .cons (ofList ρ) α
++
++/-- Extend a canonical spine by a concrete list of top binders. -/
++def extendList {C : Carrier} {S : Shape C} (pS : ProperSpine S) :
++    (ρ : List C.Arity) → ProperSpine (S ⧺ Tele.ofList ρ)
++  | [] => pS
++  | α :: ρ => .cons (extendList pS ρ) α
++
++@[simp] theorem inl_nil {C : Carrier} (Γ : Shape C) :
++    inl .nil Γ = (𝟙ʳ : Γ →ʳ Γ) := rfl
++
++theorem inr_nil {C : Carrier} (Γ : Shape C) {α : C.Arity}
++    (x : (Shape.nil : Shape C) ∋ α) :
++    inr .nil Γ x = nomatch x := by
++  cases x
++
++@[simp] theorem inl_cons {C : Carrier} {S : Shape C}
++    (p : ProperSpine S) (β : C.Arity) (Γ : Shape C)
++    {α : C.Arity} (x : Γ ∋ α) :
++    inl (.cons p β) Γ x = .there (inl p Γ x) := rfl
++
++@[simp] theorem inr_cons_here {C : Carrier} {S : Shape C}
++    (p : ProperSpine S) (β : C.Arity) (Γ : Shape C)
++    (i : C.Binder β) :
++    inr (.cons p β) Γ (.here i) = .here i := rfl
++
++@[simp] theorem inr_cons_there {C : Carrier} {S : Shape C}
++    (p : ProperSpine S) (β : C.Arity) (Γ : Shape C)
++    {α : C.Arity} (x : S ∋ α) :
++    inr (.cons p β) Γ (.there x) = .there (inr p Γ x) := rfl
++
++@[simp] theorem classify_inr {C : Carrier} {S : Shape C}
++    (p : ProperSpine S) (Γ : Shape C) (X : Type)
++    {α : C.Arity} (x : S ∋ α)
++    (right : S ∋ α → X) (left : Γ ∋ α → X) :
++    classify p Γ X (inr p Γ x) right left = right x := by
++  induction p generalizing Γ X α with
++  | nil => cases x
++  | cons p β ih =>
++      cases x with
++      | here i => rfl
++      | there x =>
++          exact ih Γ X x (fun y => right (.there y)) left
++
++@[simp] theorem classify_inl {C : Carrier} {S : Shape C}
++    (p : ProperSpine S) (Γ : Shape C) (X : Type)
++    {α : C.Arity} (x : Γ ∋ α)
++    (right : S ∋ α → X) (left : Γ ∋ α → X) :
++    classify p Γ X (inl p Γ x) right left = left x := by
++  induction p generalizing Γ X α with
++  | nil => rfl
++  | cons p β ih =>
++      exact ih Γ X x (fun y => right (.there y)) left
++
++@[simp] theorem classify_cons_here {C : Carrier} {S Γ : Shape C}
++    (p : ProperSpine S) (β : C.Arity) (X : Type)
++    (i : C.Binder β)
++    (right : S ∷ β ∋ i.arity → X) (left : Γ ∋ i.arity → X) :
++    classify (.cons p β) Γ X (.here i) right left = right (.here i) := rfl
++
++@[simp] theorem classify_cons_there {C : Carrier} {S Γ : Shape C}
++    (p : ProperSpine S) (β : C.Arity) (X : Type)
++    {α : C.Arity} (x : Γ ⧺ S ∋ α)
++    (right : S ∷ β ∋ α → X) (left : Γ ∋ α → X) :
++    classify (.cons p β) Γ X (.there x) right left =
++      classify p Γ X x (fun y => right (.there y)) left := rfl
++
++theorem classify_weaken {C : Carrier} {S Γ Δ : Shape C}
++    (p : ProperSpine S) (β : C.Arity)
++    {α : C.Arity} (x : Γ ⧺ S ∋ α)
++    (right : S ∋ α → Δ ∋ α) (left : Γ ∋ α → Δ ∋ α) :
++    classify p Γ (Δ ∷ β ∋ α) x
++        (fun y => .there (right y))
++        (fun y => .there (left y)) =
++      .there (classify p Γ (Δ ∋ α) x right left) := by
++  induction p generalizing Γ Δ α with
++  | nil => rfl
++  | cons p γ ih =>
++      cases x with
++      | here i => rfl
++      | there x =>
++          exact ih x (fun y => right (.there y)) left
++
++theorem cover_inr {C : Carrier} :
++    {S : Shape C} → (p : ProperSpine S) → (Γ : Shape C) →
++    {α : C.Arity} → (x : S ∋ α) →
++    ∃ y : S ∋ α, inr p Γ x = inr p Γ y
++  | _, _p, _Γ, _, x => ⟨x, rfl⟩
++
++theorem cover_inl {C : Carrier} :
++    {S : Shape C} → (p : ProperSpine S) → (Γ : Shape C) →
++    {α : C.Arity} → (x : Γ ∋ α) →
++    ∃ y : Γ ∋ α, inl p Γ x = inl p Γ y
++  | _, _p, _Γ, _, x => ⟨x, rfl⟩
++
++@[simp] theorem append_nil {C : Carrier} {S : Shape C}
++    (pS : ProperSpine S) :
++    append pS .nil = pS := rfl
++
++@[simp] theorem append_cons {C : Carrier} {S T : Shape C}
++    (pS : ProperSpine S) (pT : ProperSpine T) (α : C.Arity) :
++    append pS (.cons pT α) = .cons (append pS pT) α := rfl
++
++theorem append_inl {C : Carrier} {S T : Shape C}
++    (pS : ProperSpine S) (pT : ProperSpine T)
++    (Γ : Shape C) {α : C.Arity} (x : Γ ∋ α) :
++    inl (append pS pT) Γ x =
++      inl pT (Γ ⧺ S) (inl pS Γ x) := by
++  induction pT generalizing Γ α x with
++  | nil => rfl
++  | cons pT β ih =>
++      exact congrArg ListSlotAt.there (ih Γ x)
++
++theorem append_inr_inl {C : Carrier} {S T : Shape C}
++    (pS : ProperSpine S) (pT : ProperSpine T)
++    (Γ : Shape C) {α : C.Arity} (x : S ∋ α) :
++    inr (append pS pT) Γ (inl pT S x) =
++      inl pT (Γ ⧺ S) (inr pS Γ x) := by
++  induction pT generalizing Γ α x with
++  | nil => rfl
++  | cons pT β ih =>
++      exact congrArg ListSlotAt.there (ih Γ x)
++
++theorem append_inr_inr {C : Carrier} {S T : Shape C}
++    (pS : ProperSpine S) (pT : ProperSpine T)
++    (Γ : Shape C) {α : C.Arity} (x : T ∋ α) :
++    inr (append pS pT) Γ (inr pT S x) =
++      inr pT (Γ ⧺ S) x := by
++  induction pT generalizing Γ α with
++  | nil => cases x
++  | cons pT β ih =>
++      cases x with
++      | here i => rfl
++      | there x =>
++          exact congrArg ListSlotAt.there (ih Γ x)
++
++/-- Turn a canonical spine into the existing compatibility `Proper` witness. -/
++@[reducible]
++def toProper {C : Carrier} {S : Shape C} :
++    ProperSpine S → Proper S
++  | .nil => Proper.instId
++  | .cons p α =>
++      letI : Proper _ := toProper p
++      Proper.instCons α _
++
++end ProperSpine
++
+ @[inherit_doc Proper.inl]
+ notation:max "ι₁ " x:max => Proper.inl _ x
+ 
+diff --git a/HigherRankSyntax/HigherRankSyntax/ScopedExpr.lean b/HigherRankSyntax/HigherRankSyntax/ScopedExpr.lean
+new file mode 100644
+index 0000000..f0af63f
+--- /dev/null
++++ b/HigherRankSyntax/HigherRankSyntax/ScopedExpr.lean
+@@ -0,0 +1,1436 @@
++import HigherRankSyntax.ProperTele
++
++/-!
++# Scoped expressions with telescope-indexed local stacks
++
++`ScopedExpr Γ τ` separates free variables from local binders.  The free
++context `Γ` is stable, while the local context `τ` changes as we descend under
++binders.  Unlike the earlier list-indexed prototype, local stacks are now
++ordinary `Shape`s, and passive prefixes are decomposed by explicit
++`ProperSpine` witnesses.
++
++The key representation invariant for one-binder local substitution is:
++
++* `υ` is the older local tail;
++* `α` is the active binder being substituted;
++* `χ` is the newer passive prefix;
++* the source local context is `(υ ∷ α) ⧺ χ`;
++* the target local context is `υ ⧺ χ`.
++
++This orientation makes argument descent definitional:
++`((υ ∷ α) ⧺ χ) ∷ β = (υ ∷ α) ⧺ (χ ∷ β)`.
++-/
++
++/-- A scoped application head.  A head is either free, from the ambient
++context, or local, from the current local telescope. -/
++inductive ScopedHead {C : Carrier} (Γ τ : Shape C) : C.Arity → Type where
++  | free {α : C.Arity} : Γ ∋ α → ScopedHead Γ τ α
++  | local {α : C.Arity} : τ ∋ α → ScopedHead Γ τ α
++
++/-- Scoped expressions over free context `Γ` and local binder telescope `τ`. -/
++inductive ScopedExpr {C : Carrier} (Γ : Shape C) : Shape C → Type where
++  | ap : {τ : Shape C} → {α : C.Arity} →
++      ScopedHead Γ τ α →
++      ((i : C.Binder α) → ScopedExpr Γ (τ ∷ i.arity)) →
++      ScopedExpr Γ τ
++
++namespace ScopedHead
++
++/-- Rename free variables in a head; local heads are untouched. -/
++def renameFree {C : Carrier} {Γ Δ τ : Shape C}
++    (ρ : Γ →ʳ Δ) : {α : C.Arity} → ScopedHead Γ τ α → ScopedHead Δ τ α
++  | _, .free x => .free (ρ x)
++  | _, .local x => .local x
++
++/-- Rename local variables in a head; free heads are untouched. -/
++def renameLocal {C : Carrier} {Γ τ ν : Shape C}
++    (ρ : τ →ʳ ν) : {α : C.Arity} → ScopedHead Γ τ α → ScopedHead Γ ν α
++  | _, .free x => .free x
++  | _, .local x => .local (ρ x)
++
++/-- Weaken a head under one fresh local binder. -/
++def weakenLocal {C : Carrier} {Γ τ : Shape C}
++    (β : C.Arity) : {α : C.Arity} → ScopedHead Γ τ α →
++      ScopedHead Γ (τ ∷ β) α
++  | _, .free x => .free x
++  | _, .local x => .local (.there x)
++
++end ScopedHead
++
++namespace ScopedExpr
++
++theorem ap_args_congr {C : Carrier} {Γ τ : Shape C} {α : C.Arity}
++    (head : ScopedHead Γ τ α)
++    {args args' : (i : C.Binder α) → ScopedExpr Γ (τ ∷ i.arity)}
++    (hargs : ∀ i, args i = args' i) :
++    ScopedExpr.ap head args = ScopedExpr.ap head args' := by
++  congr
++  funext i
++  exact hargs i
++
++/-- Direct subterm relation for recursion through application arguments. -/
++inductive Subterm {C : Carrier} {Γ : Shape C} :
++    (Σ τ : Shape C, ScopedExpr Γ τ) →
++      (Σ τ : Shape C, ScopedExpr Γ τ) → Prop where
++  | of_arg {τ : Shape C} {α : C.Arity}
++      (head : ScopedHead Γ τ α)
++      (args : (i : C.Binder α) → ScopedExpr Γ (τ ∷ i.arity))
++      (j : C.Binder α) :
++      Subterm ⟨τ ∷ j.arity, args j⟩ ⟨τ, ScopedExpr.ap head args⟩
++
++/-- Argument descent through a passive-prefix decomposition. -/
++theorem Subterm.of_arg_ext {C : Carrier} {Γ : Shape C}
++    {τ χ : Shape C} {α : C.Arity}
++    (head : ScopedHead Γ (τ ⧺ χ) α)
++    (args : (i : C.Binder α) → ScopedExpr Γ ((τ ⧺ χ) ∷ i.arity))
++    (j : C.Binder α) :
++    Subterm ⟨τ ⧺ (χ ∷ j.arity), args j⟩
++      ⟨τ ⧺ χ, ScopedExpr.ap head args⟩ :=
++  Subterm.of_arg head args j
++
++/-- Structural recursion on scoped expressions is well-founded. -/
++theorem Subterm.wf {C : Carrier} {Γ : Shape C} :
++    WellFounded (Subterm (Γ := Γ)) := by
++  refine ⟨fun ⟨τ, e⟩ => ?_⟩
++  induction e with
++  | ap head args ih =>
++      refine Acc.intro _ ?_
++      rintro ⟨_, _⟩ h
++      cases h
++      exact ih _
++
++private instance {C : Carrier} {Γ : Shape C} :
++    WellFoundedRelation (Σ τ : Shape C, ScopedExpr Γ τ) where
++  rel := Subterm
++  wf := Subterm.wf
++
++/-- Rename free variables throughout a scoped expression. -/
++def renameFree {C : Carrier} {Γ Δ : Shape C}
++    (ρ : Γ →ʳ Δ) : {τ : Shape C} → ScopedExpr Γ τ → ScopedExpr Δ τ
++  | _, .ap head args =>
++      .ap (head.renameFree ρ) (fun i => renameFree ρ (args i))
++
++/-- Extend a local renaming under one fresh local binder. -/
++def localCons {C : Carrier} {τ ν : Shape C}
++    (ρ : τ →ʳ ν) (β : C.Arity) : τ ∷ β →ʳ ν ∷ β :=
++  ρ ⇑ʳ β
++
++/-- Rename local variables throughout a scoped expression. -/
++def renameLocal {C : Carrier} {Γ τ ν : Shape C}
++    (ρ : τ →ʳ ν) : ScopedExpr Γ τ → ScopedExpr Γ ν
++  | .ap head args =>
++      .ap (head.renameLocal ρ) (fun i =>
++        renameLocal (localCons ρ i.arity) (args i))
++
++/-! ## Renaming laws
++
++These are deliberately stated for the scoped syntax rather than for flattened
++telescopes.  The recursive cases say exactly what is happening: a renaming
++acts on the current head and is extended under each freshly opened binder.
++-/
++
++theorem renameFree_id {C : Carrier} {Γ τ : Shape C}
++    (e : ScopedExpr Γ τ) :
++    renameFree (𝟙ʳ : Γ →ʳ Γ) e = e := by
++  induction e with
++  | ap head args ih =>
++      cases head <;> simp [renameFree, ScopedHead.renameFree]
++      all_goals
++        funext i
++        exact ih i
++
++theorem renameFree_comp {C : Carrier} {Γ Δ Ξ τ : Shape C}
++    (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ξ) (e : ScopedExpr Γ τ) :
++    renameFree (σ ∘ʳʳ ρ) e = renameFree σ (renameFree ρ e) := by
++  induction e generalizing Δ Ξ with
++  | ap head args ih =>
++      cases head <;> simp [renameFree, ScopedHead.renameFree]
++      · constructor
++        · rfl
++        · funext i
++          exact ih i ρ σ
++      · funext i
++        exact ih i ρ σ
++
++theorem renameLocal_id {C : Carrier} {Γ τ : Shape C}
++    (e : ScopedExpr Γ τ) :
++    renameLocal (𝟙ʳ : τ →ʳ τ) e = e := by
++  induction e with
++  | ap head args ih =>
++      cases head <;> simp [renameLocal, ScopedHead.renameLocal, localCons,
++        Renaming.extend_id]
++      all_goals
++        funext i
++        exact ih i
++
++theorem renameLocal_comp {C : Carrier} {Γ τ ν ξ : Shape C}
++    (ρ : τ →ʳ ν) (σ : ν →ʳ ξ) (e : ScopedExpr Γ τ) :
++    renameLocal (σ ∘ʳʳ ρ) e =
++      renameLocal σ (renameLocal ρ e) := by
++  induction e generalizing ν ξ with
++  | ap head args ih =>
++      cases head <;> simp [renameLocal, ScopedHead.renameLocal, localCons,
++        Renaming.extend_comp]
++      · funext i
++        exact ih i (localCons ρ i.arity) (localCons σ i.arity)
++      · constructor
++        · rfl
++        · funext i
++          exact ih i (localCons ρ i.arity) (localCons σ i.arity)
++
++/-- η-expansion of an arbitrary head. -/
++def etaHead {C : Carrier} {Γ τ : Shape C} :
++    {α : C.Arity} → ScopedHead Γ τ α → ScopedExpr Γ (τ ∷ α)
++  | α, head =>
++      .ap (head.weakenLocal α)
++        (fun i => etaHead (τ := τ ∷ α) (.local (.here i)))
++termination_by α _ => α
++decreasing_by exact ⟨i, rfl⟩
++
++/-- Relative-monad unit: η-expansion of a free variable. -/
++def eta {C : Carrier} {Γ : Shape C} {α : C.Arity}
++    (x : Γ ∋ α) : ScopedExpr Γ ⌊α⌋ :=
++  etaHead (τ := Shape.nil) (.free x)
++
++/-- Inject a passive-prefix slot into `υ ⧺ χ`. -/
++def localPrefix {C : Carrier} {χ : Shape C}
++    (pχ : ProperSpine χ) (υ : Shape C) : χ →ʳ υ ⧺ χ :=
++  ProperSpine.inr pχ υ
++
++/-- Inject an older-tail slot into `υ ⧺ χ`. -/
++def localTail {C : Carrier} {χ : Shape C}
++    (pχ : ProperSpine χ) (υ : Shape C) : υ →ʳ υ ⧺ χ :=
++  ProperSpine.inl pχ υ
++
++/-- Rename the older tail under a fixed passive prefix. -/
++def localMapTail {C : Carrier} {χ υ ν : Shape C}
++    (pχ : ProperSpine χ) (ρ : υ →ʳ ν) : υ ⧺ χ →ʳ ν ⧺ χ :=
++  ⟨fun x =>
++    ProperSpine.classify pχ υ _ x
++      (fun xχ => localPrefix pχ ν xχ)
++      (fun xυ => localTail pχ ν (ρ xυ))⟩
++
++@[simp] theorem localMapTail_nil {C : Carrier} {υ ν : Shape C}
++    (ρ : υ →ʳ ν) :
++    localMapTail .nil ρ = ρ := rfl
++
++theorem localMapTail_prefix {C : Carrier} {χ υ ν : Shape C}
++    (pχ : ProperSpine χ) (ρ : υ →ʳ ν)
++    {α : C.Arity} (x : χ ∋ α) :
++    localMapTail pχ ρ (localPrefix pχ υ x) =
++      localPrefix pχ ν x := by
++  unfold localMapTail localPrefix localTail
++  change
++    ProperSpine.classify pχ υ _
++        ((ProperSpine.inr pχ υ) x)
++        (fun xχ => (ProperSpine.inr pχ ν) xχ)
++        (fun xυ => (ProperSpine.inl pχ ν) (ρ xυ)) =
++      (ProperSpine.inr pχ ν) x
++  rw [ProperSpine.classify_inr]
++
++theorem localMapTail_tail {C : Carrier} {χ υ ν : Shape C}
++    (pχ : ProperSpine χ) (ρ : υ →ʳ ν)
++    {α : C.Arity} (x : υ ∋ α) :
++    localMapTail pχ ρ (localTail pχ υ x) =
++      localTail pχ ν (ρ x) := by
++  unfold localMapTail localPrefix localTail
++  change
++    ProperSpine.classify pχ υ _
++        ((ProperSpine.inl pχ υ) x)
++        (fun xχ => (ProperSpine.inr pχ ν) xχ)
++        (fun xυ => (ProperSpine.inl pχ ν) (ρ xυ)) =
++      (ProperSpine.inl pχ ν) (ρ x)
++  rw [ProperSpine.classify_inl]
++
++@[simp] theorem localMapTail_cons {C : Carrier} {χ υ ν : Shape C}
++    (pχ : ProperSpine χ) (ρ : υ →ʳ ν) (β : C.Arity) :
++    localMapTail (.cons pχ β) ρ =
++      localCons (localMapTail pχ ρ) β := by
++  ext α x
++  cases x with
++  | here i => rfl
++  | there x =>
++      unfold localMapTail localCons localPrefix localTail
++      change
++        ProperSpine.classify (.cons pχ β) υ _ (.there x)
++            (fun xχ => (ProperSpine.inr (.cons pχ β) ν) xχ)
++            (fun xυ => (ProperSpine.inl (.cons pχ β) ν) (ρ xυ)) =
++          ListSlotAt.there
++            (ProperSpine.classify pχ υ _
++              x
++              (fun xχ => (ProperSpine.inr pχ ν) xχ)
++              (fun xυ => (ProperSpine.inl pχ ν) (ρ xυ)))
++      rw [ProperSpine.classify_cons_there]
++      simp only [ProperSpine.inr_cons_there, ProperSpine.inl_cons]
++      change
++        ProperSpine.classify pχ υ ((ν ⧺ χ) ∷ β ∋ α) x
++            (fun xχ => .there ((ProperSpine.inr pχ ν) xχ))
++            (fun xυ => .there ((ProperSpine.inl pχ ν) (ρ xυ))) =
++          .there
++            (ProperSpine.classify pχ υ (ν ⧺ χ ∋ α) x
++              (fun xχ => (ProperSpine.inr pχ ν) xχ)
++              (fun xυ => (ProperSpine.inl pχ ν) (ρ xυ)))
++      rw [ProperSpine.classify_weaken]
++
++/-- The three origins of a local head while substituting one active binder. -/
++inductive LocalSite {C : Carrier} (χ υ : Shape C) (α : C.Arity) :
++    C.Arity → Type where
++  | pre {β : C.Arity} (x : χ ∋ β) : LocalSite χ υ α β
++  | active (i : C.Binder α) : LocalSite χ υ α i.arity
++  | tail {β : C.Arity} (x : υ ∋ β) : LocalSite χ υ α β
++
++namespace LocalSite
++
++/-- Rename only the older-tail component of a classified local site. -/
++def renameTail {C : Carrier} {χ υ ν : Shape C} {α β : C.Arity}
++    (ρ : υ →ʳ ν) : LocalSite χ υ α β → LocalSite χ ν α β
++  | .pre x => .pre x
++  | .active i => .active i
++  | .tail x => .tail (ρ x)
++
++/-- Embed a classified local site back into `(υ ∷ α) ⧺ χ`. -/
++def embedSource {C : Carrier} {χ υ : Shape C} (pχ : ProperSpine χ)
++    {α β : C.Arity} : LocalSite χ υ α β → (υ ∷ α) ⧺ χ ∋ β
++  | .pre x => localPrefix pχ (υ ∷ α) x
++  | .active i => localTail pχ (υ ∷ α) (.here i)
++  | .tail x => localTail pχ (υ ∷ α) (.there x)
++
++/-- Classify a local slot of `(υ ∷ α) ⧺ χ`. -/
++def classify {C : Carrier} {χ : Shape C} (pχ : ProperSpine χ)
++    (υ : Shape C) (α : C.Arity) {β : C.Arity}
++    (x : (υ ∷ α) ⧺ χ ∋ β) : LocalSite χ υ α β :=
++  ProperSpine.classify pχ (υ ∷ α) _ x
++    (fun xχ => .pre xχ)
++    (fun
++      | .here i => .active i
++      | .there xυ => .tail xυ)
++
++theorem cover {C : Carrier} {χ υ : Shape C}
++    (pχ : ProperSpine χ) (α : C.Arity) {β : C.Arity}
++    (x : (υ ∷ α) ⧺ χ ∋ β) :
++    ∃ site : LocalSite χ υ α β, x = embedSource pχ site := by
++  rcases ProperSpine.coverEq pχ (υ ∷ α) x with ⟨xχ, h⟩ | ⟨y, h⟩
++  · exact ⟨.pre xχ, h⟩
++  · cases y with
++    | here i => exact ⟨.active i, h⟩
++    | there xυ => exact ⟨.tail xυ, h⟩
++
++theorem classify_pre {C : Carrier} {χ υ : Shape C}
++    (pχ : ProperSpine χ) (α : C.Arity) {β : C.Arity}
++    (x : χ ∋ β) :
++    classify pχ υ α (localPrefix pχ (υ ∷ α) x) = LocalSite.pre x := by
++  exact ProperSpine.classify_inr pχ (υ ∷ α) _ x _ _
++
++theorem classify_active {C : Carrier} {χ υ : Shape C}
++    (pχ : ProperSpine χ) (α : C.Arity) (i : C.Binder α) :
++    classify pχ υ α (localTail pχ (υ ∷ α) (.here i)) = LocalSite.active i := by
++  exact ProperSpine.classify_inl pχ (υ ∷ α) _ (.here i) _ _
++
++theorem classify_tail {C : Carrier} {χ υ : Shape C}
++    (pχ : ProperSpine χ) (α : C.Arity) {β : C.Arity}
++    (x : υ ∋ β) :
++    classify pχ υ α (localTail pχ (υ ∷ α) (.there x)) = LocalSite.tail x := by
++  exact ProperSpine.classify_inl pχ (υ ∷ α) _ (.there x) _ _
++
++/-- Classifying after a tail-only renaming is the same as classifying first and
++renaming only the tail case. -/
++theorem classify_mapTail {C : Carrier} {χ υ ν : Shape C}
++    (pχ : ProperSpine χ) (ρ : υ →ʳ ν) (α : C.Arity)
++    {β : C.Arity} (x : (υ ∷ α) ⧺ χ ∋ β) :
++    classify pχ ν α (localMapTail pχ (localCons ρ α) x) =
++      renameTail ρ (classify pχ υ α x) := by
++  rcases ProperSpine.coverEq pχ (υ ∷ α) x with ⟨xχ, rfl⟩ | ⟨y, rfl⟩
++  · have hmap :
++        localMapTail pχ (localCons ρ α)
++            ((ProperSpine.inr pχ (υ ∷ α)) xχ) =
++          (ProperSpine.inr pχ (ν ∷ α)) xχ := by
++        change
++          ProperSpine.classify pχ (υ ∷ α) _
++              ((ProperSpine.inr pχ (υ ∷ α)) xχ)
++              (fun xχ => (ProperSpine.inr pχ (ν ∷ α)) xχ)
++              (fun xυ => (ProperSpine.inl pχ (ν ∷ α)) ((localCons ρ α) xυ))
++            =
++          (ProperSpine.inr pχ (ν ∷ α)) xχ
++        rw [ProperSpine.classify_inr]
++    rw [hmap]
++    unfold classify
++    rw [ProperSpine.classify_inr, ProperSpine.classify_inr]
++    rfl
++  · cases y with
++    | here i =>
++        have hmap :
++            localMapTail pχ (localCons ρ α)
++                ((ProperSpine.inl pχ (υ ∷ α)) (.here i)) =
++              (ProperSpine.inl pχ (ν ∷ α)) (.here i) := by
++          change
++            ProperSpine.classify pχ (υ ∷ α) _
++                ((ProperSpine.inl pχ (υ ∷ α)) (.here i))
++                (fun xχ => (ProperSpine.inr pχ (ν ∷ α)) xχ)
++                (fun xυ => (ProperSpine.inl pχ (ν ∷ α)) ((localCons ρ α) xυ))
++              =
++            (ProperSpine.inl pχ (ν ∷ α)) (.here i)
++          rw [ProperSpine.classify_inl]
++          rfl
++        rw [hmap]
++        unfold classify
++        rw [ProperSpine.classify_inl, ProperSpine.classify_inl]
++        rfl
++    | there xυ =>
++        have hmap :
++            localMapTail pχ (localCons ρ α)
++                ((ProperSpine.inl pχ (υ ∷ α)) (.there xυ)) =
++              (ProperSpine.inl pχ (ν ∷ α)) (.there (ρ xυ)) := by
++          change
++            ProperSpine.classify pχ (υ ∷ α) _
++                ((ProperSpine.inl pχ (υ ∷ α)) (.there xυ))
++                (fun xχ => (ProperSpine.inr pχ (ν ∷ α)) xχ)
++                (fun xυ => (ProperSpine.inl pχ (ν ∷ α)) ((localCons ρ α) xυ))
++              =
++            (ProperSpine.inl pχ (ν ∷ α)) (.there (ρ xυ))
++          rw [ProperSpine.classify_inl]
++          rfl
++        rw [hmap]
++        unfold classify
++        rw [ProperSpine.classify_inl, ProperSpine.classify_inl]
++        rfl
++
++theorem mapTail_embedSource {C : Carrier} {χ υ ν : Shape C}
++    (pχ : ProperSpine χ) (ρ : υ →ʳ ν) {α β : C.Arity}
++    (site : LocalSite χ υ α β) :
++    localMapTail pχ (localCons ρ α) (embedSource pχ site) =
++      embedSource pχ (renameTail ρ site) := by
++  cases site with
++  | pre x =>
++      exact localMapTail_prefix pχ (localCons ρ α) x
++  | active i =>
++      exact localMapTail_tail pχ (localCons ρ α) (.here i)
++  | tail x =>
++      exact localMapTail_tail pχ (localCons ρ α) (.there x)
++
++end LocalSite
++
++/-- Substitute one active local binder below a passive prefix. -/
++def instOneAt {C : Carrier} {Γ : Shape C} :
++    {χ : Shape C} → (pχ : ProperSpine χ) → (υ : Shape C) →
++    (α : C.Arity) →
++    ((i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity)) →
++    ScopedExpr Γ ((υ ∷ α) ⧺ χ) → ScopedExpr Γ (υ ⧺ χ)
++  | χ, pχ, υ, α, fill, .ap (α := β) head args =>
++      match head with
++      | .free x =>
++          -- Free head: preserve the head and recurse through arguments.
++          .ap (.free x)
++            (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j))
++      | .local x =>
++          match LocalSite.classify pχ υ α x with
++          | .pre y =>
++              -- Passive-prefix head: preserve the head and recurse.
++              .ap (.local (localPrefix pχ υ y))
++                (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j))
++          | .tail y =>
++              -- Older-tail head: preserve the head and recurse.
++              .ap (.local (localTail pχ υ y))
++                (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j))
++          | .active j =>
++              -- Active head: fire the selected filler, then instantiate the
++              -- fresh binder introduced by that filler with transformed args.
++              instOneAt .nil (υ ⧺ χ) j.arity
++                (fun k => instOneAt (.cons pχ k.arity) υ α fill (args k))
++                (renameLocal (localCons (localTail pχ υ) j.arity) (fill j))
++termination_by χ _ υ α _ e =>
++  (α, (⟨(υ ∷ α) ⧺ χ, e⟩ : Σ τ : Shape C, ScopedExpr Γ τ))
++decreasing_by
++  all_goals
++    first
++      | exact Prod.Lex.left _ _ ⟨j, rfl⟩
++      | exact Prod.Lex.right _ (Subterm.of_arg_ext _ _ _)
++
++/-! ## One-binder computation lemmas -/
++
++theorem instOneAt_freeHead {C : Carrier} {Γ χ υ : Shape C}
++    (pχ : ProperSpine χ) {α β : C.Arity}
++    (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
++    (x : Γ ∋ β)
++    (args : (j : C.Binder β) →
++      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
++    instOneAt pχ υ α fill (.ap (.free x) args) =
++      .ap (.free x)
++        (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j)) := by
++  exact instOneAt.eq_1 χ pχ υ α fill β args x
++
++theorem instOneAt_preHead {C : Carrier} {Γ χ υ : Shape C}
++    (pχ : ProperSpine χ) {α β : C.Arity}
++    (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
++    (x : χ ∋ β)
++    (args : (j : C.Binder β) →
++      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
++    instOneAt pχ υ α fill (.ap (.local (localPrefix pχ (υ ∷ α) x)) args) =
++      .ap (.local (localPrefix pχ υ x))
++        (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j)) := by
++  exact instOneAt.eq_2 χ pχ υ α fill β args
++    (localPrefix pχ (υ ∷ α) x) x (LocalSite.classify_pre pχ α x)
++
++theorem instOneAt_tailHead {C : Carrier} {Γ χ υ : Shape C}
++    (pχ : ProperSpine χ) {α β : C.Arity}
++    (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
++    (x : υ ∋ β)
++    (args : (j : C.Binder β) →
++      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
++    instOneAt pχ υ α fill (.ap (.local (localTail pχ (υ ∷ α) (.there x))) args) =
++      .ap (.local (localTail pχ υ x))
++        (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j)) := by
++  exact instOneAt.eq_3 χ pχ υ α fill β args
++    (localTail pχ (υ ∷ α) (.there x)) x (LocalSite.classify_tail pχ α x)
++
++theorem instOneAt_activeHead {C : Carrier} {Γ χ υ : Shape C}
++    (pχ : ProperSpine χ) {α : C.Arity}
++    (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
++    (i : C.Binder α)
++    (args : (j : C.Binder i.arity) →
++      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
++    instOneAt pχ υ α fill (.ap (.local (localTail pχ (υ ∷ α) (.here i))) args) =
++      instOneAt .nil (υ ⧺ χ) i.arity
++        (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j))
++        (renameLocal (localCons (localTail pχ υ) i.arity) (fill i)) := by
++  exact instOneAt.eq_4 χ pχ υ α fill i args
++    (localTail pχ (υ ∷ α) (.here i)) (LocalSite.classify_active pχ α i)
++
++theorem instOneAt_preSiteHead {C : Carrier} {Γ χ υ : Shape C}
++    (pχ : ProperSpine χ) {α β : C.Arity}
++    (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
++    (x : χ ∋ β)
++    (args : (j : C.Binder β) →
++      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
++    instOneAt pχ υ α fill
++        (.ap (.local (LocalSite.embedSource pχ (LocalSite.pre x))) args) =
++      .ap (.local (localPrefix pχ υ x))
++        (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j)) := by
++  change
++    instOneAt pχ υ α fill
++        (.ap (.local (localPrefix pχ (υ ∷ α) x)) args) =
++      .ap (.local (localPrefix pχ υ x))
++        (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j))
++  exact instOneAt_preHead pχ fill x args
++
++theorem instOneAt_tailSiteHead {C : Carrier} {Γ χ υ : Shape C}
++    (pχ : ProperSpine χ) {α β : C.Arity}
++    (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
++    (x : υ ∋ β)
++    (args : (j : C.Binder β) →
++      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
++    instOneAt pχ υ α fill
++        (.ap (.local (LocalSite.embedSource pχ (LocalSite.tail x))) args) =
++      .ap (.local (localTail pχ υ x))
++        (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j)) := by
++  change
++    instOneAt pχ υ α fill
++        (.ap (.local (localTail pχ (υ ∷ α) (.there x))) args) =
++      .ap (.local (localTail pχ υ x))
++        (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j))
++  exact instOneAt_tailHead pχ fill x args
++
++theorem instOneAt_activeSiteHead {C : Carrier} {Γ χ υ : Shape C}
++    (pχ : ProperSpine χ) {α : C.Arity}
++    (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
++    (i : C.Binder α)
++    (args : (j : C.Binder i.arity) →
++      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
++    instOneAt pχ υ α fill
++        (.ap (.local (LocalSite.embedSource pχ (LocalSite.active i))) args) =
++      instOneAt .nil (υ ⧺ χ) i.arity
++        (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j))
++        (renameLocal (localCons (localTail pχ υ) i.arity) (fill i)) := by
++  change
++    instOneAt pχ υ α fill
++        (.ap (.local (localTail pχ (υ ∷ α) (.here i))) args) =
++      instOneAt .nil (υ ⧺ χ) i.arity
++        (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j))
++        (renameLocal (localCons (localTail pχ υ) i.arity) (fill i))
++  exact instOneAt_activeHead pχ fill i args
++
++theorem renameLocal_activeFiller {C : Carrier} {Γ χ υ ν : Shape C}
++    (pχ : ProperSpine χ) (ρ : υ →ʳ ν) {β : C.Arity}
++    (e : ScopedExpr Γ (υ ∷ β)) :
++    renameLocal (localCons (localMapTail pχ ρ) β)
++        (renameLocal (localCons (localTail pχ υ) β) e) =
++      renameLocal (localCons (localTail pχ ν) β)
++        (renameLocal (localCons ρ β) e) := by
++  rw [← renameLocal_comp, ← renameLocal_comp]
++  congr 1
++  ext γ x
++  cases x with
++  | here i => rfl
++  | there x =>
++      exact congrArg ListSlotAt.there (localMapTail_tail pχ ρ x)
++
++theorem instOneAt_congr {C : Carrier} {Γ χ υ : Shape C}
++    (pχ : ProperSpine χ) {α : C.Arity}
++    {fill fill' : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity)}
++    (hfill : ∀ i, fill i = fill' i)
++    {e e' : ScopedExpr Γ ((υ ∷ α) ⧺ χ)}
++    (he : e = e') :
++    instOneAt pχ υ α fill e = instOneAt pχ υ α fill' e' := by
++  subst he
++  congr
++  funext i
++  exact hfill i
++
++private theorem localPrefix_append_right {C : Carrier} {χ ψ υ : Shape C}
++    (pχ : ProperSpine χ) (pψ : ProperSpine ψ)
++    {α : C.Arity} (x : ψ ∋ α) :
++    localPrefix (ProperSpine.append pχ pψ) υ (localPrefix pψ χ x) =
++      localPrefix pψ (υ ⧺ χ) x :=
++  ProperSpine.append_inr_inr pχ pψ υ x
++
++private theorem localPrefix_append_left {C : Carrier} {χ ψ υ : Shape C}
++    (pχ : ProperSpine χ) (pψ : ProperSpine ψ)
++    {α : C.Arity} (x : χ ∋ α) :
++    localPrefix (ProperSpine.append pχ pψ) υ (localTail pψ χ x) =
++      localTail pψ (υ ⧺ χ) (localPrefix pχ υ x) :=
++  ProperSpine.append_inr_inl pχ pψ υ x
++
++private theorem localTail_append {C : Carrier} {χ ψ υ : Shape C}
++    (pχ : ProperSpine χ) (pψ : ProperSpine ψ)
++    {α : C.Arity} (x : υ ∋ α) :
++    localTail (ProperSpine.append pχ pψ) υ x =
++      localTail pψ (υ ⧺ χ) (localTail pχ υ x) :=
++  ProperSpine.append_inl pχ pψ υ x
++
++private theorem renameLocal_extendPassiveFiller {C : Carrier}
++    {Γ χ ψ υ : Shape C}
++    (pχ : ProperSpine χ) (pψ : ProperSpine ψ) {β : C.Arity}
++    (e : ScopedExpr Γ (υ ∷ β)) :
++    renameLocal (localCons (localTail (ProperSpine.append pχ pψ) υ) β) e =
++      renameLocal (localCons (localTail pψ (υ ⧺ χ)) β)
++        (renameLocal (localCons (localTail pχ υ) β) e) := by
++  rw [← renameLocal_comp]
++  congr 1
++  ext γ x
++  cases x with
++  | here i => rfl
++  | there x =>
++      exact congrArg ListSlotAt.there (localTail_append pχ pψ x)
++
++private def extendPassiveRen {C : Carrier} {χ ψ ω base : Shape C}
++    (pψ : ProperSpine ψ) (pω : ProperSpine ω) :
++    (base ⧺ χ) ⧺ ω →ʳ (base ⧺ (χ ⧺ ψ)) ⧺ ω :=
++  localMapTail pω (localTail pψ (base ⧺ χ))
++
++private theorem extendPassiveRen_cons {C : Carrier}
++    {χ ψ ω base : Shape C}
++    (pψ : ProperSpine ψ) (pω : ProperSpine ω) (β : C.Arity) :
++    extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω ∷ β)
++        (base := base) pψ (.cons pω β) =
++      localCons
++        (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++          (base := base) pψ pω)
++        β := by
++  unfold extendPassiveRen
++  rw [localMapTail_cons]
++
++private def passiveInsert {C : Carrier} {χ ψ ω : Shape C}
++    (pψ : ProperSpine ψ) (pω : ProperSpine ω) :
++    χ ⧺ ω →ʳ (χ ⧺ ψ) ⧺ ω :=
++  localMapTail pω (localTail pψ χ)
++
++private theorem localPrefix_extendPassive {C : Carrier}
++    {χ ψ ω base : Shape C}
++    (pχ : ProperSpine χ) (pψ : ProperSpine ψ)
++    (pω : ProperSpine ω)
++    {α : C.Arity} (x : χ ⧺ ω ∋ α) :
++    extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω) (base := base) pψ pω
++        (localPrefix (ProperSpine.append pχ pω) base x)
++      =
++    localPrefix (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++        base (passiveInsert pψ pω x) := by
++  unfold extendPassiveRen
++  rcases ProperSpine.coverEq pω χ x with ⟨xω, rfl⟩ | ⟨xχ, rfl⟩
++  · unfold passiveInsert
++    have hleft :
++        localPrefix (ProperSpine.append pχ pω) base
++            ((ProperSpine.inr pω χ) xω) =
++          localPrefix pω (base ⧺ χ) xω :=
++      ProperSpine.append_inr_inr pχ pω base xω
++    rw [hleft]
++    rw [localMapTail_prefix]
++    have hpass :
++        localMapTail pω (localTail pψ χ)
++            ((ProperSpine.inr pω χ) xω) =
++          (ProperSpine.inr pω (χ ⧺ ψ)) xω :=
++      localMapTail_prefix pω (localTail pψ χ) xω
++    rw [hpass]
++    have hright :
++        localPrefix (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++            base ((ProperSpine.inr pω (χ ⧺ ψ)) xω) =
++          localPrefix pω (base ⧺ (χ ⧺ ψ)) xω :=
++      ProperSpine.append_inr_inr (ProperSpine.append pχ pψ) pω base xω
++    rw [hright]
++  · unfold passiveInsert
++    have hleft :
++        localPrefix (ProperSpine.append pχ pω) base
++            ((ProperSpine.inl pω χ) xχ) =
++          localTail pω (base ⧺ χ) (localPrefix pχ base xχ) :=
++      ProperSpine.append_inr_inl pχ pω base xχ
++    rw [hleft]
++    rw [localMapTail_tail]
++    have hpass :
++        localMapTail pω (localTail pψ χ)
++            ((ProperSpine.inl pω χ) xχ) =
++          localTail pω (χ ⧺ ψ) (localTail pψ χ xχ) :=
++      localMapTail_tail pω (localTail pψ χ) xχ
++    rw [hpass]
++    rw [← localPrefix_append_left pχ pψ (υ := base) xχ]
++    have hright :
++        localPrefix (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++            base (localTail pω (χ ⧺ ψ) (localTail pψ χ xχ)) =
++          localTail pω (base ⧺ (χ ⧺ ψ))
++            (localPrefix (ProperSpine.append pχ pψ) base
++              (localTail pψ χ xχ)) :=
++      ProperSpine.append_inr_inl (ProperSpine.append pχ pψ) pω base
++        (localTail pψ χ xχ)
++    rw [hright]
++
++private theorem localTail_extendPassive {C : Carrier}
++    {χ ψ ω base : Shape C}
++    (pχ : ProperSpine χ) (pψ : ProperSpine ψ)
++    (pω : ProperSpine ω)
++    {α : C.Arity} (x : base ∋ α) :
++    extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω) (base := base) pψ pω
++        (localTail (ProperSpine.append pχ pω) base x)
++      =
++    localTail (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++        base x := by
++  unfold extendPassiveRen
++  rw [localTail_append pχ pω (υ := base) x]
++  rw [localMapTail_tail]
++  rw [← localTail_append pχ pψ (υ := base) x]
++  rw [localTail_append (ProperSpine.append pχ pψ) pω
++    (υ := base) x]
++
++private theorem renameLocal_extendPassiveAtFiller {C : Carrier}
++    {Γ χ ψ ω υ : Shape C}
++    (pχ : ProperSpine χ) (pψ : ProperSpine ψ)
++    (pω : ProperSpine ω) {β : C.Arity}
++    (e : ScopedExpr Γ (υ ∷ β)) :
++    renameLocal
++        (localCons
++          (localTail (ProperSpine.append (ProperSpine.append pχ pψ) pω) υ)
++          β)
++        e =
++      renameLocal
++        (localCons
++          (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω) (base := υ)
++            pψ pω)
++          β)
++        (renameLocal
++          (localCons (localTail (ProperSpine.append pχ pω) υ) β)
++          e) := by
++  rw [← renameLocal_comp]
++  congr 1
++  ext γ x
++  cases x with
++  | here i => rfl
++  | there x =>
++      exact congrArg ListSlotAt.there
++        (localTail_extendPassive pχ pψ pω (base := υ) x).symm
++
++/-! ## Local renaming and one-binder instantiation -/
++
++/-- Argument-descent facade for one-binder instantiation.
++
++When we recurse through the arguments of an application whose local context is
++`(υ ∷ α) ⧺ χ`, the argument lives in `((υ ∷ α) ⧺ χ) ∷ β`.  This is
++definitionally the same shape as `(υ ∷ α) ⧺ (χ ∷ β)`, but this facade states
++the argument-shaped version directly.  That keeps recursive proof calls visibly
++structural instead of asking Lean to rediscover the reassociation each time. -/
++private def instOneAtUnder {C : Carrier} {Γ χ υ : Shape C}
++    (pχ : ProperSpine χ) (α : C.Arity)
++    (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
++    {β : C.Arity}
++    (e : ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ β)) :
++    ScopedExpr Γ ((υ ⧺ χ) ∷ β) :=
++  instOneAt (.cons pχ β) υ α fill e
++
++/-- Renaming the older local tail commutes with one-binder instantiation.
++
++The proof follows the four semantic head cases for the source local context:
++free head, passive-prefix local head, older-tail local head, and active local
++head.  The first three cases preserve the head and use argument recursion.  In
++the active case, the selected filler is smaller in arity, so we use the same
++theorem recursively at that smaller active binder. -/
++theorem renameLocal_instOneAt {C : Carrier} {Γ : Shape C} :
++    {χ υ ν : Shape C} → (pχ : ProperSpine χ) → (ρ : υ →ʳ ν) →
++    (α : C.Arity) →
++    (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity)) →
++    (e : ScopedExpr Γ ((υ ∷ α) ⧺ χ)) →
++    renameLocal (localMapTail pχ ρ) (instOneAt pχ υ α fill e) =
++      instOneAt pχ ν α
++        (fun i => renameLocal (localCons ρ i.arity) (fill i))
++        (renameLocal (localMapTail pχ (localCons ρ α)) e)
++  | χ, υ, ν, pχ, ρ, α, fill, .ap head args => by
++      let fill' : (i : C.Binder α) → ScopedExpr Γ (ν ∷ i.arity) :=
++        fun i => renameLocal (localCons ρ i.arity) (fill i)
++      have hargs : ∀ j,
++          renameLocal (localCons (localMapTail pχ ρ) j.arity)
++              (instOneAtUnder pχ α fill (args j)) =
++            instOneAtUnder pχ α fill'
++              (renameLocal
++                (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++                (args j)) := by
++        intro j
++        unfold instOneAtUnder
++        have h := renameLocal_instOneAt (.cons pχ j.arity) ρ α fill (args j)
++        rw [localMapTail_cons, localMapTail_cons] at h
++        exact h
++      cases head
++      · rename_i x
++        -- Free head: instantiate below the same free head and recurse through
++        -- every binder argument.
++        rw [instOneAt_freeHead pχ fill x args]
++        change
++          .ap (.free x)
++              (fun j =>
++                renameLocal (localCons (localMapTail pχ ρ) j.arity)
++                  (instOneAtUnder pχ α fill (args j))) =
++            instOneAt pχ ν α fill'
++              (.ap (.free x)
++                (fun j =>
++                  renameLocal
++                    (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++                    (args j)))
++        rw [instOneAt_freeHead pχ fill' x
++          (fun j =>
++            renameLocal
++              (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++              (args j))]
++        exact ap_args_congr (.free x) hargs
++      · rename_i x
++        obtain ⟨site, rfl⟩ := LocalSite.cover pχ α x
++        cases site with
++        | pre xχ =>
++            -- Passive-prefix local head: it is newer than the active binder,
++            -- so it is preserved by instantiation and by tail renaming.
++            rw [instOneAt_preSiteHead pχ fill xχ args]
++            change
++              .ap (.local (localMapTail pχ ρ (localPrefix pχ υ xχ)))
++                  (fun j =>
++                    renameLocal (localCons (localMapTail pχ ρ) j.arity)
++                      (instOneAtUnder pχ α fill (args j))) =
++                instOneAt pχ ν α fill'
++                  (.ap
++                    (.local
++                      (localMapTail pχ (localCons ρ α)
++                        (LocalSite.embedSource pχ (LocalSite.pre xχ))))
++                    (fun j =>
++                      renameLocal
++                        (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++                        (args j)))
++            rw [localMapTail_prefix]
++            rw [LocalSite.mapTail_embedSource]
++            change
++              .ap (.local (localPrefix pχ ν xχ))
++                  (fun j =>
++                    renameLocal (localCons (localMapTail pχ ρ) j.arity)
++                      (instOneAtUnder pχ α fill (args j))) =
++                instOneAt pχ ν α fill'
++                  (.ap (.local (LocalSite.embedSource pχ (LocalSite.pre xχ)))
++                    (fun j =>
++                      renameLocal
++                        (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++                        (args j)))
++            rw [instOneAt_preSiteHead pχ fill' xχ
++              (fun j =>
++                renameLocal
++                  (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++                  (args j))]
++            exact ap_args_congr (.local (localPrefix pχ ν xχ)) hargs
++        | tail xυ =>
++            -- Older-tail local head: it survives instantiation, but the
++            -- surrounding local renaming acts on the selected tail slot.
++            rw [instOneAt_tailSiteHead pχ fill xυ args]
++            change
++              .ap (.local (localMapTail pχ ρ (localTail pχ υ xυ)))
++                  (fun j =>
++                    renameLocal (localCons (localMapTail pχ ρ) j.arity)
++                      (instOneAtUnder pχ α fill (args j))) =
++                instOneAt pχ ν α fill'
++                  (.ap
++                    (.local
++                      (localMapTail pχ (localCons ρ α)
++                        (LocalSite.embedSource pχ (LocalSite.tail xυ))))
++                    (fun j =>
++                      renameLocal
++                        (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++                        (args j)))
++            rw [localMapTail_tail]
++            rw [LocalSite.mapTail_embedSource]
++            change
++              .ap (.local (localTail pχ ν (ρ xυ)))
++                  (fun j =>
++                    renameLocal (localCons (localMapTail pχ ρ) j.arity)
++                      (instOneAtUnder pχ α fill (args j))) =
++                instOneAt pχ ν α fill'
++                  (.ap (.local (LocalSite.embedSource pχ (LocalSite.tail (ρ xυ))))
++                    (fun j =>
++                      renameLocal
++                        (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++                        (args j)))
++            rw [instOneAt_tailSiteHead pχ fill' (ρ xυ)
++              (fun j =>
++                renameLocal
++                  (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++                  (args j))]
++            exact ap_args_congr (.local (localTail pχ ν (ρ xυ))) hargs
++        | active i =>
++            -- Active local head: instantiation fires the selected filler.  We
++            -- then commute the outer renaming through that smaller
++            -- one-binder instantiation, and finish by the active-filler
++            -- renaming equation plus argument recursion.
++            rw [instOneAt_activeSiteHead pχ fill i args]
++            change
++              renameLocal (localMapTail pχ ρ)
++                (instOneAt .nil (υ ⧺ χ) i.arity
++                  (fun j => instOneAtUnder pχ α fill (args j))
++                  (renameLocal (localCons (localTail pχ υ) i.arity)
++                    (fill i))) =
++                instOneAt pχ ν α fill'
++                  (.ap
++                    (.local
++                      (localMapTail pχ (localCons ρ α)
++                        (LocalSite.embedSource pχ (LocalSite.active i))))
++                    (fun j =>
++                      renameLocal
++                        (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++                        (args j)))
++            change
++              renameLocal (localMapTail .nil (localMapTail pχ ρ))
++                (instOneAt .nil (υ ⧺ χ) i.arity
++                  (fun j => instOneAtUnder pχ α fill (args j))
++                  (renameLocal (localCons (localTail pχ υ) i.arity)
++                    (fill i))) =
++                instOneAt pχ ν α fill'
++                  (.ap
++                    (.local
++                      (localMapTail pχ (localCons ρ α)
++                        (LocalSite.embedSource pχ (LocalSite.active i))))
++                    (fun j =>
++                      renameLocal
++                        (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++                        (args j)))
++            rw [renameLocal_instOneAt .nil (localMapTail pχ ρ)
++              i.arity
++              (fun j => instOneAtUnder pχ α fill (args j))
++              (renameLocal (localCons (localTail pχ υ) i.arity) (fill i))]
++            rw [LocalSite.mapTail_embedSource]
++            change
++              instOneAt .nil (ν ⧺ χ) i.arity
++                  (fun j =>
++                    renameLocal (localCons (localMapTail pχ ρ) j.arity)
++                      (instOneAtUnder pχ α fill (args j)))
++                  (renameLocal (localCons (localMapTail pχ ρ) i.arity)
++                    (renameLocal (localCons (localTail pχ υ) i.arity)
++                      (fill i))) =
++                instOneAt pχ ν α fill'
++                  (.ap (.local (LocalSite.embedSource pχ (LocalSite.active i)))
++                    (fun j =>
++                      renameLocal
++                        (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++                        (args j)))
++            rw [instOneAt_activeSiteHead pχ fill' i
++              (fun j =>
++                renameLocal
++                  (localCons (localMapTail pχ (localCons ρ α)) j.arity)
++                  (args j))]
++            exact instOneAt_congr .nil hargs
++              (renameLocal_activeFiller pχ ρ (fill i))
++termination_by χ υ ν _ _ α _ e =>
++  (α, (⟨(υ ∷ α) ⧺ χ, e⟩ : Σ τ : Shape C, ScopedExpr Γ τ))
++decreasing_by
++  all_goals
++    first
++      | exact Prod.Lex.left _ _ ⟨i, rfl⟩
++      | exact Prod.Lex.right _ (Subterm.of_arg_ext _ _ _)
++
++/-! ## Passive extension and one-binder instantiation -/
++
++private theorem instOneAt_extendPassiveAt {C : Carrier} {Γ : Shape C} :
++    {χ ψ ω υ : Shape C} →
++    (pχ : ProperSpine χ) → (pψ : ProperSpine ψ) →
++    (pω : ProperSpine ω) → (α : C.Arity) →
++    (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity)) →
++    (e : ScopedExpr Γ (((υ ∷ α) ⧺ χ) ⧺ ω)) →
++    instOneAt (ProperSpine.append (ProperSpine.append pχ pψ) pω) υ α fill
++        (renameLocal
++          (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++            (base := υ ∷ α) pψ pω) e)
++      =
++      renameLocal
++        (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++          (base := υ) pψ pω)
++        (instOneAt (ProperSpine.append pχ pω) υ α fill e)
++  | χ, ψ, ω, υ, pχ, pψ, pω, α, fill, .ap head args => by
++      have hargs : ∀ j,
++          instOneAt
++              (ProperSpine.append (ProperSpine.append pχ pψ)
++                (.cons pω j.arity))
++              υ α fill
++              (renameLocal
++                (localCons
++                  (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                    (base := υ ∷ α) pψ pω)
++                  j.arity)
++                (args j))
++            =
++            renameLocal
++              (localCons
++                (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                  (base := υ) pψ pω)
++                j.arity)
++              (instOneAt (ProperSpine.append pχ (.cons pω j.arity))
++                υ α fill (args j)) := by
++        intro j
++        have h :=
++          instOneAt_extendPassiveAt pχ pψ (.cons pω j.arity) α fill
++            (args j)
++        rw [extendPassiveRen_cons, extendPassiveRen_cons] at h
++        exact h
++      cases head
++      · rename_i x
++        -- Free head: passive extension only changes the local telescope, so
++        -- both routes preserve the head and recurse through arguments.
++        change
++          instOneAt (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++              υ α fill
++              (.ap (.free x)
++                (fun j =>
++                  renameLocal
++                    (localCons
++                      (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                        (base := υ ∷ α) pψ pω)
++                      j.arity)
++                    (args j))) =
++            renameLocal
++              (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                (base := υ) pψ pω)
++              (instOneAt (ProperSpine.append pχ pω) υ α fill
++                (.ap (.free x) args))
++        rw [instOneAt_freeHead
++          (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++          fill x
++          (fun j =>
++            renameLocal
++              (localCons
++                (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                  (base := υ ∷ α) pψ pω)
++                j.arity)
++              (args j))]
++        rw [instOneAt_freeHead (ProperSpine.append pχ pω) fill x args]
++        exact ap_args_congr (.free x) hargs
++      · rename_i x
++        obtain ⟨site, rfl⟩ :=
++          LocalSite.cover (ProperSpine.append pχ pω) α x
++        cases site with
++        | pre y =>
++            -- Passive-prefix head: the old passive slot is transported by
++            -- `passiveInsert`, then preserved by both instantiations.
++            change
++              instOneAt (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++                  υ α fill
++                  (.ap
++                    (.local
++                      (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                        (base := υ ∷ α) pψ pω
++                        (localPrefix (ProperSpine.append pχ pω)
++                          (υ ∷ α) y)))
++                    (fun j =>
++                      renameLocal
++                        (localCons
++                          (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                            (base := υ ∷ α) pψ pω)
++                          j.arity)
++                        (args j))) =
++                renameLocal
++                  (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                    (base := υ) pψ pω)
++                  (instOneAt (ProperSpine.append pχ pω) υ α fill
++                    (.ap
++                      (.local
++                        (localPrefix (ProperSpine.append pχ pω)
++                          (υ ∷ α) y))
++                      args))
++            rw [localPrefix_extendPassive pχ pψ pω (base := υ ∷ α) y]
++            rw [instOneAt_preHead
++              (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++              fill (passiveInsert pψ pω y)
++              (fun j =>
++                renameLocal
++                  (localCons
++                    (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                      (base := υ ∷ α) pψ pω)
++                    j.arity)
++                  (args j))]
++            rw [instOneAt_preHead (ProperSpine.append pχ pω) fill y args]
++            change
++              ScopedExpr.ap
++                  (.local
++                    (localPrefix
++                      (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++                      υ (passiveInsert pψ pω y)))
++                  (fun j =>
++                    instOneAt
++                      (ProperSpine.append (ProperSpine.append pχ pψ)
++                        (.cons pω j.arity))
++                      υ α fill
++                      (renameLocal
++                        (localCons
++                          (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                            (base := υ ∷ α) pψ pω)
++                          j.arity)
++                        (args j))) =
++                ScopedExpr.ap
++                  (.local
++                    (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                      (base := υ) pψ pω
++                      (localPrefix (ProperSpine.append pχ pω) υ y)))
++                  (fun j =>
++                    renameLocal
++                      (localCons
++                        (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                          (base := υ) pψ pω)
++                        j.arity)
++                      (instOneAt (ProperSpine.append pχ (.cons pω j.arity))
++                        υ α fill (args j)))
++            rw [localPrefix_extendPassive pχ pψ pω (base := υ) y]
++            exact ap_args_congr
++              (.local
++                (localPrefix
++                  (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++                  υ (passiveInsert pψ pω y)))
++              hargs
++        | tail xυ =>
++            -- Older-tail head: inserting passive binders leaves it an
++            -- older-tail head.
++            change
++              instOneAt (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++                  υ α fill
++                  (.ap
++                    (.local
++                      (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                        (base := υ ∷ α) pψ pω
++                        (localTail (ProperSpine.append pχ pω)
++                          (υ ∷ α) (.there xυ))))
++                    (fun j =>
++                      renameLocal
++                        (localCons
++                          (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                            (base := υ ∷ α) pψ pω)
++                          j.arity)
++                        (args j))) =
++                renameLocal
++                  (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                    (base := υ) pψ pω)
++                  (instOneAt (ProperSpine.append pχ pω) υ α fill
++                    (.ap
++                      (.local
++                        (localTail (ProperSpine.append pχ pω)
++                          (υ ∷ α) (.there xυ)))
++                      args))
++            rw [localTail_extendPassive pχ pψ pω (base := υ ∷ α)
++              (.there xυ)]
++            rw [instOneAt_tailHead
++              (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++              fill xυ
++              (fun j =>
++                renameLocal
++                  (localCons
++                    (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                      (base := υ ∷ α) pψ pω)
++                    j.arity)
++                  (args j))]
++            rw [instOneAt_tailHead (ProperSpine.append pχ pω) fill xυ args]
++            change
++              ScopedExpr.ap
++                  (.local
++                    (localTail
++                      (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++                      υ xυ))
++                  (fun j =>
++                    instOneAt
++                      (ProperSpine.append (ProperSpine.append pχ pψ)
++                        (.cons pω j.arity))
++                      υ α fill
++                      (renameLocal
++                        (localCons
++                          (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                            (base := υ ∷ α) pψ pω)
++                          j.arity)
++                        (args j))) =
++                ScopedExpr.ap
++                  (.local
++                    (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                      (base := υ) pψ pω
++                      (localTail (ProperSpine.append pχ pω) υ xυ)))
++                  (fun j =>
++                    renameLocal
++                      (localCons
++                        (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                          (base := υ) pψ pω)
++                        j.arity)
++                      (instOneAt (ProperSpine.append pχ (.cons pω j.arity))
++                        υ α fill (args j)))
++            rw [localTail_extendPassive pχ pψ pω (base := υ) xυ]
++            exact ap_args_congr
++              (.local
++                (localTail
++                  (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++                  υ xυ))
++              hargs
++        | active i =>
++            -- Active head: after both routes fire the same filler, the
++            -- remaining equality is renaming-through-instantiation for the
++            -- smaller active arity plus passive-extension of the filler
++            -- weakening.
++            change
++              instOneAt (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++                  υ α fill
++                  (.ap
++                    (.local
++                      (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                        (base := υ ∷ α) pψ pω
++                        (localTail (ProperSpine.append pχ pω)
++                          (υ ∷ α) (.here i))))
++                    (fun j =>
++                      renameLocal
++                        (localCons
++                          (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                            (base := υ ∷ α) pψ pω)
++                          j.arity)
++                        (args j))) =
++                renameLocal
++                  (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                    (base := υ) pψ pω)
++                  (instOneAt (ProperSpine.append pχ pω) υ α fill
++                    (.ap
++                      (.local
++                        (localTail (ProperSpine.append pχ pω)
++                          (υ ∷ α) (.here i)))
++                      args))
++            rw [localTail_extendPassive pχ pψ pω (base := υ ∷ α)
++              (.here i)]
++            rw [instOneAt_activeHead
++              (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++              fill i
++              (fun j =>
++                renameLocal
++                  (localCons
++                    (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                      (base := υ ∷ α) pψ pω)
++                    j.arity)
++                  (args j))]
++            rw [instOneAt_activeHead (ProperSpine.append pχ pω) fill i args]
++            change
++              instOneAt .nil (((υ ⧺ χ) ⧺ ψ) ⧺ ω) i.arity
++                  (fun j =>
++                    instOneAt
++                      (ProperSpine.append (ProperSpine.append pχ pψ)
++                        (.cons pω j.arity))
++                      υ α fill
++                      (renameLocal
++                        (localCons
++                          (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                            (base := υ ∷ α) pψ pω)
++                          j.arity)
++                        (args j)))
++                  (renameLocal
++                    (localCons
++                      (localTail
++                        (ProperSpine.append (ProperSpine.append pχ pψ) pω)
++                        υ)
++                      i.arity)
++                    (fill i)) =
++                renameLocal
++                  (localMapTail .nil
++                    (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                      (base := υ) pψ pω))
++                  (instOneAt .nil ((υ ⧺ χ) ⧺ ω) i.arity
++                    (fun j =>
++                      instOneAt (ProperSpine.append pχ (.cons pω j.arity))
++                        υ α fill (args j))
++                    (renameLocal
++                      (localCons
++                        (localTail (ProperSpine.append pχ pω) υ)
++                        i.arity)
++                      (fill i)))
++            rw [renameLocal_instOneAt .nil
++              (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
++                (base := υ) pψ pω)
++              i.arity
++              (fun j =>
++                instOneAt (ProperSpine.append pχ (.cons pω j.arity))
++                  υ α fill (args j))
++              (renameLocal
++                (localCons (localTail (ProperSpine.append pχ pω) υ)
++                  i.arity)
++                (fill i))]
++            exact instOneAt_congr .nil hargs
++              (renameLocal_extendPassiveAtFiller pχ pψ pω (fill i))
++termination_by χ ψ ω υ _ _ _ α _ e =>
++  (α, (⟨((υ ∷ α) ⧺ χ) ⧺ ω, e⟩ :
++    Σ τ : Shape C, ScopedExpr Γ τ))
++decreasing_by
++  all_goals
++    first
++      | exact Prod.Lex.left _ _ ⟨i, rfl⟩
++      | exact Prod.Lex.right _ (Subterm.of_arg_ext _ _ _)
++
++private theorem instOneAt_extendPassive {C : Carrier} {Γ χ ψ υ : Shape C}
++    (pχ : ProperSpine χ) (pψ : ProperSpine ψ) (α : C.Arity)
++    (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
++    (e : ScopedExpr Γ ((υ ∷ α) ⧺ χ)) :
++    instOneAt (ProperSpine.append pχ pψ) υ α fill
++        (renameLocal (localTail pψ ((υ ∷ α) ⧺ χ)) e)
++      =
++      renameLocal (localTail pψ (υ ⧺ χ))
++        (instOneAt pχ υ α fill e) := by
++  exact instOneAt_extendPassiveAt pχ pψ .nil α fill e
++
++private theorem instOneAt_extendPassiveUnder {C : Carrier} {Γ χ ψ υ : Shape C}
++    (pχ : ProperSpine χ) (pψ : ProperSpine ψ) (α : C.Arity)
++    (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
++    {β : C.Arity}
++    (e : ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ β)) :
++    instOneAt (.cons (ProperSpine.append pχ pψ) β) υ α fill
++        (renameLocal (localCons (localTail pψ ((υ ∷ α) ⧺ χ)) β) e)
++      =
++      renameLocal (localCons (localTail pψ (υ ⧺ χ)) β)
++        (instOneAtUnder pχ α fill e) := by
++  unfold instOneAtUnder
++  have h := instOneAt_extendPassiveAt pχ pψ (.cons .nil β) α fill e
++  rw [extendPassiveRen_cons, extendPassiveRen_cons] at h
++  exact h
++
++/-! ## Passive insertion and contraction -/
++
++/-- Insert a single active binder just below the passive suffix `ψ`.
++
++This is the renaming used when an expression that does not mention `β` is viewed
++in a context where `β` has been added as an older local binder. -/
++private def insertActiveRen {C : Carrier} {ψ base : Shape C}
++    (pψ : ProperSpine ψ) (β : C.Arity) : base ⧺ ψ →ʳ (base ∷ β) ⧺ ψ :=
++  localMapTail pψ (localTail (.cons .nil β) base)
++
++private theorem insertActiveRen_cons {C : Carrier} {ψ base : Shape C}
++    (pψ : ProperSpine ψ) (β γ : C.Arity) :
++    insertActiveRen (.cons pψ γ) (base := base) β =
++      localCons (insertActiveRen pψ (base := base) β) γ := by
++  unfold insertActiveRen
++  rw [localMapTail_cons]
++
++private theorem insertActiveRen_prefix {C : Carrier} {ψ base : Shape C}
++    (pψ : ProperSpine ψ) (β : C.Arity) {γ : C.Arity} (x : ψ ∋ γ) :
++    insertActiveRen pψ (base := base) β (localPrefix pψ base x) =
++      localPrefix pψ (base ∷ β) x := by
++  unfold insertActiveRen
++  rw [localMapTail_prefix]
++
++private theorem insertActiveRen_tail {C : Carrier} {ψ base : Shape C}
++    (pψ : ProperSpine ψ) (β : C.Arity) {γ : C.Arity} (x : base ∋ γ) :
++    insertActiveRen pψ (base := base) β (localTail pψ base x) =
++      localTail pψ (base ∷ β) (.there x) := by
++  unfold insertActiveRen
++  rw [localMapTail_tail]
++  unfold localTail
++  rw [ProperSpine.inl_cons]
++  rw [ProperSpine.inl_nil]
++  rw [Renaming.id_apply]
++  rfl
++
++private theorem insertActiveRen_inr {C : Carrier} {ψ base : Shape C}
++    (pψ : ProperSpine ψ) (β : C.Arity) {γ : C.Arity} (x : ψ ∋ γ) :
++    insertActiveRen pψ (base := base) β ((ProperSpine.inr pψ base) x) =
++      (ProperSpine.inr pψ (base ∷ β)) x := by
++  exact insertActiveRen_prefix pψ β x
++
++private theorem insertActiveRen_inl {C : Carrier} {ψ base : Shape C}
++    (pψ : ProperSpine ψ) (β : C.Arity) {γ : C.Arity} (x : base ∋ γ) :
++    insertActiveRen pψ (base := base) β ((ProperSpine.inl pψ base) x) =
++      (ProperSpine.inl pψ (base ∷ β)) (.there x) := by
++  exact insertActiveRen_tail pψ β x
++
++/-- If `β` was introduced only by weakening, substituting the active `β` does
++nothing except remove that weakening.
++
++There is deliberately no active-`β` local-head branch: after `insertActiveRen`,
++every local head comes either from the passive suffix `ψ` or from the older base.
++This is the scoped analogue of the “absence” part of the old diamond proof. -/
++private theorem instOneAt_contractInserted {C : Carrier} {Γ : Shape C} :
++    {ψ base : Shape C} → (pψ : ProperSpine ψ) → (β : C.Arity) →
++    (fillβ : (j : C.Binder β) → ScopedExpr Γ (base ∷ j.arity)) →
++    (e : ScopedExpr Γ (base ⧺ ψ)) →
++    instOneAt pψ base β fillβ
++        (renameLocal (insertActiveRen pψ (base := base) β) e) = e
++  | ψ, base, pψ, β, fillβ, .ap head args => by
++      have hargs : ∀ j,
++          instOneAt (.cons pψ j.arity) base β fillβ
++              (renameLocal
++                (localCons (insertActiveRen pψ (base := base) β) j.arity)
++                (args j)) = args j := by
++        intro j
++        have h := instOneAt_contractInserted (.cons pψ j.arity) β fillβ
++          (args j)
++        rw [insertActiveRen_cons] at h
++        exact h
++      cases head with
++      | free x =>
++          -- Free head: insertion and contraction only affect local slots.
++          simp only [renameLocal, ScopedHead.renameLocal]
++          rw [instOneAt_freeHead pψ fillβ x]
++          exact ap_args_congr (.free x) hargs
++      | «local» x =>
++          rcases ProperSpine.coverEq pψ base x with ⟨xψ, rfl⟩ | ⟨xbase, rfl⟩
++          · -- Passive head: it remains passive after insertion.
++            simp only [renameLocal, ScopedHead.renameLocal]
++            rw [insertActiveRen_inr]
++            change
++              instOneAt pψ base β fillβ
++                  (.ap (.local (localPrefix pψ (base ∷ β) xψ))
++                    (fun j =>
++                      renameLocal
++                        (localCons (insertActiveRen pψ (base := base) β) j.arity)
++                        (args j))) =
++                .ap (.local (localPrefix pψ base xψ)) args
++            rw [instOneAt_preHead pψ fillβ xψ]
++            exact ap_args_congr (.local (localPrefix pψ base xψ)) hargs
++          · -- Older-tail head: insertion moves it below `β`, so contraction
++            -- preserves it as an older-tail head.
++            simp only [renameLocal, ScopedHead.renameLocal]
++            rw [insertActiveRen_inl]
++            change
++              instOneAt pψ base β fillβ
++                  (.ap (.local (localTail pψ (base ∷ β) (.there xbase)))
++                    (fun j =>
++                      renameLocal
++                        (localCons (insertActiveRen pψ (base := base) β) j.arity)
++                        (args j))) =
++                .ap (.local (localTail pψ base xbase)) args
++            rw [instOneAt_tailHead pψ fillβ xbase]
++            exact ap_args_congr (.local (localTail pψ base xbase)) hargs
++termination_by ψ base _ β _ e =>
++  (β, (⟨base ⧺ ψ, e⟩ : Σ τ : Shape C, ScopedExpr Γ τ))
++decreasing_by
++  all_goals
++    exact Prod.Lex.right _ (Subterm.of_arg_ext _ _ _)
++
++private theorem instOneAt_contractInsertedUnder {C : Carrier} {Γ ψ base : Shape C}
++    (pψ : ProperSpine ψ) (β : C.Arity)
++    (fillβ : (j : C.Binder β) → ScopedExpr Γ (base ∷ j.arity))
++    {γ : C.Arity} (e : ScopedExpr Γ ((base ⧺ ψ) ∷ γ)) :
++    instOneAt (.cons pψ γ) base β fillβ
++        (renameLocal
++          (localCons (insertActiveRen pψ (base := base) β) γ)
++          e) = e := by
++  have h := instOneAt_contractInserted (.cons pψ γ) β fillβ e
++  rw [insertActiveRen_cons] at h
++  exact h
++
++end ScopedExpr
+diff --git a/HigherRankSyntax/HigherRankSyntax/Subst.lean b/HigherRankSyntax/HigherRankSyntax/Subst.lean
+index 428abde..dde15f6 100644
+--- a/HigherRankSyntax/HigherRankSyntax/Subst.lean
++++ b/HigherRankSyntax/HigherRankSyntax/Subst.lean
+@@ -4,16 +4,24 @@ import HigherRankSyntax.ProperTele
+ /-!
+ # Substitution
+ 
+-`Subst C pre dom cod` (with `[Proper dom]` `[Proper cod]` in
++The public substitution type is `Subst C Γ Δ`: a full Kleisli environment
++assigning each source slot in `Γ` an expression over the target `Δ`.
++
++The prefix-preserving engine `PrefixSubst C pre dom cod` remains as the
++hereditary-instantiation backend.  It is the form needed when one application
++head fires: the target context is preserved as a prefix while only the freshly
++opened binder is active.
++
++`PrefixSubst C pre dom cod` (with `[Proper dom]` `[Proper cod]` in
+ scope) carries one field, `sub`, mapping each `dom`-slot to an
+ expression in `pre ⧺ cod`.
+ 
+-`Subst.act σ τ` applies the substitution `σ` to an expression at depth
++`PrefixSubst.act σ τ` applies the substitution `σ` to an expression at depth
+ `τ : Shape C` (with `[Proper τ]`).  It dispatches each head slot with
+-`Proper.classify` (τ-side vs. below τ) and then `Subst.classifyDom`
++`Proper.classify` (τ-side vs. below τ) and then `PrefixSubst.classifyDom`
+ (pre vs. dom); pre-slots reinject into the target via `Proper.inl`.
+ 
+-`Subst.classifyDom` and `Subst.weakenCod` are *projections* through
++`PrefixSubst.classifyDom` and `PrefixSubst.weakenCod` are *projections* through
+ the `[Proper dom]` and `[Proper cod]` instances, not struct
+ fields — they are determined by the structural data on dom and cod.
+ -/
+@@ -30,7 +38,7 @@ theorem SlotAt.subWitness {C : Carrier} :
+       exact ⟨β, List.Mem.tail _ h_mem, h_sub⟩
+ 
+ /-- One-step WF relation on `List C.Arity`: `[β] ≺ dom` iff `β` is a sub-arity of
+-some `αⱼ ∈ dom`.  Used as the first component of `Subst.act`'s lex termination. -/
++some `αⱼ ∈ dom`.  Used as the first component of `PrefixSubst.act`'s lex termination. -/
+ inductive DomLt {C : Carrier} : List C.Arity → List C.Arity → Prop
+   | step {dom : List C.Arity} (αⱼ : C.Arity) (h_in : αⱼ ∈ dom)
+          (β : C.Arity) (h_sub : Carrier.Sub β αⱼ) :
+@@ -65,14 +73,14 @@ instance (C : Carrier) : WellFoundedRelation (DomMeasure C) where
+   wf := InvImage.wf DomMeasure.unwrap DomLt.wf
+ 
+ /-- Dispatching a slot of `pre ⧺ dom` into pre vs dom.  Returned by
+-`Subst.classifyDom`. -/
++`PrefixSubst.classifyDom`. -/
+ inductive PreOrDom {C : Carrier} (pre dom : Shape C) (α : C.Arity) : Type where
+   /-- The slot belongs to `pre`. -/
+   | pre (q : pre ∋ α)
+   /-- The slot belongs to `dom`. -/
+   | dom (q : dom ∋ α)
+ 
+-/-- Three-way dispatch of a slot of `pre ⧺ dom ⧺ τ`, used by `Subst.act`.
++/-- Three-way dispatch of a slot of `pre ⧺ dom ⧺ τ`, used by `PrefixSubst.act`.
+ The cases record whether the head is already under the current depth `τ`,
+ is a substitutable `dom`-slot, or is an untouched `pre`-slot. -/
+ inductive SubstSite {C : Carrier} (pre dom τ : Shape C) (α : C.Arity) : Type where
+@@ -86,25 +94,25 @@ inductive SubstSite {C : Carrier} (pre dom τ : Shape C) (α : C.Arity) : Type w
+ /-- A substitution record.  Source shape is `pre ⧺ dom`, target is
+ `pre ⧺ cod`.  The `sub` field is the only data; slot dispatch and
+ pre-weakening are derived from `[Proper dom]` and `[Proper cod]`
+-at the operations that need them (see `Subst.classifyDom`,
+-`Subst.weakenCod`, `Subst.act`). -/
+-structure Subst (C : Carrier) (pre dom cod : Shape C) : Type where
++at the operations that need them (see `PrefixSubst.classifyDom`,
++`PrefixSubst.weakenCod`, `PrefixSubst.act`). -/
++structure PrefixSubst (C : Carrier) (pre dom cod : Shape C) : Type where
+   sub : ∀ {α : C.Arity}, dom ∋ α → Expr (pre ⧺ cod ∷ α)
+ 
+ instance {C : Carrier} {pre dom cod : Shape C} :
+-    CoeFun (Subst C pre dom cod)
++    CoeFun (PrefixSubst C pre dom cod)
+       (fun _ => ∀ {α : C.Arity}, dom ∋ α → Expr (pre ⧺ cod ∷ α)) :=
+-  ⟨Subst.sub⟩
++  ⟨PrefixSubst.sub⟩
+ 
+ /-- Dispatching a `pre ⧺ dom`-slot into pre vs dom, via `[Proper dom]`. -/
+-def Subst.classifyDom {C : Carrier} {pre dom cod : Shape C}
+-    [Proper dom] (_σ : Subst C pre dom cod)
++def PrefixSubst.classifyDom {C : Carrier} {pre dom cod : Shape C}
++    [Proper dom] (_σ : PrefixSubst C pre dom cod)
+     {α : C.Arity} (p : pre ⧺ dom ∋ α) : PreOrDom pre dom α :=
+   Proper.classify pre _ p PreOrDom.dom PreOrDom.pre
+ 
+ /-- Dispatching a `pre ⧺ dom ⧺ τ`-slot into its mathematical source:
+ current depth, substitution domain, or untouched prefix. -/
+-def Subst.classifySite {C : Carrier} {pre dom τ : Shape C}
++def PrefixSubst.classifySite {C : Carrier} {pre dom τ : Shape C}
+     [Proper dom] [Proper τ]
+     {α : C.Arity} (p : pre ⧺ dom ⧺ τ ∋ α) : SubstSite pre dom τ α :=
+   Proper.classify (pre ⧺ dom) _ p
+@@ -115,7 +123,7 @@ def Subst.classifySite {C : Carrier} {pre dom τ : Shape C}
+         SubstSite.pre)
+ 
+ /-- Embed a classified source site back into `pre ⧺ dom ⧺ τ`. -/
+-def Subst.embedSource {C : Carrier} {pre dom τ : Shape C}
++def PrefixSubst.embedSource {C : Carrier} {pre dom τ : Shape C}
+     [Proper dom] [Proper τ] {α : C.Arity} :
+     SubstSite pre dom τ α → pre ⧺ dom ⧺ τ ∋ α
+   | .tau x => (Proper.inr (pre ⧺ dom)) x
+@@ -123,12 +131,12 @@ def Subst.embedSource {C : Carrier} {pre dom τ : Shape C}
+   | .pre x => (Proper.inl (pre ⧺ dom)) ((Proper.inl pre) x)
+ 
+ /-- Every source slot is the embedding of a unique-looking `SubstSite`.
+-This is the proof-facing inverse of `Subst.classifySite`; use it to replace
++This is the proof-facing inverse of `PrefixSubst.classifySite`; use it to replace
+ nested `Proper.cover` splits. -/
+-theorem Subst.coverSite {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.coverSite {C : Carrier} {pre dom τ : Shape C}
+     [Proper dom] [Proper τ] {α : C.Arity}
+     (p : pre ⧺ dom ⧺ τ ∋ α) :
+-    ∃ site : SubstSite pre dom τ α, p = Subst.embedSource site
++    ∃ site : SubstSite pre dom τ α, p = PrefixSubst.embedSource site
+   := by
+   rcases Proper.cover (pre ⧺ dom) p with ⟨x, h_x⟩ | ⟨y, h_y⟩
+   · exact ⟨.tau x, h_x⟩
+@@ -139,109 +147,109 @@ theorem Subst.coverSite {C : Carrier} {pre dom τ : Shape C}
+       exact ⟨.pre w, by rw [h_w]; rfl⟩
+ 
+ /-- Classifying an embedded `τ`-site returns the same `τ`-site. -/
+-theorem Subst.classifySite_tau {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.classifySite_tau {C : Carrier} {pre dom τ : Shape C}
+     [Proper dom] [Proper τ] {α : C.Arity} (x : τ ∋ α) :
+-    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
+-      (Subst.embedSource (.tau x)) = SubstSite.tau x
++    PrefixSubst.classifySite (pre := pre) (dom := dom) (τ := τ)
++      (PrefixSubst.embedSource (.tau x)) = SubstSite.tau x
+   := by
+-  unfold Subst.classifySite Subst.embedSource
++  unfold PrefixSubst.classifySite PrefixSubst.embedSource
+   rw [Proper.classify_inr]
+ 
+ /-- Classifying an embedded `dom`-site returns the same `dom`-site. -/
+-theorem Subst.classifySite_dom {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.classifySite_dom {C : Carrier} {pre dom τ : Shape C}
+     [Proper dom] [Proper τ] {α : C.Arity} (x : dom ∋ α) :
+-    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
+-      (Subst.embedSource (.dom x)) = SubstSite.dom x
++    PrefixSubst.classifySite (pre := pre) (dom := dom) (τ := τ)
++      (PrefixSubst.embedSource (.dom x)) = SubstSite.dom x
+   := by
+-  unfold Subst.classifySite Subst.embedSource
++  unfold PrefixSubst.classifySite PrefixSubst.embedSource
+   rw [Proper.classify_inl]
+   rw [Proper.classify_inr]
+ 
+ /-- Classifying an embedded `pre`-site returns the same `pre`-site. -/
+-theorem Subst.classifySite_pre {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.classifySite_pre {C : Carrier} {pre dom τ : Shape C}
+     [Proper dom] [Proper τ] {α : C.Arity} (x : pre ∋ α) :
+-    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
+-      (Subst.embedSource (.pre x)) = SubstSite.pre x
++    PrefixSubst.classifySite (pre := pre) (dom := dom) (τ := τ)
++      (PrefixSubst.embedSource (.pre x)) = SubstSite.pre x
+   := by
+-  unfold Subst.classifySite Subst.embedSource
++  unfold PrefixSubst.classifySite PrefixSubst.embedSource
+   rw [Proper.classify_inl]
+   rw [Proper.classify_inl]
+ 
+ /-- Classifying a concrete right-injected `τ` head returns `SubstSite.tau`. -/
+-theorem Subst.classifySite_inr {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.classifySite_inr {C : Carrier} {pre dom τ : Shape C}
+     [Proper dom] [Proper τ] {α : C.Arity} (x : τ ∋ α) :
+-    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
++    PrefixSubst.classifySite (pre := pre) (dom := dom) (τ := τ)
+       ((Proper.inr (pre ⧺ dom)) x) = SubstSite.tau x
+   := by
+-  unfold Subst.classifySite
++  unfold PrefixSubst.classifySite
+   rw [Proper.classify_inr]
+ 
+ /-- Classifying a concrete dom head returns `SubstSite.dom`. -/
+-theorem Subst.classifySite_inl_dom {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.classifySite_inl_dom {C : Carrier} {pre dom τ : Shape C}
+     [Proper dom] [Proper τ] {α : C.Arity} (x : dom ∋ α) :
+-    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
++    PrefixSubst.classifySite (pre := pre) (dom := dom) (τ := τ)
+       ((Proper.inl (pre ⧺ dom)) ((Proper.inr pre) x)) = SubstSite.dom x
+   := by
+-  unfold Subst.classifySite
++  unfold PrefixSubst.classifySite
+   rw [Proper.classify_inl]
+   rw [Proper.classify_inr]
+ 
+ /-- Classifying a concrete pre head returns `SubstSite.pre`. -/
+-theorem Subst.classifySite_inl_pre {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.classifySite_inl_pre {C : Carrier} {pre dom τ : Shape C}
+     [Proper dom] [Proper τ] {α : C.Arity} (x : pre ∋ α) :
+-    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
++    PrefixSubst.classifySite (pre := pre) (dom := dom) (τ := τ)
+       ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) x)) = SubstSite.pre x
+   := by
+-  unfold Subst.classifySite
++  unfold PrefixSubst.classifySite
+   rw [Proper.classify_inl]
+   rw [Proper.classify_inl]
+ 
+ /-- Embedding `pre` into `pre ⧺ cod`, via `[Proper cod]`. -/
+-def Subst.weakenCod {C : Carrier} {pre dom cod : Shape C}
+-    [Proper cod] (_σ : Subst C pre dom cod) :
++def PrefixSubst.weakenCod {C : Carrier} {pre dom cod : Shape C}
++    [Proper cod] (_σ : PrefixSubst C pre dom cod) :
+     pre →ʳ pre ⧺ cod :=
+   Proper.inl pre
+ 
+-/-! ### Instantiation Subst
++/-! ### Instantiation PrefixSubst
+ 
+-The `Subst.inst` constructor turns a "kit" (one expression per binder of an
+-arity α, in some target context) into a Subst with domain `⌊α⌋`.
+-Used inside `Subst.act`'s dom branch to act on a substituted expression
++The `PrefixSubst.inst` constructor turns a "kit" (one expression per binder of an
++arity α, in some target context) into a PrefixSubst with domain `⌊α⌋`.
++Used inside `PrefixSubst.act`'s dom branch to act on a substituted expression
+ with the recursive arg results as fillers. -/
+ 
+-/-- Subst constructor from a slot-keyed function. -/
+-abbrev Subst.inst {C : Carrier} {pre : Shape C} (dom : Shape C) {cod : Shape C}
++/-- PrefixSubst constructor from a slot-keyed function. -/
++abbrev PrefixSubst.inst {C : Carrier} {pre : Shape C} (dom : Shape C) {cod : Shape C}
+     (f : ∀ {α : C.Arity}, dom ∋ α → Expr (pre ⧺ cod ∷ α)) :
+-    Subst C pre dom cod where
++    PrefixSubst C pre dom cod where
+   sub := f
+ 
+ /-- The identity instantiation for the one-binder telescope `⌊α⌋`,
+ with an arbitrary fixed prefix `Δ`. -/
+-def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) :
+-    Subst C Δ ⌊α⌋ ⌊α⌋ :=
+-  Subst.inst ⌊α⌋ (fun q => match q with
++def PrefixSubst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) :
++    PrefixSubst C Δ ⌊α⌋ ⌊α⌋ :=
++  PrefixSubst.inst ⌊α⌋ (fun q => match q with
+     | .here i => Expr.η (.here i))
+ 
+-/-! ### Kleisli ↔ Subst correspondence
++/-! ### Kleisli ↔ PrefixSubst correspondence
+ 
+ A Kleisli map of the syntax relative monad is `∀ {α}, (Γ ∋ α) → Expr (Δ ∷ α)`.
+ With cons-style telescopes and `pre := Shape.nil`, the correspondence to
+-`Subst` is *definitional*: `Shape.nil ⧺ X = X` by Tele's strict left unit. -/
++`PrefixSubst` is *definitional*: `Shape.nil ⧺ X = X` by Tele's strict left unit. -/
+ 
+-/-- Wrap a Kleisli map as a `Subst` with empty `pre`. -/
+-def toSubst {C : Carrier} {Γ Δ : Shape C}
++/-- Wrap a Kleisli map as a `PrefixSubst` with empty `pre`. -/
++def toPrefixSubst {C : Carrier} {Γ Δ : Shape C}
+     (f : ∀ {α : C.Arity}, Γ ∋ α → Expr (Δ ∷ α)) :
+-    Subst C Shape.nil Γ Δ where
++    PrefixSubst C Shape.nil Γ Δ where
+   sub := f
+ 
+-@[simp] theorem toSubst_sub {C : Carrier} {Γ Δ : Shape C}
++@[simp] theorem toPrefixSubst_sub {C : Carrier} {Γ Δ : Shape C}
+     (f : ∀ {α : C.Arity}, Γ ∋ α → Expr (Δ ∷ α))
+     {α : C.Arity} (p : Γ ∋ α) :
+-    (toSubst f).sub p = f p := rfl
++    (toPrefixSubst f).sub p = f p := rfl
+ 
+-/-- The identity substitution at shape `Γ` — `toSubst` of the unit `Expr.η`. -/
+-def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Shape.nil Γ Γ :=
+-  toSubst (fun {β : C.Arity} (p : Γ ∋ β) => Expr.η p)
++/-- The identity substitution at shape `Γ` — `toPrefixSubst` of the unit `Expr.η`. -/
++def PrefixSubst.id {C : Carrier} (Γ : Shape C) : PrefixSubst C Shape.nil Γ Γ :=
++  toPrefixSubst (fun {β : C.Arity} (p : Γ ∋ β) => Expr.η p)
+ 
+ /-! ### The substitution action -/
+ 
+@@ -249,23 +257,23 @@ def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Shape.nil Γ Γ :=
+ `Proper.classify` for the τ/below-τ dispatch and `σ.classifyDom` for
+ the pre/dom dispatch.  All renamings used to rebuild new heads in the
+ target come from `[Proper τ]` / `[Proper cod]`. -/
+-def Subst.act {C : Carrier} : {pre dom cod : Shape C} →
++def PrefixSubst.act {C : Carrier} : {pre dom cod : Shape C} →
+     [Proper dom] → [Proper cod] →
+-    (σ : Subst C pre dom cod) →
++    (σ : PrefixSubst C pre dom cod) →
+     (τ : Shape C) → [Proper τ] →
+     Expr (pre ⧺ dom ⧺ τ) → Expr (pre ⧺ cod ⧺ τ)
+   | pre, dom, cod, _, _, σ, τ, _, .ap (α := α) p args =>
+-      match Subst.classifySite p with
++      match PrefixSubst.classifySite p with
+       | SubstSite.tau x =>
+           .ap (Proper.inr (pre ⧺ cod) x)
+             (fun i => σ.act (τ ∷ i.arity) (args i))
+       | SubstSite.dom z =>
+-          (Subst.inst ⌊α⌋ (fun q => match q with
++          (PrefixSubst.inst ⌊α⌋ (fun q => match q with
+             | .here i => σ.act (τ ∷ i.arity) (args i))).act Shape.nil (σ z)
+       | SubstSite.pre z =>
+           .ap
+             (Proper.inl (pre ⧺ cod)
+-              ((Subst.weakenCod σ) z))
++              ((PrefixSubst.weakenCod σ) z))
+             (fun i => σ.act (τ ∷ i.arity) (args i))
+ termination_by pre dom _ _ _ _ _ _ e =>
+   ((⟨dom.toList⟩ : DomMeasure C), (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
+@@ -278,19 +286,98 @@ decreasing_by
+          exact DomLt.step β h_mem _ h_sub))
+ 
+ /-- The ground substitution action `σ.act Shape.nil e`, mirroring `⟦ρ⟧ʳ e`. -/
+-notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ Shape.nil e
++notation:60 "⟦" σ "⟧ˢ " e:61 => PrefixSubst.act σ Shape.nil e
+ 
+ /-- Substitution-level composition.  First substitute with `σ`, producing
+ expressions over `pre ⧺ mid`; then act on each filler with `θ`, producing
+ expressions over `pre ⧺ cod`. -/
+-def Subst.comp {C : Carrier} {pre dom mid cod : Shape C}
++def PrefixSubst.comp {C : Carrier} {pre dom mid cod : Shape C}
+     [Proper mid] [Proper cod]
+-    (σ : Subst C pre dom mid)
+-    (θ : Subst C pre mid cod) :
+-    Subst C pre dom cod :=
+-  Subst.inst dom (fun {β} x => θ.act ⌊β⌋ (σ.sub x))
++    (σ : PrefixSubst C pre dom mid)
++    (θ : PrefixSubst C pre mid cod) :
++    PrefixSubst C pre dom cod :=
++  PrefixSubst.inst dom (fun {β} x => θ.act ⌊β⌋ (σ.sub x))
++
++/-- Kleisli composition of two Kleisli maps via `PrefixSubst.act`. -/
++def PrefixSubst.kcomp {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
++    (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ∷ β))
++    (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ξ ∷ β)) :
++    ∀ {β : C.Arity}, Γ ∋ β → Expr (Ξ ∷ β) :=
++  fun {β} p => (toPrefixSubst g).act ⌊β⌋ (f p)
++
++/-! ### Full-context substitutions
++
++`Subst C Γ Δ` is the public Kleisli-environment presentation: every source
++slot of `Γ` is assigned an expression over the whole target `Δ`.
++
++The hereditary action is currently implemented through the prefix-preserving
++engine above, specialized to empty prefix.  That specialization is not just a
++shortcut: when a source head fires, hereditary substitution must instantiate
++the freshly opened binder while preserving the target context.  The
++prefix-preserving engine is exactly that one-binder hereditary-instantiation
++backend.
++-/
+ 
+-/-- Kleisli composition of two Kleisli maps via `Subst.act`. -/
++/-- A full-context substitution from source shape `Γ` to target shape `Δ`. -/
++structure Subst (C : Carrier) (Γ Δ : Shape C) : Type where
++  sub : ∀ {α : C.Arity}, Γ ∋ α → Expr (Δ ∷ α)
++
++instance {C : Carrier} {Γ Δ : Shape C} :
++    CoeFun (Subst C Γ Δ)
++      (fun _ => ∀ {α : C.Arity}, Γ ∋ α → Expr (Δ ∷ α)) :=
++  ⟨Subst.sub⟩
++
++/-- View a full-context substitution as the empty-prefix instance of the
++prefix-preserving substitution engine. -/
++def Subst.toPrefix {C : Carrier} {Γ Δ : Shape C}
++    (σ : Subst C Γ Δ) :
++    PrefixSubst C Shape.nil Γ Δ where
++  sub := σ.sub
++
++/-- Apply a full-context substitution under an additional proper depth `τ`. -/
++def Subst.act {C : Carrier} {Γ Δ : Shape C}
++    [Proper Γ] [Proper Δ]
++    (σ : Subst C Γ Δ)
++    (τ : Shape C) [Proper τ]
++    (e : Expr (Γ ⧺ τ)) :
++    Expr (Δ ⧺ τ) :=
++  σ.toPrefix.act τ e
++
++/-- Wrap a Kleisli map as a full-context substitution. -/
++def toSubst {C : Carrier} {Γ Δ : Shape C}
++    (f : ∀ {α : C.Arity}, Γ ∋ α → Expr (Δ ∷ α)) :
++    Subst C Γ Δ where
++  sub := f
++
++@[simp] theorem toSubst_sub {C : Carrier} {Γ Δ : Shape C}
++    (f : ∀ {α : C.Arity}, Γ ∋ α → Expr (Δ ∷ α))
++    {α : C.Arity} (p : Γ ∋ α) :
++    (toSubst f).sub p = f p := rfl
++
++/-- The identity full-context substitution. -/
++def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Γ Γ :=
++  toSubst (fun {β : C.Arity} (p : Γ ∋ β) => Expr.η p)
++
++/-- Build a full-context substitution that preserves `pre` and replaces only
++the `dom` part. -/
++def Subst.withPrefix {C : Carrier}
++    (pre dom cod : Shape C) [Proper dom] [Proper cod]
++    (f : ∀ {α : C.Arity}, dom ∋ α → Expr (pre ⧺ cod ∷ α)) :
++    Subst C (pre ⧺ dom) (pre ⧺ cod) where
++  sub := fun {α} p =>
++    Proper.classify pre (Expr (pre ⧺ cod ∷ α)) p
++      (fun x => f x)
++      (fun x => Expr.η ((Proper.inl pre) x))
++
++/-- Full-context substitution-level composition. -/
++def Subst.comp {C : Carrier} {Γ Δ Ξ : Shape C}
++    [Proper Δ] [Proper Ξ]
++    (σ : Subst C Γ Δ)
++    (θ : Subst C Δ Ξ) :
++    Subst C Γ Ξ where
++  sub := fun {β} p => θ.act ⌊β⌋ (σ.sub p)
++
++/-- Kleisli composition of two maps through full-context substitution. -/
+ def Subst.kcomp {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
+     (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ∷ β))
+     (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ξ ∷ β)) :
+diff --git a/HigherRankSyntax/scoped-core-refactor.md b/HigherRankSyntax/scoped-core-refactor.md
+new file mode 100644
+index 0000000..415255b
+--- /dev/null
++++ b/HigherRankSyntax/scoped-core-refactor.md
+@@ -0,0 +1,254 @@
++# Scoped-Core Refactor Handoff
++
++This note summarizes the refactor direction and the current proof state for the
++next agent.
++
++## Main Idea
++
++The old backend proves relative-monad equations over flat expressions
++
++```lean
++Expr (Γ ⧺ τ)
++```
++
++where free variables, active substitution variables, passive binders, and local
++argument binders are all represented as slots of one telescope.  Most of
++`Equations.lean` is therefore not conceptual mathematics; it is bookkeeping:
++recovering where a head came from and aligning proof-relevant `Proper`
++witnesses.
++
++The scoped refactor changes the proof backend to expressions with two explicit
++parts:
++
++```lean
++ScopedExpr Γ τ
++```
++
++Here `Γ` is the free context and `τ` is the local binder telescope.  A head is
++literally one of:
++
++```lean
++ScopedHead.free  : Γ ∋ α → ScopedHead Γ τ α
++ScopedHead.local : τ ∋ α → ScopedHead Γ τ α
++```
++
++Descending into an application argument only extends the local telescope:
++
++```lean
++ScopedExpr.ap :
++  ScopedHead Γ τ α →
++  ((i : C.Binder α) → ScopedExpr Γ (τ ∷ i.arity)) →
++  ScopedExpr Γ τ
++```
++
++This keeps the important distinction, "free variable versus local binder", in
++the syntax instead of recovering it with `Proper.cover`.
++
++## Why `ProperSpine`
++
++The first scoped prototype used lists for local binder stacks, but list
++associativity made the one-binder proofs awkward.  The current version uses
++`Shape C` again for local stacks, so telescope associativity is definitional.
++
++However, arbitrary `Proper` witnesses are still proof-relevant.  The solution
++is `ProperSpine`, a canonical witness for proper telescopes.  New scoped proofs
++should use explicit `ProperSpine` values and their structural operations:
++
++- `ProperSpine.inl`
++- `ProperSpine.inr`
++- `ProperSpine.classify`
++- `ProperSpine.coverEq`
++- `ProperSpine.append`
++- `ProperSpine.append_inl`
++- `ProperSpine.append_inr_inl`
++- `ProperSpine.append_inr_inr`
++
++The important design rule is: use canonical spines in the scoped backend, and
++only bridge back to old `Proper` where compatibility requires it.
++
++## Current Proof Ladder
++
++The central local operation is one-active-binder substitution:
++
++```lean
++instOneAt
++  (pχ : ProperSpine χ) (υ : Shape C) (α : C.Arity)
++  (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity)) :
++  ScopedExpr Γ ((υ ∷ α) ⧺ χ) →
++  ScopedExpr Γ (υ ⧺ χ)
++```
++
++The intended reading is:
++
++- `υ` is the older local tail;
++- `α` is the active binder being substituted;
++- `χ` is the newer passive prefix;
++- source local context is `(υ ∷ α) ⧺ χ`;
++- target local context is `υ ⧺ χ`.
++
++Implemented in `ScopedExpr.lean`:
++
++- telescope-indexed `ScopedHead` and `ScopedExpr`;
++- free/local renaming and their identity/composition laws;
++- `etaHead` and `eta`;
++- local vocabulary `localPrefix`, `localTail`, `localMapTail`;
++- `LocalSite` classifier with cases `.pre`, `.active`, `.tail`;
++- `instOneAt` and its computation lemmas for free, passive-prefix, older-tail,
++  and active heads;
++- site-head restatements of the `instOneAt` computation lemmas;
++- `instOneAtUnder`, the argument-shaped facade for recursive calls under a
++  newly opened binder;
++- `renameLocal_instOneAt`, proving that tail-renaming commutes with
++  `instOneAt`;
++- passive-extension normalizers and naturality:
++  - `extendPassiveRen`
++  - `extendPassiveRen_cons`
++  - `passiveInsert`
++  - `localPrefix_extendPassive`
++  - `localTail_extendPassive`
++  - `renameLocal_extendPassiveAtFiller`
++  - `instOneAt_extendPassiveAt`
++  - `instOneAt_extendPassive`
++  - `instOneAt_extendPassiveUnder`
++
++The old flat backend in `Equations.lean` is still present and still powers
++`SyntaxMonad.lean`.  The scoped backend is proof infrastructure only so far.
++
++## What Was Learned From Local-Local Interchange
++
++The next major theorem is local-local interchange: substituting an upper active
++binder `β` and a lower active binder `α` should commute in the shape required
++by environment action.
++
++A scratch proof in `/tmp/ScopedInterchange2.lean` got this far:
++
++- free-head case works;
++- outer passive `ψ` head case works;
++- upper-active `β` case works using `instOneAt_extendPassiveUnder`;
++- inner passive `χ` case works;
++- older-tail `υ` case works;
++- the remaining blocker is the active-`α` case.
++
++The active-`α` branch exposes one missing lemma.  After `α` fires, the upper
++`β` substitution is acting on the selected `α`-filler, but that filler was only
++weakened through the passive insertion of `β`.  We need a theorem saying that
++substituting a binder through an expression that merely contains that binder as
++a passive weakening contracts in the expected way.
++
++Informally:
++
++```text
++instOneAt for β, applied to a term obtained by weakening past β,
++is the same as the original term, with arguments transformed recursively.
++```
++
++This is not just a tactic issue.  It should be proved as a small named scoped
++lemma before finishing `LocalInterchange.localLocal`.
++
++## Suggested Next Pass
++
++1. Add a small "passive active-binder absence" lemma for `instOneAt`.
++
++   The theorem should cover the active-`α` situation from local-local
++   interchange: a term/filler has been weakened through a passive `β`, and then
++   `instOneAt` tries to substitute `β`.  Since no head in the original term is
++   the active `β`, the result should be the original substitution/renaming
++   shape, with recursive argument equalities.
++
++2. Prove it with the same style as existing scoped lemmas.
++
++   Use semantic head cases:
++
++   - free head: preserved, recurse on arguments;
++   - passive-prefix head: preserved;
++   - older-tail head: preserved;
++   - active impossible/absent by construction, or converted to the intended
++     filler equation depending on the exact statement.
++
++   Use `instOneAtUnder` or an analogous under-binder facade if the argument
++   shape exposes one extra binder.
++
++3. Return to `LocalInterchange.localLocal`.
++
++   Use the scratch structure:
++
++   ```lean
++   namespace LocalInterchange
++   private def upperThenLower ...
++   private def lowerThenUpper ...
++   private def upperThenLowerUnder ...
++   private def lowerThenUpperUnder ...
++   private theorem localLocal ...
++   end LocalInterchange
++   ```
++
++   The already-understood branch split is:
++
++   - free;
++   - outer passive `ψ`;
++   - active `β`;
++   - tail, then classify again into:
++     - inner passive `χ`;
++     - active `α`;
++     - older tail `υ`.
++
++4. After local-local interchange is green, prove the environment laws.
++
++   Define:
++
++   ```lean
++   Env Γ Δ := ∀ {α}, Γ ∋ α → ScopedExpr Δ ⌊α⌋
++   ```
++
++   Then prove:
++
++   - `Env.act`;
++   - `Env.act_renameLocal`;
++   - `Env.act_instOneAt`;
++   - `Env.act_id`;
++   - `Env.act_η`;
++   - `Env.act_comp`.
++
++5. Only then migrate `SyntaxMonad.lean`.
++
++   The target presentation is:
++
++   ```lean
++   T Γ α := ScopedExpr Γ.tele ⌊α⌋
++   η := ScopedExpr.eta
++   lift f := Env.act (fun p => f _ p)
++   ```
++
++   `SyntaxMonad.lean` should eventually use scoped `Env.act_comp`, not the old
++   flat `Subst.act_kcomp`.
++
++## Validation State
++
++As of this handoff, these checks passed from `HigherRankSyntax/`:
++
++```bash
++lake env lean HigherRankSyntax/ScopedExpr.lean
++lake env lean HigherRankSyntax/Equations.lean
++lake env lean HigherRankSyntax/SyntaxMonad.lean
++lake build HigherRankSyntax
++```
++
++Also checked:
++
++```bash
++rg -n '\b(sorry|axiom)\b' HigherRankSyntax/HigherRankSyntax
++git diff --check
++```
++
++No new `sorry` or `axiom` is present in tracked Lean files.
++
++## Practical Advice
++
++- Keep theorem statements in the scoped local vocabulary: `localPrefix`,
++  `localTail`, `localMapTail`, `instOneAtUnder`, and `extendPassiveRen`.
++- Confine raw `ProperSpine.append_*` rewrites to small helper lemmas.
++- Avoid global simp rules for these coherence lemmas; local `rw`/`change`
++  blocks have been more predictable.
++- Do not migrate `SyntaxMonad.lean` until `Env.act_instOneAt` and
++  `Env.act_comp` are green.
++- Do not delete `Equations.lean` yet.  It is still the production proof backend.
