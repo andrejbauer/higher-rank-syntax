@@ -60,6 +60,7 @@ class Proper {C : Carrier} (Γ : Tele C.Arity) : Type 1 where
   inr : (Δ : Shape C) → Γ →ʳ Δ ⧺ Γ
   /-- Classifier (CPS): dispatch a slot of `Δ ⧺ Γ` into either a Δ-slot
   or a Γ-slot. -/
+  -- TODO: reverse the order of arguments, it's stupid to take in the right one first
   classify : (Δ : Shape C) → {α : C.Arity} → (X : Type) → Δ ⧺ Γ ∋ α →
              (Γ ∋ α → X) → (Δ ∋ α → X) → X
   /-- Reflection: classifying a right-injected S-slot fires the S-continuation. -/

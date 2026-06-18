@@ -64,143 +64,137 @@ instance (C : Carrier) : WellFoundedRelation (DomMeasure C) where
   rel := fun a b => DomLt a.unwrap b.unwrap
   wf := InvImage.wf DomMeasure.unwrap DomLt.wf
 
-/-- Dispatching a slot of `pre ⧺ dom` into pre vs dom.  Returned by
-`Subst.classifyDom`. -/
-inductive PreOrDom {C : Carrier} (pre dom : Shape C) (α : C.Arity) : Type where
-  /-- The slot belongs to `pre`. -/
-  | pre (q : pre ∋ α)
-  /-- The slot belongs to `dom`. -/
-  | dom (q : dom ∋ α)
-
-/-- Three-way dispatch of a slot of `pre ⧺ dom ⧺ τ`, used by `Subst.act`.
-The cases record whether the head is already under the current depth `τ`,
-is a substitutable `dom`-slot, or is an untouched `pre`-slot. -/
-inductive SubstSite {C : Carrier} (pre dom τ : Shape C) (α : C.Arity) : Type where
-  /-- The slot belongs to the current depth `τ`. -/
-  | tau (q : τ ∋ α)
-  /-- The slot belongs to the substitution domain `dom`. -/
-  | dom (q : dom ∋ α)
-  /-- The slot belongs to the untouched prefix `pre`. -/
-  | pre (q : pre ∋ α)
-
 /-- A substitution record.  Source shape is `pre ⧺ dom`, target is
 `pre ⧺ cod`.  The `sub` field is the only data; slot dispatch and
 pre-weakening are derived from `[Proper dom]` and `[Proper cod]`
 at the operations that need them (see `Subst.classifyDom`,
 `Subst.weakenCod`, `Subst.act`). -/
-structure Subst (C : Carrier) (pre dom cod : Shape C) : Type where
-  sub : ∀ {α : C.Arity}, dom ∋ α → Expr (pre ⧺ cod ∷ α)
+structure Subst (C : Carrier) (dom cod : Shape C) : Type where
+  sub : ∀ {α : C.Arity}, dom ∋ α → Expr (cod ∷ α)
 
-instance {C : Carrier} {pre dom cod : Shape C} :
-    CoeFun (Subst C pre dom cod)
-      (fun _ => ∀ {α : C.Arity}, dom ∋ α → Expr (pre ⧺ cod ∷ α)) :=
-  ⟨Subst.sub⟩
+instance {C : Carrier} {dom cod : Shape C} :
+    CoeFun (Subst C dom cod)
+      (fun _ => ∀ {α : C.Arity}, dom ∋ α → Expr (cod ∷ α)) where
+  coe := Subst.sub
+
+/-- Dispatching a slot of `pre ⧺ dom` into pre vs dom.  Returned by
+`Subst.classifyDom`. -/
+inductive LeftRight {C : Carrier} (Γ Δ : Shape C) (α : C.Arity) : Type where
+  /-- The slot belongs to the left summand. -/
+  | left (q : Γ ∋ α)
+  /-- The slot belongs to the right summand. -/
+  | right (q : Δ ∋ α)
+
+/-- Three-way dispatch of a slot of `pre ⧺ dom ⧺ τ`, used by `Subst.act`.
+The cases record whether the head is already under the current depth `τ`,
+is a substitutable `dom`-slot, or is an untouched `pre`-slot. -/
+inductive LeftMiddleRight {C : Carrier} (Γ Δ Ξ : Shape C) (α : C.Arity) : Type where
+  /-- The slot belongs to the current depth `τ`. -/
+  | left (q : Γ ∋ α)
+  /-- The slot belongs to the substitution domain `dom`. -/
+  | middle (q : Δ ∋ α)
+  /-- The slot belongs to the untouched prefix `pre`. -/
+  | right (q : Ξ ∋ α)
 
 /-- Dispatching a `pre ⧺ dom`-slot into pre vs dom, via `[Proper dom]`. -/
-def Subst.classifyDom {C : Carrier} {pre dom cod : Shape C}
-    [Proper dom] (_σ : Subst C pre dom cod)
-    {α : C.Arity} (p : pre ⧺ dom ∋ α) : PreOrDom pre dom α :=
-  Proper.classify pre _ p PreOrDom.dom PreOrDom.pre
+def classifyLeftRight {C : Carrier} {Γ Δ : Shape C} [Proper Δ]
+    {α : C.Arity} (p : Γ ⧺ Δ ∋ α) : LeftRight Γ Δ α :=
+  Proper.classify Γ (LeftRight Γ Δ α) p .right .left
 
 /-- Dispatching a `pre ⧺ dom ⧺ τ`-slot into its mathematical source:
 current depth, substitution domain, or untouched prefix. -/
-def Subst.classifySite {C : Carrier} {pre dom τ : Shape C}
-    [Proper dom] [Proper τ]
-    {α : C.Arity} (p : pre ⧺ dom ⧺ τ ∋ α) : SubstSite pre dom τ α :=
-  Proper.classify (pre ⧺ dom) _ p
-    SubstSite.tau
-    (fun q =>
-      Proper.classify pre _ q
-        SubstSite.dom
-        SubstSite.pre)
+def Subst.classifySite {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
+    {α : C.Arity} (p : Γ ⧺ Δ ⧺ Ξ ∋ α) : LeftMiddleRight Γ Δ Ξ α :=
+  Proper.classify (Γ ⧺ Δ) _ p
+    .right
+    (fun q => Proper.classify Γ _ q .middle .left)
 
 /-- Embed a classified source site back into `pre ⧺ dom ⧺ τ`. -/
-def Subst.embedSource {C : Carrier} {pre dom τ : Shape C}
-    [Proper dom] [Proper τ] {α : C.Arity} :
-    SubstSite pre dom τ α → pre ⧺ dom ⧺ τ ∋ α
-  | .tau x => (Proper.inr (pre ⧺ dom)) x
-  | .dom x => (Proper.inl (pre ⧺ dom)) ((Proper.inr pre) x)
-  | .pre x => (Proper.inl (pre ⧺ dom)) ((Proper.inl pre) x)
+def Subst.reinject {C : Carrier} {Γ Δ Ξ : Shape C}
+    [Proper Δ] [Proper Ξ] {α : C.Arity} :
+    LeftMiddleRight Γ Δ Ξ α → Γ ⧺ Δ ⧺ Ξ ∋ α
+  | .left x => Proper.inl _ (Proper.inl _ x)
+  | .middle x => Proper.inl (Γ ⧺ Δ) (Proper.inr Γ x)
+  | .right x => Proper.inr _ x
 
 /-- Every source slot is the embedding of a unique-looking `SubstSite`.
 This is the proof-facing inverse of `Subst.classifySite`; use it to replace
 nested `Proper.cover` splits. -/
-theorem Subst.coverSite {C : Carrier} {pre dom τ : Shape C}
-    [Proper dom] [Proper τ] {α : C.Arity}
-    (p : pre ⧺ dom ⧺ τ ∋ α) :
-    ∃ site : SubstSite pre dom τ α, p = Subst.embedSource site
+theorem Subst.coverSite {C : Carrier} {Γ Δ Ξ : Shape C}
+    [Proper Δ] [Proper Ξ] {α : C.Arity}
+    (p : Γ ⧺ Δ ⧺ Ξ ∋ α) :
+    ∃ site : LeftMiddleRight Γ Δ Ξ α, p = Subst.reinject site
   := by
-  rcases Proper.cover (pre ⧺ dom) p with ⟨x, h_x⟩ | ⟨y, h_y⟩
-  · exact ⟨.tau x, h_x⟩
-  · rcases Proper.cover pre y with ⟨z, h_z⟩ | ⟨w, h_w⟩
+  rcases Proper.cover (Γ ⧺ Δ) p with ⟨x, h_x⟩ | ⟨y, h_y⟩
+  · exact ⟨.right x, h_x⟩
+  · rcases Proper.cover Γ y with ⟨z, h_z⟩ | ⟨w, h_w⟩
     · subst h_y
-      exact ⟨.dom z, by rw [h_z]; rfl⟩
+      exact ⟨.middle z, by rw [h_z]; rfl⟩
     · subst h_y
-      exact ⟨.pre w, by rw [h_w]; rfl⟩
+      exact ⟨.left w, by rw [h_w]; rfl⟩
 
 /-- Classifying an embedded `τ`-site returns the same `τ`-site. -/
-theorem Subst.classifySite_tau {C : Carrier} {pre dom τ : Shape C}
-    [Proper dom] [Proper τ] {α : C.Arity} (x : τ ∋ α) :
-    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
-      (Subst.embedSource (.tau x)) = SubstSite.tau x
+theorem Subst.classifySite_right {C : Carrier} {Γ Δ Ξ : Shape C}
+    [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Ξ ∋ α) :
+    Subst.classifySite (Γ := Γ) (Δ := Δ) (Ξ := Ξ)
+      (Subst.reinject (.right x)) = .right x
   := by
-  unfold Subst.classifySite Subst.embedSource
+  unfold Subst.classifySite Subst.reinject
   rw [Proper.classify_inr]
 
 /-- Classifying an embedded `dom`-site returns the same `dom`-site. -/
-theorem Subst.classifySite_dom {C : Carrier} {pre dom τ : Shape C}
-    [Proper dom] [Proper τ] {α : C.Arity} (x : dom ∋ α) :
-    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
-      (Subst.embedSource (.dom x)) = SubstSite.dom x
+theorem Subst.classifySite_middle {C : Carrier} {Γ Δ Ξ : Shape C}
+    [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Δ ∋ α) :
+    Subst.classifySite (Γ := Γ) (Δ := Δ) (Ξ := Ξ)
+      (Subst.reinject (.middle x)) = .middle x
   := by
-  unfold Subst.classifySite Subst.embedSource
+  unfold Subst.classifySite Subst.reinject
   rw [Proper.classify_inl]
   rw [Proper.classify_inr]
 
 /-- Classifying an embedded `pre`-site returns the same `pre`-site. -/
-theorem Subst.classifySite_pre {C : Carrier} {pre dom τ : Shape C}
-    [Proper dom] [Proper τ] {α : C.Arity} (x : pre ∋ α) :
-    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
-      (Subst.embedSource (.pre x)) = SubstSite.pre x
+theorem  Subst.classifySite_left {C : Carrier} {Γ Δ Ξ : Shape C}
+    [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Γ ∋ α) :
+    Subst.classifySite (Γ := Γ) (Δ := Δ) (Ξ := Ξ)
+      (Subst.reinject (.left x)) = .left x
   := by
-  unfold Subst.classifySite Subst.embedSource
+  unfold Subst.classifySite Subst.reinject
   rw [Proper.classify_inl]
   rw [Proper.classify_inl]
 
 /-- Classifying a concrete right-injected `τ` head returns `SubstSite.tau`. -/
-theorem Subst.classifySite_inr {C : Carrier} {pre dom τ : Shape C}
-    [Proper dom] [Proper τ] {α : C.Arity} (x : τ ∋ α) :
-    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
-      ((Proper.inr (pre ⧺ dom)) x) = SubstSite.tau x
+theorem Subst.classifySite_inr {C : Carrier} {Γ Δ Ξ : Shape C}
+    [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Ξ ∋ α) :
+    Subst.classifySite (Γ := Γ) (Δ := Δ) (Ξ := Ξ)
+      ((Proper.inr (Γ ⧺ Δ)) x) = .right x
   := by
   unfold Subst.classifySite
   rw [Proper.classify_inr]
 
 /-- Classifying a concrete dom head returns `SubstSite.dom`. -/
-theorem Subst.classifySite_inl_dom {C : Carrier} {pre dom τ : Shape C}
-    [Proper dom] [Proper τ] {α : C.Arity} (x : dom ∋ α) :
-    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
-      ((Proper.inl (pre ⧺ dom)) ((Proper.inr pre) x)) = SubstSite.dom x
+theorem Subst.classifySite_inl_dom {C : Carrier} {Γ Δ Ξ : Shape C}
+    [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Δ ∋ α) :
+    Subst.classifySite (Γ := Γ) (Δ := Δ) (Ξ := Ξ)
+      ((Proper.inl (Γ ⧺ Δ)) ((Proper.inr Γ) x)) = .middle x
   := by
   unfold Subst.classifySite
   rw [Proper.classify_inl]
   rw [Proper.classify_inr]
 
 /-- Classifying a concrete pre head returns `SubstSite.pre`. -/
-theorem Subst.classifySite_inl_pre {C : Carrier} {pre dom τ : Shape C}
-    [Proper dom] [Proper τ] {α : C.Arity} (x : pre ∋ α) :
-    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
-      ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) x)) = SubstSite.pre x
+theorem Subst.classifySite_inl_pre {C : Carrier} {Γ Δ Ξ : Shape C}
+    [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Γ ∋ α) :
+    Subst.classifySite (Γ := Γ) (Δ := Δ) (Ξ := Ξ)
+      ((Proper.inl (Γ ⧺ Δ)) ((Proper.inl Γ) x)) = .left x
   := by
   unfold Subst.classifySite
   rw [Proper.classify_inl]
   rw [Proper.classify_inl]
 
 /-- Embedding `pre` into `pre ⧺ cod`, via `[Proper cod]`. -/
-def Subst.weakenCod {C : Carrier} {pre dom cod : Shape C}
-    [Proper cod] (_σ : Subst C pre dom cod) :
-    pre →ʳ pre ⧺ cod :=
-  Proper.inl pre
+-- TODO: unecessary crap
+def Subst.weakenCod {C : Carrier} {Γ Δ : Shape C} [Proper Δ] : Γ →ʳ Γ ⧺ Δ :=
+  Proper.inl Γ
 
 /-! ### Instantiation Subst
 
@@ -210,17 +204,15 @@ Used inside `Subst.act`'s dom branch to act on a substituted expression
 with the recursive arg results as fillers. -/
 
 /-- Subst constructor from a slot-keyed function. -/
-abbrev Subst.inst {C : Carrier} {pre : Shape C} (dom : Shape C) {cod : Shape C}
-    (f : ∀ {α : C.Arity}, dom ∋ α → Expr (pre ⧺ cod ∷ α)) :
-    Subst C pre dom cod where
+-- TODO: unecessary crap
+abbrev Subst.inst {C : Carrier} (Δ : Shape C) {Ξ : Shape C} (f : ∀ {α : C.Arity}, Δ ∋ α → Expr (Ξ ∷ α)) : Subst C Δ Ξ where
   sub := f
 
 /-- The identity instantiation for the one-binder telescope `⌊α⌋`,
 with an arbitrary fixed prefix `Δ`. -/
 def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) :
-    Subst C Δ ⌊α⌋ ⌊α⌋ :=
-  Subst.inst ⌊α⌋ (fun q => match q with
-    | .here i => Expr.η (.here i))
+    Subst C ⌊α⌋ (Δ ⧺ ⌊α⌋) :=
+  Subst.inst _ (fun q => match q with | .here i => Expr.η (.here i))
 
 /-! ### Kleisli ↔ Subst correspondence
 
@@ -229,9 +221,8 @@ With cons-style telescopes and `pre := Shape.nil`, the correspondence to
 `Subst` is *definitional*: `Shape.nil ⧺ X = X` by Tele's strict left unit. -/
 
 /-- Wrap a Kleisli map as a `Subst` with empty `pre`. -/
-def toSubst {C : Carrier} {Γ Δ : Shape C}
-    (f : ∀ {α : C.Arity}, Γ ∋ α → Expr (Δ ∷ α)) :
-    Subst C Shape.nil Γ Δ where
+-- TODO unecessary crap
+def toSubst {C : Carrier} {Γ Δ : Shape C} (f : ∀ {α : C.Arity}, Γ ∋ α → Expr (Δ ∷ α)) : Subst C Γ Δ where
   sub := f
 
 @[simp] theorem toSubst_sub {C : Carrier} {Γ Δ : Shape C}
@@ -240,7 +231,7 @@ def toSubst {C : Carrier} {Γ Δ : Shape C}
     (toSubst f).sub p = f p := rfl
 
 /-- The identity substitution at shape `Γ` — `toSubst` of the unit `Expr.η`. -/
-def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Shape.nil Γ Γ :=
+def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Γ Γ :=
   toSubst (fun {β : C.Arity} (p : Γ ∋ β) => Expr.η p)
 
 /-! ### The substitution action -/
@@ -249,25 +240,26 @@ def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Shape.nil Γ Γ :=
 `Proper.classify` for the τ/below-τ dispatch and `σ.classifyDom` for
 the pre/dom dispatch.  All renamings used to rebuild new heads in the
 target come from `[Proper τ]` / `[Proper cod]`. -/
-def Subst.act {C : Carrier} : {pre dom cod : Shape C} →
-    [Proper dom] → [Proper cod] →
-    (σ : Subst C pre dom cod) →
+def Subst.act {C : Carrier} : {Γ Δ Ξ : Shape C} →
+    [Proper Δ] → [Proper Ξ] →
+    (σ : Subst C Δ (Γ ⧺ Ξ)) →
     (τ : Shape C) → [Proper τ] →
-    Expr (pre ⧺ dom ⧺ τ) → Expr (pre ⧺ cod ⧺ τ)
-  | pre, dom, cod, _, _, σ, τ, _, .ap (α := α) p args =>
+    Expr (Γ ⧺ Δ ⧺ τ) → Expr (Γ ⧺ Ξ ⧺ τ)
+  | Γ, Δ, Ξ, _, _, σ, τ, _, .ap (α := α) p args =>
       match Subst.classifySite p with
-      | SubstSite.tau x =>
-          .ap (Proper.inr (pre ⧺ cod) x)
+      |.right x =>
+          .ap (Proper.inr (Γ ⧺ Ξ) x)
             (fun i => σ.act (τ ∷ i.arity) (args i))
-      | SubstSite.dom z =>
+      | .middle z =>
           (Subst.inst ⌊α⌋ (fun q => match q with
+            -- TODO: this is a real problem here
             | .here i => σ.act (τ ∷ i.arity) (args i))).act Shape.nil (σ z)
-      | SubstSite.pre z =>
+      | .left z =>
           .ap
-            (Proper.inl (pre ⧺ cod)
+            (Proper.inl (Γ ⧺ Ξ)
               ((Subst.weakenCod σ) z))
             (fun i => σ.act (τ ∷ i.arity) (args i))
-termination_by pre dom _ _ _ _ _ _ e =>
+termination_by Γ Δ _ _ _ _ _ _ e =>
   ((⟨dom.toList⟩ : DomMeasure C), (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
   all_goals (
@@ -285,9 +277,9 @@ expressions over `pre ⧺ mid`; then act on each filler with `θ`, producing
 expressions over `pre ⧺ cod`. -/
 def Subst.comp {C : Carrier} {pre dom mid cod : Shape C}
     [Proper mid] [Proper cod]
-    (σ : Subst C pre dom mid)
-    (θ : Subst C pre mid cod) :
-    Subst C pre dom cod :=
+    (σ : Subst C dom (pre ⧺ mid))
+    (θ : Subst C mid (pre ⧺ cod)) :
+    Subst C dom (pre ⧺ cod) :=
   Subst.inst dom (fun {β} x => θ.act ⌊β⌋ (σ.sub x))
 
 /-- Kleisli composition of two Kleisli maps via `Subst.act`. -/

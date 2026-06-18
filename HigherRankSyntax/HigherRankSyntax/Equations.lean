@@ -647,26 +647,26 @@ private theorem DiamondSite.cover {C : Carrier}
         ⟨xυ, h_xυ⟩ | ⟨base, h_base⟩
       · subst h_xυ
         refine ⟨.under xυ, ?_⟩
-        unfold DiamondSite.embed Subst.embedSource
+        unfold DiamondSite.embed Subst.reinject
         rfl
       · subst h_base
         rcases Proper.cover (Γ := src) τ base with
           ⟨xsrc, h_xsrc⟩ | ⟨xτ, h_xτ⟩
         · subst h_xsrc
           refine ⟨.src xsrc, ?_⟩
-          unfold DiamondSite.embed Subst.embedSource
+          unfold DiamondSite.embed Subst.reinject
           rfl
         · subst h_xτ
           refine ⟨.tau xτ, ?_⟩
-          unfold DiamondSite.embed Subst.embedSource
+          unfold DiamondSite.embed Subst.reinject
           rfl
   | dom z =>
       refine ⟨.dom z, ?_⟩
-      unfold DiamondSite.embed Subst.embedSource
+      unfold DiamondSite.embed Subst.reinject
       rfl
   | pre z =>
       refine ⟨.pre z, ?_⟩
-      unfold DiamondSite.embed Subst.embedSource
+      unfold DiamondSite.embed Subst.reinject
       rfl
 
 /- Three possible origins for a head in the lifted one-binder companion:
