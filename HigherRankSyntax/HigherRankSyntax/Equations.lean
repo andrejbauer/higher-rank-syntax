@@ -798,7 +798,7 @@ private theorem diamondAt
       | under xυ =>
           -- Stable local-binder head.  Both routes keep the same head `xυ`;
           -- after normalising the embeddings, the result is pointwise `hargs`.
-          refine (congrArg ((Diamond.acted σ hτDst κ).act (Tele.ofList υ))
+          refine (congrArg (Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ))
             (DiamondSite.actBySubst σ hτSrc srcTarget (.under xυ) args)).trans ?_
           dsimp only [actAt, DiamondSite.embed]
           refine (Subst.act_ap_right (Diamond.acted σ hτDst κ) (Tele.ofList υ) xυ
@@ -832,7 +832,7 @@ private theorem diamondAt
           -- The left-hand route first acts on the head and then fires the
           -- acted substitution.  Both reduce to the smaller diamond on the
           -- single selected filler `κ.sub xsrc`.
-          refine (congrArg ((Diamond.acted σ hτDst κ).act (Tele.ofList υ))
+          refine (congrArg (Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ))
             (DiamondSite.actBySubst σ hτSrc srcTarget (.src xsrc) args)).trans ?_
           dsimp only [actAt, DiamondSite.embed]
           refine (Subst.act_ap_middle (Diamond.acted σ hτDst κ) (Tele.ofList υ) xsrc
@@ -889,7 +889,7 @@ private theorem diamondAt
           -- Stable ambient-depth head.  It is not in the domain of either
           -- substitution; the proof is bookkeeping that shows both sides
           -- rebuild the same τ-head and recurse on the arguments.
-          refine (congrArg ((Diamond.acted σ hτDst κ).act (Tele.ofList υ))
+          refine (congrArg (Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ))
             (DiamondSite.actBySubst σ hτSrc srcTarget (.tau xτ) args)).trans ?_
           dsimp only [actAt, DiamondSite.embed]
           refine (Subst.act_ap_left (Diamond.acted σ hτDst κ) (Tele.ofList υ)
@@ -947,7 +947,7 @@ private theorem diamondAt
           -- immediate subterms are the acted arguments.  The needed statement
           -- is exactly the lifted one-binder theorem `liftAt`; afterwards
           -- `hargs` aligns the singleton filler family.
-          refine (congrArg ((Diamond.acted σ hτDst κ).act (Tele.ofList υ))
+          refine (congrArg (Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ))
             (DiamondSite.actBySubst σ hτSrc srcTarget (.dom z) args)).trans ?_
           dsimp only [actAt, DiamondSite.embed]
           let η : (j : C.Binder β) →
@@ -1029,7 +1029,7 @@ private theorem diamondAt
           -- Stable prefix head.  The prefix is preserved by both substitutions.
           -- The long-looking proof is only reassociation of the same preserved
           -- head through the two composite target contexts.
-          refine (congrArg ((Diamond.acted σ hτDst κ).act (Tele.ofList υ))
+          refine (congrArg (Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ))
             (DiamondSite.actBySubst σ hτSrc srcTarget (.pre z) args)).trans ?_
           dsimp only [actAt, DiamondSite.embed]
           refine (Subst.act_ap_left (Diamond.acted σ hτDst κ) (Tele.ofList υ)
@@ -1114,7 +1114,7 @@ private theorem liftAt
       Expr (((pre ⋈ τ) ⋈ src) ⋈ Tele.ofList υ ∷ j.arity))
     (e : Expr ((pre ∷ β) ⋈ Tele.ofList χ)) :
     Lift.sequential hτSrc κ χ η e = Lift.fused hτDst κ χ η e := by
-  let lam :=
+  let lam :  Subst C ⌊β⌋ (pre ⋈ (τ ⋈ src ⋈ Tele.ofList υ)) :=
     instOne β ((τ ⋈ src) ⋈ Tele.ofList υ) (pre := pre) η
   let lam' : Subst C ⌊β⌋ (pre ⋈ (τ ⋈ dst ⋈ Tele.ofList υ)) :=
     instOne β ((τ ⋈ dst) ⋈ Tele.ofList υ)
@@ -1382,8 +1382,7 @@ theorem Subst.act_comp
         fun (i : C.Binder β) => Subst.act_comp σ θ (τ ∷ i.arity) (args i)
       simp only [ih_args]
       change
-        ⟦(Subst.mk
-          (fun
+        ⟦((fun
           | .here i =>
               θ.act (τ ∷ i.arity)
                 (σ.act (τ ∷ i.arity) (args i)))
@@ -1394,7 +1393,7 @@ theorem Subst.act_comp
           (σ.act τ
             (.ap ((Proper.inl _) (Proper.inr _ y)) args))
       rw [Subst.act_ap_middle σ τ y args]
-      let κβ := instOne β τ (fun i => σ.act (τ ∷ i.arity) (args i))
+      let κβ : Subst C ⌊β⌋ (pre ⋈ mid ⋈ τ) := instOne β τ (fun i => σ.act (τ ∷ i.arity) (args i))
       have h := diamondAt
         (τ := Shape.nil)
         θ
