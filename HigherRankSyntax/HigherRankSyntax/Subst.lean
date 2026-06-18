@@ -204,9 +204,11 @@ Used inside `Subst.act`'s dom branch to act on a substituted expression
 with the recursive arg results as fillers. -/
 
 /-- Subst constructor from a slot-keyed function. -/
--- TODO: unecessary crap
-abbrev Subst.inst {C : Carrier} (Δ : Shape C) {Ξ : Shape C} (f : ∀ {α : C.Arity}, Δ ∋ α → Expr (Ξ ∷ α)) : Subst C Δ Ξ where
-  sub := f
+-- TODO: unecessary crap?
+abbrev Subst.inst {C : Carrier} (Δ : Shape C) {Γ Ξ : Shape C}
+      (f : ∀ {α : C.Arity}, Δ ∋ α → Expr (Γ ⧺ Ξ ∷ α)) :
+      Subst C Δ (Γ ⧺ Ξ) where
+    sub := f
 
 /-- The identity instantiation for the one-binder telescope `⌊α⌋`,
 with an arbitrary fixed prefix `Δ`. -/
@@ -256,11 +258,10 @@ def Subst.act {C : Carrier} : {Γ Δ Ξ : Shape C} →
             | .here i => σ.act (τ ∷ i.arity) (args i))).act Shape.nil (σ z)
       | .left z =>
           .ap
-            (Proper.inl (Γ ⧺ Ξ)
-              ((Subst.weakenCod σ) z))
+            (Proper.inl (Γ ⧺ Ξ) (Subst.weakenCod z))
             (fun i => σ.act (τ ∷ i.arity) (args i))
 termination_by Γ Δ _ _ _ _ _ _ e =>
-  ((⟨dom.toList⟩ : DomMeasure C), (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
+  ((⟨Δ.toList⟩ : DomMeasure C), (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
   all_goals (
     first
@@ -275,16 +276,16 @@ notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ Shape.nil e
 /-- Substitution-level composition.  First substitute with `σ`, producing
 expressions over `pre ⧺ mid`; then act on each filler with `θ`, producing
 expressions over `pre ⧺ cod`. -/
-def Subst.comp {C : Carrier} {pre dom mid cod : Shape C}
-    [Proper mid] [Proper cod]
-    (σ : Subst C dom (pre ⧺ mid))
-    (θ : Subst C mid (pre ⧺ cod)) :
-    Subst C dom (pre ⧺ cod) :=
-  Subst.inst dom (fun {β} x => θ.act ⌊β⌋ (σ.sub x))
+def Subst.comp {C : Carrier} {Γ Δ Θ Ξ : Shape C}
+    [Proper Θ] [Proper Ξ]
+    (σ : Subst C Δ (Γ ⧺ Θ))
+    (θ : Subst C Θ (Γ ⧺ Ξ)) :
+    Subst C Δ (Γ ⧺ Ξ) :=
+  Subst.inst Δ (fun {β} x => θ.act ⌊β⌋ (σ.sub x))
 
 /-- Kleisli composition of two Kleisli maps via `Subst.act`. -/
 def Subst.kcomp {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ∷ β))
     (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ξ ∷ β)) :
     ∀ {β : C.Arity}, Γ ∋ β → Expr (Ξ ∷ β) :=
-  fun {β} p => (toSubst g).act ⌊β⌋ (f p)
+  fun {β} x => (toSubst g).act (Γ := Shape.nil) ⌊β⌋ (f x)
