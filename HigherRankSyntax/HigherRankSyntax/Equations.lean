@@ -72,7 +72,7 @@ classified to the pre side: rebuilds the head in the pre branch. -/
 theorem Subst.act_ap_inl_pre
     {C : Carrier} {pre dom cod : Shape C}
     [Proper dom] [Proper cod]
-    (σ : Subst C pre dom cod) (τ : Shape C) [Proper τ]
+    (σ : Subst C dom (pre ⧺ cod)) (τ : Shape C) [Proper τ]
     {α} (z : pre ∋ α)
     (args : (i : C.Binder α) → Expr (pre ⧺ dom ⧺ τ ∷ i.arity)) :
   σ.act τ (.ap ((Proper.inl (pre ⧺ dom)) ((Proper.inl pre) z)) args)
@@ -638,7 +638,7 @@ private theorem DiamondSite.cover {C : Carrier}
       head = DiamondSite.embed hτSrc site := by
   letI : Proper ((τ ⧺ src) ⧺ Tele.ofList υ) := properUnder hτSrc υ
   obtain ⟨site, h_site⟩ :=
-    Subst.coverSite
+    Subst.reinjectIsSurj
       (τ := (τ ⧺ src) ⧺ Tele.ofList υ) head
   subst h_site
   cases site with
@@ -1539,7 +1539,7 @@ theorem Subst.act_comp
   := by
   match e with
   | .ap (α := β) head args =>
-    obtain ⟨site, h_site⟩ := Subst.coverSite head
+    obtain ⟨site, h_site⟩ := Subst.reinjectIsSurj head
     subst h_site
     cases site with
     | tau x =>
