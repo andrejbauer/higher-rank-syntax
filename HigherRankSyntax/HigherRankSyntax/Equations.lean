@@ -280,7 +280,7 @@ theorem Subst.act_η
         (.ap ((Proper.inl (Shape.nil ⋈ Γ))
                       ((Proper.inr Shape.nil) y))
                     (fun i => .η (.here i))) = _
-    rw [Subst.act_ap_middle (pre := Shape.nil) (dom := Γ) (cod := Δ)
+    rw [Subst.act_ap_middle (pre := Shape.nil)
       (Subst.mk f : Subst C Γ Δ) ⌊α⌋ y]
     have hfill : ∀ (i : C.Binder α),
         (Subst.mk f : Subst C Γ Δ).act (⌊α⌋ ∷ i.arity)
@@ -387,8 +387,7 @@ private abbrev acted
     (κ : Subst C src (((pre ⋈ dom) ⋈ τ) ⋈ dst)) :
     Subst C src (((pre ⋈ cod) ⋈ τ) ⋈ dst) :=
   Subst.mk (fun {β} x =>
-    actAt (pre := pre) (dom := dom) (cod := cod)
-      σ (Proper.underBinder hτDst β) (κ.sub x))
+    actAt (pre := pre) σ (Proper.underBinder hτDst β) (κ.sub x))
 
 /- Left side of the diamond: first act on the ambient expression by `σ`, then
 instantiate by the pointwise-acted substitution. -/
@@ -401,8 +400,7 @@ private abbrev actThenInst
     (κ : Subst C src (((pre ⋈ dom) ⋈ τ) ⋈ dst))
     (e : Expr ((((pre ⋈ dom) ⋈ τ) ⋈ src) ⋈ Tele.ofList υ)) :=
   (acted σ hτDst κ).act (Tele.ofList υ)
-    (actAt (pre := pre) (dom := dom) (cod := cod)
-      σ (Proper.underList hτSrc υ) e)
+    (actAt (pre := pre) σ (Proper.underList hτSrc υ) e)
 
 /- Right side of the diamond: instantiate by `κ` first, then act by `σ`.
 `diamondAt` proves this equals `actThenInst`. -/
@@ -414,9 +412,8 @@ private abbrev instThenAct
     (hτDst : Proper (τ ⋈ dst))
     (κ : Subst C src (((pre ⋈ dom) ⋈ τ) ⋈ dst))
     (e : Expr ((((pre ⋈ dom) ⋈ τ) ⋈ src) ⋈ Tele.ofList υ)) :=
-  actAt (pre := pre) (dom := dom) (cod := cod)
-    σ (Proper.underList hτDst υ)
-    (κ.act (Tele.ofList υ) e)
+  actAt (pre := pre)
+    σ (Proper.underList hτDst υ) (κ.act (Tele.ofList υ) e)
 
 end Diamond
 
@@ -435,7 +432,6 @@ private abbrev sequential
     (η : (j : C.Binder β) →
       Expr (((pre ⋈ τ) ⋈ src) ⋈ Tele.ofList υ ∷ j.arity))
     (e : Expr ((pre ∷ β) ⋈ Tele.ofList χ)) :=
-  letI : Proper ((τ ⋈ src) ⋈ Tele.ofList υ) := Proper.underList hτSrc υ
   κ.act ((Tele.ofList υ) ⋈ Tele.ofList χ)
     ((instOne β ((τ ⋈ src) ⋈ Tele.ofList υ) η).act (Tele.ofList χ) e)
 
@@ -451,7 +447,6 @@ private abbrev fused
     (η : (j : C.Binder β) →
       Expr (((pre ⋈ τ) ⋈ src) ⋈ Tele.ofList υ ∷ j.arity))
     (e : Expr ((pre ∷ β) ⋈ Tele.ofList χ)) :=
-  letI : Proper ((τ ⋈ dst) ⋈ Tele.ofList υ) := Proper.underList hτDst υ
   (instOne β ((τ ⋈ dst) ⋈ Tele.ofList υ)
       (fun j => κ.act (Tele.ofList υ ∷ j.arity) (η j))).act (Tele.ofList χ) e
 
@@ -520,7 +515,6 @@ private theorem DiamondSite.cover {C : Carrier}
     (head : ((((pre ⋈ dom) ⋈ τ) ⋈ src) ⋈ Tele.ofList υ) ∋ β) :
     ∃ site : DiamondSite pre dom τ src υ β,
       head = DiamondSite.embed hτSrc site := by
-  letI : Proper ((τ ⋈ src) ⋈ Tele.ofList υ) := Proper.underList hτSrc υ
   obtain ⟨site, h_site⟩ :=
     Subst.coverSite
       (Ξ := (τ ⋈ src) ⋈ Tele.ofList υ) head
@@ -721,24 +715,15 @@ private theorem diamondAt
     Diamond.actThenInst σ hτSrc hτDst κ e =
       Diamond.instThenAct σ hτDst κ e := by
   unfold Diamond.actThenInst Diamond.instThenAct
-  letI : Proper ((τ ⋈ src) ⋈ Tele.ofList υ) := Proper.underList hτSrc υ
-  letI : Proper ((τ ⋈ dst) ⋈ Tele.ofList υ) := Proper.underList hτDst υ
   match e with
   | .ap (α := β) head args =>
       -- Ordinary structural recursion on every application argument.  Every
       -- branch below eventually reduces to these equalities, except the two
       -- fuel-changing branches (`src` and `dom`).
-      have hargs : ∀ (j : C.Binder β),
-          Diamond.actThenInst (υ := j.arity :: υ)
-            σ hτSrc hτDst κ (args j)
-            =
-          Diamond.instThenAct (υ := j.arity :: υ)
-            σ hτDst κ (args j) :=
-        fun j => diamondAt (υ := j.arity :: υ)
+      have hargs :=
+        fun (j : C.Binder β) => diamondAt (υ := j.arity :: υ)
           σ hτSrc hτDst srcTarget dstTarget κ (args j)
-      obtain ⟨site, h_site⟩ :=
-        DiamondSite.cover
-          (src := src) hτSrc head
+      obtain ⟨site, h_site⟩ := DiamondSite.cover hτSrc head
       subst h_site
       cases site with
       | under xυ =>
@@ -746,7 +731,7 @@ private theorem diamondAt
           -- after normalising the embeddings, the result is pointwise `hargs`.
           change (Diamond.acted σ hτDst κ).act (Tele.ofList υ)
               (σ.act ((τ ⋈ src) ⋈ Tele.ofList υ)
-                (.ap ((Proper.inr (pre ⋈ dom)) ((Proper.inr (τ ⋈ src)) xυ)) args))
+                (.ap ((Proper.inr _) ((Proper.inr _) xυ)) args))
             =
             σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
               (κ.act (Tele.ofList υ)
@@ -812,7 +797,7 @@ private theorem diamondAt
           rw [srcTarget.inr_right (pre ⋈ cod) xsrc]
           change (Diamond.acted σ hτDst κ).act (Tele.ofList υ)
               (.ap
-                ((Proper.inl (((pre ⋈ cod) ⋈ τ) ⋈ src))
+                ((Proper.inl _)
                   ((Proper.inr ((pre ⋈ cod) ⋈ τ)) xsrc))
                 (fun j => σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ j.arity) (args j)))
             =
