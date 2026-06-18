@@ -70,10 +70,10 @@ Attempted in this session; 16 build errors; stashed at `stash@{0}`.
 The errors are NOT bugs in the swap — they are a genuine **associativity
 diamond** in Lean's `Proper` instance synthesis:
 
-- Two `rfl`-equal shapes `(A ⧺ B) ∷ X` (left-assoc) and `A ⧺ (B ∷ X)`
+- Two `rfl`-equal shapes `(A ⋈ B) ∷ X` (left-assoc) and `A ⋈ (B ∷ X)`
   (right-assoc) get **different `Proper` instance terms**
-  (`instCons X (A ⧺ B)` vs `compose A (B ∷ X)`) because Lean's
-  first-order instance synthesis matches on the outermost `⧺`/`∷`.
+  (`instCons X (A ⋈ B)` vs `compose A (B ∷ X)`) because Lean's
+  first-order instance synthesis matches on the outermost `⋈`/`∷`.
 - The two terms inhabit the same proposition, but `Proper` is not
   `Subsingleton`, so they're not defeq.
 - The proofs of `underListAt`, `preNaturalityLiftAt`, `preNaturalityAt`,
@@ -97,7 +97,7 @@ diamond becomes visible.
 
 1. **Canonicalise parenthesisation in proofs.** Every shape expression
    in proof bodies follows a fixed convention (left- or right-assoc;
-   `∷ α` vs `⧺ ⌊α⌋`). Mechanical but invasive; brittle to maintenance
+   `∷ α` vs `⋈ ⌊α⌋`). Mechanical but invasive; brittle to maintenance
    (the convention lives in our heads, not in the type system).
 2. **`Subsingleton` (Proper S)` coherence lemma.** Provable from
    the existing axioms by funext, then used as a transport at each

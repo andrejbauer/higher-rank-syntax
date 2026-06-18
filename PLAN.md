@@ -10,7 +10,7 @@ current proof work.  The Tele version uses cons-style representable endomaps:
 
 - `Tele α` is an endomap on `List α`.
 - `Shape C` is `Tele C.Arity`.
-- `Shape.nil`, `Γ ∷ α`, and `Γ ⧺ τ` are strict endomap operations.
+- `Shape.nil`, `Γ ∷ α`, and `Γ ⋈ τ` are strict endomap operations.
 - `Proper` supplies `inl`, `inr`, classification, and cover data for
   telescopes that behave like proper context extensions.
 
@@ -74,9 +74,9 @@ The core statement is expressed through private facades:
 - `Lift.sequential` and `Lift.fused` express the lifted beta-instantiation
   companion needed by the domain branch.
 
-The key proof-engineering layer is `TargetProper`.  It carries the exact
-`Proper` witnesses and decomposition laws for `τ`, `src`, `dst`, `τ ⧺ src`,
-and `τ ⧺ dst`.  Under-list witnesses are computed canonically with
+The key proof-engineering layer is `Proper.AppendCoherence`.  It carries the exact
+`Proper` witnesses and decomposition laws for `τ`, `src`, `dst`, `τ ⋈ src`,
+and `τ ⋈ dst`.  Under-list witnesses are computed canonically with
 `Proper.extendList`.  This is necessary because `Proper` witnesses are
 computational data, not proof-irrelevant propositions.
 

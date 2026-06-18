@@ -8,7 +8,7 @@ next agent.
 The old backend proves relative-monad equations over flat expressions
 
 ```lean
-Expr (Γ ⧺ τ)
+Expr (Γ ⋈ τ)
 ```
 
 where free variables, active substitution variables, passive binders, and local
@@ -74,8 +74,8 @@ The central local operation is one-active-binder substitution:
 instOneAt
   (pχ : ProperSpine χ) (υ : Shape C) (α : C.Arity)
   (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity)) :
-  ScopedExpr Γ ((υ ∷ α) ⧺ χ) →
-  ScopedExpr Γ (υ ⧺ χ)
+  ScopedExpr Γ ((υ ∷ α) ⋈ χ) →
+  ScopedExpr Γ (υ ⋈ χ)
 ```
 
 The intended reading is:
@@ -83,8 +83,8 @@ The intended reading is:
 - `υ` is the older local tail;
 - `α` is the active binder being substituted;
 - `χ` is the newer passive prefix;
-- source local context is `(υ ∷ α) ⧺ χ`;
-- target local context is `υ ⧺ χ`.
+- source local context is `(υ ∷ α) ⋈ χ`;
+- target local context is `υ ⋈ χ`.
 
 Implemented in `ScopedExpr.lean`:
 

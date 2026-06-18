@@ -36,12 +36,12 @@ and `Subst.act_kcomp` remains the short corollary of `Subst.act_comp`.
 
 The key implementation point is that `Proper` witnesses are computational data.
 The theorem cannot merely ask typeclass search for arbitrary witnesses of
-composites such as `τ ⧺ dst`.
+composites such as `τ ⋈ dst`.
 
 The private package
 
 ```lean
-private structure TargetProper (τ src dst : Shape C) (υ : List C.Arity)
+private structure Proper.AppendCoherence (τ src dst : Shape C) (υ : List C.Arity)
 ```
 
 carries exact witnesses for:
@@ -49,24 +49,24 @@ carries exact witnesses for:
 - `τ`;
 - `src`;
 - `dst`;
-- `τ ⧺ src`;
-- `τ ⧺ dst`;
+- `τ ⋈ src`;
+- `τ ⋈ dst`;
 - the laws describing how right and left injections decompose through those
   composites.
 
 The under-list witnesses are then computed canonically by
-`TargetProper.hSrcUnder` and `TargetProper.hDstUnder` using
+`Proper.AppendCoherence.src-under witness` and `Proper.AppendCoherence.dst-under witness` using
 `Proper.extendList`.  This keeps recursive argument calls aligned with the
 computation lemmas for concrete list depths.
 
 There are three important constructors:
 
-- `TargetProper.arg`, for ordinary argument recursion;
-- `TargetProper.srcStep`, for the source-filler recursive call in
+- `Proper.AppendCoherence.arg`, for ordinary argument recursion;
+- `Proper.AppendCoherence.srcStep`, for the source-filler recursive call in
   `diamondAt`;
-- `TargetProper.liftBeta`, for the beta branch of `liftAt`.
+- `Proper.AppendCoherence.liftBeta`, for the beta branch of `liftAt`.
 
-There is also `TargetProper.nil`, used by `Subst.act_comp`, whose target
+There is also `Proper.AppendCoherence.nil`, used by `Subst.act_comp`, whose target
 witness is exactly the ambient `[Proper τ]`.  This avoids comparing
 `Proper.compose Shape.nil τ` with the ordinary witness for `τ`.
 
@@ -113,7 +113,7 @@ The proof is organized by `LiftSite`:
 - `pre`: the head lies in the untouched prefix.
 
 The `beta` branch calls back into `diamondAt` with
-`TargetProper.liftBeta`.
+`Proper.AppendCoherence.liftBeta`.
 
 ## Termination
 
@@ -139,5 +139,5 @@ Equations.lean: 1693 lines
 ```
 
 So the conceptual replacement succeeded, but the hoped-for 1100-1250 line
-target did not.  The additional `TargetProper` coherence laws are roughly as
+target did not.  The additional `Proper.AppendCoherence` coherence laws are roughly as
 large as the old specialized proof infrastructure they replaced.

@@ -27,7 +27,7 @@ module Alternatives (Class : Set) where
 
   lift 𝟘 = 𝟘
   lift [ x ] = [ η x ]
-  lift (ρ₁ ⧺ ρ₂) = lift ρ₁ ⧺ lift ρ₂
+  lift (ρ₁ ⋈ ρ₂) = lift ρ₁ ⋈ lift ρ₂
 
   η x = var-left x ` lift (tabulate var-right)
 
@@ -37,7 +37,7 @@ module Alternatives (Class : Set) where
   lift-map-η : ∀ {γ δ} (ρ : γ →ʳ δ) → lift ρ ≡ map η ρ
   lift-map-η 𝟘 = refl
   lift-map-η [ x ] = refl
-  lift-map-η (ρ₁ ⧺ ρ₂) = cong₂ _⧺_ (lift-map-η ρ₁) (lift-map-η ρ₂)
+  lift-map-η (ρ₁ ⋈ ρ₂) = cong₂ _⋈_ (lift-map-η ρ₁) (lift-map-η ρ₂)
 
   lift-𝟙ʳ : ∀ {γ} → lift 𝟙ʳ ≡ tabulate (η {γ = γ})
   lift-𝟙ʳ = trans (lift-map-η 𝟙ʳ) map-tabulate
@@ -49,16 +49,16 @@ module Alternatives (Class : Set) where
 
   -- Substitution extension
 
-  ⇑ˢ : ∀ {γ δ θ} → γ →ˢ δ → γ ⧺ θ →ˢ δ ⧺ θ
-  ⇑ˢ {θ = θ} f =  map [ ⇑ʳ (tabulate var-left) ]ʳ_ f ⧺ lift (tabulate var-right)
+  ⇑ˢ : ∀ {γ δ θ} → γ →ˢ δ → γ ⋈ θ →ˢ δ ⋈ θ
+  ⇑ˢ {θ = θ} f =  map [ ⇑ʳ (tabulate var-left) ]ʳ_ f ⋈ lift (tabulate var-right)
 
   -- The interaction of lifting with various operations
 
   lift-∙ : ∀ {γ δ} (ρ : γ →ʳ δ) {a} (x : a ∈ γ) →
            lift ρ ∙ x ≡ η (ρ ∙ x)
   lift-∙ [ _ ] var-here = refl
-  lift-∙ (ρ₁ ⧺ ρ₂) (var-left x) = lift-∙ ρ₁ x
-  lift-∙ (ρ₁ ⧺ ρ₂) (var-right y) = lift-∙ ρ₂ y
+  lift-∙ (ρ₁ ⋈ ρ₂) (var-left x) = lift-∙ ρ₁ x
+  lift-∙ (ρ₁ ⋈ ρ₂) (var-right y) = lift-∙ ρ₂ y
 
   𝟙ˢ-∙ : ∀ {γ a} {x : a ∈ γ} → 𝟙ˢ ∙ x ≡ η x
   𝟙ˢ-∙ {x = x} = trans (lift-∙ 𝟙ʳ x) (cong η 𝟙ʳ-≡)
@@ -72,15 +72,15 @@ module Alternatives (Class : Set) where
   ∘ʳ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) →
              lift (τ ∘ʳ ρ) ∙ x ≡  lift τ ∙ (ρ ∙ x)
   ∘ʳ-lift [ x ] τ var-here = sym (lift-∙ τ x)
-  ∘ʳ-lift (ρ₁ ⧺ ρ₂) τ (var-left x) = ∘ʳ-lift ρ₁ τ x
-  ∘ʳ-lift (ρ₁ ⧺ ρ₂) τ (var-right y) = ∘ʳ-lift ρ₂ τ y
+  ∘ʳ-lift (ρ₁ ⋈ ρ₂) τ (var-left x) = ∘ʳ-lift ρ₁ τ x
+  ∘ʳ-lift (ρ₁ ⋈ ρ₂) τ (var-right y) = ∘ʳ-lift ρ₂ τ y
 
   []ʳ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) → [ ⇑ʳ τ ]ʳ (lift ρ ∙ x) ≡  lift (τ ∘ʳ ρ) ∙ x
   []ʳ-η : ∀ {γ δ} (ρ : γ →ʳ δ) {a} (x : a ∈ γ) → [ ⇑ʳ ρ ]ʳ η x ≡ η (ρ ∙ x)
 
   []ʳ-lift [ x ] τ var-here = []ʳ-η τ x
-  []ʳ-lift (ρ₁ ⧺ ρ₂) τ (var-left x) = []ʳ-lift ρ₁ τ x
-  []ʳ-lift (ρ₁ ⧺ ρ₂) τ (var-right x) = []ʳ-lift ρ₂ τ x
+  []ʳ-lift (ρ₁ ⋈ ρ₂) τ (var-left x) = []ʳ-lift ρ₁ τ x
+  []ʳ-lift (ρ₁ ⋈ ρ₂) τ (var-right x) = []ʳ-lift ρ₂ τ x
 
   ⇑ʳ-∘ʳ-tabulate-var-right : ∀ {γ δ θ} (ρ : γ →ʳ δ) →
                              (⇑ʳ {θ = θ} ρ ∘ʳ tabulate var-right) ≡ tabulate var-right
@@ -109,21 +109,21 @@ module Alternatives (Class : Set) where
   ʳ∘ˢ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) (τ : δ →ʳ θ) {a} (x : a ∈ γ) →
              (τ ʳ∘ˢ lift ρ) ∙ x ≡ lift (τ ∘ʳ ρ) ∙ x
   ʳ∘ˢ-lift [ x ] τ var-here = ≡-` ( map-∙ {f = var-left} {ps = τ}) λ z → ʳ∘ˢ-lift-var-right τ z
-  ʳ∘ˢ-lift (ρ₁ ⧺ ρ₂) τ (var-left x) = ʳ∘ˢ-lift ρ₁ τ x
-  ʳ∘ˢ-lift (ρ₁ ⧺ ρ₂) τ (var-right x) = ʳ∘ˢ-lift ρ₂ τ x
+  ʳ∘ˢ-lift (ρ₁ ⋈ ρ₂) τ (var-left x) = ʳ∘ˢ-lift ρ₁ τ x
+  ʳ∘ˢ-lift (ρ₁ ⋈ ρ₂) τ (var-right x) = ʳ∘ˢ-lift ρ₂ τ x
 
   lift-map : ∀ {γ δ θ} (f : ∀ {α} → α ∈ γ → α ∈ δ) (ρ : θ →ʳ γ) →
              lift (map f ρ) ≡ map [ ⇑ʳ (tabulate f) ]ʳ_ (lift ρ)
   lift-map f 𝟘 = refl
   lift-map f [ x ] = cong [_] (trans (cong η (sym (tabulate-∙ f))) (sym ([]ʳ-η (tabulate f) x)))
-  lift-map f (ρ₁ ⧺ ρ₂) = cong₂ _⧺_ (lift-map f ρ₁) (lift-map f ρ₂)
+  lift-map f (ρ₁ ⋈ ρ₂) = cong₂ _⋈_ (lift-map f ρ₁) (lift-map f ρ₂)
 
   ⇑ˢ-lift : ∀ {γ δ θ} (ρ : γ →ʳ δ) → ⇑ˢ {θ = θ} (lift ρ) ≡ lift (⇑ʳ ρ)
-  ⇑ˢ-lift ρ = cong₂ _⧺_ (sym (lift-map var-left ρ)) refl
+  ⇑ˢ-lift ρ = cong₂ _⋈_ (sym (lift-map var-left ρ)) refl
 
   shift : Shape → List Shape → Shape
   shift γ [] = γ
-  shift γ (δ ∷ δs) = (shift γ δs) ⧺ δ
+  shift γ (δ ∷ δs) = (shift γ δs) ⋈ δ
 
   ⟰ʳ : ∀ {γ δ Ξ} → (γ →ʳ δ) → (shift γ Ξ →ʳ shift δ Ξ)
   ⟰ʳ {Ξ = []} ρ = ρ
@@ -146,15 +146,15 @@ module Alternatives (Class : Set) where
     infix 4 _⇒ˢ_
     data _⇒ˢ_ : Shape → Shape → Set where
       sbs : ∀ {γ δ} (f : γ →ˢ δ) → γ ⇒ˢ δ
-      𝟙⧺ : ∀ {δ θ} (f : θ ⇒ˢ δ) → δ ⧺ θ ⇒ˢ δ
-      rgh : ∀ {γ δ θ} (f : γ ⇒ˢ δ) → γ ⧺ θ ⇒ˢ δ ⧺ θ
-      𝟙, : ∀ {γ δ θ} (f : γ ⇒ˢ θ ⧺ δ) → θ ⧺ γ ⇒ˢ θ ⧺ δ
+      𝟙⋈ : ∀ {δ θ} (f : θ ⇒ˢ δ) → δ ⋈ θ ⇒ˢ δ
+      rgh : ∀ {γ δ θ} (f : γ ⇒ˢ δ) → γ ⋈ θ ⇒ˢ δ ⋈ θ
+      𝟙, : ∀ {γ δ θ} (f : γ ⇒ˢ θ ⋈ δ) → θ ⋈ γ ⇒ˢ θ ⋈ δ
 
     infix 7 _∙∙_
     _∙∙_ : ∀ {γ δ} (f : γ ⇒ˢ δ) {a} → a ∈ γ → Arg δ a
     sbs f ∙∙ x = f ∙ x
-    𝟙⧺ f ∙∙ var-left x = η x
-    𝟙⧺ f ∙∙ var-right y = f ∙∙ y
+    𝟙⋈ f ∙∙ var-left x = η x
+    𝟙⋈ f ∙∙ var-right y = f ∙∙ y
     rgh f ∙∙ var-left x = [ ⇑ʳ (tabulate var-left) ]ʳ (f ∙∙ x)
     rgh f ∙∙ var-right y = η (var-right y)
     𝟙, f ∙∙ var-left x = η (var-left x)
@@ -162,13 +162,13 @@ module Alternatives (Class : Set) where
 
     {-# TERMINATING #-}
     act : ∀ {γ δ cl} (f : γ ⇒ˢ δ) → Expr γ cl → Expr δ cl
-    act (sbs f) (x ` ts) =  act (𝟙⧺ (sbs (tabulate λ z → act (rgh (sbs f)) (ts ∙ z)))) (f ∙ x)
-    act (𝟙⧺ f) (var-left x ` ts) = x ` (tabulate λ z → act (rgh (𝟙⧺ f)) (ts ∙ z))
-    act (𝟙⧺ f) (var-right y ` ts) = act (𝟙⧺ (sbs (tabulate λ z → act (rgh (𝟙⧺ f)) (ts ∙ z)))) (f ∙∙ y)
+    act (sbs f) (x ` ts) =  act (𝟙⋈ (sbs (tabulate λ z → act (rgh (sbs f)) (ts ∙ z)))) (f ∙ x)
+    act (𝟙⋈ f) (var-left x ` ts) = x ` (tabulate λ z → act (rgh (𝟙⋈ f)) (ts ∙ z))
+    act (𝟙⋈ f) (var-right y ` ts) = act (𝟙⋈ (sbs (tabulate λ z → act (rgh (𝟙⋈ f)) (ts ∙ z)))) (f ∙∙ y)
     act (rgh f) (var-left x ` ts) = act (𝟙, (sbs (tabulate (λ z → act (rgh (rgh f))  (ts ∙ z))))) (f ∙∙ x)
     act (rgh f) (var-right y ` ts) = var-right y ` tabulate λ z → act (rgh (rgh f)) (ts ∙ z)
     act (𝟙, f) (var-left x ` ts) = var-left x ` tabulate (λ z →  act (rgh (𝟙, f)) (ts ∙ z))
-    act (𝟙, f) (var-right x ` ts) = act (𝟙⧺ (sbs (tabulate (λ z → act (rgh (𝟙, f)) (ts ∙ z))))) (f ∙∙ x)
+    act (𝟙, f) (var-right x ` ts) = act (𝟙⋈ (sbs (tabulate (λ z → act (rgh (𝟙, f)) (ts ∙ z))))) (f ∙∙ x)
 
 
   module IdealDefintion where
@@ -182,14 +182,14 @@ module Alternatives (Class : Set) where
     {-# TERMINATING #-}
     _∘ˢ_ : ∀ {γ δ θ} (g : δ →ˢ θ) (f : γ →ˢ δ) → γ →ˢ θ
 
-    [ f ]ˢ x ` ts = [ 𝟙ˢ ⧺ (f ∘ˢ ts) ]ˢ (f ∙ x)
+    [ f ]ˢ x ` ts = [ 𝟙ˢ ⋈ (f ∘ˢ ts) ]ˢ (f ∙ x)
     g ∘ˢ f = tabulate (λ x → [ ⇑ˢ g ]ˢ f ∙ x)
 
     [lift]ˢ : ∀ {γ δ cl} (ρ : γ →ʳ δ) (e : Expr γ cl) → [ lift ρ ]ˢ e ≡ [ ρ ]ʳ e
-    [lift]ˢ ρ (x ` ts) = trans (cong [ 𝟙ˢ ⧺ lift ρ ∘ˢ ts ]ˢ_ (lift-∙ ρ x)) {!!}
+    [lift]ˢ ρ (x ` ts) = trans (cong [ 𝟙ˢ ⋈ lift ρ ∘ˢ ts ]ˢ_ (lift-∙ ρ x)) {!!}
 
     [𝟙]ˢ : ∀ {γ cl} {e : Expr γ cl} → [ 𝟙ˢ ]ˢ e ≡ e
-    [𝟙]ˢ {e = x ` ts} = trans (cong [ 𝟙ˢ ⧺ (𝟙ˢ ∘ˢ ts) ]ˢ_ 𝟙ˢ-∙) {!!}
+    [𝟙]ˢ {e = x ` ts} = trans (cong [ 𝟙ˢ ⋈ (𝟙ˢ ∘ˢ ts) ]ˢ_ 𝟙ˢ-∙) {!!}
 
 
 
@@ -209,17 +209,17 @@ module Alternatives (Class : Set) where
     data defined where
       df : ∀ {γ δ} {f : γ →ˢ δ} {γˣ clˣ} {x : (γˣ , clˣ) ∈ γ} {ts : γˣ →ˢ γ}
               (D : ∀ {a} (z : a ∈ γˣ) → defined (⇑ˢ f) (ts ∙ z)) →
-              (E : defined (𝟙ˢ ⧺ tabulate (λ z → act (⇑ˢ f) (ts ∙ z) (D z))) (f ∙ x)) →
+              (E : defined (𝟙ˢ ⋈ tabulate (λ z → act (⇑ˢ f) (ts ∙ z) (D z))) (f ∙ x)) →
               defined f (x ` ts)
 
-    act f (x ` ts) (df D E) = act (𝟙ˢ ⧺ tabulate (λ z → act (⇑ˢ f) (ts ∙ z) (D z))) (f ∙ x) E
+    act f (x ` ts) (df D E) = act (𝟙ˢ ⋈ tabulate (λ z → act (⇑ˢ f) (ts ∙ z) (D z))) (f ∙ x) E
 
     -- we'll do this later
     postulate total-D : ∀ {γ δ} {f : γ →ˢ δ} {γˣ clˣ} (x : (γˣ , clˣ) ∈ γ) (ts : γˣ →ˢ γ) →
                         ∀ {a} (z : a ∈ γˣ) → defined (⇑ˢ f) (ts ∙ z)
 
     postulate total-E : ∀ {γ δ} {f : γ →ˢ δ} {γˣ clˣ} (x : (γˣ , clˣ) ∈ γ) (ts : γˣ →ˢ γ) →
-                        defined (𝟙ˢ ⧺ tabulate (λ {a} (z : a ∈ γˣ) → act (⇑ˢ f) (ts ∙ z)
+                        defined (𝟙ˢ ⋈ tabulate (λ {a} (z : a ∈ γˣ) → act (⇑ˢ f) (ts ∙ z)
                                         (total-D x ts z))) (f ∙ x)
 
     total-act : ∀ {γ δ cl} (f : γ →ˢ δ) (e : Expr γ cl) → defined f e
@@ -242,21 +242,21 @@ module Alternatives (Class : Set) where
     data [_]ˢ_:=_ : ∀ {γ δ cl} → (γ →ˢ δ) → Expr γ cl → Expr δ cl → Set where
        sbs : ∀ {γ δ} {f : γ →ˢ δ} {γˣ clˣ} {x : (γˣ , clˣ) ∈ γ} {ts : γˣ →ˢ γ} (d : γˣ →ˢ δ) {e} →
                   (∀ {a} (z : a ∈ γˣ) → [ ⇑ˢ f ]ˢ ts ∙ z := d ∙ z) →
-                  [ 𝟙ˢ ⧺ d ]ˢ f ∙ x := e →
+                  [ 𝟙ˢ ⋈ d ]ˢ f ∙ x := e →
                   [ f ]ˢ (x ` ts) := e
 
-    act-⧺-left : ∀ {γ δ θ} {f : γ →ˢ θ} {g : δ →ˢ θ} {γˣ clˣ} {x : (γˣ , clˣ) ∈ γ} {ts : γˣ →ˢ γ ⧺ δ} (d : γˣ →ˢ θ) e →
-                 (∀ {a} (z : a ∈ γˣ) → [ ⇑ˢ (f ⧺ g) ]ˢ ts ∙ z  := d ∙ z) →
-                 [ 𝟙ˢ ⧺ d ]ˢ (f ∙ x) := e →
-                 [ f ⧺ g ]ˢ var-left x ` ts := e
-    act-⧺-left d e r₁ r₂ = sbs d r₁ r₂
+    act-⋈-left : ∀ {γ δ θ} {f : γ →ˢ θ} {g : δ →ˢ θ} {γˣ clˣ} {x : (γˣ , clˣ) ∈ γ} {ts : γˣ →ˢ γ ⋈ δ} (d : γˣ →ˢ θ) e →
+                 (∀ {a} (z : a ∈ γˣ) → [ ⇑ˢ (f ⋈ g) ]ˢ ts ∙ z  := d ∙ z) →
+                 [ 𝟙ˢ ⋈ d ]ˢ (f ∙ x) := e →
+                 [ f ⋈ g ]ˢ var-left x ` ts := e
+    act-⋈-left d e r₁ r₂ = sbs d r₁ r₂
 
-    act-⇑ˢ : ∀ {γ δ θ} {f : γ →ˢ δ} {γˣ clˣ} {ts : γˣ →ˢ γ} {x : (γˣ , clˣ) ∈ γ} {ts : γˣ →ˢ γ ⧺ θ} (d : γˣ →ˢ δ ⧺ θ) e →
+    act-⇑ˢ : ∀ {γ δ θ} {f : γ →ˢ δ} {γˣ clˣ} {ts : γˣ →ˢ γ} {x : (γˣ , clˣ) ∈ γ} {ts : γˣ →ˢ γ ⋈ θ} (d : γˣ →ˢ δ ⋈ θ) e →
             (∀ {a} (z : a ∈ γˣ) → [ ⇑ˢ (⇑ˢ f) ]ˢ ts ∙ z := d ∙ z) →
-            [ 𝟙ˢ ⧺ d ]ˢ [ ⇑ʳ (tabulate var-left) ]ʳ f ∙ x  := e →
+            [ 𝟙ˢ ⋈ d ]ˢ [ ⇑ʳ (tabulate var-left) ]ʳ f ∙ x  := e →
             [ ⇑ˢ f ]ˢ var-left x ` ts := e
     act-⇑ˢ {γ = γ} {θ = θ} {f = f} {x = x} d e r₁ r₂ =
-      sbs d r₁ (subst (λ u → [ 𝟙ˢ ⧺ d ]ˢ u := e) (sym (map-∙ {ps = f} {x = x})) r₂)
+      sbs d r₁ (subst (λ u → [ 𝟙ˢ ⋈ d ]ˢ u := e) (sym (map-∙ {ps = f} {x = x})) r₂)
 
     act-η : ∀ {γ δ} (f : γ →ˢ δ) {a} (x : a ∈ γ) → [ ⇑ˢ f ]ˢ η x := f ∙ x
     act-η f x = {!!}

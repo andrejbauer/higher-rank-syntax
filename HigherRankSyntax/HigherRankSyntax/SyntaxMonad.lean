@@ -16,8 +16,8 @@ whenever `Γ : PShape C` is in scope, so `lift`, `unit_right`,
 lemmas without manually threading instance args.
 
 With cons-style telescopes, the Kleisli ↔ Subst bridge is cast-free:
-`Shape.nil ⧺ X = X` definitionally, so `lift f` is just
-`(toSubst f).act ⌊α⌋`.
+`Shape.nil ⋈ X = X` definitionally, so `lift f` is just
+`(Subst.mk f).act (Γ := Shape.nil) ⌊α⌋`.
 -/
 
 
@@ -79,7 +79,8 @@ def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
   map := (T C).obj
   η Γ := fun _ p => Expr.η p
   lift {Γ Δ} f := fun α e =>
-    (toSubst (fun {β} p => f β p)).act ⌊α⌋ e
+    (Subst.mk (fun {β} p => f β p) : Subst C Γ.tele Δ.tele).act
+      (Γ := Shape.nil) ⌊α⌋ e
   unit_right := by
     intro Γ
     funext α e

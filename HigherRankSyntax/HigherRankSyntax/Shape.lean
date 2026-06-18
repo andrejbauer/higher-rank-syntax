@@ -5,7 +5,7 @@ import HigherRankSyntax.Tele
 # Shapes and slots — telescope representation
 
 `Shape C` is `Tele C.Arity` — cons-style telescopes over arities.  The monoid
-operations `⧺` (composition) and `Shape.nil` (identity) are **strictly
+operations `⋈` (composition) and `Shape.nil` (identity) are **strictly
 associative with strict unit at the level of definitional equality**.
 
 Slots are inductive on the underlying list (`Γ.toList`).  Because
@@ -41,7 +41,7 @@ notation:max "⌊" α "⌋" => Shape.singleton α
 abbrev Shape.extList {C : Carrier} (Γ Δ : Shape C) : Shape C := Δ ∘ᵗ Γ
 
 @[inherit_doc Shape.extList]
-infixl:65 " ⧺ " => Shape.extList
+infixl:65 " ⋈ " => Shape.extList
 
 /-- A slot of a list of arities with its arity tracked as a type index.  The
 inductive lives on `List`; `SlotAt` on `Shape` is `abbrev`'d to this via the
@@ -69,13 +69,13 @@ def SlotAt.arity {C : Carrier} {Γ : Shape C} {α : C.Arity}
 /-! ### Strict monoid laws (all `rfl`) -/
 
 @[simp] theorem Shape.extList_nil {C : Carrier} (Γ : Shape C) :
-    Γ ⧺ Shape.nil = Γ := rfl
+    (Γ ⋈ Shape.nil) = Γ := rfl
 
 @[simp] theorem Shape.nil_extList {C : Carrier} (Γ : Shape C) :
-    Shape.nil ⧺ Γ = Γ := rfl
+    (Shape.nil ⋈ Γ) = Γ := rfl
 
 @[simp] theorem Shape.extList_assoc {C : Carrier} (Γ Δ Ξ : Shape C) :
-    (Γ ⧺ Δ) ⧺ Ξ = Γ ⧺ (Δ ⧺ Ξ) := rfl
+    ((Γ ⋈ Δ) ⋈ Ξ) = (Γ ⋈ (Δ ⋈ Ξ)) := rfl
 
 /-! ### Underlying-list reduction: `(Γ ∷ α).toList = α :: Γ.toList` -/
 

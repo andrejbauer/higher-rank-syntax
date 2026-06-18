@@ -16,7 +16,7 @@ Subst.act_ap_inl_pre
 ```
 
 These are the syntax-directed action clauses.  They are the local Lean form of
-the mathematical split of a head in `pre ⧺ dom ⧺ τ` into:
+the mathematical split of a head in `pre ⋈ dom ⋈ τ` into:
 
 - the current depth `τ`;
 - the substitution domain `dom`;
@@ -80,16 +80,16 @@ branch of `diamondAt` fires.
 The central implementation device is:
 
 ```lean
-TargetProper τ src dst υ
+Proper.AppendCoherence τ src dst υ
 ```
 
-It carries exact `Proper` witnesses for `τ`, `src`, `dst`, `τ ⧺ src`, and
-`τ ⧺ dst`, together with the decomposition laws needed by the head-normalizing
+It carries exact `Proper` witnesses for `τ`, `src`, `dst`, `τ ⋈ src`, and
+`τ ⋈ dst`, together with the decomposition laws needed by the head-normalizing
 branches.
 
 This is necessary because `Proper` is computational data.  In particular,
 `Proper.compose Shape.nil τ` does not compute like the ordinary ambient
-`[Proper τ]` witness.  The constructor `TargetProper.nil` is used by
+`[Proper τ]` witness.  The constructor `Proper.AppendCoherence.nil` is used by
 `Subst.act_comp` to keep the nil-target specialization definitionally aligned.
 
 ## 5. Composition And Relative-Monad Laws
@@ -108,7 +108,7 @@ law `Subst.act_kcomp` remains a short corollary of `Subst.act_comp`.
 ## Result
 
 The conceptual duplicate recursive stack is gone.  The line-count target did
-not land: the file is about 1693 lines because the explicit `TargetProper`
+not land: the file is about 1693 lines because the explicit `Proper.AppendCoherence`
 coherence layer is substantial.  The next realistic cleanup is not another
 global theorem, but factoring repeated target-witness/filler-family
 normalization into small local lemmas without hiding the five/three head-case

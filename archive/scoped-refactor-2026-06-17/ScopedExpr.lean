@@ -14,11 +14,11 @@ The key representation invariant for one-binder local substitution is:
 * `υ` is the older local tail;
 * `α` is the active binder being substituted;
 * `χ` is the newer passive prefix;
-* the source local context is `(υ ∷ α) ⧺ χ`;
-* the target local context is `υ ⧺ χ`.
+* the source local context is `(υ ∷ α) ⋈ χ`;
+* the target local context is `υ ⋈ χ`.
 
 This orientation makes argument descent definitional:
-`((υ ∷ α) ⧺ χ) ∷ β = (υ ∷ α) ⧺ (χ ∷ β)`.
+`((υ ∷ α) ⋈ χ) ∷ β = (υ ∷ α) ⋈ (χ ∷ β)`.
 -/
 
 /-- A scoped application head.  A head is either free, from the ambient
@@ -81,11 +81,11 @@ inductive Subterm {C : Carrier} {Γ : Shape C} :
 /-- Argument descent through a passive-prefix decomposition. -/
 theorem Subterm.of_arg_ext {C : Carrier} {Γ : Shape C}
     {τ χ : Shape C} {α : C.Arity}
-    (head : ScopedHead Γ (τ ⧺ χ) α)
-    (args : (i : C.Binder α) → ScopedExpr Γ ((τ ⧺ χ) ∷ i.arity))
+    (head : ScopedHead Γ (τ ⋈ χ) α)
+    (args : (i : C.Binder α) → ScopedExpr Γ ((τ ⋈ χ) ∷ i.arity))
     (j : C.Binder α) :
-    Subterm ⟨τ ⧺ (χ ∷ j.arity), args j⟩
-      ⟨τ ⧺ χ, ScopedExpr.ap head args⟩ :=
+    Subterm ⟨τ ⋈ (χ ∷ j.arity), args j⟩
+      ⟨τ ⋈ χ, ScopedExpr.ap head args⟩ :=
   Subterm.of_arg head args j
 
 /-- Structural recursion on scoped expressions is well-founded. -/
@@ -192,19 +192,19 @@ def eta {C : Carrier} {Γ : Shape C} {α : C.Arity}
     (x : Γ ∋ α) : ScopedExpr Γ ⌊α⌋ :=
   etaHead (τ := Shape.nil) (.free x)
 
-/-- Inject a passive-prefix slot into `υ ⧺ χ`. -/
+/-- Inject a passive-prefix slot into `υ ⋈ χ`. -/
 def localPrefix {C : Carrier} {χ : Shape C}
-    (pχ : ProperSpine χ) (υ : Shape C) : χ →ʳ υ ⧺ χ :=
+    (pχ : ProperSpine χ) (υ : Shape C) : χ →ʳ υ ⋈ χ :=
   ProperSpine.inr pχ υ
 
-/-- Inject an older-tail slot into `υ ⧺ χ`. -/
+/-- Inject an older-tail slot into `υ ⋈ χ`. -/
 def localTail {C : Carrier} {χ : Shape C}
-    (pχ : ProperSpine χ) (υ : Shape C) : υ →ʳ υ ⧺ χ :=
+    (pχ : ProperSpine χ) (υ : Shape C) : υ →ʳ υ ⋈ χ :=
   ProperSpine.inl pχ υ
 
 /-- Rename the older tail under a fixed passive prefix. -/
 def localMapTail {C : Carrier} {χ υ ν : Shape C}
-    (pχ : ProperSpine χ) (ρ : υ →ʳ ν) : υ ⧺ χ →ʳ ν ⧺ χ :=
+    (pχ : ProperSpine χ) (ρ : υ →ʳ ν) : υ ⋈ χ →ʳ ν ⋈ χ :=
   ⟨fun x =>
     ProperSpine.classify pχ υ _ x
       (fun xχ => localPrefix pχ ν xχ)
@@ -263,11 +263,11 @@ theorem localMapTail_tail {C : Carrier} {χ υ ν : Shape C}
       rw [ProperSpine.classify_cons_there]
       simp only [ProperSpine.inr_cons_there, ProperSpine.inl_cons]
       change
-        ProperSpine.classify pχ υ ((ν ⧺ χ) ∷ β ∋ α) x
+        ProperSpine.classify pχ υ ((ν ⋈ χ) ∷ β ∋ α) x
             (fun xχ => .there ((ProperSpine.inr pχ ν) xχ))
             (fun xυ => .there ((ProperSpine.inl pχ ν) (ρ xυ))) =
           .there
-            (ProperSpine.classify pχ υ (ν ⧺ χ ∋ α) x
+            (ProperSpine.classify pχ υ (ν ⋈ χ ∋ α) x
               (fun xχ => (ProperSpine.inr pχ ν) xχ)
               (fun xυ => (ProperSpine.inl pχ ν) (ρ xυ)))
       rw [ProperSpine.classify_weaken]
@@ -288,17 +288,17 @@ def renameTail {C : Carrier} {χ υ ν : Shape C} {α β : C.Arity}
   | .active i => .active i
   | .tail x => .tail (ρ x)
 
-/-- Embed a classified local site back into `(υ ∷ α) ⧺ χ`. -/
+/-- Embed a classified local site back into `(υ ∷ α) ⋈ χ`. -/
 def embedSource {C : Carrier} {χ υ : Shape C} (pχ : ProperSpine χ)
-    {α β : C.Arity} : LocalSite χ υ α β → (υ ∷ α) ⧺ χ ∋ β
+    {α β : C.Arity} : LocalSite χ υ α β → (υ ∷ α) ⋈ χ ∋ β
   | .pre x => localPrefix pχ (υ ∷ α) x
   | .active i => localTail pχ (υ ∷ α) (.here i)
   | .tail x => localTail pχ (υ ∷ α) (.there x)
 
-/-- Classify a local slot of `(υ ∷ α) ⧺ χ`. -/
+/-- Classify a local slot of `(υ ∷ α) ⋈ χ`. -/
 def classify {C : Carrier} {χ : Shape C} (pχ : ProperSpine χ)
     (υ : Shape C) (α : C.Arity) {β : C.Arity}
-    (x : (υ ∷ α) ⧺ χ ∋ β) : LocalSite χ υ α β :=
+    (x : (υ ∷ α) ⋈ χ ∋ β) : LocalSite χ υ α β :=
   ProperSpine.classify pχ (υ ∷ α) _ x
     (fun xχ => .pre xχ)
     (fun
@@ -307,7 +307,7 @@ def classify {C : Carrier} {χ : Shape C} (pχ : ProperSpine χ)
 
 theorem cover {C : Carrier} {χ υ : Shape C}
     (pχ : ProperSpine χ) (α : C.Arity) {β : C.Arity}
-    (x : (υ ∷ α) ⧺ χ ∋ β) :
+    (x : (υ ∷ α) ⋈ χ ∋ β) :
     ∃ site : LocalSite χ υ α β, x = embedSource pχ site := by
   rcases ProperSpine.coverEq pχ (υ ∷ α) x with ⟨xχ, h⟩ | ⟨y, h⟩
   · exact ⟨.pre xχ, h⟩
@@ -336,7 +336,7 @@ theorem classify_tail {C : Carrier} {χ υ : Shape C}
 renaming only the tail case. -/
 theorem classify_mapTail {C : Carrier} {χ υ ν : Shape C}
     (pχ : ProperSpine χ) (ρ : υ →ʳ ν) (α : C.Arity)
-    {β : C.Arity} (x : (υ ∷ α) ⧺ χ ∋ β) :
+    {β : C.Arity} (x : (υ ∷ α) ⋈ χ ∋ β) :
     classify pχ ν α (localMapTail pχ (localCons ρ α) x) =
       renameTail ρ (classify pχ υ α x) := by
   rcases ProperSpine.coverEq pχ (υ ∷ α) x with ⟨xχ, rfl⟩ | ⟨y, rfl⟩
@@ -414,7 +414,7 @@ def instOneAt {C : Carrier} {Γ : Shape C} :
     {χ : Shape C} → (pχ : ProperSpine χ) → (υ : Shape C) →
     (α : C.Arity) →
     ((i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity)) →
-    ScopedExpr Γ ((υ ∷ α) ⧺ χ) → ScopedExpr Γ (υ ⧺ χ)
+    ScopedExpr Γ ((υ ∷ α) ⋈ χ) → ScopedExpr Γ (υ ⋈ χ)
   | χ, pχ, υ, α, fill, .ap (α := β) head args =>
       match head with
       | .free x =>
@@ -434,11 +434,11 @@ def instOneAt {C : Carrier} {Γ : Shape C} :
           | .active j =>
               -- Active head: fire the selected filler, then instantiate the
               -- fresh binder introduced by that filler with transformed args.
-              instOneAt .nil (υ ⧺ χ) j.arity
+              instOneAt .nil (υ ⋈ χ) j.arity
                 (fun k => instOneAt (.cons pχ k.arity) υ α fill (args k))
                 (renameLocal (localCons (localTail pχ υ) j.arity) (fill j))
 termination_by χ _ υ α _ e =>
-  (α, (⟨(υ ∷ α) ⧺ χ, e⟩ : Σ τ : Shape C, ScopedExpr Γ τ))
+  (α, (⟨(υ ∷ α) ⋈ χ, e⟩ : Σ τ : Shape C, ScopedExpr Γ τ))
 decreasing_by
   all_goals
     first
@@ -452,7 +452,7 @@ theorem instOneAt_freeHead {C : Carrier} {Γ χ υ : Shape C}
     (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
     (x : Γ ∋ β)
     (args : (j : C.Binder β) →
-      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
+      ScopedExpr Γ (((υ ∷ α) ⋈ χ) ∷ j.arity)) :
     instOneAt pχ υ α fill (.ap (.free x) args) =
       .ap (.free x)
         (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j)) := by
@@ -463,7 +463,7 @@ theorem instOneAt_preHead {C : Carrier} {Γ χ υ : Shape C}
     (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
     (x : χ ∋ β)
     (args : (j : C.Binder β) →
-      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
+      ScopedExpr Γ (((υ ∷ α) ⋈ χ) ∷ j.arity)) :
     instOneAt pχ υ α fill (.ap (.local (localPrefix pχ (υ ∷ α) x)) args) =
       .ap (.local (localPrefix pχ υ x))
         (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j)) := by
@@ -475,7 +475,7 @@ theorem instOneAt_tailHead {C : Carrier} {Γ χ υ : Shape C}
     (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
     (x : υ ∋ β)
     (args : (j : C.Binder β) →
-      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
+      ScopedExpr Γ (((υ ∷ α) ⋈ χ) ∷ j.arity)) :
     instOneAt pχ υ α fill (.ap (.local (localTail pχ (υ ∷ α) (.there x))) args) =
       .ap (.local (localTail pχ υ x))
         (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j)) := by
@@ -487,9 +487,9 @@ theorem instOneAt_activeHead {C : Carrier} {Γ χ υ : Shape C}
     (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
     (i : C.Binder α)
     (args : (j : C.Binder i.arity) →
-      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
+      ScopedExpr Γ (((υ ∷ α) ⋈ χ) ∷ j.arity)) :
     instOneAt pχ υ α fill (.ap (.local (localTail pχ (υ ∷ α) (.here i))) args) =
-      instOneAt .nil (υ ⧺ χ) i.arity
+      instOneAt .nil (υ ⋈ χ) i.arity
         (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j))
         (renameLocal (localCons (localTail pχ υ) i.arity) (fill i)) := by
   exact instOneAt.eq_4 χ pχ υ α fill i args
@@ -500,7 +500,7 @@ theorem instOneAt_preSiteHead {C : Carrier} {Γ χ υ : Shape C}
     (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
     (x : χ ∋ β)
     (args : (j : C.Binder β) →
-      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
+      ScopedExpr Γ (((υ ∷ α) ⋈ χ) ∷ j.arity)) :
     instOneAt pχ υ α fill
         (.ap (.local (LocalSite.embedSource pχ (LocalSite.pre x))) args) =
       .ap (.local (localPrefix pχ υ x))
@@ -517,7 +517,7 @@ theorem instOneAt_tailSiteHead {C : Carrier} {Γ χ υ : Shape C}
     (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
     (x : υ ∋ β)
     (args : (j : C.Binder β) →
-      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
+      ScopedExpr Γ (((υ ∷ α) ⋈ χ) ∷ j.arity)) :
     instOneAt pχ υ α fill
         (.ap (.local (LocalSite.embedSource pχ (LocalSite.tail x))) args) =
       .ap (.local (localTail pχ υ x))
@@ -534,16 +534,16 @@ theorem instOneAt_activeSiteHead {C : Carrier} {Γ χ υ : Shape C}
     (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
     (i : C.Binder α)
     (args : (j : C.Binder i.arity) →
-      ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ j.arity)) :
+      ScopedExpr Γ (((υ ∷ α) ⋈ χ) ∷ j.arity)) :
     instOneAt pχ υ α fill
         (.ap (.local (LocalSite.embedSource pχ (LocalSite.active i))) args) =
-      instOneAt .nil (υ ⧺ χ) i.arity
+      instOneAt .nil (υ ⋈ χ) i.arity
         (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j))
         (renameLocal (localCons (localTail pχ υ) i.arity) (fill i)) := by
   change
     instOneAt pχ υ α fill
         (.ap (.local (localTail pχ (υ ∷ α) (.here i))) args) =
-      instOneAt .nil (υ ⧺ χ) i.arity
+      instOneAt .nil (υ ⋈ χ) i.arity
         (fun j => instOneAt (.cons pχ j.arity) υ α fill (args j))
         (renameLocal (localCons (localTail pχ υ) i.arity) (fill i))
   exact instOneAt_activeHead pχ fill i args
@@ -567,7 +567,7 @@ theorem instOneAt_congr {C : Carrier} {Γ χ υ : Shape C}
     (pχ : ProperSpine χ) {α : C.Arity}
     {fill fill' : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity)}
     (hfill : ∀ i, fill i = fill' i)
-    {e e' : ScopedExpr Γ ((υ ∷ α) ⧺ χ)}
+    {e e' : ScopedExpr Γ ((υ ∷ α) ⋈ χ)}
     (he : e = e') :
     instOneAt pχ υ α fill e = instOneAt pχ υ α fill' e' := by
   subst he
@@ -579,21 +579,21 @@ private theorem localPrefix_append_right {C : Carrier} {χ ψ υ : Shape C}
     (pχ : ProperSpine χ) (pψ : ProperSpine ψ)
     {α : C.Arity} (x : ψ ∋ α) :
     localPrefix (ProperSpine.append pχ pψ) υ (localPrefix pψ χ x) =
-      localPrefix pψ (υ ⧺ χ) x :=
+      localPrefix pψ (υ ⋈ χ) x :=
   ProperSpine.append_inr_inr pχ pψ υ x
 
 private theorem localPrefix_append_left {C : Carrier} {χ ψ υ : Shape C}
     (pχ : ProperSpine χ) (pψ : ProperSpine ψ)
     {α : C.Arity} (x : χ ∋ α) :
     localPrefix (ProperSpine.append pχ pψ) υ (localTail pψ χ x) =
-      localTail pψ (υ ⧺ χ) (localPrefix pχ υ x) :=
+      localTail pψ (υ ⋈ χ) (localPrefix pχ υ x) :=
   ProperSpine.append_inr_inl pχ pψ υ x
 
 private theorem localTail_append {C : Carrier} {χ ψ υ : Shape C}
     (pχ : ProperSpine χ) (pψ : ProperSpine ψ)
     {α : C.Arity} (x : υ ∋ α) :
     localTail (ProperSpine.append pχ pψ) υ x =
-      localTail pψ (υ ⧺ χ) (localTail pχ υ x) :=
+      localTail pψ (υ ⋈ χ) (localTail pχ υ x) :=
   ProperSpine.append_inl pχ pψ υ x
 
 private theorem renameLocal_extendPassiveFiller {C : Carrier}
@@ -601,7 +601,7 @@ private theorem renameLocal_extendPassiveFiller {C : Carrier}
     (pχ : ProperSpine χ) (pψ : ProperSpine ψ) {β : C.Arity}
     (e : ScopedExpr Γ (υ ∷ β)) :
     renameLocal (localCons (localTail (ProperSpine.append pχ pψ) υ) β) e =
-      renameLocal (localCons (localTail pψ (υ ⧺ χ)) β)
+      renameLocal (localCons (localTail pψ (υ ⋈ χ)) β)
         (renameLocal (localCons (localTail pχ υ) β) e) := by
   rw [← renameLocal_comp]
   congr 1
@@ -613,8 +613,8 @@ private theorem renameLocal_extendPassiveFiller {C : Carrier}
 
 private def extendPassiveRen {C : Carrier} {χ ψ ω base : Shape C}
     (pψ : ProperSpine ψ) (pω : ProperSpine ω) :
-    (base ⧺ χ) ⧺ ω →ʳ (base ⧺ (χ ⧺ ψ)) ⧺ ω :=
-  localMapTail pω (localTail pψ (base ⧺ χ))
+    (base ⋈ χ) ⋈ ω →ʳ (base ⋈ (χ ⋈ ψ)) ⋈ ω :=
+  localMapTail pω (localTail pψ (base ⋈ χ))
 
 private theorem extendPassiveRen_cons {C : Carrier}
     {χ ψ ω base : Shape C}
@@ -630,14 +630,14 @@ private theorem extendPassiveRen_cons {C : Carrier}
 
 private def passiveInsert {C : Carrier} {χ ψ ω : Shape C}
     (pψ : ProperSpine ψ) (pω : ProperSpine ω) :
-    χ ⧺ ω →ʳ (χ ⧺ ψ) ⧺ ω :=
+    χ ⋈ ω →ʳ (χ ⋈ ψ) ⋈ ω :=
   localMapTail pω (localTail pψ χ)
 
 private theorem localPrefix_extendPassive {C : Carrier}
     {χ ψ ω base : Shape C}
     (pχ : ProperSpine χ) (pψ : ProperSpine ψ)
     (pω : ProperSpine ω)
-    {α : C.Arity} (x : χ ⧺ ω ∋ α) :
+    {α : C.Arity} (x : χ ⋈ ω ∋ α) :
     extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω) (base := base) pψ pω
         (localPrefix (ProperSpine.append pχ pω) base x)
       =
@@ -649,41 +649,41 @@ private theorem localPrefix_extendPassive {C : Carrier}
     have hleft :
         localPrefix (ProperSpine.append pχ pω) base
             ((ProperSpine.inr pω χ) xω) =
-          localPrefix pω (base ⧺ χ) xω :=
+          localPrefix pω (base ⋈ χ) xω :=
       ProperSpine.append_inr_inr pχ pω base xω
     rw [hleft]
     rw [localMapTail_prefix]
     have hpass :
         localMapTail pω (localTail pψ χ)
             ((ProperSpine.inr pω χ) xω) =
-          (ProperSpine.inr pω (χ ⧺ ψ)) xω :=
+          (ProperSpine.inr pω (χ ⋈ ψ)) xω :=
       localMapTail_prefix pω (localTail pψ χ) xω
     rw [hpass]
     have hright :
         localPrefix (ProperSpine.append (ProperSpine.append pχ pψ) pω)
-            base ((ProperSpine.inr pω (χ ⧺ ψ)) xω) =
-          localPrefix pω (base ⧺ (χ ⧺ ψ)) xω :=
+            base ((ProperSpine.inr pω (χ ⋈ ψ)) xω) =
+          localPrefix pω (base ⋈ (χ ⋈ ψ)) xω :=
       ProperSpine.append_inr_inr (ProperSpine.append pχ pψ) pω base xω
     rw [hright]
   · unfold passiveInsert
     have hleft :
         localPrefix (ProperSpine.append pχ pω) base
             ((ProperSpine.inl pω χ) xχ) =
-          localTail pω (base ⧺ χ) (localPrefix pχ base xχ) :=
+          localTail pω (base ⋈ χ) (localPrefix pχ base xχ) :=
       ProperSpine.append_inr_inl pχ pω base xχ
     rw [hleft]
     rw [localMapTail_tail]
     have hpass :
         localMapTail pω (localTail pψ χ)
             ((ProperSpine.inl pω χ) xχ) =
-          localTail pω (χ ⧺ ψ) (localTail pψ χ xχ) :=
+          localTail pω (χ ⋈ ψ) (localTail pψ χ xχ) :=
       localMapTail_tail pω (localTail pψ χ) xχ
     rw [hpass]
     rw [← localPrefix_append_left pχ pψ (υ := base) xχ]
     have hright :
         localPrefix (ProperSpine.append (ProperSpine.append pχ pψ) pω)
-            base (localTail pω (χ ⧺ ψ) (localTail pψ χ xχ)) =
-          localTail pω (base ⧺ (χ ⧺ ψ))
+            base (localTail pω (χ ⋈ ψ) (localTail pψ χ xχ)) =
+          localTail pω (base ⋈ (χ ⋈ ψ))
             (localPrefix (ProperSpine.append pχ pψ) base
               (localTail pψ χ xχ)) :=
       ProperSpine.append_inr_inl (ProperSpine.append pχ pψ) pω base
@@ -739,16 +739,16 @@ private theorem renameLocal_extendPassiveAtFiller {C : Carrier}
 /-- Argument-descent facade for one-binder instantiation.
 
 When we recurse through the arguments of an application whose local context is
-`(υ ∷ α) ⧺ χ`, the argument lives in `((υ ∷ α) ⧺ χ) ∷ β`.  This is
-definitionally the same shape as `(υ ∷ α) ⧺ (χ ∷ β)`, but this facade states
+`(υ ∷ α) ⋈ χ`, the argument lives in `((υ ∷ α) ⋈ χ) ∷ β`.  This is
+definitionally the same shape as `(υ ∷ α) ⋈ (χ ∷ β)`, but this facade states
 the argument-shaped version directly.  That keeps recursive proof calls visibly
 structural instead of asking Lean to rediscover the reassociation each time. -/
 private def instOneAtUnder {C : Carrier} {Γ χ υ : Shape C}
     (pχ : ProperSpine χ) (α : C.Arity)
     (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
     {β : C.Arity}
-    (e : ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ β)) :
-    ScopedExpr Γ ((υ ⧺ χ) ∷ β) :=
+    (e : ScopedExpr Γ (((υ ∷ α) ⋈ χ) ∷ β)) :
+    ScopedExpr Γ ((υ ⋈ χ) ∷ β) :=
   instOneAt (.cons pχ β) υ α fill e
 
 /-- Renaming the older local tail commutes with one-binder instantiation.
@@ -762,7 +762,7 @@ theorem renameLocal_instOneAt {C : Carrier} {Γ : Shape C} :
     {χ υ ν : Shape C} → (pχ : ProperSpine χ) → (ρ : υ →ʳ ν) →
     (α : C.Arity) →
     (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity)) →
-    (e : ScopedExpr Γ ((υ ∷ α) ⧺ χ)) →
+    (e : ScopedExpr Γ ((υ ∷ α) ⋈ χ)) →
     renameLocal (localMapTail pχ ρ) (instOneAt pχ υ α fill e) =
       instOneAt pχ ν α
         (fun i => renameLocal (localCons ρ i.arity) (fill i))
@@ -889,7 +889,7 @@ theorem renameLocal_instOneAt {C : Carrier} {Γ : Shape C} :
             rw [instOneAt_activeSiteHead pχ fill i args]
             change
               renameLocal (localMapTail pχ ρ)
-                (instOneAt .nil (υ ⧺ χ) i.arity
+                (instOneAt .nil (υ ⋈ χ) i.arity
                   (fun j => instOneAtUnder pχ α fill (args j))
                   (renameLocal (localCons (localTail pχ υ) i.arity)
                     (fill i))) =
@@ -904,7 +904,7 @@ theorem renameLocal_instOneAt {C : Carrier} {Γ : Shape C} :
                         (args j)))
             change
               renameLocal (localMapTail .nil (localMapTail pχ ρ))
-                (instOneAt .nil (υ ⧺ χ) i.arity
+                (instOneAt .nil (υ ⋈ χ) i.arity
                   (fun j => instOneAtUnder pχ α fill (args j))
                   (renameLocal (localCons (localTail pχ υ) i.arity)
                     (fill i))) =
@@ -923,7 +923,7 @@ theorem renameLocal_instOneAt {C : Carrier} {Γ : Shape C} :
               (renameLocal (localCons (localTail pχ υ) i.arity) (fill i))]
             rw [LocalSite.mapTail_embedSource]
             change
-              instOneAt .nil (ν ⧺ χ) i.arity
+              instOneAt .nil (ν ⋈ χ) i.arity
                   (fun j =>
                     renameLocal (localCons (localMapTail pχ ρ) j.arity)
                       (instOneAtUnder pχ α fill (args j)))
@@ -944,7 +944,7 @@ theorem renameLocal_instOneAt {C : Carrier} {Γ : Shape C} :
             exact instOneAt_congr .nil hargs
               (renameLocal_activeFiller pχ ρ (fill i))
 termination_by χ υ ν _ _ α _ e =>
-  (α, (⟨(υ ∷ α) ⧺ χ, e⟩ : Σ τ : Shape C, ScopedExpr Γ τ))
+  (α, (⟨(υ ∷ α) ⋈ χ, e⟩ : Σ τ : Shape C, ScopedExpr Γ τ))
 decreasing_by
   all_goals
     first
@@ -958,7 +958,7 @@ private theorem instOneAt_extendPassiveAt {C : Carrier} {Γ : Shape C} :
     (pχ : ProperSpine χ) → (pψ : ProperSpine ψ) →
     (pω : ProperSpine ω) → (α : C.Arity) →
     (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity)) →
-    (e : ScopedExpr Γ (((υ ∷ α) ⧺ χ) ⧺ ω)) →
+    (e : ScopedExpr Γ (((υ ∷ α) ⋈ χ) ⋈ ω)) →
     instOneAt (ProperSpine.append (ProperSpine.append pχ pψ) pω) υ α fill
         (renameLocal
           (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
@@ -1229,7 +1229,7 @@ private theorem instOneAt_extendPassiveAt {C : Carrier} {Γ : Shape C} :
                   (args j))]
             rw [instOneAt_activeHead (ProperSpine.append pχ pω) fill i args]
             change
-              instOneAt .nil (((υ ⧺ χ) ⧺ ψ) ⧺ ω) i.arity
+              instOneAt .nil (((υ ⋈ χ) ⋈ ψ) ⋈ ω) i.arity
                   (fun j =>
                     instOneAt
                       (ProperSpine.append (ProperSpine.append pχ pψ)
@@ -1252,7 +1252,7 @@ private theorem instOneAt_extendPassiveAt {C : Carrier} {Γ : Shape C} :
                   (localMapTail .nil
                     (extendPassiveRen (χ := χ) (ψ := ψ) (ω := ω)
                       (base := υ) pψ pω))
-                  (instOneAt .nil ((υ ⧺ χ) ⧺ ω) i.arity
+                  (instOneAt .nil ((υ ⋈ χ) ⋈ ω) i.arity
                     (fun j =>
                       instOneAt (ProperSpine.append pχ (.cons pω j.arity))
                         υ α fill (args j))
@@ -1275,7 +1275,7 @@ private theorem instOneAt_extendPassiveAt {C : Carrier} {Γ : Shape C} :
             exact instOneAt_congr .nil hargs
               (renameLocal_extendPassiveAtFiller pχ pψ pω (fill i))
 termination_by χ ψ ω υ _ _ _ α _ e =>
-  (α, (⟨((υ ∷ α) ⧺ χ) ⧺ ω, e⟩ :
+  (α, (⟨((υ ∷ α) ⋈ χ) ⋈ ω, e⟩ :
     Σ τ : Shape C, ScopedExpr Γ τ))
 decreasing_by
   all_goals
@@ -1286,11 +1286,11 @@ decreasing_by
 private theorem instOneAt_extendPassive {C : Carrier} {Γ χ ψ υ : Shape C}
     (pχ : ProperSpine χ) (pψ : ProperSpine ψ) (α : C.Arity)
     (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
-    (e : ScopedExpr Γ ((υ ∷ α) ⧺ χ)) :
+    (e : ScopedExpr Γ ((υ ∷ α) ⋈ χ)) :
     instOneAt (ProperSpine.append pχ pψ) υ α fill
-        (renameLocal (localTail pψ ((υ ∷ α) ⧺ χ)) e)
+        (renameLocal (localTail pψ ((υ ∷ α) ⋈ χ)) e)
       =
-      renameLocal (localTail pψ (υ ⧺ χ))
+      renameLocal (localTail pψ (υ ⋈ χ))
         (instOneAt pχ υ α fill e) := by
   exact instOneAt_extendPassiveAt pχ pψ .nil α fill e
 
@@ -1298,11 +1298,11 @@ private theorem instOneAt_extendPassiveUnder {C : Carrier} {Γ χ ψ υ : Shape 
     (pχ : ProperSpine χ) (pψ : ProperSpine ψ) (α : C.Arity)
     (fill : (i : C.Binder α) → ScopedExpr Γ (υ ∷ i.arity))
     {β : C.Arity}
-    (e : ScopedExpr Γ (((υ ∷ α) ⧺ χ) ∷ β)) :
+    (e : ScopedExpr Γ (((υ ∷ α) ⋈ χ) ∷ β)) :
     instOneAt (.cons (ProperSpine.append pχ pψ) β) υ α fill
-        (renameLocal (localCons (localTail pψ ((υ ∷ α) ⧺ χ)) β) e)
+        (renameLocal (localCons (localTail pψ ((υ ∷ α) ⋈ χ)) β) e)
       =
-      renameLocal (localCons (localTail pψ (υ ⧺ χ)) β)
+      renameLocal (localCons (localTail pψ (υ ⋈ χ)) β)
         (instOneAtUnder pχ α fill e) := by
   unfold instOneAtUnder
   have h := instOneAt_extendPassiveAt pχ pψ (.cons .nil β) α fill e
@@ -1316,7 +1316,7 @@ private theorem instOneAt_extendPassiveUnder {C : Carrier} {Γ χ ψ υ : Shape 
 This is the renaming used when an expression that does not mention `β` is viewed
 in a context where `β` has been added as an older local binder. -/
 private def insertActiveRen {C : Carrier} {ψ base : Shape C}
-    (pψ : ProperSpine ψ) (β : C.Arity) : base ⧺ ψ →ʳ (base ∷ β) ⧺ ψ :=
+    (pψ : ProperSpine ψ) (β : C.Arity) : base ⋈ ψ →ʳ (base ∷ β) ⋈ ψ :=
   localMapTail pψ (localTail (.cons .nil β) base)
 
 private theorem insertActiveRen_cons {C : Carrier} {ψ base : Shape C}
@@ -1366,7 +1366,7 @@ This is the scoped analogue of the “absence” part of the old diamond proof. 
 private theorem instOneAt_contractInserted {C : Carrier} {Γ : Shape C} :
     {ψ base : Shape C} → (pψ : ProperSpine ψ) → (β : C.Arity) →
     (fillβ : (j : C.Binder β) → ScopedExpr Γ (base ∷ j.arity)) →
-    (e : ScopedExpr Γ (base ⧺ ψ)) →
+    (e : ScopedExpr Γ (base ⋈ ψ)) →
     instOneAt pψ base β fillβ
         (renameLocal (insertActiveRen pψ (base := base) β) e) = e
   | ψ, base, pψ, β, fillβ, .ap head args => by
@@ -1416,7 +1416,7 @@ private theorem instOneAt_contractInserted {C : Carrier} {Γ : Shape C} :
             rw [instOneAt_tailHead pψ fillβ xbase]
             exact ap_args_congr (.local (localTail pψ base xbase)) hargs
 termination_by ψ base _ β _ e =>
-  (β, (⟨base ⧺ ψ, e⟩ : Σ τ : Shape C, ScopedExpr Γ τ))
+  (β, (⟨base ⋈ ψ, e⟩ : Σ τ : Shape C, ScopedExpr Γ τ))
 decreasing_by
   all_goals
     exact Prod.Lex.right _ (Subterm.of_arg_ext _ _ _)
@@ -1424,7 +1424,7 @@ decreasing_by
 private theorem instOneAt_contractInsertedUnder {C : Carrier} {Γ ψ base : Shape C}
     (pψ : ProperSpine ψ) (β : C.Arity)
     (fillβ : (j : C.Binder β) → ScopedExpr Γ (base ∷ j.arity))
-    {γ : C.Arity} (e : ScopedExpr Γ ((base ⧺ ψ) ∷ γ)) :
+    {γ : C.Arity} (e : ScopedExpr Γ ((base ⋈ ψ) ∷ γ)) :
     instOneAt (.cons pψ γ) base β fillβ
         (renameLocal
           (localCons (insertActiveRen pψ (base := base) β) γ)
