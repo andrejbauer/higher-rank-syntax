@@ -61,9 +61,7 @@ theorem Subst.act_ap_middle
     {α} (y : dom ∋ α)
     (args : (i : C.Binder α) → Expr (((pre ⋈ dom) ⋈ τ) ∷ i.arity)) :
   σ.act τ (.ap ((Proper.inl (pre ⋈ dom)) ((Proper.inr pre) y)) args)
-    = ⟦ (Subst.mk (fun q => match q with
-          | .here i => σ.act (τ ∷ i.arity) (args i))
-        : Subst C ⌊α⌋ ((pre ⋈ cod) ⋈ τ)) ⟧ˢ (σ y)
+    = ⟦ ((fun | .here (i : C.Binder α) => σ.act (τ ∷ i.arity) (args i)) : Subst C ⌊α⌋ ((pre ⋈ cod) ⋈ τ)) ⟧ˢ (σ y)
   := by
   conv => lhs; unfold Subst.act
   rw [Subst.classifySite_inl_dom]
@@ -119,15 +117,15 @@ recurses over the expression. -/
 private theorem idOf
     {C : Carrier} (α : C.Arity) (Δ : Shape C)
     (hη : ∀ (i : C.Binder α), ∀ {pre cod : Shape C} [Proper cod]
-      (ι : ∀ {β : C.Arity}, (⌊i.arity⌋) ∋ β → Expr ((pre ⋈ cod) ∷ β))
+      (ι : Subst C ⌊i.arity⌋ (pre ⋈ cod))
       (p : pre ∋ i.arity),
-      ⟦(Subst.mk ι : Subst C ⌊i.arity⌋ (pre ⋈ cod))⟧ˢ (.η p)
+      ⟦ ι ⟧ˢ (.η p)
         = .ap ((Proper.inl pre) p) (fun j => ι (.here j))) :
   ∀ (τ : Shape C) [Proper τ] (e : Expr ((Δ ∷ α) ⋈ τ)),
-    (Subst.instId Δ α).act (Γ := Δ) τ e = e
+    Subst.act (Subst.instId Δ α) (Γ := Δ) τ e = e
   | τ, _, .ap (α := β) head argFam => by
       have ih_all : ∀ (k : C.Binder β),
-          (Subst.instId Δ α).act (Γ := Δ) (τ ∷ k.arity) (argFam k) = argFam k :=
+          Subst.act (Subst.instId Δ α) (Γ := Δ) (τ ∷ k.arity) (argFam k) = argFam k :=
         fun k => idOf α Δ hη (τ ∷ k.arity) (argFam k)
       rcases Proper.cover (Δ ∷ α) head with ⟨y, h_y⟩ | ⟨y, h_y⟩
       · subst h_y
@@ -165,26 +163,25 @@ mutual
 of a pre-slot exposes the kit. -/
 theorem Subst.act_inst.η
     {C : Carrier} {pre cod : Shape C} [Proper cod]
-    {α} (ι : ∀ {β : C.Arity}, ⌊α⌋ ∋ β → Expr ((pre ⋈ cod) ∷ β))
+    {α} (ι : Subst C ⌊α⌋ (pre ⋈ cod))
     (p : pre ∋ α) :
-  ⟦ Subst.mk ι ⟧ˢ (.η p)
+  ⟦ ι ⟧ˢ (.η p)
     = .ap ((Proper.inl pre) p) (fun i => ι (.here i))
   := by
   rw [Expr.η.eq_1]
-  change ⟦(Subst.mk ι : Subst C ⌊α⌋ (pre ⋈ cod))⟧ˢ
+  change ⟦ ι ⟧ˢ
       (.ap ((Proper.inl (pre ⋈ ⌊α⌋))
         ((Proper.inl pre) p)) (fun i => .η (.here i))) = _
   rw [Subst.act_ap_left]
   change
     Expr.ap ((Proper.inl pre) p)
-      (fun i => (Subst.mk ι).act
-        (⌊i.arity⌋) (.η (.here i)))
+      (fun i => ι.act (⌊i.arity⌋) (.η (.here i)))
     =
     Expr.ap ((Proper.inl pre) p) (fun i => ι (.here i))
   congr
   funext i
   rw [Expr.η.eq_1]
-  change (Subst.mk ι : Subst C ⌊α⌋ (pre ⋈ cod)).act (⌊i.arity⌋)
+  change ι.act (⌊i.arity⌋)
       (.ap ((Proper.inl _) ((Proper.inr pre) (.here i)))
         (fun k =>
           @Expr.η C
@@ -192,7 +189,7 @@ theorem Subst.act_inst.η
             k.arity (.here k))) = _
   rw [Subst.act_ap_middle]
   have hfill : ∀ (k : C.Binder i.arity),
-      (Subst.mk ι).act
+      ι.act
         (⌊i.arity⌋ ∷ k.arity)
           (@Expr.η C
             ((pre ⋈ ⌊α⌋) ⋈ ⌊i.arity⌋)
@@ -203,8 +200,7 @@ theorem Subst.act_inst.η
           k.arity (.here k)
           := by
     intro k
-    exact Subst.act_η_right (Subst.mk ι : Subst C ⌊α⌋ (pre ⋈ cod))
-      (⌊i.arity⌋) (x := .here k)
+    exact Subst.act_η_right ι (⌊i.arity⌋) (x := .here k)
   simp only [hfill]
   exact Subst.act_inst.id i.arity (pre ⋈ cod) Shape.nil (ι (.here i))
 termination_by α
@@ -214,10 +210,10 @@ decreasing_by exact ⟨i, rfl⟩
 theorem Subst.act_inst.id
     {C : Carrier} (α : C.Arity) (Δ : Shape C) :
   ∀ (τ : Shape C) [Proper τ] (e : Expr ((Δ ∷ α) ⋈ τ)),
-    (Subst.instId Δ α).act (Γ := Δ) τ e = e
+    act (instId Δ α) (Γ := Δ) τ e = e
   :=
   fun τ _ e =>
-    idOf α Δ (fun i => Subst.act_inst.η) τ e
+    idOf α Δ (fun i => act_inst.η) τ e
 termination_by α
 decreasing_by exact ⟨i, rfl⟩
 
@@ -232,7 +228,7 @@ theorem Subst.act_id
     {C : Carrier} (Γ : Shape C) [Proper Γ]
     (τ : Shape C) [Proper τ]
     (e : Expr (Γ ⋈ τ)) :
-  (Subst.id Γ).act (Γ := Shape.nil) τ e = e
+  act (id Γ) (Γ := Shape.nil) τ e = e
   := by
   match e with
   | .ap (α := β) x args =>
@@ -252,7 +248,7 @@ theorem Subst.act_id
           (Subst.id Γ) τ y args).trans ?_
         -- IH on each argument:
         have h_args : ∀ (k : C.Binder β),
-          (Subst.id Γ).act (Γ := Shape.nil) (τ ∷ k.arity) _ = args k :=
+          act (id Γ) (Γ := Shape.nil) (τ ∷ k.arity) _ = args k :=
           fun k => Subst.act_id Γ _ _
         rw [Proper.inr_nil_id y]
         refine (Subst.act_inst.η (ι := _) (p := y)).trans ?_
@@ -267,23 +263,23 @@ decreasing_by all_goals exact Expr.Subterm.of_arg x args _
 Translates to `lift f ∘ η = f` (unit_left). -/
 theorem Subst.act_η
     {C : Carrier} {Γ Δ : Shape C} [Proper Γ] [Proper Δ]
-    (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ∷ β))
+      (f : Subst C Γ Δ)
     (α : C.Arity) (p : Γ ∋ α) :
-  (Subst.mk f : Subst C Γ Δ).act (Γ := Shape.nil) ⌊α⌋ (.η p) = f p
+    f.act (Γ := Shape.nil) ⌊α⌋ (.η p) = f p
   := by
   rw [Expr.η.eq_1]
   -- `.there p = (weaken_{⌊α⌋} _) p` by instCons.weaken (rfl).
   -- Cover p at base Shape.nil: p must be in the right image (inl-from-nil empty).
   rcases Proper.cover Shape.nil p with ⟨y, h_q⟩ | ⟨z, _⟩
   · subst h_q
-    show (Subst.mk f : Subst C Γ Δ).act (Γ := Shape.nil) ⌊α⌋
+    show f.act (Γ := Shape.nil) ⌊α⌋
         (.ap ((Proper.inl (Shape.nil ⋈ Γ))
                       ((Proper.inr Shape.nil) y))
                     (fun i => .η (.here i))) = _
     rw [Subst.act_ap_middle (pre := Shape.nil)
-      (Subst.mk f : Subst C Γ Δ) ⌊α⌋ y]
+      f ⌊α⌋ y]
     have hfill : ∀ (i : C.Binder α),
-        (Subst.mk f : Subst C Γ Δ).act (⌊α⌋ ∷ i.arity)
+        f.act (⌊α⌋ ∷ i.arity)
           (@Expr.η C
             ((Shape.nil ⋈ Γ) ⋈ ⌊α⌋)
             i.arity (.here i))
@@ -293,9 +289,7 @@ theorem Subst.act_η
           i.arity (.here i)
           := by
       intro i
-      exact Subst.act_η_right (pre := Shape.nil)
-        (Subst.mk f : Subst C Γ Δ) ⌊α⌋
-        (x := .here i)
+      exact Subst.act_η_right (pre := Shape.nil) f ⌊α⌋ (x := .here i)
     simp only [hfill]
     rw [Proper.inr_nil_id y]
     exact Subst.act_inst.id α Δ Shape.nil (f y)
@@ -349,18 +343,18 @@ private abbrev instOne
     {C : Carrier} {pre : Shape C} (α : C.Arity) (cod : Shape C)
     (f : (i : C.Binder α) → Expr ((pre ⋈ cod) ∷ i.arity)) :
     Subst C ⌊α⌋ (pre ⋈ cod) :=
-  Subst.mk (fun | .here i => f i)
+  (fun | .here i => f i)
 
 /- Extensionality for substitutions built from an explicit filler family. -/
-private theorem Subst.mk_congr
-    {C : Carrier} {dom cod : Shape C}
-    {f g : ∀ {α : C.Arity}, dom ∋ α → Expr (cod ∷ α)}
-    (h : ∀ {α : C.Arity} (q : dom ∋ α), f q = g q) :
-    (Subst.mk f : Subst C dom cod) =
-      (Subst.mk g : Subst C dom cod) := by
-  congr
-  funext α q
-  exact h q
+-- private theorem Subst.mk_congr
+--     {C : Carrier} {dom cod : Shape C}
+--     {f g : Subst C dom cod}
+--     (h : ∀ {α : C.Arity} (q : dom ∋ α), f q = g q) :
+--   @f = @g
+-- := by
+--   congr
+--   funext α q
+--   exact h q
 
 /- Apply `σ` at a target depth using an explicitly chosen `Proper` witness.
 This tiny wrapper prevents typeclass search from silently choosing the wrong
@@ -386,8 +380,7 @@ private abbrev acted
     (hτDst : Proper (τ ⋈ dst))
     (κ : Subst C src (((pre ⋈ dom) ⋈ τ) ⋈ dst)) :
     Subst C src (((pre ⋈ cod) ⋈ τ) ⋈ dst) :=
-  Subst.mk (fun {β} x =>
-    actAt (pre := pre) σ (Proper.underBinder hτDst β) (κ.sub x))
+  (fun {β} x => actAt (pre := pre) σ (Proper.underBinder hτDst β) (κ x))
 
 /- Left side of the diamond: first act on the ambient expression by `σ`, then
 instantiate by the pointwise-acted substitution. -/
@@ -399,7 +392,7 @@ private abbrev actThenInst
     (hτSrc : Proper (τ ⋈ src)) (hτDst : Proper (τ ⋈ dst))
     (κ : Subst C src (((pre ⋈ dom) ⋈ τ) ⋈ dst))
     (e : Expr ((((pre ⋈ dom) ⋈ τ) ⋈ src) ⋈ Tele.ofList υ)) :=
-  (acted σ hτDst κ).act (Tele.ofList υ)
+  Subst.act (acted σ hτDst κ) (Tele.ofList υ)
     (actAt (pre := pre) σ (Proper.underList hτSrc υ) e)
 
 /- Right side of the diamond: instantiate by `κ` first, then act by `σ`.
@@ -433,7 +426,7 @@ private abbrev sequential
       Expr (((pre ⋈ τ) ⋈ src) ⋈ Tele.ofList υ ∷ j.arity))
     (e : Expr ((pre ∷ β) ⋈ Tele.ofList χ)) :=
   κ.act ((Tele.ofList υ) ⋈ Tele.ofList χ)
-    ((instOne β ((τ ⋈ src) ⋈ Tele.ofList υ) η).act (Tele.ofList χ) e)
+    (Subst.act (instOne β ((τ ⋈ src) ⋈ Tele.ofList υ) η) (Tele.ofList χ) e)
 
 /- `Lift.fused` is the same operation with the `κ` action pushed into each
 β-filler.  `liftAt` proves `sequential = fused`. -/
@@ -447,8 +440,8 @@ private abbrev fused
     (η : (j : C.Binder β) →
       Expr (((pre ⋈ τ) ⋈ src) ⋈ Tele.ofList υ ∷ j.arity))
     (e : Expr ((pre ∷ β) ⋈ Tele.ofList χ)) :=
-  (instOne β ((τ ⋈ dst) ⋈ Tele.ofList υ)
-      (fun j => κ.act (Tele.ofList υ ∷ j.arity) (η j))).act (Tele.ofList χ) e
+  Subst.act (instOne β ((τ ⋈ dst) ⋈ Tele.ofList υ)
+      (fun j => κ.act (Tele.ofList υ ∷ j.arity) (η j))) (Tele.ofList χ) e
 
 end Lift
 
@@ -729,7 +722,7 @@ private theorem diamondAt
       | under xυ =>
           -- Stable local-binder head.  Both routes keep the same head `xυ`;
           -- after normalising the embeddings, the result is pointwise `hargs`.
-          change (Diamond.acted σ hτDst κ).act (Tele.ofList υ)
+          change Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ)
               (σ.act ((τ ⋈ src) ⋈ Tele.ofList υ)
                 (.ap ((Proper.inr _) ((Proper.inr _) xυ)) args))
             =
@@ -739,7 +732,7 @@ private theorem diamondAt
           rw [Subst.act_ap_right σ ((τ ⋈ src) ⋈ Tele.ofList υ)
             ((Proper.inr (τ ⋈ src)) xυ) args]
           rw [Proper.extendList_inr_inr (τ ⋈ src) υ (pre ⋈ cod) xυ]
-          change (Diamond.acted σ hτDst κ).act (Tele.ofList υ)
+          change Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ)
               (.ap ((Proper.inr (((pre ⋈ cod) ⋈ τ) ⋈ src)) xυ)
                 (fun j => σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ j.arity) (args j)))
             =
@@ -750,7 +743,7 @@ private theorem diamondAt
             (fun j => σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ j.arity) (args j))]
           rw [Proper.extendList_inr_inr (τ ⋈ src) υ (pre ⋈ dom) xυ]
           change .ap ((Proper.inr (((pre ⋈ cod) ⋈ τ) ⋈ dst)) xυ)
-                (fun j => (Diamond.acted σ hτDst κ).act (Tele.ofList υ ∷ j.arity)
+                (fun j => Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ ∷ j.arity)
                   (σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ j.arity) (args j)))
             =
             σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
@@ -758,7 +751,7 @@ private theorem diamondAt
                 (.ap ((Proper.inr (((pre ⋈ dom) ⋈ τ) ⋈ src)) xυ) args))
           rw [Subst.act_ap_right κ (Tele.ofList υ) xυ args]
           change .ap ((Proper.inr (((pre ⋈ cod) ⋈ τ) ⋈ dst)) xυ)
-                (fun j => (Diamond.acted σ hτDst κ).act (Tele.ofList υ ∷ j.arity)
+                (fun j => Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ ∷ j.arity)
                   (σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ j.arity) (args j)))
             =
             σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
@@ -777,7 +770,7 @@ private theorem diamondAt
           -- The left-hand route first acts on the head and then fires the
           -- acted substitution.  Both reduce to the smaller diamond on the
           -- single selected filler `κ.sub xsrc`.
-          change (Diamond.acted σ hτDst κ).act (Tele.ofList υ)
+          change Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ)
               (σ.act ((τ ⋈ src) ⋈ Tele.ofList υ)
                 (.ap
                   ((Proper.inr (pre ⋈ dom))
@@ -795,7 +788,7 @@ private theorem diamondAt
           rw [Proper.extendList_inr_inl (τ ⋈ src) υ (pre ⋈ cod)
             ((Proper.inr τ) xsrc)]
           rw [srcTarget.inr_right (pre ⋈ cod) xsrc]
-          change (Diamond.acted σ hτDst κ).act (Tele.ofList υ)
+          change Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ)
               (.ap
                 ((Proper.inl _)
                   ((Proper.inr ((pre ⋈ cod) ⋈ τ)) xsrc))
@@ -812,13 +805,13 @@ private theorem diamondAt
           rw [Proper.extendList_inr_inl (τ ⋈ src) υ (pre ⋈ dom)
             ((Proper.inr τ) xsrc)]
           rw [srcTarget.inr_right (pre ⋈ dom) xsrc]
-          change ⟦(Subst.mk
+          change ⟦(
                 (fun {δ} q => match q with
                 | .here j =>
-                    (Diamond.acted σ hτDst κ).act (Tele.ofList υ ∷ j.arity)
+                    Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ ∷ j.arity)
                       (σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ j.arity) (args j)))
                 : Subst C ⌊β⌋ (((pre ⋈ cod) ⋈ (τ ⋈ dst)) ⋈ Tele.ofList υ))⟧ˢ
-              (σ.act ((τ ⋈ dst) ∷ β) (κ.sub xsrc))
+              (σ.act ((τ ⋈ dst) ∷ β) (κ xsrc))
             =
             σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
               (κ.act (Tele.ofList υ)
@@ -827,7 +820,7 @@ private theorem diamondAt
                     ((Proper.inr ((pre ⋈ dom) ⋈ τ)) xsrc))
                   args))
           rw [Subst.act_ap_middle κ (Tele.ofList υ) xsrc args]
-          let κβ :=
+          let κβ : Subst C ⌊β⌋ (pre ⋈ dom ⋈ τ ⋈ dst ⋈ Tele.ofList υ) :=
             instOne β (Tele.ofList υ)
               (pre := ((pre ⋈ dom) ⋈ τ) ⋈ dst)
               (fun j => κ.act (Tele.ofList υ ∷ j.arity) (args j))
@@ -838,23 +831,20 @@ private theorem diamondAt
             (Proper.underBinder hτDst β) (Proper.underList hτDst υ)
             (Proper.AppendCoherence.singleton (τ ⋈ dst) β)
             (Proper.AppendCoherence.extendList (τ ⋈ dst) υ)
-            κβ (e := κ.sub xsrc)
+            κβ (e := κ xsrc)
           unfold Diamond.actThenInst Diamond.instThenAct Diamond.acted at hrec
           have hSubst :
-              (Subst.mk
-                (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
+              ((fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
                   match q with
                   | .here j =>
-                      (Diamond.acted σ hτDst κ).act (Tele.ofList υ ∷ j.arity)
+                      Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ ∷ j.arity)
                         (σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ j.arity) (args j)))
                 : Subst C ⌊β⌋ (((pre ⋈ cod) ⋈ (τ ⋈ dst)) ⋈ Tele.ofList υ))
               =
-              (Subst.mk
-                (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
-                  σ.act (((τ ⋈ dst) ⋈ Tele.ofList υ) ∷ δ) (κβ.sub q))
+              ((fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
+                  σ.act (((τ ⋈ dst) ⋈ Tele.ofList υ) ∷ δ) (κβ q))
                 : Subst C ⌊β⌋ (((pre ⋈ cod) ⋈ (τ ⋈ dst)) ⋈ Tele.ofList υ)) := by
-            apply Subst.mk_congr
-            intro δ q
+            funext δ q
             cases q with
             | here j => exact hargs j
             | there q => nomatch q
@@ -864,7 +854,7 @@ private theorem diamondAt
           -- Stable ambient-depth head.  It is not in the domain of either
           -- substitution; the proof is bookkeeping that shows both sides
           -- rebuild the same τ-head and recurse on the arguments.
-          change (Diamond.acted σ hτDst κ).act (Tele.ofList υ)
+          change Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ)
               (σ.act ((τ ⋈ src) ⋈ Tele.ofList υ)
                 (.ap
                   ((Proper.inr (pre ⋈ dom))
@@ -882,7 +872,7 @@ private theorem diamondAt
           rw [Proper.extendList_inr_inl (τ ⋈ src) υ (pre ⋈ cod)
             ((Proper.inl τ) xτ)]
           rw [srcTarget.inr_left (pre ⋈ cod) xτ]
-          change (Diamond.acted σ hτDst κ).act (Tele.ofList υ)
+          change Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ)
               (.ap
                 ((Proper.inl (((pre ⋈ cod) ⋈ τ) ⋈ src))
                   ((Proper.inl ((pre ⋈ cod) ⋈ τ))
@@ -905,7 +895,7 @@ private theorem diamondAt
               ((Proper.inl (((pre ⋈ cod) ⋈ τ) ⋈ dst))
                 ((Proper.inl ((pre ⋈ cod) ⋈ τ))
                   ((Proper.inr (pre ⋈ cod)) xτ)))
-              (fun i => (Diamond.acted σ hτDst κ).act (Tele.ofList υ ∷ i.arity)
+              (fun i => Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ ∷ i.arity)
                 (σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ i.arity) (args i)))
             =
             σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
@@ -926,7 +916,7 @@ private theorem diamondAt
               ((Proper.inl (((pre ⋈ cod) ⋈ τ) ⋈ dst))
                 ((Proper.inl ((pre ⋈ cod) ⋈ τ))
                   ((Proper.inr (pre ⋈ cod)) xτ)))
-              (fun i => (Diamond.acted σ hτDst κ).act (Tele.ofList υ ∷ i.arity)
+              (fun i => Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ ∷ i.arity)
                 (σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ i.arity) (args i)))
             =
             σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
@@ -950,7 +940,7 @@ private theorem diamondAt
           -- immediate subterms are the acted arguments.  The needed statement
           -- is exactly the lifted one-binder theorem `liftAt`; afterwards
           -- `hargs` aligns the singleton filler family.
-          refine (congrArg ((Diamond.acted σ hτDst κ).act (Tele.ofList υ))
+          refine (congrArg (Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ))
             (Subst.act_ap_middle σ
               ((τ ⋈ src) ⋈ Tele.ofList υ) z args)).trans ?_
           let η : (j : C.Binder β) →
@@ -958,19 +948,14 @@ private theorem diamondAt
             fun j => σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ j.arity) (args j)
           refine (liftAt hτSrc hτDst srcTarget dstTarget
             (Diamond.acted σ hτDst κ) [] η (σ z)).trans ?_
-          let ζ₀ : ∀ {δ : C.Arity}, ⌊β⌋ ∋ δ →
-              Expr ((pre ⋈ cod) ⋈
-                ((τ ⋈ dst) ⋈ Tele.ofList υ) ∷ δ) :=
+          let ζ₀ : Subst C ⌊β⌋ ((pre ⋈ cod) ⋈ ((τ ⋈ dst) ⋈ Tele.ofList υ)) :=
             fun q => match q with
             | .here j =>
-                (Diamond.acted σ hτDst κ).act (Tele.ofList υ ∷ j.arity)
+                Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ ∷ j.arity)
                   (σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ j.arity)
                     (args j))
-          let ζ₁ : ∀ {δ : C.Arity}, ⌊β⌋ ∋ δ →
-              Expr ((pre ⋈ cod) ⋈
-                ((τ ⋈ dst) ⋈ Tele.ofList υ) ∷ δ) :=
-            fun q => match q with
-            | .here j =>
+          let ζ₁ : Subst C ⌊β⌋ ((pre ⋈ cod) ⋈ ((τ ⋈ dst) ⋈ Tele.ofList υ)) :=
+            fun | .here j =>
                 σ.act (((τ ⋈ dst) ⋈ Tele.ofList υ) ∷ j.arity)
                   (κ.act (Tele.ofList υ ∷ j.arity) (args j))
           have hζ :
@@ -981,8 +966,7 @@ private theorem diamondAt
             cases q with
             | here j => exact hargs j
             | there q => nomatch q
-          change ⟦(Subst.mk ζ₀ :
-                Subst C ⌊β⌋ ((pre ⋈ cod) ⋈ ((τ ⋈ dst) ⋈ Tele.ofList υ)))⟧ˢ (σ z)
+          change ⟦ ζ₀ ⟧ˢ (σ z)
               =
               σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
                 (κ.act (Tele.ofList υ)
@@ -1017,8 +1001,7 @@ private theorem diamondAt
           refine Eq.trans ?_
             (congrArg (σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)) hκ).symm
           rw [← dstTarget.inl (pre ⋈ dom) ((Proper.inr pre) z)]
-          change ⟦(Subst.mk ζ₁ :
-                Subst C ⌊β⌋ ((pre ⋈ cod) ⋈ ((τ ⋈ dst) ⋈ Tele.ofList υ)))⟧ˢ (σ z)
+          change ⟦ ζ₁ ⟧ˢ (σ z)
               =
               σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
                 (.ap
@@ -1039,7 +1022,7 @@ private theorem diamondAt
           -- Stable prefix head.  The prefix is preserved by both substitutions.
           -- The long-looking proof is only reassociation of the same preserved
           -- head through the two composite target contexts.
-          change (Diamond.acted σ hτDst κ).act (Tele.ofList υ)
+          change Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ)
               (σ.act ((τ ⋈ src) ⋈ Tele.ofList υ)
                 (.ap
                   (((Proper.inl (pre ⋈ dom)) :
@@ -1060,7 +1043,7 @@ private theorem diamondAt
           rw [Proper.extendList_inl (τ ⋈ src) υ (pre ⋈ cod)
             ((Proper.inl pre) z)]
           rw [srcTarget.inl (pre ⋈ cod) ((Proper.inl pre) z)]
-          change (Diamond.acted σ hτDst κ).act (Tele.ofList υ)
+          change Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ)
               (.ap
                 ((Proper.inl (((pre ⋈ cod) ⋈ τ) ⋈ src))
                   ((Proper.inl ((pre ⋈ cod) ⋈ τ))
@@ -1085,7 +1068,7 @@ private theorem diamondAt
               ((Proper.inl (((pre ⋈ cod) ⋈ τ) ⋈ dst))
                 ((Proper.inl ((pre ⋈ cod) ⋈ τ))
                   ((Proper.inl (pre ⋈ cod)) ((Proper.inl pre) z))))
-              (fun i => (Diamond.acted σ hτDst κ).act (Tele.ofList υ ∷ i.arity)
+              (fun i => Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ ∷ i.arity)
                 (σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ i.arity) (args i)))
             =
             σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
@@ -1102,7 +1085,7 @@ private theorem diamondAt
               ((Proper.inl (((pre ⋈ cod) ⋈ τ) ⋈ dst))
                 ((Proper.inl ((pre ⋈ cod) ⋈ τ))
                   ((Proper.inl (pre ⋈ cod)) ((Proper.inl pre) z))))
-              (fun i => (Diamond.acted σ hτDst κ).act (Tele.ofList υ ∷ i.arity)
+              (fun i => Subst.act (Diamond.acted σ hτDst κ) (Tele.ofList υ ∷ i.arity)
                 (σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ i.arity) (args i)))
             =
             σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
@@ -1159,12 +1142,11 @@ private theorem liftAt
     Lift.sequential hτSrc κ χ η e = Lift.fused hτDst κ χ η e := by
   letI : Proper ((τ ⋈ src) ⋈ Tele.ofList υ) := Proper.underList hτSrc υ
   letI : Proper ((τ ⋈ dst) ⋈ Tele.ofList υ) := Proper.underList hτDst υ
-  let lam :=
+  let lam : Subst C ⌊β⌋ (pre ⋈ (τ ⋈ src ⋈ Tele.ofList υ)) :=
     instOne β ((τ ⋈ src) ⋈ Tele.ofList υ) (pre := pre) η
-  let lam' :=
+  let lam' : Subst C ⌊β⌋ (pre ⋈ (τ ⋈ dst ⋈ Tele.ofList υ)) :=
     instOne β ((τ ⋈ dst) ⋈ Tele.ofList υ)
-      (pre := pre)
-      (fun j => κ.act (Tele.ofList υ ∷ j.arity) (η j))
+      (pre := pre) (fun j => κ.act (Tele.ofList υ ∷ j.arity) (η j))
   change κ.act ((Tele.ofList υ) ⋈ Tele.ofList χ)
       (lam.act (Tele.ofList χ) e)
     =
@@ -1244,7 +1226,7 @@ private theorem liftAt
               θ' (.here k) := by
             intro k
             exact ih_args k
-          let θSubst :=
+          let θSubst : Subst C ⌊j.arity⌋ (pre ⋈ τ ⋈ src ⋈ Tele.ofList υ ⋈ Tele.ofList χ) :=
             instOne j.arity (Tele.ofList χ)
               (pre := ((pre ⋈ τ) ⋈ src) ⋈ Tele.ofList υ)
               (fun k => lam.act (Tele.ofList χ ∷ k.arity) (args k))
@@ -1260,31 +1242,27 @@ private theorem liftAt
           unfold Diamond.actThenInst Diamond.instThenAct Diamond.acted at hrec
           refine Eq.trans hrec.symm ?_
           have hSubst :
-              (Subst.mk
-                (fun {δ : C.Arity} (q : ⌊j.arity⌋ ∋ δ) =>
+              ((fun {δ : C.Arity} (q : ⌊j.arity⌋ ∋ δ) =>
                   κ.act (((Tele.ofList υ) ⋈ Tele.ofList χ) ∷ δ)
-                    (θSubst.sub q))
+                    (θSubst q))
                 : Subst C ⌊j.arity⌋
                     ((((pre ⋈ τ) ⋈ dst) ⋈ Tele.ofList υ) ⋈ Tele.ofList χ))
               =
-              (Subst.mk
-                (fun {δ : C.Arity} (q : ⌊j.arity⌋ ∋ δ) =>
+              ((fun {δ : C.Arity} (q : ⌊j.arity⌋ ∋ δ) =>
                   θ' q)
                 : Subst C ⌊j.arity⌋
                     ((((pre ⋈ τ) ⋈ dst) ⋈ Tele.ofList υ) ⋈ Tele.ofList χ)) := by
-            apply Subst.mk_congr
-            intro δ q
+            funext δ q
             cases q with
             | here k => exact hfill k
             | there q => nomatch q
           rw [hSubst]
-          change ⟦(Subst.mk
-                (fun {α : C.Arity} (q : ⌊j.arity⌋ ∋ α) =>
+          change ⟦((fun {α : C.Arity} (q : ⌊j.arity⌋ ∋ α) =>
                   match q with
                   | .here i => lam'.act (Tele.ofList χ ∷ i.arity) (args i))
                 : Subst C ⌊j.arity⌋
                     (((pre ⋈ (τ ⋈ dst)) ⋈ Tele.ofList υ) ⋈ Tele.ofList χ))⟧ˢ
-                (lam'.sub (.here j))
+                (lam' (.here j))
               =
               lam'.act (Tele.ofList χ)
                 (.ap
@@ -1399,7 +1377,7 @@ theorem Subst.act_comp
     [Proper dom] [Proper mid] [Proper cod]
     (σ : Subst C dom (pre ⋈ mid)) (θ : Subst C mid (pre ⋈ cod))
     (τ : Shape C) [Proper τ] (e : Expr ((pre ⋈ dom) ⋈ τ)) :
-  (Subst.comp σ θ).act τ e = θ.act τ (σ.act τ e)
+  act (comp σ θ) τ e = θ.act τ (σ.act τ e)
   := by
   match e with
   | .ap (α := β) head args =>
@@ -1409,10 +1387,10 @@ theorem Subst.act_comp
     | right x =>
       -- Current-depth variable: both sides rebuild the same head and compare
       -- the recursively transformed argument family.
-      refine (Subst.act_ap_right (Subst.comp σ θ) τ x args).trans ?_
+      refine (Subst.act_ap_right (comp σ θ) τ x args).trans ?_
       change
         .ap ((Proper.inr (pre ⋈ cod)) x)
-          (fun j => (Subst.comp σ θ).act (τ ∷ j.arity) (args j))
+          (fun j => act (comp σ θ) (τ ∷ j.arity) (args j))
         =
         θ.act τ
           (σ.act τ
@@ -1427,17 +1405,16 @@ theorem Subst.act_comp
       -- `θ.act ⌊β⌋ (σ y)`.  The remaining question is whether `θ` commutes
       -- with the instantiation created by firing `σ`; this is exactly the
       -- nil-τ singleton-source specialization of `diamondAt`.
-      refine (Subst.act_ap_middle (Subst.comp σ θ) τ y args).trans ?_
+      refine (Subst.act_ap_middle (comp σ θ) τ y args).trans ?_
       have ih_args : ∀ (i : C.Binder β),
-          (Subst.comp σ θ).act (τ ∷ i.arity) (args i)
+          act (comp σ θ) (τ ∷ i.arity) (args i)
             =
           θ.act (τ ∷ i.arity)
             (σ.act (τ ∷ i.arity) (args i)) :=
         fun i => Subst.act_comp σ θ (τ ∷ i.arity) (args i)
       simp only [ih_args]
       change
-        ⟦(Subst.mk
-          (fun {δ} (q : ⌊β⌋ ∋ δ) => match q with
+        ⟦((fun {δ} (q : ⌊β⌋ ∋ δ) => match q with
           | .here i =>
               θ.act (τ ∷ i.arity)
                 (σ.act (τ ∷ i.arity) (args i)))
@@ -1450,7 +1427,7 @@ theorem Subst.act_comp
               ((Proper.inl (pre ⋈ dom)) ((Proper.inr pre) y))
               args))
       rw [Subst.act_ap_middle σ τ y args]
-      let κβ :=
+      let κβ : Subst C ⌊β⌋ (pre ⋈ mid ⋈ Shape.nil ⋈ τ) :=
         instOne β τ (pre := (pre ⋈ mid) ⋈ Shape.nil)
           (fun i => σ.act (τ ∷ i.arity) (args i))
       have h := diamondAt (pre := pre) (dom := mid) (cod := cod)
@@ -1467,38 +1444,32 @@ theorem Subst.act_comp
       unfold instOne at h
       dsimp only at h
       change
-        ((Subst.mk
-          (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
+        Subst.act (((fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
             θ.act (τ ∷ δ)
               (match q with
               | .here i => σ.act (τ ∷ i.arity) (args i)))
-          : Subst C ⌊β⌋ ((pre ⋈ cod) ⋈ τ))).act
+          ))
           (Tele.ofList []) (θ.act ⌊β⌋ (σ y))
         =
         θ.act τ
-          (((Subst.mk
-            (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
+          (Subst.act (((fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
               match q with
               | .here i => σ.act (τ ∷ i.arity) (args i))
-            : Subst C ⌊β⌋ ((pre ⋈ mid) ⋈ τ))).act
+            ))
             (Tele.ofList []) (σ y)) at h
       have hFiller :
-          (Subst.mk
-            (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
+          ((fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
               θ.act (τ ∷ δ)
                 (match q with
-                | .here i => σ.act (τ ∷ i.arity) (args i)))
-            : Subst C ⌊β⌋ ((pre ⋈ cod) ⋈ τ))
+                | .here i => σ.act (τ ∷ i.arity) (args i))))
           =
-          (Subst.mk
-            (fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
+          ((fun {δ : C.Arity} (q : ⌊β⌋ ∋ δ) =>
               match q with
               | .here i =>
                   θ.act (τ ∷ i.arity)
-                    (σ.act (τ ∷ i.arity) (args i)))
-            : Subst C ⌊β⌋ ((pre ⋈ cod) ⋈ τ)) := by
-        apply Subst.mk_congr
-        intro δ q
+                    (σ.act (τ ∷ i.arity) (args i))))
+:= by
+        funext δ q
         cases q with
         | here i => rfl
         | there q => nomatch q
@@ -1507,10 +1478,10 @@ theorem Subst.act_comp
     | left z =>
       -- Prefix variable: neither substitution replaces the head.  Only the
       -- argument family is transformed recursively.
-      refine (Subst.act_ap_left (Subst.comp σ θ) τ z args).trans ?_
+      refine (Subst.act_ap_left (comp σ θ) τ z args).trans ?_
       change
         .ap ((Proper.inl (pre ⋈ cod)) ((Proper.inl pre) z))
-          (fun i => (Subst.comp σ θ).act (τ ∷ i.arity) (args i))
+          (fun i => Subst.act (comp σ θ) (τ ∷ i.arity) (args i))
         =
         θ.act τ
           (σ.act τ
@@ -1525,18 +1496,13 @@ theorem Subst.act_comp
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg head args _
 
-/-- **`act_kcomp`** — Kleisli composition factors through `Subst.act_comp`. -/
-theorem Subst.act_kcomp
-    {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Γ] [Proper Δ] [Proper Ξ]
-    (f : ∀ {β}, Γ ∋ β → Expr (Δ ∷ β))
-    (g : ∀ {β}, Δ ∋ β → Expr (Ξ ∷ β))
-    (τ : Shape C) [Proper τ] (e : Expr (Γ ⋈ τ)) :
-  (Subst.mk (Subst.kcomp f g) : Subst C Γ Ξ).act (Γ := Shape.nil) τ e =
-    (Subst.mk g : Subst C Δ Ξ).act (Γ := Shape.nil) τ
-      ((Subst.mk f : Subst C Γ Δ).act (Γ := Shape.nil) τ e)
-  := by
-  exact Subst.act_comp
-    (pre := Shape.nil)
-    (Subst.mk f : Subst C Γ Δ)
-    (Subst.mk g : Subst C Δ Ξ)
-    τ e
+-- /-- **`act_kcomp`** — Kleisli composition factors through `Subst.act_comp`. -/
+-- theorem Subst.act_kcomp
+--     {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Γ] [Proper Δ] [Proper Ξ]
+--     (f : Subst C Γ Δ)
+--     (g : Subst C Δ Ξ)
+--     (τ : Shape C) [Proper τ] (e : Expr (Γ ⋈ τ)) :
+--   act (kcomp f g) (Γ := Shape.nil) τ e =
+--     g.act (Γ := Shape.nil) τ (f.act (Γ := Shape.nil) τ e)
+-- := by
+--   exact Subst.act_comp (pre := Shape.nil) f g τ e

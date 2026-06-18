@@ -61,35 +61,45 @@ def J (C : Carrier) : PShape C ⥤ ArityFunc C where
 
 /-- The "expressions" functor: shape `Γ ↦ α ↦ Expr (Γ.tele ∷ α)`. -/
 def T (C : Carrier) : PShape C ⥤ ArityFunc C where
+
   obj Γ := ⟨fun α => Expr (Γ.tele ∷ α)⟩
+
   map {Γ Δ} (ρ : Γ.tele →ʳ Δ.tele) := fun α e => ⟦ ρ ⇑ʳ α ⟧ʳ e
+
   map_id Γ := by
     funext α e
     show ⟦ (𝟙ʳ : Γ.tele →ʳ Γ.tele) ⇑ʳ α ⟧ʳ e = e
     rw [Renaming.extend_id]
-    exact Renaming.actExpr.map_id e
+    apply Renaming.actExpr.map_id
+
   map_comp {Γ Δ Ξ} (ρ : Γ.tele →ʳ Δ.tele) (σ : Δ.tele →ʳ Ξ.tele) := by
     funext α e
     show ⟦ (σ ∘ʳʳ ρ) ⇑ʳ α ⟧ʳ e = ⟦ σ ⇑ʳ α ⟧ʳ (⟦ ρ ⇑ʳ α ⟧ʳ e)
     rw [Renaming.extend_comp]
-    exact Renaming.actExpr.map_comp _ _ e
+    apply Renaming.actExpr.map_comp
 
 /-- The relative monad of the syntax. -/
 def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
+
   map := (T C).obj
-  η Γ := fun _ p => Expr.η p
-  lift {Γ Δ} f := fun α e =>
-    (Subst.mk (fun {β} p => f β p) : Subst C Γ.tele Δ.tele).act
-      (Γ := Shape.nil) ⌊α⌋ e
+
+  η Γ _ := Expr.η
+
+  lift {Γ Δ} f α e :=
+    Subst.act @f (Γ := Shape.nil) ⌊α⌋ e
+
   unit_right := by
     intro Γ
     funext α e
-    exact Subst.act_id Γ.tele ⌊α⌋ e
+    apply Subst.act_id
+
   unit_left := by
     intro Γ Δ f
     funext α p
-    exact (Subst.act_η (fun {β} p_inner => f β p_inner) α p).symm
+    symm
+    apply Subst.act_η
+
   comp_lift := by
     intro Γ Δ Ξ f g
     funext α e
-    exact Subst.act_kcomp (fun {β} p => f β p) (fun {β} q => g β q) ⌊α⌋ e
+    apply Subst.act_comp

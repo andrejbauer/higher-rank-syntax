@@ -4,8 +4,7 @@ import HigherRankSyntax.ProperTele
 /-!
 # Substitution
 
-`Subst C dom cod` carries one field, `sub`, mapping each `dom`-slot to an
-expression in the full target context `cod`.
+`Subst C dom cod` maps each `dom`-slot `i` to an expression over `cod ⋈ i.arity`.
 
 `Subst.act σ τ` applies the substitution `σ` to an expression at depth
 `τ : Shape C` (with `[Proper τ]`).  The action is still prefix-aware: if
@@ -22,8 +21,7 @@ left/prefix heads are preserved by direct reinjection.
 /-- A slot of `dom` witnesses that some `β ∈ dom.toList` has the slot's arity as
 a sub-arity. -/
 theorem SlotAt.subWitness {C : Carrier} :
-    ∀ {dom : List C.Arity} {α : C.Arity}, ListSlotAt dom α →
-      ∃ β, β ∈ dom ∧ Carrier.Sub α β
+  ∀ {Γ : List C.Arity} {α : C.Arity}, ListSlotAt Γ α → ∃ β, β ∈ Γ ∧ Carrier.Sub α β
   | _ :: _, _, .here i  => ⟨_, List.Mem.head _, ⟨i, rfl⟩⟩
   | _ :: _, _, .there p => by
       obtain ⟨β, h_mem, h_sub⟩ := SlotAt.subWitness p
@@ -68,17 +66,12 @@ instance (C : Carrier) : WellFoundedRelation (DomMeasure C) where
 The `sub` field is the only data; prefix preservation is not part of the
 record and is instead selected by `Subst.act` when the target is decomposed
 as `Γ ⋈ Ξ`. -/
-structure Subst (C : Carrier) (dom cod : Shape C) : Type where
-  sub : ∀ {α : C.Arity}, dom ∋ α → Expr (cod ∷ α)
+abbrev Subst (C : Carrier) (dom cod : Shape C) :=
+  ∀ {α : C.Arity}, dom ∋ α → Expr (cod ∷ α)
 
 /-- The identity substitution at shape `Γ`. -/
 def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Γ Γ :=
-  Subst.mk (fun {β : C.Arity} (p : Γ ∋ β) => Expr.η p)
-
-instance {C : Carrier} {dom cod : Shape C} :
-    CoeFun (Subst C dom cod)
-      (fun _ => ∀ {α : C.Arity}, dom ∋ α → Expr (cod ∷ α)) where
-  coe := Subst.sub
+  (fun {β : C.Arity} (p : Γ ∋ β) => Expr.η p)
 
 /-- Dispatching a slot of `pre ⋈ dom` into pre vs dom.  Returned by
 `Subst.classifyDom`. -/
@@ -194,12 +187,9 @@ theorem Subst.classifySite_inl_pre {C : Carrier} {Γ Δ Ξ : Shape C}
   rw [Proper.classify_inl]
   rw [Proper.classify_inl]
 
-
-/-- The identity instantiation for the one-binder telescope `⌊α⌋`,
-with an arbitrary fixed prefix `Δ`. -/
-def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) :
-    Subst C ⌊α⌋ (Δ ⋈ ⌊α⌋) :=
-  Subst.mk (fun | .here i => Expr.η (.here i))
+/-- The identity instantiation for the one-binder telescope `⌊α⌋`, with an arbitrary fixed prefix `Δ`. -/
+def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) : Subst C ⌊α⌋ (Δ ⋈ ⌊α⌋) :=
+  fun | .here i => Expr.η (.here i)
 
 
 /-! ### The substitution action -/
@@ -208,25 +198,25 @@ def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) :
 `Proper.classify` for the τ/below-τ dispatch and `σ.classifyDom` for
 the pre/dom dispatch.  All renamings used to rebuild new heads in the
 target come from `[Proper τ]` / `[Proper cod]`. -/
-def Subst.act {C : Carrier} : {Γ Δ Ξ : Shape C} →
-    [Proper Δ] → [Proper Ξ] →
-    (σ : Subst C Δ (Γ ⋈ Ξ)) →
-    (τ : Shape C) → [Proper τ] →
+def Subst.act {C : Carrier} {Γ Δ Ξ : Shape C}
+    [Proper Δ] [Proper Ξ]
+    (σ : Subst C Δ (Γ ⋈ Ξ))
+    (τ : Shape C) [Proper τ] :
     Expr ((Γ ⋈ Δ) ⋈ τ) → Expr ((Γ ⋈ Ξ) ⋈ τ)
-  | Γ, Δ, Ξ, _, _, σ, τ, _, .ap (α := α) p args =>
+  | .ap (α := α) p args =>
       match Subst.classifySite p with
       |.right x =>
           .ap (Proper.inr _ x)
             (fun i => σ.act (τ ∷ i.arity) (args i))
       | .middle z =>
-          (Subst.mk (fun q => match q with
+          act ((fun q => match q with
             | .here i => σ.act (τ ∷ i.arity) (args i))
-                : Subst C ⌊α⌋ ((Γ ⋈ Ξ) ⋈ τ)).act Shape.nil (σ z)
+                : Subst C ⌊α⌋ ((Γ ⋈ Ξ) ⋈ τ)) Shape.nil (σ z)
       | .left z =>
           .ap
             (Proper.inl _ (Proper.inl _ z))
             (fun i => σ.act (τ ∷ i.arity) (args i))
-termination_by Γ Δ _ _ _ _ _ _ e =>
+termination_by e =>
   ((⟨Δ.toList⟩ : DomMeasure C), (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
   all_goals (
@@ -247,11 +237,4 @@ def Subst.comp {C : Carrier} {Γ Δ Θ Ξ : Shape C}
     (σ : Subst C Δ (Γ ⋈ Θ))
     (θ : Subst C Θ (Γ ⋈ Ξ)) :
     Subst C Δ (Γ ⋈ Ξ) :=
-  Subst.mk (fun {β} x => θ.act ⌊β⌋ (σ.sub x))
-
-/-- Kleisli composition of two Kleisli maps via `Subst.act`. -/
-def Subst.kcomp {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (f : ∀ {β : C.Arity}, Γ ∋ β → Expr (Δ ∷ β))
-    (g : ∀ {β : C.Arity}, Δ ∋ β → Expr (Ξ ∷ β)) :
-    ∀ {β : C.Arity}, Γ ∋ β → Expr (Ξ ∷ β) :=
-  fun {β} x => (Subst.mk g).act (Γ := Shape.nil) ⌊β⌋ (f x)
+  (fun {β} x => θ.act ⌊β⌋ (σ x))
