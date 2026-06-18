@@ -83,7 +83,7 @@ namespace Proper
 /-- The identity telescope: empty; the classifier returns everything to Γ. -/
 instance instId {C : Carrier} : Proper (Tele.id : Tele C.Arity) where
   inl := fun Γ => Renaming.id Γ
-  inr := fun _Γ => ⟨fun {_} p => nomatch p⟩
+  inr := fun _ {_} x => nomatch x
   classify := fun _Γ _α _X p _f g => g p
   classify_inr := fun _Γ _X _α x _f _g => nomatch x
   classify_inl := fun _Γ _X _α _y _f _g => rfl
@@ -93,16 +93,15 @@ instance instId {C : Carrier} : Proper (Tele.id : Tele C.Arity) where
 /-- Extend a `Proper` by one arity at the top. -/
 instance instCons {C : Carrier} (a : C.Arity) (T : Tele C.Arity) [Proper T] :
     Proper (Tele.cons a ∘ᵗ T) where
-  inl := fun Γ => ⟨fun {_} p => .there ((Proper.inl Γ) p)⟩
-  inr := fun Γ => ⟨fun {_} p =>
-    match p with
+  inl := fun Γ {_} x => .there (Proper.inl Γ x)
+  inr := fun Γ {_} x =>
+    match x with
     | .here i  => .here i
-    | .there x => .there ((Proper.inr Γ) x)⟩
+    | .there x => .there (Proper.inr Γ x)
   classify := fun Γ _α X p f g =>
     match p with
     | .here i   => f (.here i)
-    | .there p' => Proper.classify Γ X p'
-                     (fun y => f (.there y)) g
+    | .there p' => Proper.classify Γ X p' (fun y => f (.there y)) g
   classify_inr := fun Γ X _α x f g => by
     cases x with
     | here _i  => rfl
@@ -256,53 +255,30 @@ try arbitrary telescope decompositions. -/
 @[reducible]
 def compose {C : Carrier} (S T : Shape C) [Proper S] [Proper T] :
     Proper (S ⋈ T) where
+
   inl := fun Γ =>
     (Proper.inl (Γ ⋈ S) : Γ ⋈ S →ʳ (Γ ⋈ S) ⋈ T) ∘ʳʳ
       (Proper.inl Γ : Γ →ʳ Γ ⋈ S)
-  inr := fun Γ => ⟨fun {_} p =>
+
+  inr := fun Γ {_} p =>
     Proper.classify S _ p
-      (fun t => (Proper.inr (Γ ⋈ S)) t)
-      (fun s => (Proper.inl (Γ ⋈ S))
-        ((Proper.inr Γ) s))⟩
+      (fun t => Proper.inr (Γ ⋈ S) t)
+      (fun s => Proper.inl (Γ ⋈ S) (Proper.inr Γ s))
+
   classify := fun Γ _α X p f g =>
     Proper.classify (Γ ⋈ S) X p
-      (fun t => f ((Proper.inr S) t))
+      (fun t => f (Proper.inr S t))
       (fun q => Proper.classify Γ X q
-        (fun s => f ((Proper.inl S) s))
+        (fun s => f (Proper.inl S s))
         g)
+
   classify_inr := fun Γ X _α x f g => by
     rcases Proper.cover S x with ⟨t, h_t⟩ | ⟨s, h_s⟩
     · subst h_t
-      have h_embed :
-          ({
-            apply := fun {x} p =>
-              Proper.classify S ((Γ ⋈ (S ⋈ T)) ∋ x) p
-                (fun t => (Proper.inr (Γ ⋈ S)) t)
-                (fun s => (Proper.inl (Γ ⋈ S))
-                  ((Proper.inr Γ) s))
-          } : (S ⋈ T) →ʳ Γ ⋈ (S ⋈ T))
-            ((Proper.inr S) t)
-          =
-          (Proper.inr (Γ ⋈ S)) t :=
-        Proper.classify_inr S _ t _ _
-      rw [h_embed]
-      rw [Proper.classify_inr (Γ ⋈ S)]
+      simp only [Proper.classify_inr]
     · subst h_s
-      have h_weaken :
-          ({
-            apply := fun {x} p =>
-              Proper.classify S ((Γ ⋈ (S ⋈ T)) ∋ x) p
-                (fun t => (Proper.inr (Γ ⋈ S)) t)
-                (fun s => (Proper.inl (Γ ⋈ S))
-                  ((Proper.inr Γ) s))
-          } : (S ⋈ T) →ʳ Γ ⋈ (S ⋈ T))
-            ((Proper.inl S) s)
-          =
-          (Proper.inl (Γ ⋈ S)) ((Proper.inr Γ) s) :=
-        Proper.classify_inl S _ s _ _
-      rw [h_weaken]
-      rw [Proper.classify_inl (Γ ⋈ S)]
-      rw [Proper.classify_inr Γ]
+      simp only [Proper.classify_inl, Proper.classify_inr]
+
   classify_inl := fun Γ X _α y f g => by
     change
       Proper.classify (Γ ⋈ S) X
@@ -318,72 +294,22 @@ def compose {C : Carrier} (S T : Shape C) [Proper S] [Proper T] :
     rcases Proper.cover (Γ ⋈ S) p with ⟨t, h_t⟩ | ⟨q, h_q⟩
     · refine Or.inl ⟨(Proper.inr S) t, ?_⟩
       subst h_t
-      have h_embed :
-          ({
-            apply := fun {x} p =>
-              Proper.classify S ((Γ ⋈ (S ⋈ T)) ∋ x) p
-                (fun t => (Proper.inr (Γ ⋈ S)) t)
-                (fun s => (Proper.inl (Γ ⋈ S))
-                  ((Proper.inr Γ) s))
-          } : (S ⋈ T) →ʳ Γ ⋈ (S ⋈ T))
-            ((Proper.inr S) t)
-          =
-          (Proper.inr (Γ ⋈ S)) t :=
-        Proper.classify_inr S _ t _ _
-      exact h_embed.symm
+      simp only [Proper.classify_inr]
     · subst h_q
       rcases Proper.cover Γ q with ⟨s, h_s⟩ | ⟨y, h_y⟩
       · refine Or.inl ⟨(Proper.inl S) s, ?_⟩
         subst h_s
-        have h_weaken :
-            ({
-              apply := fun {x} p =>
-                Proper.classify S ((Γ ⋈ (S ⋈ T)) ∋ x) p
-                  (fun t => (Proper.inr (Γ ⋈ S)) t)
-                  (fun s => (Proper.inl (Γ ⋈ S))
-                    ((Proper.inr Γ) s))
-            } : (S ⋈ T) →ʳ Γ ⋈ (S ⋈ T))
-              ((Proper.inl S) s)
-            =
-            (Proper.inl (Γ ⋈ S)) ((Proper.inr Γ) s) :=
-          Proper.classify_inl S _ s _ _
-        exact h_weaken.symm
+        simp only [Proper.classify_inl]
       · refine Or.inr ⟨y, ?_⟩
         subst h_y
         rfl
   inr_nil_id := fun {_α} x => by
     rcases Proper.cover S x with ⟨t, h_t⟩ | ⟨s, h_s⟩
     · subst h_t
-      have h_embed :
-          ({
-            apply := fun {x} p =>
-              Proper.classify S ((Shape.nil ⋈ (S ⋈ T)) ∋ x) p
-                (fun t => (Proper.inr (Shape.nil ⋈ S)) t)
-                (fun s => (Proper.inl (Shape.nil ⋈ S))
-                  ((Proper.inr Shape.nil) s))
-          } : (S ⋈ T) →ʳ Shape.nil ⋈ (S ⋈ T))
-            ((Proper.inr S) t)
-          =
-          (Proper.inr (Shape.nil ⋈ S)) t :=
-        Proper.classify_inr S _ t _ _
-      exact h_embed
+      simp only [Proper.classify_inr]
+      rfl
     · subst h_s
-      have h_weaken :
-          ({
-            apply := fun {x} p =>
-              Proper.classify S ((Shape.nil ⋈ (S ⋈ T)) ∋ x) p
-                (fun t => (Proper.inr (Shape.nil ⋈ S)) t)
-                (fun s => (Proper.inl (Shape.nil ⋈ S))
-                  ((Proper.inr Shape.nil) s))
-          } : (S ⋈ T) →ʳ Shape.nil ⋈ (S ⋈ T))
-            ((Proper.inl S) s)
-          =
-          (Proper.inl (Shape.nil ⋈ S))
-            ((Proper.inr Shape.nil) s) :=
-        Proper.classify_inl S _ s _ _
-      rw [h_weaken]
-      rw [Proper.inr_nil_id s]
-      change (Proper.inl S) s = (Proper.inl S) s
+      simp only [Proper.classify_inl, Proper.inr_nil_id]
       rfl
 
 /-- In the composed `Proper`, the right injection of a `T`-slot factors

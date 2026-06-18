@@ -63,12 +63,10 @@ theorem Renaming.act_ap {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
 
 @[simp]
 theorem Renaming.act_id {C : Carrier} {Γ : Shape C} :
-  ∀ (e : Expr Γ), ⟦ 𝟙ʳ ⟧ʳ e = e
+  ∀ (e : Expr Γ), ⟦ 𝟙ʳ Γ ⟧ʳ e = e
   | .ap x args => by
-    show Expr.ap x (fun i => ⟦ (𝟙ʳ : _ →ʳ _) ⇑ʳ i.arity ⟧ʳ args i) = Expr.ap x args
-    congr 1
+    simp
     funext i
-    rw [Renaming.extend_id]
     exact Renaming.act_id (args i)
 
 @[simp]
