@@ -88,9 +88,9 @@ index 621c4e6..5706973 100644
      = .ap (ι₂ x) (fun j => σ.act (τ ∷ j.arity) (args j))
    := by
 -  conv => lhs; unfold Subst.act
--  rw [Subst.classifySite_inr]
+-  rw [Subst.threeway_inr]
 +  conv => lhs; unfold PrefixSubst.act
-+  rw [PrefixSubst.classifySite_inr]
++  rw [PrefixSubst.threeway_inr]
  
  /-- Computing `σ.act` on an apply whose head is left-injected below τ and
  classified to the dom side: fires the dom-branch instantiation. -/
@@ -107,9 +107,9 @@ index 621c4e6..5706973 100644
 +    = ⟦ PrefixSubst.inst ⌊α⌋ (fun q => match q with | .here i => σ.act (τ ∷ i.arity) (args i)) ⟧ˢ (σ y)
    := by
 -  conv => lhs; unfold Subst.act
--  rw [Subst.classifySite_inl_dom]
+-  rw [Subst.threeway_inl_dom]
 +  conv => lhs; unfold PrefixSubst.act
-+  rw [PrefixSubst.classifySite_inl_dom]
++  rw [PrefixSubst.threeway_inl_dom]
    rfl
  
  /-- Computing `σ.act` on an apply whose head is left-injected below τ and
@@ -127,9 +127,9 @@ index 621c4e6..5706973 100644
 +    = .ap ((Proper.inl (pre ⋈ cod)) ((PrefixSubst.weakenCod σ) z)) (fun i => σ.act (τ ∷ i.arity) (args i))
    := by
 -  conv => lhs; unfold Subst.act
--  rw [Subst.classifySite_inl_pre]
+-  rw [Subst.threeway_inl_pre]
 +  conv => lhs; unfold PrefixSubst.act
-+  rw [PrefixSubst.classifySite_inl_pre]
++  rw [PrefixSubst.threeway_inl_pre]
  
  /-! ## Auxiliary: η-action on a right-injected slot -/
  
@@ -872,9 +872,9 @@ index 621c4e6..5706973 100644
                    args)
            symm
 -          conv => lhs; unfold Subst.act
--          rw [Subst.classifySite_inl_dom]
+-          rw [Subst.threeway_inl_dom]
 +          conv => lhs; unfold PrefixSubst.act
-+          rw [PrefixSubst.classifySite_inl_dom]
++          rw [PrefixSubst.threeway_inl_dom]
            simp only
            congr
            funext α q
@@ -2904,12 +2904,12 @@ index 428abde..dde15f6 100644
  
  /-- Dispatching a `pre ⋈ dom ⋈ τ`-slot into its mathematical source:
  current depth, substitution domain, or untouched prefix. -/
--def Subst.classifySite {C : Carrier} {pre dom τ : Shape C}
-+def PrefixSubst.classifySite {C : Carrier} {pre dom τ : Shape C}
+-def Subst.threeway {C : Carrier} {pre dom τ : Shape C}
++def PrefixSubst.threeway {C : Carrier} {pre dom τ : Shape C}
      [Proper dom] [Proper τ]
      {α : C.Arity} (p : pre ⋈ dom ⋈ τ ∋ α) : SubstSite pre dom τ α :=
    Proper.classify (pre ⋈ dom) _ p
-@@ -115,7 +123,7 @@ def Subst.classifySite {C : Carrier} {pre dom τ : Shape C}
+@@ -115,7 +123,7 @@ def Subst.threeway {C : Carrier} {pre dom τ : Shape C}
          SubstSite.pre)
  
  /-- Embed a classified source site back into `pre ⋈ dom ⋈ τ`. -/
@@ -2922,8 +2922,8 @@ index 428abde..dde15f6 100644
    | .pre x => (Proper.inl (pre ⋈ dom)) ((Proper.inl pre) x)
  
  /-- Every source slot is the embedding of a unique-looking `SubstSite`.
--This is the proof-facing inverse of `Subst.classifySite`; use it to replace
-+This is the proof-facing inverse of `PrefixSubst.classifySite`; use it to replace
+-This is the proof-facing inverse of `Subst.threeway`; use it to replace
++This is the proof-facing inverse of `PrefixSubst.threeway`; use it to replace
  nested `Proper.cover` splits. -/
 -theorem Subst.coverSite {C : Carrier} {pre dom τ : Shape C}
 +theorem PrefixSubst.coverSite {C : Carrier} {pre dom τ : Shape C}
@@ -2938,81 +2938,81 @@ index 428abde..dde15f6 100644
        exact ⟨.pre w, by rw [h_w]; rfl⟩
  
  /-- Classifying an embedded `τ`-site returns the same `τ`-site. -/
--theorem Subst.classifySite_tau {C : Carrier} {pre dom τ : Shape C}
-+theorem PrefixSubst.classifySite_tau {C : Carrier} {pre dom τ : Shape C}
+-theorem Subst.threeway_tau {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.threeway_tau {C : Carrier} {pre dom τ : Shape C}
      [Proper dom] [Proper τ] {α : C.Arity} (x : τ ∋ α) :
--    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
+-    Subst.threeway (pre := pre) (dom := dom) (τ := τ)
 -      (Subst.embedSource (.tau x)) = SubstSite.tau x
-+    PrefixSubst.classifySite (pre := pre) (dom := dom) (τ := τ)
++    PrefixSubst.threeway (pre := pre) (dom := dom) (τ := τ)
 +      (PrefixSubst.embedSource (.tau x)) = SubstSite.tau x
    := by
--  unfold Subst.classifySite Subst.embedSource
-+  unfold PrefixSubst.classifySite PrefixSubst.embedSource
+-  unfold Subst.threeway Subst.embedSource
++  unfold PrefixSubst.threeway PrefixSubst.embedSource
    rw [Proper.classify_inr]
  
  /-- Classifying an embedded `dom`-site returns the same `dom`-site. -/
--theorem Subst.classifySite_dom {C : Carrier} {pre dom τ : Shape C}
-+theorem PrefixSubst.classifySite_dom {C : Carrier} {pre dom τ : Shape C}
+-theorem Subst.threeway_dom {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.threeway_dom {C : Carrier} {pre dom τ : Shape C}
      [Proper dom] [Proper τ] {α : C.Arity} (x : dom ∋ α) :
--    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
+-    Subst.threeway (pre := pre) (dom := dom) (τ := τ)
 -      (Subst.embedSource (.dom x)) = SubstSite.dom x
-+    PrefixSubst.classifySite (pre := pre) (dom := dom) (τ := τ)
++    PrefixSubst.threeway (pre := pre) (dom := dom) (τ := τ)
 +      (PrefixSubst.embedSource (.dom x)) = SubstSite.dom x
    := by
--  unfold Subst.classifySite Subst.embedSource
-+  unfold PrefixSubst.classifySite PrefixSubst.embedSource
+-  unfold Subst.threeway Subst.embedSource
++  unfold PrefixSubst.threeway PrefixSubst.embedSource
    rw [Proper.classify_inl]
    rw [Proper.classify_inr]
  
  /-- Classifying an embedded `pre`-site returns the same `pre`-site. -/
--theorem Subst.classifySite_pre {C : Carrier} {pre dom τ : Shape C}
-+theorem PrefixSubst.classifySite_pre {C : Carrier} {pre dom τ : Shape C}
+-theorem Subst.threeway_pre {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.threeway_pre {C : Carrier} {pre dom τ : Shape C}
      [Proper dom] [Proper τ] {α : C.Arity} (x : pre ∋ α) :
--    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
+-    Subst.threeway (pre := pre) (dom := dom) (τ := τ)
 -      (Subst.embedSource (.pre x)) = SubstSite.pre x
-+    PrefixSubst.classifySite (pre := pre) (dom := dom) (τ := τ)
++    PrefixSubst.threeway (pre := pre) (dom := dom) (τ := τ)
 +      (PrefixSubst.embedSource (.pre x)) = SubstSite.pre x
    := by
--  unfold Subst.classifySite Subst.embedSource
-+  unfold PrefixSubst.classifySite PrefixSubst.embedSource
+-  unfold Subst.threeway Subst.embedSource
++  unfold PrefixSubst.threeway PrefixSubst.embedSource
    rw [Proper.classify_inl]
    rw [Proper.classify_inl]
  
  /-- Classifying a concrete right-injected `τ` head returns `SubstSite.tau`. -/
--theorem Subst.classifySite_inr {C : Carrier} {pre dom τ : Shape C}
-+theorem PrefixSubst.classifySite_inr {C : Carrier} {pre dom τ : Shape C}
+-theorem Subst.threeway_inr {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.threeway_inr {C : Carrier} {pre dom τ : Shape C}
      [Proper dom] [Proper τ] {α : C.Arity} (x : τ ∋ α) :
--    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
-+    PrefixSubst.classifySite (pre := pre) (dom := dom) (τ := τ)
+-    Subst.threeway (pre := pre) (dom := dom) (τ := τ)
++    PrefixSubst.threeway (pre := pre) (dom := dom) (τ := τ)
        ((Proper.inr (pre ⋈ dom)) x) = SubstSite.tau x
    := by
--  unfold Subst.classifySite
-+  unfold PrefixSubst.classifySite
+-  unfold Subst.threeway
++  unfold PrefixSubst.threeway
    rw [Proper.classify_inr]
  
  /-- Classifying a concrete dom head returns `SubstSite.dom`. -/
--theorem Subst.classifySite_inl_dom {C : Carrier} {pre dom τ : Shape C}
-+theorem PrefixSubst.classifySite_inl_dom {C : Carrier} {pre dom τ : Shape C}
+-theorem Subst.threeway_inl_dom {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.threeway_inl_dom {C : Carrier} {pre dom τ : Shape C}
      [Proper dom] [Proper τ] {α : C.Arity} (x : dom ∋ α) :
--    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
-+    PrefixSubst.classifySite (pre := pre) (dom := dom) (τ := τ)
+-    Subst.threeway (pre := pre) (dom := dom) (τ := τ)
++    PrefixSubst.threeway (pre := pre) (dom := dom) (τ := τ)
        ((Proper.inl (pre ⋈ dom)) ((Proper.inr pre) x)) = SubstSite.dom x
    := by
--  unfold Subst.classifySite
-+  unfold PrefixSubst.classifySite
+-  unfold Subst.threeway
++  unfold PrefixSubst.threeway
    rw [Proper.classify_inl]
    rw [Proper.classify_inr]
  
  /-- Classifying a concrete pre head returns `SubstSite.pre`. -/
--theorem Subst.classifySite_inl_pre {C : Carrier} {pre dom τ : Shape C}
-+theorem PrefixSubst.classifySite_inl_pre {C : Carrier} {pre dom τ : Shape C}
+-theorem Subst.threeway_inl_pre {C : Carrier} {pre dom τ : Shape C}
++theorem PrefixSubst.threeway_inl_pre {C : Carrier} {pre dom τ : Shape C}
      [Proper dom] [Proper τ] {α : C.Arity} (x : pre ∋ α) :
--    Subst.classifySite (pre := pre) (dom := dom) (τ := τ)
-+    PrefixSubst.classifySite (pre := pre) (dom := dom) (τ := τ)
+-    Subst.threeway (pre := pre) (dom := dom) (τ := τ)
++    PrefixSubst.threeway (pre := pre) (dom := dom) (τ := τ)
        ((Proper.inl (pre ⋈ dom)) ((Proper.inl pre) x)) = SubstSite.pre x
    := by
--  unfold Subst.classifySite
-+  unfold PrefixSubst.classifySite
+-  unfold Subst.threeway
++  unfold PrefixSubst.threeway
    rw [Proper.classify_inl]
    rw [Proper.classify_inl]
  
@@ -3099,8 +3099,8 @@ index 428abde..dde15f6 100644
      (τ : Shape C) → [Proper τ] →
      Expr (pre ⋈ dom ⋈ τ) → Expr (pre ⋈ cod ⋈ τ)
    | pre, dom, cod, _, _, σ, τ, _, .ap (α := α) p args =>
--      match Subst.classifySite p with
-+      match PrefixSubst.classifySite p with
+-      match Subst.threeway p with
++      match PrefixSubst.threeway p with
        | SubstSite.tau x =>
            .ap (Proper.inr (pre ⋈ cod) x)
              (fun i => σ.act (τ ∷ i.arity) (args i))

@@ -70,13 +70,13 @@ def T (C : Carrier) : PShape C ⥤ ArityFunc C where
     funext α e
     show ⟦ (𝟙ʳ : Γ.tele →ʳ Γ.tele) ⇑ʳ α ⟧ʳ e = e
     rw [Renaming.extend_id]
-    apply Renaming.actExpr.map_id
+    apply Renaming.act_id
 
   map_comp {Γ Δ Ξ} (ρ : Γ.tele →ʳ Δ.tele) (σ : Δ.tele →ʳ Ξ.tele) := by
     funext α e
     show ⟦ (σ ∘ʳʳ ρ) ⇑ʳ α ⟧ʳ e = ⟦ σ ⇑ʳ α ⟧ʳ (⟦ ρ ⇑ʳ α ⟧ʳ e)
     rw [Renaming.extend_comp]
-    apply Renaming.actExpr.map_comp
+    apply Renaming.act_comp
 
 /-- The relative monad of the syntax. -/
 def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where

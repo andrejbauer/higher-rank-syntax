@@ -12,7 +12,7 @@ import HigherRankSyntax.ProperTele
 `Expr ((Γ ⋈ Δ) ⋈ τ)` into `Expr ((Γ ⋈ Ξ) ⋈ τ)`.  The data no longer stores the
 prefix separately; the operation chooses that decomposition when acting.
 
-`Subst.classifySite` is the proof-facing head classifier for this action:
+`Subst.threeway` is the proof-facing head classifier for this action:
 right/current-depth heads are preserved, middle/domain heads fire `σ`, and
 left/prefix heads are preserved by direct reinjection.
 -/
@@ -99,7 +99,7 @@ def classifyLeftRight {C : Carrier} {Γ Δ : Shape C} [Proper Δ]
 
 /-- Dispatching a `(pre ⋈ dom) ⋈ τ`-slot into its mathematical source:
 current depth, substitution domain, or untouched prefix. -/
-def Subst.classifySite {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
+def Subst.threeway {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     {α : C.Arity} (p : ((Γ ⋈ Δ) ⋈ Ξ) ∋ α) : LeftMiddleRight Γ Δ Ξ α :=
   Proper.classify (Γ ⋈ Δ) _ p
     .right
@@ -108,20 +108,20 @@ def Subst.classifySite {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ
 /-- Embed a classified source site back into `(pre ⋈ dom) ⋈ τ`. -/
 def Subst.reinject {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} :
-    LeftMiddleRight Γ Δ Ξ α → ((Γ ⋈ Δ) ⋈ Ξ) ∋ α
+  LeftMiddleRight Γ Δ Ξ α → ((Γ ⋈ Δ) ⋈ Ξ) ∋ α
   | .left x => Proper.inl _ (Proper.inl _ x)
   | .middle x => Proper.inl (Γ ⋈ Δ) (Proper.inr Γ x)
   | .right x => Proper.inr _ x
 
 /-- Every source slot is the embedding of a unique-looking `SubstSite`.
-This is the proof-facing inverse of `Subst.classifySite`; use it to replace
+This is the proof-facing inverse of `Subst.threeway`; use it to replace
 nested `Proper.cover` splits. -/
-theorem Subst.coverSite {C : Carrier} {Γ Δ Ξ : Shape C}
-    [Proper Δ] [Proper Ξ] {α : C.Arity}
-    (p : ((Γ ⋈ Δ) ⋈ Ξ) ∋ α) :
-    ∃ site : LeftMiddleRight Γ Δ Ξ α, p = Subst.reinject site
+theorem Subst.isReinject {C : Carrier} {Γ Δ Ξ : Shape C}
+      [Proper Δ] [Proper Ξ] {α : C.Arity}
+      (x : ((Γ ⋈ Δ) ⋈ Ξ) ∋ α) :
+    ∃ y : LeftMiddleRight Γ Δ Ξ α, x = reinject y
   := by
-  rcases Proper.cover (Γ ⋈ Δ) p with ⟨x, h_x⟩ | ⟨y, h_y⟩
+  rcases Proper.cover (Γ ⋈ Δ) x with ⟨x, h_x⟩ | ⟨y, h_y⟩
   · exact ⟨.right x, h_x⟩
   · rcases Proper.cover Γ y with ⟨z, h_z⟩ | ⟨w, h_w⟩
     · subst h_y
@@ -130,60 +130,54 @@ theorem Subst.coverSite {C : Carrier} {Γ Δ Ξ : Shape C}
       exact ⟨.left w, by rw [h_w]; rfl⟩
 
 /-- Classifying an embedded `τ`-site returns the same `τ`-site. -/
-theorem Subst.classifySite_right {C : Carrier} {Γ Δ Ξ : Shape C}
+theorem Subst.threeway_right {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Ξ ∋ α) :
-    Subst.classifySite (Γ := Γ) (Δ := Δ)
-      (Subst.reinject (.right x)) = .right x
+  threeway (Γ := Γ) (Δ := Δ) (reinject (.right x)) = .right x
   := by
-  unfold Subst.classifySite Subst.reinject
+  unfold Subst.threeway Subst.reinject
   rw [Proper.classify_inr]
 
 /-- Classifying an embedded `dom`-site returns the same `dom`-site. -/
-theorem Subst.classifySite_middle {C : Carrier} {Γ Δ Ξ : Shape C}
+theorem Subst.threeway_middle {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Δ ∋ α) :
-    Subst.classifySite (Γ := Γ) (Ξ := Ξ)
-      (Subst.reinject (.middle x)) = .middle x
+  threeway (Γ := Γ) (Ξ := Ξ) (reinject (.middle x)) = .middle x
   := by
-  unfold Subst.classifySite Subst.reinject
+  unfold threeway reinject
   rw [Proper.classify_inl]
   rw [Proper.classify_inr]
 
 /-- Classifying an embedded `pre`-site returns the same `pre`-site. -/
-theorem  Subst.classifySite_left {C : Carrier} {Γ Δ Ξ : Shape C}
+theorem  Subst.threeway_left {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Γ ∋ α) :
-    Subst.classifySite (Δ := Δ) (Ξ := Ξ)
-      (Subst.reinject (.left x)) = .left x
+  threeway (Δ := Δ) (Ξ := Ξ) (reinject (.left x)) = .left x
   := by
-  unfold Subst.classifySite Subst.reinject
+  unfold threeway reinject
   rw [Proper.classify_inl]
   rw [Proper.classify_inl]
 
 /-- Classifying a concrete right-injected `τ` head returns the right site. -/
-theorem Subst.classifySite_inr {C : Carrier} {Γ Δ Ξ : Shape C}
+theorem Subst.threeway_inr {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Ξ ∋ α) :
-    Subst.classifySite (Γ := Γ) (Δ := Δ)
-      ((Proper.inr (Γ ⋈ Δ)) x) = .right x
+  threeway (Γ := Γ) (Δ := Δ) (Proper.inr (Γ ⋈ Δ) x) = .right x
   := by
-  unfold Subst.classifySite
+  unfold threeway
   rw [Proper.classify_inr]
 
 /-- Classifying a concrete middle-domain head returns the middle site. -/
-theorem Subst.classifySite_inl_dom {C : Carrier} {Γ Δ Ξ : Shape C}
+theorem Subst.threeway_inl_dom {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Δ ∋ α) :
-    Subst.classifySite (Γ := Γ) (Ξ := Ξ)
-      ((Proper.inl (Γ ⋈ Δ)) ((Proper.inr Γ) x)) = .middle x
+  threeway (Γ := Γ) (Ξ := Ξ) (Proper.inl (Γ ⋈ Δ) ((Proper.inr Γ) x)) = .middle x
   := by
-  unfold Subst.classifySite
+  unfold threeway
   rw [Proper.classify_inl]
   rw [Proper.classify_inr]
 
 /-- Classifying a concrete left-prefix head returns the left site. -/
-theorem Subst.classifySite_inl_pre {C : Carrier} {Γ Δ Ξ : Shape C}
+theorem Subst.threeway_inl_pre {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Γ ∋ α) :
-    Subst.classifySite (Δ := Δ) (Ξ := Ξ)
-      ((Proper.inl (Γ ⋈ Δ)) ((Proper.inl Γ) x)) = .left x
+  threeway (Δ := Δ) (Ξ := Ξ) (Proper.inl (Γ ⋈ Δ) (Proper.inl Γ x)) = .left x
   := by
-  unfold Subst.classifySite
+  unfold threeway
   rw [Proper.classify_inl]
   rw [Proper.classify_inl]
 
@@ -203,8 +197,8 @@ def Subst.act {C : Carrier} {Γ Δ Ξ : Shape C}
     (σ : Subst C Δ (Γ ⋈ Ξ))
     (τ : Shape C) [Proper τ] :
     Expr ((Γ ⋈ Δ) ⋈ τ) → Expr ((Γ ⋈ Ξ) ⋈ τ)
-  | .ap (α := α) p args =>
-      match Subst.classifySite p with
+  | .ap (α := α) x args =>
+      match threeway x with
       |.right x =>
           .ap (Proper.inr _ x)
             (fun i => σ.act (τ ∷ i.arity) (args i))
@@ -221,7 +215,7 @@ termination_by e =>
 decreasing_by
   all_goals (
     first
-      | (refine Prod.Lex.right _ ?_; exact Expr.Subterm.of_arg p args i)
+      | (refine Prod.Lex.right _ ?_; exact Expr.Subterm.of_arg x args i)
       | (refine Prod.Lex.left _ _ ?_
          obtain ⟨β, h_mem, h_sub⟩ := SlotAt.subWitness z
          exact DomLt.step β h_mem _ h_sub))

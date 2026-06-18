@@ -40,49 +40,46 @@ instance Expr.Subterm.wellFoundedRelation {C : Carrier} :
   rel := @Expr.Subterm C
   wf := Expr.Subterm.wf
 
-/-- The relative monad's target: expressions with free shape `Γ` under one outer α-binder. -/
-abbrev Expr.T {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type := Expr (Γ ∷ α)
-
 /-- η-expansion: a variable `p : Γ ∋ α` becomes the fully-applied tree
 `ap (.there p) (fun i => η (.here i))`. -/
-def Expr.η {C : Carrier} : {Γ : Shape C} → {α : C.Arity} → Γ ∋ α → T Γ α
-  | _, α, p => Expr.ap (.there p) (fun i => η (α := i.arity) (.here i))
-termination_by Γ α _ => α
+def Expr.η {C : Carrier} {Γ : Shape C} {α : C.Arity} : Γ ∋ α → Expr (Γ ∷ α)
+  | x => .ap (.there x) (fun i => η (.here i))
+termination_by _ => α
 decreasing_by exact ⟨_, rfl⟩
 
 /-- Action of a renaming on an expression. -/
-def Renaming.actExpr {C : Carrier} : {Γ Δ : Shape C} → (Γ →ʳ Δ) → Expr Γ → Expr Δ
-  | _, _, ρ, .ap p args =>
-    Expr.ap (ρ p) (fun i => Renaming.actExpr (ρ ⇑ʳ i.arity) (args i))
+def Renaming.act {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) : Expr Γ → Expr Δ
+  | .ap x args => .ap (ρ x) (fun i => act (ρ ⇑ʳ i.arity) (args i))
 
-@[inherit_doc Renaming.actExpr]
-notation:60 "⟦" ρ "⟧ʳ " e:61 => Renaming.actExpr ρ e
+@[inherit_doc Renaming.act]
+notation:60 "⟦" ρ "⟧ʳ " e:61 => Renaming.act ρ e
 
 @[simp]
-theorem Renaming.actExpr_ap {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
-    {α : C.Arity} (p : Γ ∋ α)
+theorem Renaming.act_ap {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
+    {α : C.Arity} (x : Γ ∋ α)
     (args : (i : C.Binder α) → Expr (Γ ∷ i.arity)) :
-    ⟦ ρ ⟧ʳ (Expr.ap p args)
-      = Expr.ap (ρ p) (fun i => ⟦ ρ ⇑ʳ i.arity ⟧ʳ (args i)) := rfl
+  ⟦ ρ ⟧ʳ (.ap x args) = .ap (ρ x) (fun i => ⟦ ρ ⇑ʳ i.arity ⟧ʳ (args i))
+  := rfl
 
 @[simp]
-theorem Renaming.actExpr.map_id {C : Carrier} : ∀ {Γ : Shape C} (e : Expr Γ),
-    ⟦ 𝟙ʳ ⟧ʳ e = e
-  | _, .ap p args => by
-    show Expr.ap p (fun i => ⟦ (𝟙ʳ : _ →ʳ _) ⇑ʳ i.arity ⟧ʳ args i)
-      = Expr.ap p args
+theorem Renaming.act_id {C : Carrier} {Γ : Shape C} :
+  ∀ (e : Expr Γ), ⟦ 𝟙ʳ ⟧ʳ e = e
+  | .ap x args => by
+    show Expr.ap x (fun i => ⟦ (𝟙ʳ : _ →ʳ _) ⇑ʳ i.arity ⟧ʳ args i) = Expr.ap x args
     congr 1
     funext i
     rw [Renaming.extend_id]
-    exact Renaming.actExpr.map_id (args i)
+    exact Renaming.act_id (args i)
 
 @[simp]
-theorem Renaming.actExpr.map_comp {C : Carrier} : ∀ {Γ Δ Ξ : Shape C}
-    (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ξ) (e : Expr Γ), ⟦ σ ∘ʳʳ ρ ⟧ʳ e = ⟦ σ ⟧ʳ (⟦ ρ ⟧ʳ e)
-  | _, _, _, ρ, σ, .ap p args => by
-    show Expr.ap (σ (ρ p)) (fun i => ⟦ (σ ∘ʳʳ ρ) ⇑ʳ i.arity ⟧ʳ args i)
-      = Expr.ap (σ (ρ p)) (fun i => ⟦ σ ⇑ʳ i.arity ⟧ʳ (⟦ ρ ⇑ʳ i.arity ⟧ʳ args i))
+theorem Renaming.act_comp
+    {C : Carrier} {Γ Δ Ξ : Shape C}
+    (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ξ) :
+  ∀ (e : Expr Γ), ⟦ σ ∘ʳʳ ρ ⟧ʳ e = ⟦ σ ⟧ʳ (⟦ ρ ⟧ʳ e)
+  | .ap x args => by
+    show Expr.ap (σ (ρ x)) (fun i => ⟦ (σ ∘ʳʳ ρ) ⇑ʳ i.arity ⟧ʳ args i)
+      = Expr.ap (σ (ρ x)) (fun i => ⟦ σ ⇑ʳ i.arity ⟧ʳ (⟦ ρ ⇑ʳ i.arity ⟧ʳ args i))
     congr 1
     funext i
     rw [Renaming.extend_comp]
-    exact Renaming.actExpr.map_comp _ _ (args i)
+    exact Renaming.act_comp _ _ (args i)

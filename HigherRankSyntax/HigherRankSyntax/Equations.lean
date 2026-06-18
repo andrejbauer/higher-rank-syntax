@@ -50,7 +50,7 @@ theorem Subst.act_ap_right
     = .ap (ι₂ x) (fun j => σ.act (τ ∷ j.arity) (args j))
   := by
   conv => lhs; unfold Subst.act
-  rw [Subst.classifySite_inr]
+  rw [Subst.threeway_inr]
 
 /-- Computing `σ.act` on an apply whose head is left-injected below τ and
 classified to the dom side: fires the dom-branch instantiation. -/
@@ -64,7 +64,7 @@ theorem Subst.act_ap_middle
     = ⟦ ((fun | .here (i : C.Binder α) => σ.act (τ ∷ i.arity) (args i)) : Subst C ⌊α⌋ ((pre ⋈ cod) ⋈ τ)) ⟧ˢ (σ y)
   := by
   conv => lhs; unfold Subst.act
-  rw [Subst.classifySite_inl_dom]
+  rw [Subst.threeway_inl_dom]
   rfl
 
 /-- Computing `σ.act` on an apply whose head is left-injected below τ and
@@ -79,7 +79,7 @@ theorem Subst.act_ap_left
     = .ap ((Proper.inl (pre ⋈ cod)) ((Proper.inl pre) z)) (fun i => σ.act (τ ∷ i.arity) (args i))
   := by
   conv => lhs; unfold Subst.act
-  rw [Subst.classifySite_inl_pre]
+  rw [Subst.threeway_inl_pre]
 
 /-! ## Auxiliary: η-action on a right-injected slot -/
 
@@ -509,7 +509,7 @@ private theorem DiamondSite.cover {C : Carrier}
     ∃ site : DiamondSite pre dom τ src υ β,
       head = DiamondSite.embed hτSrc site := by
   obtain ⟨site, h_site⟩ :=
-    Subst.coverSite
+    Subst.isReinject
       (Ξ := (τ ⋈ src) ⋈ Tele.ofList υ) head
   subst h_site
   cases site with
@@ -1271,7 +1271,7 @@ private theorem liftAt
                   args)
           symm
           conv => lhs; unfold Subst.act
-          rw [Subst.classifySite_inl_dom]
+          rw [Subst.threeway_inl_dom]
           simp only
           congr
           funext α q
@@ -1381,7 +1381,7 @@ theorem Subst.act_comp
   := by
   match e with
   | .ap (α := β) head args =>
-    obtain ⟨site, h_site⟩ := Subst.coverSite head
+    obtain ⟨site, h_site⟩ := Subst.isReinject head
     subst h_site
     cases site with
     | right x =>
@@ -1495,14 +1495,3 @@ theorem Subst.act_comp
       exact Subst.act_comp σ θ (τ ∷ i.arity) (args i)
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg head args _
-
--- /-- **`act_kcomp`** — Kleisli composition factors through `Subst.act_comp`. -/
--- theorem Subst.act_kcomp
---     {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Γ] [Proper Δ] [Proper Ξ]
---     (f : Subst C Γ Δ)
---     (g : Subst C Δ Ξ)
---     (τ : Shape C) [Proper τ] (e : Expr (Γ ⋈ τ)) :
---   act (kcomp f g) (Γ := Shape.nil) τ e =
---     g.act (Γ := Shape.nil) τ (f.act (Γ := Shape.nil) τ e)
--- := by
---   exact Subst.act_comp (pre := Shape.nil) f g τ e
