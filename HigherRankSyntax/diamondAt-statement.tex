@@ -1,0 +1,289 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{hyperref}
+
+\newcommand{\E}{\mathcal E}
+\newcommand{\Var}{\mathsf{Var}}
+\newcommand{\B}{\mathsf{B}}
+\newcommand{\Tel}{\mathsf{T}}
+\newcommand{\Ty}{\mathsf{Ar}}
+\newcommand{\arity}{\mathsf{ar}}
+\newcommand{\coh}{\mathsf{coh}}
+\newcommand{\ext}{\mathbin{\triangleleft}}
+\newcommand{\into}{\longrightarrow}
+\newcommand{\id}{\mathrm{id}}
+
+\title{The Mathematical Content of \texttt{diamondAt}}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{The point}
+
+The theorem \texttt{diamondAt} is an interchange law for hereditary
+substitution.  It says that the following two operations commute:
+
+\begin{enumerate}
+\item replace variables from one context \(D\) by expressions over \(D'\);
+\item replace variables from another context \(S\) by expressions over \(S'\).
+\end{enumerate}
+
+There is one important subtlety.  The fillers used to replace the \(S\)-variables
+may themselves contain variables from \(D\).  Therefore, if we first substitute
+\(D\)-variables, then the \(S\)-fillers must also be transformed by that same
+substitution.  The theorem says that this is the only correction needed.
+
+\section*{Notation}
+
+We write \(\E(\Gamma)\) for expressions in context \(\Gamma\).  If \(\alpha\) is
+an arity, then
+\[
+  \Gamma \ext \alpha
+\]
+means the context \(\Gamma\) extended by one binder of arity \(\alpha\).  This is
+written \(\Gamma \mathbin{\texttt{::}} \alpha\) in Lean.
+
+The operation \(\bowtie\) appends telescopes.  We use the following names for
+the contexts appearing in the theorem:
+\[
+  P = pre,\qquad
+  D = dom,\qquad
+  D' = cod,\qquad
+  T = \tau,\qquad
+  S = src,\qquad
+  S' = dst.
+\]
+The list \(\upsilon\) of already-opened binders gives a telescope
+\[
+  U = \Tel(\upsilon).
+\]
+In Lean, \(U\) is \(\mathsf{Tele.ofList}\,\upsilon\).
+
+The expression to which the theorem applies lives in the context
+\[
+  ((((P \bowtie D) \bowtie T) \bowtie S) \bowtie U).
+\]
+Thus it may mention variables from five regions:
+\[
+  P,\qquad D,\qquad T,\qquad S,\qquad U.
+\]
+
+\section*{The two substitutions}
+
+The first substitution is
+\[
+  \sigma : D \leadsto P \bowtie D'.
+\]
+This means that for every variable \(z : D \ni \beta\), we have a filler
+\[
+  \sigma(z) \in \E((P \bowtie D') \ext \beta).
+\]
+It replaces \(D\)-variables while preserving the prefix \(P\).
+
+The second substitution is
+\[
+  \kappa : S \leadsto ((P \bowtie D) \bowtie T) \bowtie S'.
+\]
+Thus for every \(x : S \ni \beta\),
+\[
+  \kappa(x)
+  \in
+  \E(((((P \bowtie D) \bowtie T) \bowtie S') \ext \beta)).
+\]
+This replaces \(S\)-variables by expressions that still live over \(D\).  So
+\(\kappa\) is a substitution before the change of target context induced by
+\(\sigma\).
+
+\section*{Action at a passive depth}
+
+If \(A\) is a passive telescope, then \(\sigma\) acts at depth \(A\) as a map
+\[
+  \sigma_A :
+  \E((P \bowtie D) \bowtie A)
+  \into
+  \E((P \bowtie D') \bowtie A).
+\]
+The word ``passive'' means that variables from \(A\) are not substituted.  They
+are merely carried along.  Only variables from \(D\) are active for \(\sigma\).
+
+Similarly, \(\kappa\) acts at passive depth \(U\) as a map
+\[
+  \kappa_U :
+  \E(((((P \bowtie D) \bowtie T) \bowtie S) \bowtie U))
+  \into
+  \E(((((P \bowtie D) \bowtie T) \bowtie S') \bowtie U)).
+\]
+Only variables from \(S\) are active for \(\kappa\); everything else is passive.
+
+\section*{The pushforward of a substitution}
+
+Since the fillers of \(\kappa\) may contain \(D\)-variables, applying \(\sigma\)
+to an expression also transports the substitution \(\kappa\).  We write this
+pushforward as
+\[
+  \sigma_\ast\kappa : S \leadsto ((P \bowtie D') \bowtie T) \bowtie S'.
+\]
+It is defined pointwise by
+\[
+  (\sigma_\ast\kappa)(x)
+  =
+  \sigma_{T \bowtie S' \ext \beta}(\kappa(x)),
+  \qquad x : S \ni \beta.
+\]
+The passive depth is \(T \bowtie S' \ext \beta\), because the filler
+\(\kappa(x)\) is an expression over
+\[
+  ((P \bowtie D) \bowtie (T \bowtie S' \ext \beta)).
+\]
+After \(\sigma\) acts, this becomes an expression over
+\[
+  ((P \bowtie D') \bowtie (T \bowtie S' \ext \beta)),
+\]
+which is exactly the required type of a filler for \(x\) in the transformed
+substitution.
+
+\section*{The theorem as an equation}
+
+Let
+\[
+  e \in \E(((((P \bowtie D) \bowtie T) \bowtie S) \bowtie U)).
+\]
+Then \texttt{diamondAt} says:
+\[
+\boxed{
+  (\sigma_\ast\kappa)_U
+  \bigl(
+    \sigma_{(T \bowtie S) \bowtie U}(e)
+  \bigr)
+  =
+  \sigma_{(T \bowtie S') \bowtie U}
+  \bigl(
+    \kappa_U(e)
+  \bigr).
+}
+\]
+
+This is the clean mathematical statement.  The left-hand side first applies
+\(\sigma\) to \(e\), then substitutes the remaining \(S\)-variables using the
+pushforward \(\sigma_\ast\kappa\).  The right-hand side first substitutes the
+\(S\)-variables using \(\kappa\), then applies \(\sigma\).
+
+\section*{The same equation as a square}
+
+The theorem says that the following square commutes:
+\[
+\begin{array}{ccc}
+\E(((((P \bowtie D) \bowtie T) \bowtie S) \bowtie U))
+& \xrightarrow{\ \sigma_{(T \bowtie S) \bowtie U}\ } &
+\E(((((P \bowtie D') \bowtie T) \bowtie S) \bowtie U))
+\\[0.8em]
+\downarrow{\kappa_U} && \downarrow{(\sigma_\ast\kappa)_U}
+\\[0.8em]
+\E(((((P \bowtie D) \bowtie T) \bowtie S') \bowtie U))
+& \xrightarrow{\ \sigma_{(T \bowtie S') \bowtie U}\ } &
+\E(((((P \bowtie D') \bowtie T) \bowtie S') \bowtie U)).
+\end{array}
+\]
+
+The top arrow changes \(D\) into \(D'\).  The left arrow changes \(S\) into
+\(S'\).  The bottom arrow changes \(D\) into \(D'\) after \(S\) has already
+been changed into \(S'\).  The right arrow changes \(S\) into \(S'\) after the
+fillers for \(S\) have themselves been pushed forward along \(\sigma\).
+
+\section*{Why the theorem is not trivial}
+
+If the fillers of \(\kappa\) did not contain variables from \(D\), the theorem
+would be close to ordinary commutation of independent substitutions.  But here
+the fillers of \(\kappa\) are expressions over
+\[
+  ((P \bowtie D) \bowtie T) \bowtie S',
+\]
+so they may contain \(D\)-variables.  Therefore substituting \(D\)-variables
+before substituting \(S\)-variables changes the \(S\)-fillers themselves.
+
+The pushforward \(\sigma_\ast\kappa\) is precisely the bookkeeping that accounts
+for this dependency.  The theorem says:
+\[
+  \text{the dependency of \(\kappa\) on \(D\) is handled pointwise by \(\sigma\).}
+\]
+
+\section*{The five head cases}
+
+The context of \(e\) decomposes into five regions:
+\[
+  ((((P \bowtie D) \bowtie T) \bowtie S) \bowtie U).
+\]
+Consequently, the head variable of an application in \(e\) belongs to exactly
+one of:
+\[
+  U,\qquad S,\qquad T,\qquad D,\qquad P.
+\]
+The proof of the theorem is a structural recursion on \(e\), with a case split
+on these five possibilities.
+
+\paragraph{Head in \(U\).}
+This is a local binder introduced by recursive descent.  Neither substitution
+acts on it.  Both sides rebuild the same head and use the induction hypothesis
+on all arguments.
+
+\paragraph{Head in \(S\).}
+This is an active variable for \(\kappa\).  On the right side, \(\kappa\) fires
+immediately.  On the left side, \(\sigma\) first acts on the ambient expression,
+and then the pushforward \(\sigma_\ast\kappa\) fires.  The two results are equal
+because \(\sigma_\ast\kappa\) was defined by applying \(\sigma\) to the fillers
+of \(\kappa\).  This branch recursively invokes the same theorem on the
+selected filler \(\kappa(x)\).
+
+\paragraph{Head in \(T\).}
+This head is passive for both substitutions.  Both sides preserve it and
+recurse on the arguments.
+
+\paragraph{Head in \(D\).}
+This is an active variable for \(\sigma\).  Firing \(\sigma\) creates a
+one-binder instantiation from the arguments of the application.  This is the
+only branch where the companion theorem for one-binder instantiation is needed.
+
+\paragraph{Head in \(P\).}
+This is part of the untouched prefix.  Both substitutions preserve it and
+recurse on the arguments.
+
+\section*{Why the formal statement has coherence data}
+
+The mathematical equation above suppresses associativity bookkeeping for
+\(\bowtie\).  Lean cannot suppress it completely.  The formal theorem therefore
+carries witnesses saying that the decompositions
+\[
+  T \bowtie S
+  \qquad\text{and}\qquad
+  T \bowtie S'
+\]
+are proper and that injections into larger contexts compute with the intended
+parenthesization.  These witnesses do not change the mathematical content of
+the theorem.  They only ensure that the formal proof can recognize, for example,
+that a head from \(S\) remains a head from \(S\) after it is embedded through
+\[
+  (P \bowtie D) \bowtie (T \bowtie S).
+\]
+
+\section*{Role in substitution composition}
+
+The public composition theorem says that acting by a composite substitution is
+the same as acting by one substitution and then the other.  The difficult case
+is when the first substitution fires on an application head.  Firing creates a
+fresh one-binder instantiation, and the remaining substitution must commute
+past that instantiation.
+
+The theorem described here is the general interchange principle that makes that
+step possible.  In short:
+\[
+  \text{hereditary substitution respects substitution composition.}
+\]
+
+\end{document}
