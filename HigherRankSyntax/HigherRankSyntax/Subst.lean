@@ -130,7 +130,7 @@ theorem Subst.isReinject {C : Carrier} {Γ Δ Ξ : Shape C}
       exact ⟨.left w, by rw [h_w]; rfl⟩
 
 /-- Classifying an embedded `τ`-site returns the same `τ`-site. -/
-theorem Subst.threeway_right {C : Carrier} {Γ Δ Ξ : Shape C}
+@[simp] theorem Subst.threeway_right {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Ξ ∋ α) :
   threeway (Γ := Γ) (Δ := Δ) (reinject (.right x)) = .right x
   := by
@@ -138,7 +138,7 @@ theorem Subst.threeway_right {C : Carrier} {Γ Δ Ξ : Shape C}
   rw [Proper.classify_inr]
 
 /-- Classifying an embedded `dom`-site returns the same `dom`-site. -/
-theorem Subst.threeway_middle {C : Carrier} {Γ Δ Ξ : Shape C}
+@[simp] theorem Subst.threeway_middle {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Δ ∋ α) :
   threeway (Γ := Γ) (Ξ := Ξ) (reinject (.middle x)) = .middle x
   := by
@@ -147,7 +147,7 @@ theorem Subst.threeway_middle {C : Carrier} {Γ Δ Ξ : Shape C}
   rw [Proper.classify_inr]
 
 /-- Classifying an embedded `pre`-site returns the same `pre`-site. -/
-theorem  Subst.threeway_left {C : Carrier} {Γ Δ Ξ : Shape C}
+@[simp] theorem  Subst.threeway_left {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Γ ∋ α) :
   threeway (Δ := Δ) (Ξ := Ξ) (reinject (.left x)) = .left x
   := by
@@ -156,7 +156,7 @@ theorem  Subst.threeway_left {C : Carrier} {Γ Δ Ξ : Shape C}
   rw [Proper.classify_inl]
 
 /-- Classifying a concrete right-injected `τ` head returns the right site. -/
-theorem Subst.threeway_inr {C : Carrier} {Γ Δ Ξ : Shape C}
+@[simp] theorem Subst.threeway_inr {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Ξ ∋ α) :
   threeway (Γ := Γ) (Δ := Δ) (Proper.inr (Γ ⋈ Δ) x) = .right x
   := by
@@ -164,7 +164,7 @@ theorem Subst.threeway_inr {C : Carrier} {Γ Δ Ξ : Shape C}
   rw [Proper.classify_inr]
 
 /-- Classifying a concrete middle-domain head returns the middle site. -/
-theorem Subst.threeway_inl_dom {C : Carrier} {Γ Δ Ξ : Shape C}
+@[simp] theorem Subst.threeway_inl_dom {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Δ ∋ α) :
   threeway (Γ := Γ) (Ξ := Ξ) (Proper.inl (Γ ⋈ Δ) ((Proper.inr Γ) x)) = .middle x
   := by
@@ -173,7 +173,7 @@ theorem Subst.threeway_inl_dom {C : Carrier} {Γ Δ Ξ : Shape C}
   rw [Proper.classify_inr]
 
 /-- Classifying a concrete left-prefix head returns the left site. -/
-theorem Subst.threeway_inl_pre {C : Carrier} {Γ Δ Ξ : Shape C}
+@[simp] theorem Subst.threeway_inl_pre {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Γ ∋ α) :
   threeway (Δ := Δ) (Ξ := Ξ) (Proper.inl (Γ ⋈ Δ) (Proper.inl Γ x)) = .left x
   := by
