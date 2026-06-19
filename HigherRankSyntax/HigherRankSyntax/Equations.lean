@@ -127,30 +127,23 @@ private theorem idOf
       have ih_all : ∀ (k : C.Binder β),
           Subst.act (Subst.instId Δ α) (Γ := Δ) (τ ∷ k.arity) (argFam k) = argFam k :=
         fun k => idOf α Δ hη (τ ∷ k.arity) (argFam k)
-      rcases Proper.cover (Δ ∷ α) head with ⟨y, h_y⟩ | ⟨y, h_y⟩
-      · subst h_y
-        refine (Subst.act_ap_right (Subst.instId Δ α) τ y argFam).trans ?_
-        congr
-        funext k
-        exact ih_all k
-      · subst h_y
-        rcases Proper.cover Δ y with ⟨z, h_z⟩ | ⟨z, h_z⟩
-        · subst h_z
-          cases z with
+      obtain ⟨y, h⟩ := Subst.isReinject (Γ := Δ) (Δ := ⌊α⌋) (Ξ := τ) head
+      subst h
+      cases y with
+      | right x =>
+          refine (Subst.act_ap_right (Subst.instId Δ α) τ x argFam).trans ?_
+          congr; funext k; exact ih_all k
+      | middle x =>
+          cases x with
           | here i =>
-              refine (Subst.act_ap_middle
-                (Subst.instId Δ α) τ (.here i) argFam).trans ?_
+              refine (Subst.act_ap_middle (Subst.instId Δ α) τ (.here i) argFam).trans ?_
               refine (hη i (pre := Δ ∷ α) (cod := τ)
                 (ι := _) (p := .here i)).trans ?_
-              congr 1
-              funext k
-              exact ih_all k
+              congr 1; funext k; exact ih_all k
           | there z' => nomatch z'
-        · subst h_z
-          refine (Subst.act_ap_left (Subst.instId Δ α) τ z argFam).trans ?_
-          congr 1
-          funext k
-          exact ih_all k
+      | left x =>
+          refine (Subst.act_ap_left (Subst.instId Δ α) τ x argFam).trans ?_
+          congr 1; funext k; exact ih_all k
 termination_by τ _ e => (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg head argFam _
 
@@ -169,40 +162,19 @@ theorem Subst.act_inst.η
     = .ap ((Proper.inl pre) p) (fun i => ι (.here i))
   := by
   rw [Expr.η.eq_1]
-  change ⟦ ι ⟧ˢ
-      (.ap ((Proper.inl (pre ⋈ ⌊α⌋))
-        ((Proper.inl pre) p)) (fun i => .η (.here i))) = _
+  show ⟦ ι ⟧ˢ (.ap ((Proper.inl _) ((Proper.inl pre) p)) _) = _
   rw [Subst.act_ap_left]
-  change
-    Expr.ap ((Proper.inl pre) p)
-      (fun i => ι.act (⌊i.arity⌋) (.η (.here i)))
-    =
-    Expr.ap ((Proper.inl pre) p) (fun i => ι (.here i))
-  congr
+  congr 1
   funext i
   rw [Expr.η.eq_1]
-  change ι.act (⌊i.arity⌋)
-      (.ap ((Proper.inl _) ((Proper.inr pre) (.here i)))
-        (fun k =>
-          @Expr.η C
-            ((pre ⋈ ⌊α⌋) ⋈ (⌊i.arity⌋))
-            k.arity (.here k))) = _
+  show ι.act _ (.ap ((Proper.inl _) ((Proper.inr pre) (.here i))) _) = _
   rw [Subst.act_ap_middle]
-  have hfill : ∀ (k : C.Binder i.arity),
-      ι.act
-        (⌊i.arity⌋ ∷ k.arity)
-          (@Expr.η C
-            ((pre ⋈ ⌊α⌋) ⋈ ⌊i.arity⌋)
-            k.arity (.here k))
-      =
-        @Expr.η C
-          ((pre ⋈ cod) ⋈ (⌊i.arity⌋))
-          k.arity (.here k)
-          := by
-    intro k
-    exact Subst.act_η_right ι (⌊i.arity⌋) (x := .here k)
-  simp only [hfill]
-  exact Subst.act_inst.id i.arity (pre ⋈ cod) Shape.nil (ι (.here i))
+  refine Eq.trans ?_ (Subst.act_inst.id i.arity (pre ⋈ cod) Shape.nil (ι (.here i)))
+  congr 1
+  funext _ q
+  cases q with
+  | here k => exact Subst.act_η_right ι ⌊i.arity⌋ (x := .here k)
+  | there z => nomatch z
 termination_by α
 decreasing_by exact ⟨i, rfl⟩
 
@@ -232,30 +204,19 @@ theorem Subst.act_id
   := by
   match e with
   | .ap (α := β) x args =>
-    rcases Proper.cover Γ x with
-      ⟨y, h_y⟩ | ⟨y, h_y⟩
-    · -- head = inr x; the τ-side branch fires.
-      subst h_y
-      refine (Subst.act_ap_right (pre := Shape.nil)
-        (Subst.id Γ) τ y args).trans ?_
-      congr ; funext k ; apply Subst.act_id
-    · -- head = inl y; y : Γ ∋ β.  Cover y at base Shape.nil:
-      -- inl-from-nil is empty, so y is necessarily in the right image.
-      subst h_y
-      rcases Proper.cover Shape.nil y with ⟨y, h_q⟩ | ⟨z, _⟩
-      · subst h_q
-        refine (Subst.act_ap_middle (pre := Shape.nil)
-          (Subst.id Γ) τ y args).trans ?_
-        -- IH on each argument:
-        have h_args : ∀ (k : C.Binder β),
-          act (id Γ) (Γ := Shape.nil) (τ ∷ k.arity) _ = args k :=
-          fun k => Subst.act_id Γ _ _
-        rw [Proper.inr_nil_id y]
-        refine (Subst.act_inst.η (ι := _) (p := y)).trans ?_
-        congr 1
-        funext k
-        exact h_args k
-      · exact nomatch z
+    obtain ⟨y, h⟩ := Subst.isReinject (Γ := Shape.nil) (Δ := Γ) (Ξ := τ) x
+    subst h
+    cases y with
+    | right z =>
+        refine (Subst.act_ap_right (pre := Shape.nil) (Subst.id Γ) τ z args).trans ?_
+        congr; funext k; apply Subst.act_id
+    | middle z =>
+        simp only [Subst.reinject]
+        refine (Subst.act_ap_middle (pre := Shape.nil) (Subst.id Γ) τ z args).trans ?_
+        rw [Proper.inr_nil_id z]
+        refine (Subst.act_inst.η (ι := _) (p := z)).trans ?_
+        congr 1; funext k; apply Subst.act_id
+    | left z => nomatch z
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg x args _
 
@@ -268,31 +229,18 @@ theorem Subst.act_η
     f.act (Γ := Shape.nil) ⌊α⌋ (.η p) = f p
   := by
   rw [Expr.η.eq_1]
-  -- `.there p = (weaken_{⌊α⌋} _) p` by instCons.weaken (rfl).
-  -- Cover p at base Shape.nil: p must be in the right image (inl-from-nil empty).
   rcases Proper.cover Shape.nil p with ⟨y, h_q⟩ | ⟨z, _⟩
   · subst h_q
-    show f.act (Γ := Shape.nil) ⌊α⌋
-        (.ap ((Proper.inl (Shape.nil ⋈ Γ))
-                      ((Proper.inr Shape.nil) y))
-                    (fun i => .η (.here i))) = _
-    rw [Subst.act_ap_middle (pre := Shape.nil)
-      f ⌊α⌋ y]
-    have hfill : ∀ (i : C.Binder α),
-        f.act (⌊α⌋ ∷ i.arity)
-          (@Expr.η C
-            ((Shape.nil ⋈ Γ) ⋈ ⌊α⌋)
-            i.arity (.here i))
-        =
-        @Expr.η C
-          ((Shape.nil ⋈ Δ) ⋈ ⌊α⌋)
-          i.arity (.here i)
-          := by
-      intro i
-      exact Subst.act_η_right (pre := Shape.nil) f ⌊α⌋ (x := .here i)
-    simp only [hfill]
+    show Subst.act f (Γ := Shape.nil) ⌊α⌋
+          (.ap ((Proper.inl _) ((Proper.inr Shape.nil) y)) _) = _
+    refine (Subst.act_ap_middle (pre := Shape.nil) f ⌊α⌋ y _).trans ?_
     rw [Proper.inr_nil_id y]
-    exact Subst.act_inst.id α Δ Shape.nil (f y)
+    refine Eq.trans ?_ (Subst.act_inst.id α Δ Shape.nil (f y))
+    congr 1
+    funext _ q
+    cases q with
+    | here k => exact Subst.act_η_right (pre := Shape.nil) f ⌊α⌋ (x := .here k)
+    | there z => nomatch z
   · exact nomatch z
 
 /-- `Expr.Subterm.of_arg` repackaged for the descent shape
