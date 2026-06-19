@@ -425,36 +425,20 @@ private theorem DiamondSite.cover {C : Carrier}
     ∃ site : DiamondSite pre dom τ src υ β,
       head = DiamondSite.embed hτSrc site := by
   obtain ⟨site, h_site⟩ :=
-    Subst.isReinject
-      (Ξ := (τ ⋈ src) ⋈ Tele.ofList υ) head
+    Subst.isReinject (Ξ := (τ ⋈ src) ⋈ Tele.ofList υ) head
   subst h_site
   cases site with
   | right top =>
       rcases Proper.cover (Γ := Tele.ofList υ) (τ ⋈ src) top with
         ⟨xυ, h_xυ⟩ | ⟨base, h_base⟩
-      · subst h_xυ
-        refine ⟨.under xυ, ?_⟩
-        unfold DiamondSite.embed Subst.reinject
-        rfl
+      · subst h_xυ; exact ⟨.under xυ, rfl⟩
       · subst h_base
         rcases Proper.cover (Γ := src) τ base with
           ⟨xsrc, h_xsrc⟩ | ⟨xτ, h_xτ⟩
-        · subst h_xsrc
-          refine ⟨.src xsrc, ?_⟩
-          unfold DiamondSite.embed Subst.reinject
-          rfl
-        · subst h_xτ
-          refine ⟨.tau xτ, ?_⟩
-          unfold DiamondSite.embed Subst.reinject
-          rfl
-  | middle z =>
-      refine ⟨.dom z, ?_⟩
-      unfold DiamondSite.embed Subst.reinject
-      rfl
-  | left z =>
-      refine ⟨.pre z, ?_⟩
-      unfold DiamondSite.embed Subst.reinject
-      rfl
+        · subst h_xsrc; exact ⟨.src xsrc, rfl⟩
+        · subst h_xτ; exact ⟨.tau xτ, rfl⟩
+  | middle z => exact ⟨.dom z, rfl⟩
+  | left z => exact ⟨.pre z, rfl⟩
 
 /- One-step computation for the first action in `diamondAt`: acting by `σ` on a
 head classified by `DiamondSite`.  This packages the otherwise repeated
