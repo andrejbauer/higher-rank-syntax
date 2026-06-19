@@ -95,17 +95,12 @@ theorem Subst.act_η_right
     = .η (Proper.inr _ x)
   := by
   rw [Expr.η.eq_1]
-  -- `.there ((inr τ) x) = (inr (τ ∷ α)) (.there x)` holds
-  -- definitionally (instCons.inr); `change` exposes the rewrite shape.
-  change σ.act (τ ∷ α)
-      (.ap (Proper.inr _ (.there x))
-                  (fun i => .η (.here i))) = _
-  rw [Subst.act_ap_right σ (τ ∷ α) (.there x)]
-  rw [Expr.η.eq_1]
+  -- `.there ((inr τ) x) = (inr (τ ∷ α)) (.there x)` by instCons.inr (defeq).
+  show σ.act (τ ∷ α) (.ap (Proper.inr _ (.there x)) _) = _
+  rw [Subst.act_ap_right σ (τ ∷ α) (.there x), Expr.η.eq_1]
   congr 1
   funext i
-  exact Subst.act_η_right σ (τ ∷ α)
-          (x := @ListSlotAt.here C α τ.toList i)
+  exact Subst.act_η_right σ (τ ∷ α) (x := .here i)
 termination_by α
 decreasing_by exact ⟨i, rfl⟩
 
