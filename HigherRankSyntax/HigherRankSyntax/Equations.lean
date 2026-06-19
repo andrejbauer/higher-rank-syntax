@@ -762,15 +762,8 @@ private theorem diamondAt
       (σ.act ((τ ⋈ src) ⋈ Tele.ofList υ) e)
       =
        σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ) (κ.act (Tele.ofList υ) e) := by
-  letI : Proper (τ ⋈ dst) := hτDst
   let κσ : Subst C src (((pre ⋈ cod) ⋈ τ) ⋈ dst) :=
     Diamond.pushforward (Ω := τ ⋈ dst) σ κ
-  change
-    Subst.act κσ (Tele.ofList υ)
-      (actAt (pre := pre) σ (Proper.underList hτSrc υ) e)
-      =
-      actAt (pre := pre)
-        σ (Proper.underList hτDst υ) (κ.act (Tele.ofList υ) e)
   match e with
   | .ap (α := β) head args =>
       -- Ordinary structural recursion on every application argument.  Every
@@ -790,26 +783,18 @@ private theorem diamondAt
           dsimp only [actAt, DiamondSite.embed]
           refine (Subst.act_ap_right κσ (Tele.ofList υ) xυ
             (fun j => σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ j.arity) (args j))).trans ?_
-          rw [Proper.extendList_inr_inr (τ ⋈ src) υ (pre ⋈ dom) xυ]
-          change .ap ((Proper.inr (((pre ⋈ cod) ⋈ τ) ⋈ dst)) xυ)
-                (fun j => Subst.act κσ (Tele.ofList υ ∷ j.arity)
-                  (σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ j.arity) (args j)))
-            =
-            σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
-              (κ.act (Tele.ofList υ)
-                (.ap ((Proper.inr (((pre ⋈ dom) ⋈ τ) ⋈ src)) xυ) args))
+          rw [show Proper.inr (pre ⋈ dom) (Proper.inr (τ ⋈ src) xυ)
+              = Proper.inr (((pre ⋈ dom) ⋈ τ) ⋈ src) xυ by
+            simpa only [Shape.extList_assoc] using
+              Proper.extendList_inr_inr (τ ⋈ src) υ (pre ⋈ dom) xυ]
           rw [Subst.act_ap_right κ (Tele.ofList υ) xυ args]
-          change .ap ((Proper.inr (((pre ⋈ cod) ⋈ τ) ⋈ dst)) xυ)
-                (fun j => Subst.act κσ (Tele.ofList υ ∷ j.arity)
-                  (σ.act (((τ ⋈ src) ⋈ Tele.ofList υ) ∷ j.arity) (args j)))
-            =
-            σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
-              (.ap ((Proper.inr ((pre ⋈ dom) ⋈ (τ ⋈ dst))) xυ)
-                (fun j => κ.act (Tele.ofList υ ∷ j.arity) (args j)))
-          rw [← Proper.extendList_inr_inr (τ ⋈ dst) υ (pre ⋈ dom) xυ]
-          rw [Subst.act_ap_right σ ((τ ⋈ dst) ⋈ Tele.ofList υ)
+          rw [← show Proper.inr (pre ⋈ dom) (Proper.inr (τ ⋈ dst) xυ)
+              = Proper.inr (((pre ⋈ dom) ⋈ τ) ⋈ dst) xυ by
+            simpa only [Shape.extList_assoc] using
+              Proper.extendList_inr_inr (τ ⋈ dst) υ (pre ⋈ dom) xυ]
+          refine Eq.trans ?_ (Subst.act_ap_right σ ((τ ⋈ dst) ⋈ Tele.ofList υ)
             ((Proper.inr (τ ⋈ dst)) xυ)
-            (fun j => κ.act (Tele.ofList υ ∷ j.arity) (args j))]
+            (fun j => Subst.act κ (Tele.ofList υ ∷ j.arity) (args j))).symm
           rw [Proper.extendList_inr_inr (τ ⋈ dst) υ (pre ⋈ cod) xυ]
           congr 1
           funext j
@@ -1373,8 +1358,6 @@ theorem Subst.act_comp
         (Proper.AppendCoherence.nil ⌊β⌋) (Proper.AppendCoherence.nil τ)
         κβ (e := σ y)
       unfold Diamond.pushforward at h
-      unfold actAt at h
-      unfold Proper.underList at h
       unfold κβ at h
       unfold instOne at h
       dsimp only at h
