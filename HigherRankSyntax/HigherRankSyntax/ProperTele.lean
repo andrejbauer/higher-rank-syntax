@@ -175,10 +175,8 @@ composite. -/
 theorem extendList_inr_inr {C : Carrier} (S : Shape C) [Proper S]
     (ρ : List C.Arity) (Γ : Shape C)
     {α : C.Arity} (x : Tele.ofList ρ ∋ α) :
-    (Proper.inr Γ : S ⋈ Tele.ofList ρ →ʳ Γ ⋈ (S ⋈ Tele.ofList ρ))
-      ((Proper.inr S : Tele.ofList ρ →ʳ S ⋈ Tele.ofList ρ) x)
-      =
-    (Proper.inr (Γ ⋈ S) : Tele.ofList ρ →ʳ (Γ ⋈ S) ⋈ Tele.ofList ρ) x := by
+  Proper.inr Γ (Proper.inr S x) = Proper.inr (Γ ⋈ S) x
+  := by
   induction ρ with
   | nil => exact nomatch x
   | cons β rest ih =>
@@ -204,11 +202,8 @@ the list. -/
 theorem extendList_inr_inl {C : Carrier} (S : Shape C) [Proper S]
     (ρ : List C.Arity) (Γ : Shape C)
     {α : C.Arity} (x : S ∋ α) :
-    (Proper.inr Γ : S ⋈ Tele.ofList ρ →ʳ Γ ⋈ (S ⋈ Tele.ofList ρ))
-      ((Proper.inl S : S →ʳ S ⋈ Tele.ofList ρ) x)
-      =
-    (Proper.inl (Γ ⋈ S) : Γ ⋈ S →ʳ (Γ ⋈ S) ⋈ Tele.ofList ρ)
-      ((Proper.inr Γ : S →ʳ Γ ⋈ S) x) := by
+  Proper.inr Γ (Proper.inl (Γ := Tele.ofList ρ) S x) = Proper.inl (Γ ⋈ S) (Proper.inr Γ x)
+  := by
   induction ρ with
   | nil =>
       change (Proper.inr Γ) x = (Proper.inr Γ) x
@@ -228,13 +223,12 @@ theorem extendList_inr_inl {C : Carrier} (S : Shape C) [Proper S]
 
 /-- Weakening through a concrete list extension is the iterated weakening
 through that list. -/
-theorem extendList_inl {C : Carrier} (S : Shape C) [Proper S]
+theorem extendList_inl
+    {C : Carrier} (S : Shape C) [Proper S]
     (ρ : List C.Arity) (Γ : Shape C)
     {α : C.Arity} (x : Γ ∋ α) :
-    (Proper.inl Γ : Γ →ʳ Γ ⋈ (S ⋈ Tele.ofList ρ)) x
-      =
-    (Proper.inl (Γ ⋈ S) : Γ ⋈ S →ʳ (Γ ⋈ S) ⋈ Tele.ofList ρ)
-      ((Proper.inl Γ : Γ →ʳ Γ ⋈ S) x) := by
+  Proper.inl (Γ := S ⋈ Tele.ofList ρ) Γ x = Proper.inl (Γ ⋈ S) (Proper.inl Γ x)
+  := by
   induction ρ with
   | nil => rfl
   | cons β rest ih =>

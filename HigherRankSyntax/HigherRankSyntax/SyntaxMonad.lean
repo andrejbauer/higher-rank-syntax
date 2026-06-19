@@ -68,7 +68,7 @@ def T (C : Carrier) : PShape C ⥤ ArityFunc C where
 
   map_id Γ := by
     funext α e
-    show ⟦ (𝟙ʳ : Γ.tele →ʳ Γ.tele) ⇑ʳ α ⟧ʳ e = e
+    show ⟦ 𝟙ʳ _ ⇑ʳ α ⟧ʳ e = e
     rw [Renaming.extend_id]
     apply Renaming.act_id
 

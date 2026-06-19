@@ -977,20 +977,14 @@ private theorem diamondAt
               =
               σ.act ((τ ⋈ dst) ⋈ Tele.ofList υ)
                 (κ.act (Tele.ofList υ)
-                  (.ap
-                    (((Proper.inl (pre ⋈ dom)) :
-                        (pre ⋈ dom) →ʳ
-                          (pre ⋈ dom) ⋈ ((τ ⋈ src) ⋈ Tele.ofList υ))
-                      ((Proper.inr pre) z))
-                    args))
+                  (.ap (Proper.inl (Γ := (τ ⋈ src) ⋈ Tele.ofList υ)
+                    (pre ⋈ dom) ((Proper.inr pre) z)) args))
           rw [hζ]
           have hκ :
               κ.act (Tele.ofList υ)
                 (.ap
-                  (((Proper.inl (pre ⋈ dom)) :
-                      (pre ⋈ dom) →ʳ
-                        (pre ⋈ dom) ⋈ ((τ ⋈ src) ⋈ Tele.ofList υ))
-                    ((Proper.inr pre) z))
+                  (Proper.inl (Γ := (τ ⋈ src) ⋈ Tele.ofList υ)
+                    (pre ⋈ dom) ((Proper.inr pre) z))
                   args)
               =
               .ap
@@ -1294,22 +1288,12 @@ private theorem liftAt
             rw [Proper.extendList_inl
               (τ ⋈ dst) υ pre z]
             change
-              ((Proper.inl (pre ⋈ (τ ⋈ dst))) :
-                  (pre ⋈ (τ ⋈ dst)) →ʳ
-                    (pre ⋈ (τ ⋈ dst)) ⋈
-                      ((Tele.ofList υ) ⋈ Tele.ofList χ))
-                ((Proper.inl pre) z)
+              Proper.inl (Γ := (Tele.ofList υ) ⋈ Tele.ofList χ)
+                (pre ⋈ (τ ⋈ dst)) ((Proper.inl pre) z)
               =
-              ((Proper.inl ((pre ⋈ (τ ⋈ dst)) ⋈
-                  Tele.ofList υ)) :
-                  ((pre ⋈ (τ ⋈ dst)) ⋈ Tele.ofList υ) →ʳ
-                    ((pre ⋈ (τ ⋈ dst)) ⋈ Tele.ofList υ) ⋈
-                      Tele.ofList χ)
-                (((Proper.inl (pre ⋈ (τ ⋈ dst))) :
-                    (pre ⋈ (τ ⋈ dst)) →ʳ
-                      (pre ⋈ (τ ⋈ dst)) ⋈
-                        Tele.ofList υ)
-                  ((Proper.inl pre) z))
+              Proper.inl (Γ := Tele.ofList χ)
+                ((pre ⋈ (τ ⋈ dst)) ⋈ Tele.ofList υ)
+                ((Proper.inl (pre ⋈ (τ ⋈ dst))) ((Proper.inl pre) z))
             rw [← Proper.extendList_inl
               (Tele.ofList υ) χ
               (pre ⋈ (τ ⋈ dst))
