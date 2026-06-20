@@ -27,8 +27,8 @@
    Do instead: do not install a private `Env` bridge alone. The hard theorem still needs explicit coherence between `Γ ⋈ (base ∷ α ⋈ υ)` and `((Γ ⋈ base) ⋈ ⌊α⌋) ⋈ υ`; either keep `Proper.AppendCoherence`/diamond or first build a canonical spine layer for these witnesses.
 5. **[2026-06-08] Core interchange is a one-binder mutual pair**
    Do instead: state the central commute through `OneDiamond`/`OneLift`; keep `PreNaturality` and `Interchange` only for remaining derived stages.
-6. **[2026-05-27] `act_kcomp` reduces to general substitution composition**
-   Do instead: use public `Subst.comp` and `Subst.act_comp`; the old `fusion` wrapper is deleted, while `interchange` still supports the `dom` branch of `act_comp`.
+6. **[2026-06-20] `Subst.comp` is postcomposition; `Subst.kcomp` is Kleisli composition**
+   Do instead: use `Subst.kcomp σ θ` for ordinary empty-depth Kleisli composition and reserve `Subst.comp θ Ω κ` for postcomposition at passive depth `Ω`.
 7. **[2026-05-27] Keep singleton α-slots abstract in under-list proofs**
    Do instead: avoid case-splitting the whole α-head branch on `xα`; use `ListSlotAt.sub_single xα` for termination and only case-split inside local definitional sub lemmas.
 8. **[2026-06-07] Single `diamondAt` facade is not enough**

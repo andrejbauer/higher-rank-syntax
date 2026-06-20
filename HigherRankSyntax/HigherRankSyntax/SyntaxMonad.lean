@@ -102,4 +102,10 @@ def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
   comp_lift := by
     intro Γ Δ Ξ f g
     funext α e
-    apply Subst.act_comp
+    change Subst.act (Γ := Shape.nil)
+        (Subst.kcomp @f @g : Subst C Γ.tele (Shape.nil ⋈ Ξ.tele))
+        ⌊α⌋ e =
+      Subst.act @g ⌊α⌋
+        (Subst.act (Γ := Shape.nil) @f ⌊α⌋ e)
+    exact Subst.act_comp (pre := Shape.nil) (dom := Γ.tele)
+      (mid := Δ.tele) (cod := Ξ.tele) @f @g ⌊α⌋ e

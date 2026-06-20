@@ -262,19 +262,25 @@ cases recurse structurally.
 
 \section{Composition}
 
-The substitution-level composition operation is
+The substitution-level composition operation is now the general
+postcomposition-at-depth operation
 \[
-  \Code{Subst.comp}\;\sigma\;\theta : \Subst\,C\,\pre\,\dom\,\cod,
+  \Code{Subst.comp}\;\theta\;\Omega\;\sigma,
 \]
-where
+where \(\Omega\) is a passive telescope.  Pointwise,
 \[
-  (\Code{Subst.comp}\;\sigma\;\theta)(x)
+  (\Code{Subst.comp}\;\theta\;\Omega\;\sigma)(x)
   =
-  \Act{\theta}{\langle\alpha\rangle}{\sigma(x)}
+  \Act{\theta}{\Omega\comp\langle\alpha\rangle}{\sigma(x)}
   \qquad(x : \dom \ni \alpha).
 \]
-This is the general form of Kleisli composition, before specializing to empty
-prefixes.
+The ordinary Kleisli-style composition used in \Code{Subst.act\_comp} is the
+empty-depth specialization
+\[
+  \Code{Subst.kcomp}\;\sigma\;\theta
+  :=
+  \Code{Subst.comp}\;\theta\;\Code{Shape.nil}\;\sigma.
+\]
 
 \begin{theorem}[Action preserves substitution composition]
 For arbitrary substitutions
@@ -285,7 +291,7 @@ For arbitrary substitutions
 \]
 and every expression \(e : \Expr(\pre\comp\dom\comp\tau)\),
 \[
-  \Act{\Code{Subst.comp}\;\sigma\;\theta}{\tau}{e}
+  \Act{\Code{Subst.kcomp}\;\sigma\;\theta}{\tau}{e}
   =
   \Act{\theta}{\tau}{\Act{\sigma}{\tau}{e}}.
 \]
@@ -351,8 +357,12 @@ Action interacts with instantiation. \\
 \Code{liftAt} & Lifted companion needed by the domain branch of
 \Code{diamondAt}. & Compatibility of nested instantiations. \\
 
-\Code{Subst.comp} & Substitution-level Kleisli composition. & Composition of
-syntactic transformations. \\
+\Code{Subst.comp} & Postcomposition at passive depth; ordinary Kleisli
+composition is the empty-depth case. & Postcomposition of syntactic
+transformations. \\
+
+\Code{Subst.kcomp} & Kleisli composition, i.e. the empty-depth specialization
+of \Code{Subst.comp}. & Composition of syntactic transformations. \\
 
 \Code{Subst.act\_comp} & Action preserves arbitrary substitution
 composition. & Action preserves composition. \\

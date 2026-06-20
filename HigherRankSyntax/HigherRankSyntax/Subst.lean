@@ -223,12 +223,28 @@ decreasing_by
 /-- The ground substitution action `σ.act Shape.nil e`, mirroring `⟦ρ⟧ʳ e`. -/
 notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ Shape.nil e
 
-/-- Substitution-level composition.  First substitute with `σ`, producing
-expressions over `pre ⋈ mid`; then act on each filler with `θ`, producing
-expressions over `pre ⋈ cod`. -/
-def Subst.comp {C : Carrier} {Γ Δ Θ Ξ : Shape C}
-    [Proper Θ] [Proper Ξ]
+/-- Postcompose a substitution `κ` with the action induced by `σ`, at passive
+depth `Ω`.  Pointwise, every filler of `κ` is transformed by acting with `σ`.
+
+The old ordinary substitution composition is the `Ω = Shape.nil`
+specialization `Subst.comp θ Shape.nil σ`: first use `σ`, then postcompose its
+fillers by `θ`. -/
+def Subst.comp {C : Carrier} {Γ Δ Ξ Θ : Shape C}
+    [Proper Δ] [Proper Ξ] [Proper Θ]
+    (σ : Subst C Δ (Γ ⋈ Ξ))
+    (Ω : Shape C) [Proper Ω]
+    (κ : Subst C Θ ((Γ ⋈ Δ) ⋈ Ω)) :
+    Subst C Θ ((Γ ⋈ Ξ) ⋈ Ω) :=
+  fun {β} x => σ.act (Ω ∷ β) (κ x)
+
+/-- Kleisli composition of substitutions: first substitute with `σ`, producing
+expressions over `Γ ⋈ Θ`; then substitute the remaining `Θ`-variables with
+`θ`, producing expressions over `Γ ⋈ Ξ`.
+
+This is the empty-depth specialization of `Subst.comp`. -/
+def Subst.kcomp {C : Carrier} {Γ Δ Θ Ξ : Shape C}
+    [Proper Δ] [Proper Θ] [Proper Ξ]
     (σ : Subst C Δ (Γ ⋈ Θ))
     (θ : Subst C Θ (Γ ⋈ Ξ)) :
     Subst C Δ (Γ ⋈ Ξ) :=
-  (fun {β} x => θ.act ⌊β⌋ (σ x))
+  Subst.comp θ Shape.nil σ
