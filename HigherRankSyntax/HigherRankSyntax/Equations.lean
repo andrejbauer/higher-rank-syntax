@@ -201,17 +201,15 @@ theorem Subst.act_id
   | .ap (α := β) x args =>
     obtain ⟨y, h⟩ := Subst.isReinject (Γ := Shape.nil) (Δ := Γ) (Ξ := τ) x
     subst h
+    dsimp only [Subst.reinject]
     cases y with
-    | right z =>
-        refine (Subst.act_ap_right (pre := Shape.nil) (Subst.id Γ) τ z args).trans ?_
-        congr; funext k; apply Subst.act_id
-    | middle z =>
-        simp only [Subst.reinject]
-        refine (Subst.act_ap_middle (pre := Shape.nil) (Subst.id Γ) τ z args).trans ?_
-        rw [Proper.inr_nil_id z]
-        refine (Subst.act_inst.η (ι := _) (p := z)).trans ?_
-        congr 1; funext k; apply Subst.act_id
     | left z => nomatch z
+    | right z =>
+        simp only [Subst.act_ap_right]
+        congr 1; funext k; apply Subst.act_id
+    | middle z =>
+        simp only [Subst.act_ap_middle, Proper.inr_nil_id, Subst.act_inst.η]
+        congr 1; funext k; apply Subst.act_id
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg x args _
 
