@@ -233,8 +233,8 @@ def Subst.comp {C : Carrier} {Γ Δ Ξ Θ : Shape C}
     [Proper Δ] [Proper Ξ] [Proper Θ]
     (σ : Subst C Δ (Γ ⋈ Ξ))
     (Ω : Shape C) [Proper Ω]
-    (κ : Subst C Θ ((Γ ⋈ Δ) ⋈ Ω)) :
-    Subst C Θ ((Γ ⋈ Ξ) ⋈ Ω) :=
+    (κ : Subst C Θ (Γ ⋈ Δ ⋈ Ω)) :
+    Subst C Θ (Γ ⋈ Ξ ⋈ Ω) :=
   fun {β} x => σ.act (Ω ∷ β) (κ x)
 
 /-- Kleisli composition of substitutions: first substitute with `σ`, producing

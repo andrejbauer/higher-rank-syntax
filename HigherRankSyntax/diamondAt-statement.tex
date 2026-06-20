@@ -17,6 +17,7 @@
 \newcommand{\ext}{\mathbin{\triangleleft}}
 \newcommand{\into}{\longrightarrow}
 \newcommand{\id}{\mathrm{id}}
+\newcommand{\pcomp}[3]{#1 \overset{#2}{\circ} #3}
 
 \title{The Mathematical Content of \texttt{diamondAt}}
 \author{}
@@ -68,12 +69,30 @@ In Lean, \(U\) is \(\mathsf{Tele.ofList}\,\upsilon\).
 
 The expression to which the theorem applies lives in the context
 \[
-  ((((P \bowtie D) \bowtie T) \bowtie S) \bowtie U).
+  P \bowtie D \bowtie T \bowtie S \bowtie U.
 \]
 Thus it may mention variables from five regions:
 \[
   P,\qquad D,\qquad T,\qquad S,\qquad U.
 \]
+
+An argument family can be viewed as a singleton substitution.  If \(A\) is an
+argument family for a head of arity \(\beta\), write
+\[
+  A^\sharp : \langle\beta\rangle \leadsto \Omega
+\]
+for the substitution defined by
+\[
+  A^\sharp(\mathsf{here}(j)) = A_j.
+\]
+This is Lean's \texttt{Subst.fromArgs ... A}.  The beta-like step is then not a
+new primitive operation: it is ordinary substitution action by \(A^\sharp\).
+Thus
+\[
+  (A^\sharp)_\Xi(b)
+\]
+means: act on the filler \(b\) by the singleton substitution generated from the
+argument family \(A\), at passive depth \(\Xi\).
 
 \section*{The two substitutions}
 
@@ -83,19 +102,19 @@ The first substitution is
 \]
 This means that for every variable \(z : D \ni \beta\), we have a filler
 \[
-  \sigma(z) \in \E((P \bowtie D') \ext \beta).
+  \sigma(z) \in \E(P \bowtie D' \ext \beta).
 \]
 It replaces \(D\)-variables while preserving the prefix \(P\).
 
 The second substitution is
 \[
-  \kappa : S \leadsto ((P \bowtie D) \bowtie T) \bowtie S'.
+  \kappa : S \leadsto P \bowtie D \bowtie T \bowtie S'.
 \]
 Thus for every \(x : S \ni \beta\),
 \[
   \kappa(x)
   \in
-  \E(((((P \bowtie D) \bowtie T) \bowtie S') \ext \beta)).
+  \E(P \bowtie D \bowtie T \bowtie S' \ext \beta).
 \]
 This replaces \(S\)-variables by expressions that still live over \(D\).  So
 \(\kappa\) is a substitution before the change of target context induced by
@@ -106,9 +125,9 @@ This replaces \(S\)-variables by expressions that still live over \(D\).  So
 If \(A\) is a passive telescope, then \(\sigma\) acts at depth \(A\) as a map
 \[
   \sigma_A :
-  \E((P \bowtie D) \bowtie A)
+  \E(P \bowtie D \bowtie A)
   \into
-  \E((P \bowtie D') \bowtie A).
+  \E(P \bowtie D' \bowtie A).
 \]
 The word ``passive'' means that variables from \(A\) are not substituted.  They
 are merely carried along.  Only variables from \(D\) are active for \(\sigma\).
@@ -116,9 +135,9 @@ are merely carried along.  Only variables from \(D\) are active for \(\sigma\).
 Similarly, \(\kappa\) acts at passive depth \(U\) as a map
 \[
   \kappa_U :
-  \E(((((P \bowtie D) \bowtie T) \bowtie S) \bowtie U))
+  \E(P \bowtie D \bowtie T \bowtie S \bowtie U)
   \into
-  \E(((((P \bowtie D) \bowtie T) \bowtie S') \bowtie U)).
+  \E(P \bowtie D \bowtie T \bowtie S' \bowtie U).
 \]
 Only variables from \(S\) are active for \(\kappa\); everything else is passive.
 
@@ -128,24 +147,26 @@ Since the fillers of \(\kappa\) may contain \(D\)-variables, applying \(\sigma\)
 to an expression also transforms the substitution \(\kappa\).  We write this
 postcomposition as
 \[
-  \sigma \mathbin{\triangleright} \kappa :
-  S \leadsto ((P \bowtie D') \bowtie T) \bowtie S'.
+  \pcomp{\sigma}{T \bowtie S'}{\kappa} :
+  S \leadsto P \bowtie D' \bowtie T \bowtie S'.
 \]
 It is defined pointwise by
 \[
-  (\sigma \mathbin{\triangleright} \kappa)(x)
+  (\pcomp{\sigma}{T \bowtie S'}{\kappa})(x)
   =
   \sigma_{T \bowtie S' \ext \beta}(\kappa(x)),
   \qquad x : S \ni \beta.
 \]
-The passive depth is \(T \bowtie S' \ext \beta\), because the filler
+The superscript \(T \bowtie S'\) records the passive depth at which
+\(\sigma\) postcomposes \(\kappa\).  In the pointwise definition the full
+passive depth is \(T \bowtie S' \ext \beta\), because the filler
 \(\kappa(x)\) is an expression over
 \[
-  ((P \bowtie D) \bowtie (T \bowtie S' \ext \beta)).
+  P \bowtie D \bowtie T \bowtie S' \ext \beta.
 \]
 After \(\sigma\) acts, this becomes an expression over
 \[
-  ((P \bowtie D') \bowtie (T \bowtie S' \ext \beta)),
+  P \bowtie D' \bowtie T \bowtie S' \ext \beta,
 \]
 which is exactly the required type of a filler for \(x\) in the transformed
 substitution.
@@ -154,17 +175,17 @@ substitution.
 
 Let
 \[
-  e \in \E(((((P \bowtie D) \bowtie T) \bowtie S) \bowtie U)).
+  e \in \E(P \bowtie D \bowtie T \bowtie S \bowtie U).
 \]
 Then \texttt{diamondAt} says:
 \[
 \boxed{
-  (\sigma \mathbin{\triangleright} \kappa)_U
+  (\pcomp{\sigma}{T \bowtie S'}{\kappa})_U
   \bigl(
-    \sigma_{(T \bowtie S) \bowtie U}(e)
+    \sigma_{T \bowtie S \bowtie U}(e)
   \bigr)
   =
-  \sigma_{(T \bowtie S') \bowtie U}
+  \sigma_{T \bowtie S' \bowtie U}
   \bigl(
     \kappa_U(e)
   \bigr).
@@ -173,7 +194,7 @@ Then \texttt{diamondAt} says:
 
 This is the clean mathematical statement.  The left-hand side first applies
 \(\sigma\) to \(e\), then substitutes the remaining \(S\)-variables using the
-postcomposition \(\sigma \mathbin{\triangleright} \kappa\).  The right-hand
+postcomposition \(\pcomp{\sigma}{T \bowtie S'}{\kappa}\).  The right-hand
 side first substitutes the \(S\)-variables using \(\kappa\), then applies
 \(\sigma\).
 
@@ -182,22 +203,23 @@ side first substitutes the \(S\)-variables using \(\kappa\), then applies
 The theorem says that the following square commutes:
 \[
 \begin{array}{ccc}
-\E(((((P \bowtie D) \bowtie T) \bowtie S) \bowtie U))
-& \xrightarrow{\ \sigma_{(T \bowtie S) \bowtie U}\ } &
-\E(((((P \bowtie D') \bowtie T) \bowtie S) \bowtie U))
+\E(P \bowtie D \bowtie T \bowtie S \bowtie U)
+& \xrightarrow{\ \sigma_{T \bowtie S \bowtie U}\ } &
+\E(P \bowtie D' \bowtie T \bowtie S \bowtie U)
 \\[0.8em]
-\downarrow{\kappa_U} && \downarrow{(\sigma_\ast\kappa)_U}
+\downarrow{\kappa_U} && \downarrow{(\pcomp{\sigma}{T \bowtie S'}{\kappa})_U}
 \\[0.8em]
-\E(((((P \bowtie D) \bowtie T) \bowtie S') \bowtie U))
-& \xrightarrow{\ \sigma_{(T \bowtie S') \bowtie U}\ } &
-\E(((((P \bowtie D') \bowtie T) \bowtie S') \bowtie U)).
+\E(P \bowtie D \bowtie T \bowtie S' \bowtie U)
+& \xrightarrow{\ \sigma_{T \bowtie S' \bowtie U}\ } &
+\E(P \bowtie D' \bowtie T \bowtie S' \bowtie U).
 \end{array}
 \]
 
 The top arrow changes \(D\) into \(D'\).  The left arrow changes \(S\) into
 \(S'\).  The bottom arrow changes \(D\) into \(D'\) after \(S\) has already
 been changed into \(S'\).  The right arrow changes \(S\) into \(S'\) after the
-fillers for \(S\) have themselves been pushed forward along \(\sigma\).
+fillers for \(S\) have themselves been postcomposed by \(\sigma\) at passive
+depth \(T \bowtie S'\).
 
 \section*{Why the theorem is not trivial}
 
@@ -205,12 +227,12 @@ If the fillers of \(\kappa\) did not contain variables from \(D\), the theorem
 would be close to ordinary commutation of independent substitutions.  But here
 the fillers of \(\kappa\) are expressions over
 \[
-  ((P \bowtie D) \bowtie T) \bowtie S',
+  P \bowtie D \bowtie T \bowtie S',
 \]
 so they may contain \(D\)-variables.  Therefore substituting \(D\)-variables
 before substituting \(S\)-variables changes the \(S\)-fillers themselves.
 
-The postcomposition \(\sigma \mathbin{\triangleright} \kappa\) is precisely the
+The postcomposition \(\pcomp{\sigma}{T \bowtie S'}{\kappa}\) is precisely the
 bookkeeping that accounts for this dependency.  The theorem says:
 \[
   \text{the dependency of \(\kappa\) on \(D\) is handled pointwise by \(\sigma\).}
@@ -220,7 +242,7 @@ bookkeeping that accounts for this dependency.  The theorem says:
 
 The context of \(e\) decomposes into five regions:
 \[
-  ((((P \bowtie D) \bowtie T) \bowtie S) \bowtie U).
+  P \bowtie D \bowtie T \bowtie S \bowtie U.
 \]
 Consequently, the head variable of an application in \(e\) belongs to exactly
 one of:
@@ -248,15 +270,15 @@ head \(x_\upsilon\).  What changes is only the family of arguments.  For each
 argument \(j\), define
 \[
   L_j =
-  (\sigma \mathbin{\triangleright} \kappa)_{U \ext \arity(j)}
+  (\pcomp{\sigma}{T \bowtie S'}{\kappa})_{U \ext \arity(j)}
   \bigl(
-    \sigma_{(T \bowtie S) \bowtie (U \ext \arity(j))}(a(j))
+    \sigma_{T \bowtie S \bowtie U \ext \arity(j)}(a(j))
   \bigr)
 \]
 and
 \[
   R_j =
-  \sigma_{(T \bowtie S') \bowtie (U \ext \arity(j))}
+  \sigma_{T \bowtie S' \bowtie U \ext \arity(j)}
   \bigl(
     \kappa_{U \ext \arity(j)}(a(j))
   \bigr).
@@ -265,7 +287,20 @@ The induction hypothesis applied to the subterm \(a(j)\) says precisely that
 \[
   L_j = R_j
 \]
-for every binder argument \(j\).  Therefore the under case concludes by
+for every binder argument \(j\).  More precisely, for each \(j\) we call the
+same theorem with the same \(P,D,D',T,S,S',\sigma,\kappa\), but with the
+under-telescope enlarged from \(U\) to
+\[
+  U_j = U \ext \arity(j),
+\]
+and with expression \(a(j)\).  In Lean, using ASCII names for readability, this
+is the recursive call
+\begin{quote}
+\small\ttfamily
+diamondAt (upsilon := j.arity :: upsilon)\\
+\hspace*{2em}sigma hTauSrc hTauDst srcTarget dstTarget kappa (args j)
+\end{quote}
+Therefore the under case concludes by
 congruence of the application constructor and function extensionality:
 \[
   \operatorname{ap}(x_\upsilon, j \mapsto L_j)
@@ -282,10 +317,187 @@ lemma \texttt{DiamondSite.underBranch}.
 \paragraph{Head in \(S\).}
 This is an active variable for \(\kappa\).  On the right side, \(\kappa\) fires
 immediately.  On the left side, \(\sigma\) first acts on the ambient expression,
-and then the postcomposition \(\sigma \mathbin{\triangleright} \kappa\) fires.
-The two results are equal because \(\sigma \mathbin{\triangleright} \kappa\)
+and then the postcomposition \(\pcomp{\sigma}{T \bowtie S'}{\kappa}\) fires.
+The two results are equal because \(\pcomp{\sigma}{T \bowtie S'}{\kappa}\)
 was defined by applying \(\sigma\) to the fillers of \(\kappa\).  This branch
 recursively invokes the same theorem on the selected filler \(\kappa(x)\).
+
+More explicitly, suppose
+\[
+  e = \operatorname{ap}(x_S,a),
+  \qquad x_S : S \ni \beta.
+\]
+For this application, the branch goal is exactly
+\[
+  (\pcomp{\sigma}{T \bowtie S'}{\kappa})_U
+  \bigl(
+    \sigma_{T \bowtie S \bowtie U}
+      (\operatorname{ap}(x_S,a))
+  \bigr)
+  =
+  \sigma_{T \bowtie S' \bowtie U}
+  \bigl(
+    \kappa_U(\operatorname{ap}(x_S,a))
+  \bigr).
+\]
+
+We now unfold both sides.  First consider the left-hand side.  The head \(x_S\)
+is passive for \(\sigma\), because \(\sigma\) only replaces variables from
+\(D\).  Therefore \(\sigma\) preserves the head and acts on the arguments:
+\[
+  \sigma_{T \bowtie S \bowtie U}(\operatorname{ap}(x_S,a))
+  =
+  \operatorname{ap}
+  \Bigl(
+    x_S,
+    j \mapsto
+      \sigma_{T \bowtie S \bowtie U \ext \arity(j)}(a(j))
+  \Bigr).
+\]
+Write
+\[
+  \bar a_j =
+  \sigma_{T \bowtie S \bowtie U \ext \arity(j)}(a(j)).
+\]
+Then the previous equation says
+\[
+  \sigma_{T \bowtie S \bowtie U}(\operatorname{ap}(x_S,a))
+  =
+  \operatorname{ap}(x_S, j \mapsto \bar a_j).
+\]
+
+Now apply \((\pcomp{\sigma}{T \bowtie S'}{\kappa})_U\).  This substitution
+does act on \(x_S\), so it fires.  Firing means: take the filler selected by
+\(x_S\) and instantiate its binder arguments by the transformed argument family:
+\[
+  (\pcomp{\sigma}{T \bowtie S'}{\kappa})_U
+  \bigl(
+    \operatorname{ap}(x_S, j \mapsto \bar a_j)
+  \bigr)
+  =
+  (L^\sharp)_\varnothing((\pcomp{\sigma}{T \bowtie S'}{\kappa})(x_S)),
+\]
+where
+\[
+  L_j =
+  (\pcomp{\sigma}{T \bowtie S'}{\kappa})_{U \ext \arity(j)}
+  \bigl(
+    \bar a_j
+  \bigr).
+\]
+The notation \(L^\sharp\) means the singleton substitution generated by this
+family \(j \mapsto L_j\).
+By definition of postcomposition, the fired filler is
+\[
+  (\pcomp{\sigma}{T \bowtie S'}{\kappa})(x_S)
+  =
+  \sigma_{T \bowtie S' \ext \beta}(\kappa(x_S)).
+\]
+Substituting that definition of the filler into the previous equation, the left
+route has unfolded to
+\[
+  (L^\sharp)_\varnothing
+  \bigl(\sigma_{T \bowtie S' \ext \beta}(\kappa(x_S))\bigr).
+\]
+
+Now unfold the right-hand side.  Here \(\kappa\) fires immediately at the
+head \(x_S\):
+\[
+  \kappa_U(\operatorname{ap}(x_S,a))
+  =
+  ((\kappa_U \cdot a)^\sharp)_\varnothing(\kappa(x_S)).
+\]
+Therefore the right route becomes
+\[
+  \sigma_{T \bowtie S' \bowtie U}
+  \left(
+    ((\kappa_U \cdot a)^\sharp)_\varnothing(\kappa(x_S))
+  \right).
+\]
+
+Here \(\kappa_U \cdot a\) is the argument family obtained by acting with
+\(\kappa\) pointwise on \(a\):
+\[
+  (\kappa_U \cdot a)(j)
+  =
+  \kappa_{U \ext \arity(j)}(a(j)).
+\]
+Its sharp is the singleton substitution generated by that acted argument family:
+\[
+  (\kappa_U \cdot a)^\sharp(\mathsf{here}(j))
+  =
+  \kappa_{U \ext \arity(j)}(a(j)).
+\]
+In Lean, this singleton substitution is \texttt{Subst.actPointwise kappa upsilon args}.
+
+At this point the left route is
+\[
+  (L^\sharp)_\varnothing
+  \bigl(\sigma_{T \bowtie S' \ext \beta}(\kappa(x_S))\bigr),
+\]
+and the right route is
+\[
+  \sigma_{T \bowtie S' \bowtie U}
+  \left(
+    ((\kappa_U \cdot a)^\sharp)_\varnothing(\kappa(x_S))
+  \right).
+\]
+
+The recursive call that compares these is \texttt{diamondAt} applied to the
+selected filler
+\(\kappa(x_S)\).  Its parameters are
+\[
+  T_{\mathrm{new}} = T \bowtie S',
+  \qquad
+  S_{\mathrm{new}}=\langle\beta\rangle,
+  \qquad
+  S'_{\mathrm{new}}=U,
+  \qquad
+  U_{\mathrm{new}}=\varnothing,
+\]
+with expression \(\kappa(x_S)\).  In Lean, this is the call
+\begin{quote}
+\small\ttfamily
+diamondAt (tau := tau bowtie dst) (src := singleton beta)\\
+\hspace*{2em}(dst := Tele.ofList upsilon) sigma\\
+\hspace*{2em}(upsilon := []) ... (Subst.actPointwise kappa upsilon args)\\
+\hspace*{2em}(e := kappa xsrc)
+\end{quote}
+where \texttt{Subst.actPointwise kappa upsilon args} denotes
+\((\kappa_U \cdot a)^\sharp\).
+
+The recursive theorem says exactly that
+\[
+  (R^\sharp)_\varnothing
+  \bigl(\sigma_{T \bowtie S' \ext \beta}(\kappa(x_S))\bigr)
+  =
+  \sigma_{T \bowtie S' \bowtie U}
+  \left(
+    ((\kappa_U \cdot a)^\sharp)_\varnothing(\kappa(x_S))
+  \right),
+\]
+where
+\[
+  R_j =
+  \sigma_{T \bowtie S' \bowtie U \ext \arity(j)}
+  \bigl(\kappa_{U \ext \arity(j)}(a(j))\bigr).
+\]
+Similarly, \(R^\sharp\) is the singleton substitution generated by
+\(j \mapsto R_j\).
+The only remaining mismatch is that our unfolded left route contains \(L_j\),
+not \(R_j\).  But the recursive hypotheses already computed for the original
+arguments \(a(j)\) say precisely that
+\[
+  L_j = R_j
+\]
+for every \(j\).  In the Lean proof, this pointwise replacement of singleton
+filler families is the equality named \texttt{hSubst}; its only nonempty case is
+the singleton slot \(\mathsf{here}(j)\), where it is exactly the argument
+recursive hypothesis \texttt{hargs j}.
+
+This recursive call is terminating because it decreases the source side of the
+diamond: instead of proving the theorem for all of \(S\), it proves it for the
+single selected \(S\)-slot \(x_S\).
 
 \paragraph{Head in \(T\).}
 This head is passive for both substitutions.  Both sides preserve it and
@@ -304,20 +516,34 @@ Thus both routes through the diamond rebuild the same \(T\)-head.
 For each binder argument \(j \in \B(\beta)\), set
 \[
   L_j =
-  (\sigma \mathbin{\triangleright} \kappa)_{U \ext \arity(j)}
+  (\pcomp{\sigma}{T \bowtie S'}{\kappa})_{U \ext \arity(j)}
   \bigl(
-    \sigma_{(T \bowtie S) \bowtie (U \ext \arity(j))}(a(j))
+    \sigma_{T \bowtie S \bowtie U \ext \arity(j)}(a(j))
   \bigr)
 \]
 and
 \[
   R_j =
-  \sigma_{(T \bowtie S') \bowtie (U \ext \arity(j))}
+  \sigma_{T \bowtie S' \bowtie U \ext \arity(j)}
   \bigl(
     \kappa_{U \ext \arity(j)}(a(j))
   \bigr).
 \]
-The recursive hypothesis again gives \(L_j = R_j\) for every \(j\).  Therefore
+The recursive hypothesis again gives \(L_j = R_j\) for every \(j\).  The
+recursive call is exactly the same one as in the \(U\)-case: for each argument
+\(j\), we apply the theorem to the subterm \(a(j)\), leaving
+\(\sigma,\kappa,T,S,S'\) and all coherence data unchanged, and replacing the
+under-telescope \(U\) by
+\[
+  U_j = U \ext \arity(j).
+\]
+In Lean, again with ASCII names for readability, this is
+\begin{quote}
+\small\ttfamily
+diamondAt (upsilon := j.arity :: upsilon)\\
+\hspace*{2em}sigma hTauSrc hTauDst srcTarget dstTarget kappa (args j)
+\end{quote}
+Therefore
 the \(T\)-case reduces to
 \[
   \operatorname{ap}(x_T, j \mapsto L_j)
@@ -326,8 +552,8 @@ the \(T\)-case reduces to
 \]
 The Lean proof is longer than this sentence because it must show that the
 formal embeddings of the same \(T\)-head through
-\((P \bowtie D) \bowtie (T \bowtie S)\) and
-\((P \bowtie D) \bowtie (T \bowtie S')\) are the intended ones.  Once this
+\(P \bowtie D \bowtie T \bowtie S\) and
+\(P \bowtie D \bowtie T \bowtie S'\) are the intended ones.  Once this
 reassociation bookkeeping is done, the branch is just congruence plus the
 recursive equalities.
 
@@ -353,18 +579,33 @@ As before, for each binder argument \(j\) we compare the two transformed
 subterms
 \[
   L_j =
-  (\sigma \mathbin{\triangleright} \kappa)_{U \ext \arity(j)}
+  (\pcomp{\sigma}{T \bowtie S'}{\kappa})_{U \ext \arity(j)}
   \bigl(
-    \sigma_{(T \bowtie S) \bowtie (U \ext \arity(j))}(a(j))
+    \sigma_{T \bowtie S \bowtie U \ext \arity(j)}(a(j))
   \bigr),
   \qquad
   R_j =
-  \sigma_{(T \bowtie S') \bowtie (U \ext \arity(j))}
+  \sigma_{T \bowtie S' \bowtie U \ext \arity(j)}
   \bigl(
     \kappa_{U \ext \arity(j)}(a(j))
   \bigr).
 \]
-The induction hypothesis gives \(L_j = R_j\), and hence
+The induction hypothesis gives \(L_j = R_j\).  Concretely, for each \(j\) the
+recursive call is the theorem applied to \(a(j)\) at the enlarged passive
+under-telescope
+\[
+  U_j = U \ext \arity(j),
+\]
+with the same substitutions \(\sigma\) and \(\kappa\), the same ambient
+telescope \(T\), the same source and destination \(S,S'\), and the same
+coherence witnesses.  In Lean, using ASCII names for readability, it is the
+same call
+\begin{quote}
+\small\ttfamily
+diamondAt (upsilon := j.arity :: upsilon)\\
+\hspace*{2em}sigma hTauSrc hTauDst srcTarget dstTarget kappa (args j)
+\end{quote}
+Hence
 \[
   \operatorname{ap}(x_P, j \mapsto L_j)
   =
@@ -389,7 +630,7 @@ parenthesization.  These witnesses do not change the mathematical content of
 the theorem.  They only ensure that the formal proof can recognize, for example,
 that a head from \(S\) remains a head from \(S\) after it is embedded through
 \[
-  (P \bowtie D) \bowtie (T \bowtie S).
+  P \bowtie D \bowtie T \bowtie S.
 \]
 
 \section*{Role in substitution composition}
