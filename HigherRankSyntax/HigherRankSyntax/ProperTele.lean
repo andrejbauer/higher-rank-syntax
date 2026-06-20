@@ -81,7 +81,7 @@ class Proper {C : Carrier} (Γ : Tele C.Arity) : Type 1 where
 namespace Proper
 
 /-- The identity telescope: empty; the classifier returns everything to Γ. -/
-instance instId {C : Carrier} : Proper (Tele.id : Tele C.Arity) where
+instance instId {C : Carrier} : Proper (Tele.id C.Arity) where
   inl := fun Γ => Renaming.id Γ
   inr := fun _ {_} x => nomatch x
   classify := fun _Γ _α _X p _f g => g p
@@ -134,7 +134,7 @@ instance instCons {C : Carrier} (a : C.Arity) (T : Tele C.Arity) [Proper T] :
 once strict unit reduction has simplified the telescope to `Tele.cons a`. -/
 instance instSingleton {C : Carrier} (a : C.Arity) :
     Proper (Tele.cons a : Tele C.Arity) :=
-  inferInstanceAs (Proper (Tele.cons a ∘ᵗ (Tele.id : Tele C.Arity)))
+  inferInstanceAs (Proper (Tele.cons a ∘ᵗ (Tele.id C.Arity)))
 
 /-- Extend an already proper telescope by a concrete list of binders.  Unlike
 `compose`, this recurses over the list, so extension by one more binder is
@@ -306,17 +306,11 @@ def compose {C : Carrier} (S T : Shape C) [Proper S] [Proper T] :
       simp only [Proper.classify_inl, Proper.inr_nil_id]
       rfl
 
-/-- In the composed `Proper`, the right injection of a `T`-slot factors
-through `S ⋈ T`: `inr` after `inr` is the two-stage right injection. -/
-theorem compose_inr_inr {C : Carrier} (S T : Shape C)
-    [Proper S] [Proper T] (Γ : Shape C)
-    {α : C.Arity} (x : T ∋ α) :
-    letI : Proper (S ⋈ T) := Proper.compose S T
-    (Proper.inr Γ : (S ⋈ T) →ʳ Γ ⋈ (S ⋈ T))
-      ((Proper.inr S : T →ʳ S ⋈ T) x)
-      =
-    (Proper.inr (Γ ⋈ S) : T →ʳ (Γ ⋈ S) ⋈ T) x := by
-  exact Proper.classify_inr S _ x _ _
+/-- `Proper.compose`'s right injection of a `T`-slot factors through `S ⋈ T`. -/
+theorem compose_inr_inr {C : Carrier} (S T : Shape C) [Proper S] [Proper T]
+    (Γ : Shape C) {α : C.Arity} (x : T ∋ α) :
+  (Proper.compose S T).inr Γ (Proper.inr S x) = Proper.inr (Γ ⋈ S) x
+  := Proper.classify_inr S _ x _ _
 
 /-- In the composed `Proper`, the right injection of an `inl_S`-slot is
 the base right injection followed by weakening (`inl`) through `T`. -/
@@ -390,7 +384,7 @@ abbrev underBinder {C : Carrier} {S T : Shape C}
 abbrev AppendCoherence.compose {C : Carrier}
     (S T : Shape C) [hS : Proper S] [hT : Proper T] :
     AppendCoherence (Proper.compose S T) where
-  inr_right := Proper.compose_inr_inr S T
+  inr_right := fun _ {_} x => Proper.classify_inr S _ x _ _
   inr_left := Proper.compose_inr_inl S T
   inl := Proper.compose_inl S T
 

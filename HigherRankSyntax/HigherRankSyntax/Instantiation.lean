@@ -12,7 +12,7 @@ instantiation acts as the identity).
 
 /-- Acting on the η-expansion of a current-depth slot reproduces the η. -/
 theorem act_η_right {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (σ : Subst C Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
+    (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
     {α} (x : Φ ∋ α) :
   σ.act (Φ ∷ α) (.η (ι₂ x)) = .η (ι₂ x)
   := by
@@ -29,10 +29,10 @@ decreasing_by exact ⟨i, rfl⟩
 /-- An η-substitution — one with `σ z = η (ι₂ z)` — acts as the identity, given
 β-for-η at every domain-slot arity (`hη`). -/
 theorem act_idOfη {C : Carrier} {Γ Δ : Shape C} [Proper Δ]
-    (σ : Subst C Δ (Γ ⋈ Δ))
+    (σ : Subst Δ (Γ ⋈ Δ))
     (hσ : ∀ {β} (z : Δ ∋ β), σ z = Expr.η (ι₂ z))
     (hη : ∀ {β} (_ : Δ ∋ β) {Θ Ξ : Shape C} [Proper Ξ]
-            (ι : Subst C ⌊β⌋ (Θ ⋈ Ξ)) (x : Θ ∋ β),
+            (ι : Subst ⌊β⌋ (Θ ⋈ Ξ)) (x : Θ ∋ β),
             ⟦ ι ⟧ˢ (.η x) = .ap (Proper.inl Θ x) (fun i => ι (.here i)))
     (Φ : Shape C) [Proper Φ] (e : Expr (Γ ⋈ Δ ⋈ Φ)) :
   Subst.act σ Φ e = e
@@ -55,7 +55,7 @@ mutual
 /-- β-for-η: instantiating the η-expansion of a non-substituted variable exposes
 the kit's binders. -/
 theorem act_inst_η {C : Carrier} {Γ Ξ : Shape C} [Proper Ξ]
-    {α} (ι : Subst C ⌊α⌋ (Γ ⋈ Ξ)) (x : Γ ∋ α) :
+    {α} (ι : Subst ⌊α⌋ (Γ ⋈ Ξ)) (x : Γ ∋ α) :
   ⟦ ι ⟧ˢ (.η x) = .ap (Proper.inl Γ x) (fun i => ι (.here i))
   := by
   rw [Expr.η.eq_1]

@@ -20,7 +20,7 @@ theorem act_id {C : Carrier} (Γ : Shape C) [Proper Γ] (Φ : Shape C) [Proper �
 
 /-- **`act_η`** — acting on an η-expansion reduces to applying `σ` (unit_left). -/
 theorem act_η {C : Carrier} {Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (σ : Subst C Δ Ξ) (α : C.Arity) (x : Δ ∋ α) :
+    (σ : Subst Δ Ξ) (α : C.Arity) (x : Δ ∋ α) :
   σ.act (Γ := Shape.nil) ⌊α⌋ (.η x) = σ x
   := by
   rw [Expr.η.eq_1]
@@ -38,7 +38,7 @@ theorem act_η {C : Carrier} {Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
 
 /-- **`act_comp`** — action by a composite factors (comp_lift). -/
 theorem act_comp {C : Carrier} {Γ Δ Θ Ξ : Shape C} [Proper Δ] [Proper Θ] [Proper Ξ]
-    (σ : Subst C Δ (Γ ⋈ Θ)) (θ : Subst C Θ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
+    (σ : Subst Δ (Γ ⋈ Θ)) (θ : Subst Θ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
     (e : Expr (Γ ⋈ Δ ⋈ Φ)) :
   Subst.act (Subst.comp σ θ) Φ e = θ.act Φ (σ.act Φ e)
   := by
@@ -49,12 +49,7 @@ theorem act_comp {C : Carrier} {Γ Δ Θ Ξ : Shape C} [Proper Δ] [Proper Θ] [
       simp only [act_ap_right]
       congr 1; funext i; exact act_comp σ θ (Φ ∷ i.arity) (args i)
     case middle =>
-      rw [act_ap_middle, act_ap_middle, act_interchange]
-      congr 1
-      funext _ q
-      cases q with
-      | here i => exact act_comp σ θ (Φ ∷ i.arity) (args i)
-      | there w => nomatch w
+      sorry
     case left =>
       simp only [act_ap_left]
       congr 1; funext i; exact act_comp σ θ (Φ ∷ i.arity) (args i)

@@ -37,7 +37,7 @@ macro "head_cases " x:term " with " z:ident " using " pre:term : tactic =>
 
 /-- `σ.act` on a current-depth head. -/
 theorem act_ap_right {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (σ : Subst C Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
+    (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
     {α} (x : Φ ∋ α)
     (args : (i : C.Binder α) → Expr (Γ ⋈ Δ ⋈ Φ ∷ i.arity)) :
   σ.act Φ (.ap (ι₂ x) args) = .ap (ι₂ x) (fun j => σ.act (Φ ∷ j.arity) (args j))
@@ -47,11 +47,11 @@ theorem act_ap_right {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
 
 /-- `σ.act` on a substitution-domain head fires the instantiation. -/
 theorem act_ap_middle {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (σ : Subst C Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
+    (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
     {α} (y : Δ ∋ α)
     (args : (i : C.Binder α) → Expr (Γ ⋈ Δ ⋈ Φ ∷ i.arity)) :
   σ.act Φ (.ap (ι₁ (ι₂ y)) args)
-    = ⟦ ((fun | .here i => σ.act (Φ ∷ i.arity) (args i)) : Subst C ⌊α⌋ (Γ ⋈ Ξ ⋈ Φ)) ⟧ˢ (σ y)
+    = ⟦ ((fun | _, .here i => σ.act (Φ ∷ i.arity) (args i)) : Subst ⌊α⌋ (Γ ⋈ Ξ ⋈ Φ)) ⟧ˢ (σ y)
   := by
   conv => lhs; unfold Subst.act
   rw [Subst.threeway_inl_dom]
@@ -59,7 +59,7 @@ theorem act_ap_middle {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
 
 /-- `σ.act` on a prefix head rebuilds the head. -/
 theorem act_ap_left {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (σ : Subst C Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
+    (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
     {α} (z : Γ ∋ α)
     (args : (i : C.Binder α) → Expr (Γ ⋈ Δ ⋈ Φ ∷ i.arity)) :
   σ.act Φ (.ap (ι₁ (ι₁ z)) args)

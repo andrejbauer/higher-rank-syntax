@@ -19,7 +19,7 @@ abbrev Shape (C : Carrier) : Type := Tele C.Arity
 namespace Shape
 
 /-- The empty shape. -/
-@[match_pattern] abbrev nil {C : Carrier} : Shape C := Tele.id
+@[match_pattern] abbrev nil {C : Carrier} : Shape C := Tele.id C.Arity
 
 /-- Extension of a shape by an arity at the topmost layer. -/
 @[match_pattern] abbrev ext {C : Carrier} (Γ : Shape C) (α : C.Arity) : Shape C :=

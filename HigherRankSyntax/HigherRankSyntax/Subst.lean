@@ -4,12 +4,12 @@ import HigherRankSyntax.ProperTele
 /-!
 # Substitution
 
-`Subst C dom cod` maps each `dom`-slot `i` to an expression over `cod ⋈ i.arity`.
+`Subst dom cod` maps each `dom`-slot `i` to an expression over `cod ⋈ i.arity`.
 
 `Subst.act σ τ` applies the substitution `σ` to an expression at depth
 `τ : Shape C` (with `[Proper τ]`).  The action is still prefix-aware: if
-`σ : Subst C Δ (Γ ⋈ Ξ)`, then it transforms
-`Expr ((Γ ⋈ Δ) ⋈ τ)` into `Expr ((Γ ⋈ Ξ) ⋈ τ)`.  The data no longer stores the
+`σ : Subst Δ (Γ ⋈ Ξ)`, then it transforms
+`Expr (Γ ⋈ Δ ⋈ τ)` into `Expr (Γ ⋈ Ξ ⋈ τ)`.  The data no longer stores the
 prefix separately; the operation chooses that decomposition when acting.
 
 `Subst.threeway` is the proof-facing head classifier for this action:
@@ -66,12 +66,12 @@ instance (C : Carrier) : WellFoundedRelation (DomMeasure C) where
 The `sub` field is the only data; prefix preservation is not part of the
 record and is instead selected by `Subst.act` when the target is decomposed
 as `Γ ⋈ Ξ`. -/
-abbrev Subst (C : Carrier) (dom cod : Shape C) :=
-  ∀ {α : C.Arity}, dom ∋ α → Expr (cod ∷ α)
+abbrev Subst {C : Carrier} (dom cod : Shape C) :=
+  ∀ ⦃ α : C.Arity ⦄, dom ∋ α → Expr (cod ∷ α)
 
 /-- The identity substitution at shape `Γ`. -/
-def Subst.id {C : Carrier} (Γ : Shape C) : Subst C Γ Γ :=
-  (fun {β : C.Arity} (p : Γ ∋ β) => Expr.η p)
+def Subst.id {C : Carrier} (Γ : Shape C) : Subst Γ Γ :=
+  (fun ⦃β⦄ (p : Γ ∋ β) => Expr.η p)
 
 /-- Dispatching a slot of `pre ⋈ dom` into pre vs dom.  Returned by
 `Subst.classifyDom`. -/
@@ -94,21 +94,21 @@ inductive LeftMiddleRight {C : Carrier} (Γ Δ Ξ : Shape C) (α : C.Arity) : Ty
 
 /-- Dispatching a `pre ⋈ dom`-slot into pre vs dom, via `[Proper dom]`. -/
 def classifyLeftRight {C : Carrier} {Γ Δ : Shape C} [Proper Δ]
-    {α : C.Arity} (p : (Γ ⋈ Δ) ∋ α) : LeftRight Γ Δ α :=
+    {α} (p : (Γ ⋈ Δ) ∋ α) : LeftRight Γ Δ α :=
   Proper.classify Γ (LeftRight Γ Δ α) p .right .left
 
 /-- Dispatching a `(pre ⋈ dom) ⋈ τ`-slot into its mathematical source:
 current depth, substitution domain, or untouched prefix. -/
 def Subst.threeway {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    {α : C.Arity} (p : ((Γ ⋈ Δ) ⋈ Ξ) ∋ α) : LeftMiddleRight Γ Δ Ξ α :=
+    {α} (p : (Γ ⋈ Δ ⋈ Ξ) ∋ α) : LeftMiddleRight Γ Δ Ξ α :=
   Proper.classify (Γ ⋈ Δ) _ p
     .right
     (fun q => Proper.classify Γ _ q .middle .left)
 
 /-- Embed a classified source site back into `(pre ⋈ dom) ⋈ τ`. -/
 def Subst.reinject {C : Carrier} {Γ Δ Ξ : Shape C}
-    [Proper Δ] [Proper Ξ] {α : C.Arity} :
-  LeftMiddleRight Γ Δ Ξ α → ((Γ ⋈ Δ) ⋈ Ξ) ∋ α
+    [Proper Δ] [Proper Ξ] {α} :
+  LeftMiddleRight Γ Δ Ξ α → (Γ ⋈ Δ ⋈ Ξ) ∋ α
   | .left x => Proper.inl _ (Proper.inl _ x)
   | .middle x => Proper.inl (Γ ⋈ Δ) (Proper.inr Γ x)
   | .right x => Proper.inr _ x
@@ -117,8 +117,8 @@ def Subst.reinject {C : Carrier} {Γ Δ Ξ : Shape C}
 This is the proof-facing inverse of `Subst.threeway`; use it to replace
 nested `Proper.cover` splits. -/
 theorem Subst.isReinject {C : Carrier} {Γ Δ Ξ : Shape C}
-      [Proper Δ] [Proper Ξ] {α : C.Arity}
-      (x : ((Γ ⋈ Δ) ⋈ Ξ) ∋ α) :
+      [Proper Δ] [Proper Ξ] {α}
+      (x : (Γ ⋈ Δ ⋈ Ξ) ∋ α) :
     ∃ y : LeftMiddleRight Γ Δ Ξ α, x = reinject y
   := by
   rcases Proper.cover (Γ ⋈ Δ) x with ⟨x, h_x⟩ | ⟨y, h_y⟩
@@ -131,7 +131,7 @@ theorem Subst.isReinject {C : Carrier} {Γ Δ Ξ : Shape C}
 
 /-- Classifying an embedded `τ`-site returns the same `τ`-site. -/
 @[simp] theorem Subst.threeway_right {C : Carrier} {Γ Δ Ξ : Shape C}
-    [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Ξ ∋ α) :
+    [Proper Δ] [Proper Ξ] {α} (x : Ξ ∋ α) :
   threeway (Γ := Γ) (Δ := Δ) (reinject (.right x)) = .right x
   := by
   unfold Subst.threeway Subst.reinject
@@ -139,7 +139,7 @@ theorem Subst.isReinject {C : Carrier} {Γ Δ Ξ : Shape C}
 
 /-- Classifying an embedded `dom`-site returns the same `dom`-site. -/
 @[simp] theorem Subst.threeway_middle {C : Carrier} {Γ Δ Ξ : Shape C}
-    [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Δ ∋ α) :
+    [Proper Δ] [Proper Ξ] {α} (x : Δ ∋ α) :
   threeway (Γ := Γ) (Ξ := Ξ) (reinject (.middle x)) = .middle x
   := by
   unfold threeway reinject
@@ -148,7 +148,7 @@ theorem Subst.isReinject {C : Carrier} {Γ Δ Ξ : Shape C}
 
 /-- Classifying an embedded `pre`-site returns the same `pre`-site. -/
 @[simp] theorem  Subst.threeway_left {C : Carrier} {Γ Δ Ξ : Shape C}
-    [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Γ ∋ α) :
+    [Proper Δ] [Proper Ξ] {α} (x : Γ ∋ α) :
   threeway (Δ := Δ) (Ξ := Ξ) (reinject (.left x)) = .left x
   := by
   unfold threeway reinject
@@ -182,8 +182,8 @@ theorem Subst.isReinject {C : Carrier} {Γ Δ Ξ : Shape C}
   rw [Proper.classify_inl]
 
 /-- The identity instantiation for the one-binder telescope `⌊α⌋`, with an arbitrary fixed prefix `Δ`. -/
-def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) : Subst C ⌊α⌋ (Δ ⋈ ⌊α⌋) :=
-  fun | .here i => Expr.η (.here i)
+def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) : Subst ⌊α⌋ (Δ ⋈ ⌊α⌋) :=
+  fun | _, .here i => Expr.η (.here i)
 
 
 /-! ### The substitution action -/
@@ -194,18 +194,17 @@ the pre/dom dispatch.  All renamings used to rebuild new heads in the
 target come from `[Proper τ]` / `[Proper cod]`. -/
 def Subst.act {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ]
-    (σ : Subst C Δ (Γ ⋈ Ξ))
+    (σ : Subst Δ (Γ ⋈ Ξ))
     (τ : Shape C) [Proper τ] :
-    Expr ((Γ ⋈ Δ) ⋈ τ) → Expr ((Γ ⋈ Ξ) ⋈ τ)
+    Expr (Γ ⋈ Δ ⋈ τ) → Expr (Γ ⋈ Ξ ⋈ τ)
   | .ap (α := α) x args =>
       match threeway x with
       |.right x =>
           .ap (Proper.inr _ x)
             (fun i => σ.act (τ ∷ i.arity) (args i))
       | .middle z =>
-          act ((fun q => match q with
-            | .here i => σ.act (τ ∷ i.arity) (args i))
-                : Subst C ⌊α⌋ ((Γ ⋈ Ξ) ⋈ τ)) Shape.nil (σ z)
+          act ((fun | _, .here i => σ.act (τ ∷ i.arity) (args i))
+                : Subst ⌊α⌋ (Γ ⋈ Ξ ⋈ τ)) Shape.nil (σ z)
       | .left z =>
           .ap
             (Proper.inl _ (Proper.inl _ z))
@@ -228,7 +227,7 @@ expressions over `pre ⋈ mid`; then act on each filler with `θ`, producing
 expressions over `pre ⋈ cod`. -/
 def Subst.comp {C : Carrier} {Γ Δ Θ Ξ : Shape C}
     [Proper Θ] [Proper Ξ]
-    (σ : Subst C Δ (Γ ⋈ Θ))
-    (θ : Subst C Θ (Γ ⋈ Ξ)) :
-    Subst C Δ (Γ ⋈ Ξ) :=
-  (fun {β} x => θ.act ⌊β⌋ (σ x))
+    (σ : Subst Δ (Γ ⋈ Θ))
+    (θ : Subst Θ (Γ ⋈ Ξ)) :
+    Subst Δ (Γ ⋈ Ξ) :=
+  (fun ⦃β⦄ x => θ.act ⌊β⌋ (σ x))
