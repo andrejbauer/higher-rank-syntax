@@ -36,7 +36,7 @@ theorem act_ap_suffix {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     {α} (z : Φ ∋ α)
     (args : (i : C.Binder α) → Expr (Γ ⋈ Δ ⋈ Λ ⋈ Φ ∷ i.arity)) :
   σ.act (Λ ⋈ Φ) (Expr.ap (Proper.inr (Γ ⋈ Δ ⋈ Λ) z) args)
-    = Expr.ap (Proper.inr (Γ ⋈ Ξ ⋈ Λ) z) (fun j => σ.act (Λ ⋈ Φ ∷ j.arity) (args j))
+    = Expr.ap (Proper.inr (Γ ⋈ Ξ ⋈ Λ) z) (fun j => σ.act (Λ ⋈ (Φ ∷ j.arity)) (args j))
   := by
   sorry
 
@@ -55,15 +55,14 @@ theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
   | .ap (α := β) x args =>
     head_cases x with z
     case right =>             -- z : Φ  (rebuild: both acts pass through)
-      have cow := fun (i : C.Binder β) => act_interchange.aux σ κ (Φ ∷ i.arity) (args i)
       rw [act_ap_right]                              -- κ fires (head already matches)
-      convert act_ap_suffix σ (Θ ⋈ Ω) Φ z (fun j => κ.act (Φ ∷ j.arity) (args j)) using 2
-      convert congrArg
-        (Subst.act (Γ := Γ ⋈ Ξ ⋈ Θ) (Δ := Ψ) (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ)
-        (act_ap_suffix σ (Θ ⋈ Ψ) Φ z args) using 2
-      convert act_ap_right (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ z
-        (fun j => σ.act (Θ ⋈ Ψ ⋈ Φ ∷ j.arity) (args j)) using 2
-      sorry
+      convert act_ap_suffix σ (Θ ⋈ Ω) Φ z _ using 2
+      convert congrArg _ (act_ap_suffix σ (Θ ⋈ Ψ) Φ z args) using 2
+      symm
+      convert act_ap_right (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ z _ using 2
+      congr 1
+      funext i
+      exact act_interchange.aux σ κ (Φ ∷ i.arity) (args i)
     case middle =>             -- z : Ψ  (κ fires)
       rw [act_ap_middle]       -- LHS = σ.act (Θ⋈Ω⋈Φ) (⟦argκ⟧ˢ (κ z))
       -- recursive call: interchange σ past argκ on the expr (κ z)
@@ -86,6 +85,9 @@ theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
         -- recursive call: per-argument interchange
         -- have cow := fun (i : C.Binder β) => act_interchange.aux σ κ (Φ ∷ i.arity) (args i)
         sorry
+termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
+decreasing_by
+  exact .of_arg x args i
 
 /-- Acting by `θ` commutes with instantiating `κ`: substituting `κ` then acting
 by `θ` equals acting by `θ` then substituting the pushed-forward `κ`. -/
