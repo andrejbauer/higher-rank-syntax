@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1781975675.92031 "diamondAt-statement.tex" "diamondAt-statement.pdf" "diamondAt-statement" 1781975676.52189 0
+["pdflatex"] 1782062169.74533 "diamondAt-statement.tex" "diamondAt-statement.pdf" "diamondAt-statement" 1782062170.67518 0
   "/etc/texmf/web2c/texmf.cnf" 1763210044.46372 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/jknappen/ec/ecbx1095.tfm" 1136768653 3584 21b378cca2e40816b0e6d74a4dc98f04 ""
@@ -42,6 +42,7 @@
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb" 1248133631 37166 8ab3487cbe3ab49ebce74c29ea2418db ""
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb" 1248133631 35469 70d41d2b9ea31d5d813066df7c99281c ""
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb" 1248133631 35752 024fb6c41858982481f6968b5fc26508 ""
+  "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb" 1248133631 32734 69e00a6b65cedb993666e42eedb3d48f ""
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb" 1248133631 32726 0a1aea6fcd6468ee2cf64d891f5c43c8 ""
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss10.pfb" 1248133631 24457 5cbb7bdf209d5d1ce9892a9b80a307cc ""
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmss8.pfb" 1248133631 24420 52dbb8e8aa0069a1b987309557f8d303 ""
@@ -120,9 +121,9 @@
   "/usr/share/texmf/web2c/texmf.cnf" 1707919699 40399 f2c302f7d2af602abb742093540a5834 ""
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1763210073.96791 5472669 54eaf61a88b6b7896ebd0dac973cb29c ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1763210194 8213772 2e557546b1b15dd6f7a5cc9c57feabcf ""
-  "diamondAt-statement.aux" 1781975676.44904 662 5c0f0182a50fc7b0b1653db4106c66ec "pdflatex"
-  "diamondAt-statement.out" 1781975676.35223 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "diamondAt-statement.tex" 1781975645.68599 20239 6a5b6905e2f445cf63ac12068745c007 ""
+  "diamondAt-statement.aux" 1782062170.55505 665 aedf5860b5dfe37322b7c367e2e4b9df "pdflatex"
+  "diamondAt-statement.out" 1782062170.36605 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "diamondAt-statement.tex" 1782062149.20834 28276 92fd8d14af60cc10c2ae221a67768a68 ""
   (generated)
   "diamondAt-statement.aux"
   "diamondAt-statement.log"

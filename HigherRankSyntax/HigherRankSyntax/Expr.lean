@@ -17,12 +17,19 @@ inductive Expr {C : Carrier} : Shape C → Type where
   | ap : {Γ : Shape C} → {α : C.Arity} → Γ ∋ α →
          ((i : C.Binder α) → Expr (Γ ∷ i.arity)) → Expr Γ
 
+/-- Argument family for an application head of arity `α` in context `Γ`.
+Mathematically this is the same data as a singleton-domain substitution
+`Subst C ⌊α⌋ Γ`; `Subst.fromArgs` and `Subst.toArgs` provide that conversion
+after substitutions are defined. -/
+abbrev Expr.Args {C : Carrier} (Γ : Shape C) (α : C.Arity) :=
+  (i : C.Binder α) → Expr (Γ ∷ i.arity)
+
 /-- `Expr.Subterm e' e` holds when `e = ap p args` and `e'` is one of its arguments
 `args j`. -/
 inductive Expr.Subterm {C : Carrier} :
     (Σ Γ : Shape C, Expr Γ) → (Σ Γ : Shape C, Expr Γ) → Prop where
   | of_arg {Γ : Shape C} {α : C.Arity} (p : Γ ∋ α)
-      (args : (i : C.Binder α) → Expr (Γ ∷ i.arity))
+      (args : Expr.Args Γ α)
       (j : C.Binder α) :
       Expr.Subterm ⟨Γ ∷ j.arity, args j⟩ ⟨Γ, Expr.ap p args⟩
 
@@ -57,7 +64,7 @@ notation:60 "⟦" ρ "⟧ʳ " e:61 => Renaming.act ρ e
 @[simp]
 theorem Renaming.act_ap {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
     {α : C.Arity} (x : Γ ∋ α)
-    (args : (i : C.Binder α) → Expr (Γ ∷ i.arity)) :
+    (args : Expr.Args Γ α) :
   ⟦ ρ ⟧ʳ (.ap x args) = .ap (ρ x) (fun i => ⟦ ρ ⇑ʳ i.arity ⟧ʳ (args i))
   := rfl
 
