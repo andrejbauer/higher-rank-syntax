@@ -28,15 +28,18 @@ theorem Subst.act_irrel {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper �
   haveI := Proper.subsingleton Φ
   rw [Subsingleton.elim i i']
 
-/-- `σ.act` on a head from the suffix telescope `Φ`, injected past an intermediate
-telescope `Λ` that `σ` does not touch: the head is rebuilt over the new codomain and
-the action descends into the arguments.  Generalizes `act_ap_right` (`Λ = Shape.nil`). -/
-theorem act_ap_suffix {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (σ : Subst Δ (Γ ⋈ Ξ)) (Λ Φ : Shape C) [Proper Λ] [Proper Φ]
+/-- `σ.act` on a head whose slot lies in a telescope `Φ` sitting in the depth
+`Λ ⋈ Φ ⋈ Ρ` (injected past the prefix `Γ ⋈ Δ ⋈ Λ` and weakened past `Ρ`): the head is
+rebuilt over the new codomain and the action descends into the arguments.  Generalizes
+`act_ap_right` (`Λ = Ρ = Shape.nil`). -/
+theorem act_ap_depth {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
+    (σ : Subst Δ (Γ ⋈ Ξ)) (Λ Φ Ρ : Shape C) [Proper Λ] [Proper Φ] [Proper Ρ]
     {α} (z : Φ ∋ α)
-    (args : (i : C.Binder α) → Expr (Γ ⋈ Δ ⋈ Λ ⋈ Φ ∷ i.arity)) :
-  σ.act (Λ ⋈ Φ) (Expr.ap (Proper.inr (Γ ⋈ Δ ⋈ Λ) z) args)
-    = Expr.ap (Proper.inr (Γ ⋈ Ξ ⋈ Λ) z) (fun j => σ.act (Λ ⋈ (Φ ∷ j.arity)) (args j))
+    (args : (i : C.Binder α) → Expr (Γ ⋈ Δ ⋈ Λ ⋈ Φ ⋈ Ρ ∷ i.arity)) :
+  σ.act (Λ ⋈ Φ ⋈ Ρ)
+      (Expr.ap (Proper.inl (Γ ⋈ Δ ⋈ Λ ⋈ Φ) (Proper.inr (Γ ⋈ Δ ⋈ Λ) z)) args)
+    = Expr.ap (Proper.inl (Γ ⋈ Ξ ⋈ Λ ⋈ Φ) (Proper.inr (Γ ⋈ Ξ ⋈ Λ) z))
+        (fun j => σ.act (Λ ⋈ (Φ ⋈ Ρ ∷ j.arity)) (args j))
   := by
   sorry
 
@@ -56,8 +59,8 @@ theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
     head_cases x with z
     case right =>             -- z : Φ  (rebuild: both acts pass through)
       rw [act_ap_right]                              -- κ fires (head already matches)
-      convert act_ap_suffix σ (Θ ⋈ Ω) Φ z _ using 2
-      convert congrArg _ (act_ap_suffix σ (Θ ⋈ Ψ) Φ z args) using 2
+      convert act_ap_depth σ (Θ ⋈ Ω) Φ Shape.nil z _ using 2
+      convert congrArg _ (act_ap_depth σ (Θ ⋈ Ψ) Φ Shape.nil z args) using 2
       symm
       convert act_ap_right (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ z _ using 2
       congr 1
@@ -74,20 +77,26 @@ theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
     case left =>
       head_cases z with w
       case right =>            -- w : Θ  (rebuild: both acts pass through)
-        -- recursive call: per-argument interchange
-        -- have cow := fun (i : C.Binder β) => act_interchange.aux σ κ (Φ ∷ i.arity) (args i)
+        have cow := fun (i : C.Binder β) => act_interchange.aux σ κ (Φ ∷ i.arity) (args i)
         sorry
       case middle =>           -- w : Δ  (σ fires)
         -- recursive call: per-argument interchange (σ-fire likely needs more)
         -- have cow := fun (i : C.Binder β) => act_interchange.aux σ κ (Φ ∷ i.arity) (args i)
         sorry
       case left =>             -- w : Γ  (rebuild: both acts pass through)
-        -- recursive call: per-argument interchange
-        -- have cow := fun (i : C.Binder β) => act_interchange.aux σ κ (Φ ∷ i.arity) (args i)
-        sorry
+        rw [act_ap_left]                                       -- κ
+        convert act_ap_left σ (Θ ⋈ Ω ⋈ Φ) w _ using 2         -- σ LHS
+        convert congrArg _ (act_ap_left σ (Θ ⋈ Ψ ⋈ Φ) w args) using 2   -- σ RHS inner
+        symm
+        convert act_ap_left (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ _ _ using 2
+        funext i
+        convert act_interchange.aux σ κ (Φ ∷ i.arity) (args i) using 2
+        · apply Subsingleton.elim
+        · congr 1
+          apply Subst.act_irrel
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by
-  exact .of_arg x args i
+  all_goals exact .of_arg x args _
 
 /-- Acting by `θ` commutes with instantiating `κ`: substituting `κ` then acting
 by `θ` equals acting by `θ` then substituting the pushed-forward `κ`. -/
