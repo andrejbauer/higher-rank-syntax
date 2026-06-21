@@ -1,5 +1,4 @@
-import HigherRankSyntax.Subst
-import HigherRankSyntax.Equations
+import HigherRankSyntax.MonadLaws
 import HigherRankSyntax.RelativeMonad.Basic
 
 /-!
@@ -91,15 +90,15 @@ def SyntaxMonad (C : Carrier) : RelativeMonad (J C) where
   unit_right := by
     intro Γ
     funext α e
-    apply Subst.act_id
+    apply act_id
 
   unit_left := by
     intro Γ Δ f
     funext α p
     symm
-    apply Subst.act_η
+    apply act_η
 
   comp_lift := by
     intro Γ Δ Ξ f g
     funext α e
-    apply Subst.act_comp
+    apply act_comp

@@ -1,3 +1,5 @@
+import Mathlib.Data.List.Induction
+
 /-!
 # Telescopes — cons-style
 
@@ -17,27 +19,35 @@ what makes `SlotAt`-via-underlying-list work cleanly under pattern matching.
 -/
 
 
-/-- A telescope: an endofunction on `List α`. -/
+/-- A telescope: an endofunction on `List α` arising from concatenation on the left. -/
 @[ext] structure Tele (α : Type) where
   /-- The underlying endofunction. -/
-  val : List α → List α
+  act : List α → List α
+  /-- It is a concatenation on the left --/
+  hom : ∀ lst x, act (lst ++ [x]) = act lst ++ [x]
 
 /-- Apply a telescope as a function. -/
-instance {α : Type} : CoeFun (Tele α) (fun _ => List α → List α) := ⟨Tele.val⟩
+instance {α : Type} : CoeFun (Tele α) (fun _ => List α → List α) := ⟨Tele.act⟩
 
 namespace Tele
 
 /-- Identity telescope. -/
-def id (α : Type) : Tele α := ⟨_root_.id⟩
+def id (α : Type) : Tele α where
+  act := fun lst => lst
+  hom := by intros ; rfl
 
 /-- Composition of telescopes.  `t ∘ᵗ s` applies `s` first, then `t`. -/
-def comp {α : Type} (t s : Tele α) : Tele α := ⟨fun xs => t (s xs)⟩
+def comp {α : Type} (t s : Tele α) : Tele α where
+  act := fun xs => t (s xs)
+  hom := by simp [t.hom, s.hom]
 
 @[inherit_doc Tele.comp]
 infixl:90 " ∘ᵗ " => Tele.comp
 
 /-- The "cons" telescope: `xs ↦ a :: xs`.  Underlying list: `[a]`. -/
-def cons {α : Type} (a : α) : Tele α := ⟨fun xs => a :: xs⟩
+def cons {α : Type} (a : α) : Tele α where
+  act := fun xs => a :: xs
+  hom := by intro lst x ; symm ; apply List.cons_append
 
 /-- The underlying list of a telescope: `t.toList = t []`. -/
 def toList {α : Type} (t : Tele α) : List α := t []
@@ -95,5 +105,16 @@ theorem ofList_apply {α : Type} :
       show (Tele.cons β ∘ᵗ ofList rest) xs = (β :: rest) ++ xs
       show β :: (ofList rest) xs = β :: (rest ++ xs)
       rw [ofList_apply rest xs]
+
+/-- Every telescope is appending with a list. -/
+theorem isOfList {α : Type} (t : Tele α) :
+    t = Tele.ofList t.toList
+  := by
+    apply Tele.ext
+    funext xs
+    rw [ofList_apply]
+    induction xs using List.reverseRecOn with
+    | nil => simp [Tele.toList]
+    | append_singleton l a ih => simp [t.hom, ih]
 
 end Tele

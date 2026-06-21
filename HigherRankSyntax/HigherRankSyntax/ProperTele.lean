@@ -140,7 +140,7 @@ instance instSingleton {C : Carrier} (a : C.Arity) :
 `compose`, this recurses over the list, so extension by one more binder is
 definitionally the `instCons` instance needed by recursive expression proofs. -/
 @[reducible]
-def extendList {C : Carrier} (S : Shape C) [Proper S] :
+instance extendList {C : Carrier} (S : Shape C) [Proper S] :
     (ρ : List C.Arity) → Proper (S ⋈ Tele.ofList ρ)
   | [] => inferInstanceAs (Proper S)
   | β :: rest =>
@@ -149,25 +149,9 @@ def extendList {C : Carrier} (S : Shape C) [Proper S] :
 
 /-- A concrete list of binders is a proper telescope. -/
 @[reducible]
-def ofList {C : Carrier} (ρ : List C.Arity) :
+instance ofList {C : Carrier} (ρ : List C.Arity) :
     Proper (Tele.ofList ρ : Shape C) :=
   extendList (Shape.nil : Shape C) ρ
-
-/-- Instance form of `extendList` so typeclass synthesis can supply
-`Proper (Γ ⋈ Tele.ofList ρ)` automatically whenever `Γ` is already a proper
-telescope. -/
-@[reducible]
-instance instExtendList {C : Carrier} (Γ : Shape C) [Proper Γ]
-    (ρ : List C.Arity) :
-    Proper (Γ ⋈ Tele.ofList ρ) :=
-  extendList Γ ρ
-
-/-- Instance form of `ofList` so typeclass synthesis can supply
-`Proper (Tele.ofList ρ)` automatically. -/
-@[reducible]
-instance instOfList {C : Carrier} (ρ : List C.Arity) :
-    Proper (Tele.ofList ρ : Shape C) :=
-  ofList ρ
 
 /-- In a concrete list extension, the right injection of a list-side slot is
 the same as first injecting it into `S ⋈ Tele.ofList ρ` and then injecting the

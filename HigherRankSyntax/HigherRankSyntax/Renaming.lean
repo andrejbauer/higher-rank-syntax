@@ -14,14 +14,14 @@ A *renaming* `Γ →ʳ Δ` is an arity-preserving slot map.
 -/
 
 /-- A renaming of shapes from `Γ` to `Δ`: an arity-preserving slot map. -/
-abbrev Renaming {C : Carrier} (Γ Δ : Shape C) := ∀ {α}, Γ ∋ α → Δ ∋ α
+abbrev Renaming {C : Carrier} (Γ Δ : Shape C) := ∀ ⦃ α ⦄, Γ ∋ α → Δ ∋ α
 
 @[inherit_doc Renaming]
 infixr:25 " →ʳ " => Renaming
 
 /-- The identity renaming on `Γ`. -/
 def Renaming.id {C : Carrier} (Γ : Shape C) : Γ →ʳ Γ :=
-  fun {_} x => x
+  fun ⦃_⦄ x => x
 
 @[inherit_doc Renaming.id]
 notation "𝟙ʳ" => Renaming.id
@@ -31,7 +31,7 @@ def Renaming.comp
     {C : Carrier} {Γ Δ Ξ : Shape C}
     (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ)
   : Γ →ʳ Ξ :=
-  fun x => g (f x)
+  fun ⦃_⦄ x => g (f x)
 
 @[inherit_doc Renaming.comp]
 notation:90 g:90 " ∘ʳʳ " f:91 => Renaming.comp f g
@@ -43,7 +43,6 @@ theorem Renaming.ext
     (h : ∀ α (x : Γ ∋ α), f x = g x) :
   @f = @g
   := by
-  congr
   funext α x
   exact h α x
 
@@ -83,20 +82,17 @@ theorem Renaming.id_apply
 @[simp]
 theorem Renaming.extend_id
     {C : Carrier} (Γ : Shape C) (β : C.Arity) :
-  (𝟙ʳ Γ ⇑ʳ β : Γ ∷ β →ʳ Γ ∷ β) = (𝟙ʳ (Γ ∷ β) : Γ ∷ β →ʳ Γ ∷ β)
+  𝟙ʳ Γ ⇑ʳ β = 𝟙ʳ (Γ ∷ β)
   := by
-  ext α p
-  cases p with
-  | here _  => rfl
-  | there _ => rfl
+  ext α x ; cases x <;> rfl
 
 @[simp]
 theorem Renaming.extend_comp
     {C : Carrier} {Γ Δ Ξ : Shape C}
     (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ) (β : C.Arity) :
-  ((g ∘ʳʳ f) ⇑ʳ β : Γ ∷ β →ʳ Ξ ∷ β) = ((g ⇑ʳ β) ∘ʳʳ (f ⇑ʳ β) : Γ ∷ β →ʳ Ξ ∷ β)
+  (g ∘ʳʳ f) ⇑ʳ β = (g ⇑ʳ β) ∘ʳʳ (f ⇑ʳ β)
   := by
-  ext α p
-  cases p with
+  ext α x
+  cases x with
   | here _  => rfl
   | there _ => rfl
