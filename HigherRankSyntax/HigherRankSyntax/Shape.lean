@@ -1,5 +1,6 @@
 import HigherRankSyntax.Carrier
 import HigherRankSyntax.Tele
+import HigherRankSyntax.ListSlot
 
 /-!
 # Shapes and slots — telescope representation
@@ -43,17 +44,6 @@ abbrev Shape.extList {C : Carrier} (Γ Δ : Shape C) : Shape C := Δ ∘ᵗ Γ
 @[inherit_doc Shape.extList]
 infixl:65 " ⋈ " => Shape.extList
 
-/-- A slot of a list of arities with its arity tracked as a type index.  The
-inductive lives on `List`; `SlotAt` on `Shape` is `abbrev`'d to this via the
-underlying-list. -/
-inductive ListSlotAt {C : Carrier} : List C.Arity → C.Arity → Type where
-  /-- A binder introduced by the topmost extension at its binder's arity. -/
-  | here  : {β : C.Arity} → {rest : List C.Arity} → (i : C.Binder β) →
-            ListSlotAt (β :: rest) i.arity
-  /-- A slot inherited from below the topmost extension, at the same arity. -/
-  | there : {β α : C.Arity} → {rest : List C.Arity} →
-            ListSlotAt rest α → ListSlotAt (β :: rest) α
-
 /-- Slots of a shape are slots of its underlying list. -/
 abbrev SlotAt {C : Carrier} (Γ : Shape C) (α : C.Arity) : Type :=
   ListSlotAt Γ.toList α
@@ -81,3 +71,8 @@ def SlotAt.arity {C : Carrier} {Γ : Shape C} {α : C.Arity}
 
 @[simp] theorem Shape.ext_toList {C : Carrier} (Γ : Shape C) (α : C.Arity) :
     (Γ ∷ α).toList = α :: Γ.toList := rfl
+
+/-- The underlying list of `Γ ⋈ Δ` is `Δ.toList ++ Γ.toList`. -/
+theorem Shape.extList_toList {C : Carrier} (Γ Δ : Shape C) :
+    (Γ ⋈ Δ).toList = Δ.toList ++ Γ.toList :=
+  congrFun Δ.isAppend Γ.toList

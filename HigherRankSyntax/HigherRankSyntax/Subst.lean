@@ -95,15 +95,15 @@ inductive LeftMiddleRight {C : Carrier} (Γ Δ Ξ : Shape C) (α : C.Arity) : Ty
 /-- Dispatching a `pre ⋈ dom`-slot into pre vs dom, via `[Proper dom]`. -/
 def classifyLeftRight {C : Carrier} {Γ Δ : Shape C} [Proper Δ]
     {α} (p : (Γ ⋈ Δ) ∋ α) : LeftRight Γ Δ α :=
-  Proper.classify Γ (LeftRight Γ Δ α) p .right .left
+  Proper.classify Γ (LeftRight Γ Δ α) p .left .right
 
 /-- Dispatching a `(pre ⋈ dom) ⋈ τ`-slot into its mathematical source:
 current depth, substitution domain, or untouched prefix. -/
 def Subst.threeway {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     {α} (p : (Γ ⋈ Δ ⋈ Ξ) ∋ α) : LeftMiddleRight Γ Δ Ξ α :=
   Proper.classify (Γ ⋈ Δ) _ p
+    (fun q => Proper.classify Γ _ q .left .middle)
     .right
-    (fun q => Proper.classify Γ _ q .middle .left)
 
 /-- Embed a classified source site back into `(pre ⋈ dom) ⋈ τ`. -/
 def Subst.reinject {C : Carrier} {Γ Δ Ξ : Shape C}

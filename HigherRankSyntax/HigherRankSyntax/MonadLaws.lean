@@ -49,7 +49,12 @@ theorem act_comp {C : Carrier} {Γ Δ Θ Ξ : Shape C} [Proper Δ] [Proper Θ] [
       simp only [act_ap_right]
       congr 1; funext i; exact act_comp σ θ (Φ ∷ i.arity) (args i)
     case middle =>
-      sorry
+      rw [act_ap_middle, act_ap_middle, act_interchange]
+      congr 1
+      funext _ q
+      cases q with
+      | here i => exact act_comp σ θ (Φ ∷ i.arity) (args i)
+      | there w => nomatch w
     case left =>
       simp only [act_ap_left]
       congr 1; funext i; exact act_comp σ θ (Φ ∷ i.arity) (args i)

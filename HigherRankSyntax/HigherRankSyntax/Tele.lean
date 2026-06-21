@@ -1,5 +1,3 @@
-import Mathlib.Data.List.Induction
-
 /-!
 # Telescopes — cons-style
 
@@ -24,7 +22,7 @@ what makes `SlotAt`-via-underlying-list work cleanly under pattern matching.
   /-- The underlying endofunction. -/
   act : List α → List α
   /-- It is a concatenation on the left --/
-  hom : ∀ lst x, act (lst ++ [x]) = act lst ++ [x]
+  isAppend : act = List.append (act [])
 
 /-- Apply a telescope as a function. -/
 instance {α : Type} : CoeFun (Tele α) (fun _ => List α → List α) := ⟨Tele.act⟩
@@ -34,12 +32,15 @@ namespace Tele
 /-- Identity telescope. -/
 def id (α : Type) : Tele α where
   act := fun lst => lst
-  hom := by intros ; rfl
+  isAppend := by rfl
 
 /-- Composition of telescopes.  `t ∘ᵗ s` applies `s` first, then `t`. -/
 def comp {α : Type} (t s : Tele α) : Tele α where
   act := fun xs => t (s xs)
-  hom := by simp [t.hom, s.hom]
+  isAppend := by
+    funext xs
+    rw [t.isAppend, s.isAppend]
+    simp
 
 @[inherit_doc Tele.comp]
 infixl:90 " ∘ᵗ " => Tele.comp
@@ -47,7 +48,7 @@ infixl:90 " ∘ᵗ " => Tele.comp
 /-- The "cons" telescope: `xs ↦ a :: xs`.  Underlying list: `[a]`. -/
 def cons {α : Type} (a : α) : Tele α where
   act := fun xs => a :: xs
-  hom := by intro lst x ; symm ; apply List.cons_append
+  isAppend := by rfl
 
 /-- The underlying list of a telescope: `t.toList = t []`. -/
 def toList {α : Type} (t : Tele α) : List α := t []
@@ -113,8 +114,6 @@ theorem isOfList {α : Type} (t : Tele α) :
     apply Tele.ext
     funext xs
     rw [ofList_apply]
-    induction xs using List.reverseRecOn with
-    | nil => simp [Tele.toList]
-    | append_singleton l a ih => simp [t.hom, ih]
+    exact congrFun t.isAppend xs
 
 end Tele

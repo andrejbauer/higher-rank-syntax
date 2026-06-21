@@ -3,7 +3,7 @@ import HigherRankSyntax.Renaming
 /-!
 # Proper Telescopes
 
-A type class on `Tele C.Arity` exhibiting `Γ ⋈ Δ` as a coproduct, providing the structural
+A type class on `Shape C` exhibiting `Γ ⋈ Δ` as a coproduct, providing the structural
 operations needed to dispatch a slot of `Γ ⋈ Δ` between the Γ-side and the Δ-side:
 
 * `inl Γ` — left injection of the base `Γ` into `Γ ⋈ Δ` (weakening).
@@ -53,64 +53,109 @@ action because that is what makes `(Γ ∷ α).toList = α :: Γ.toList` reduce 
 /-- A `Proper` instance exhibits `Γ ⋈ S` as a coproduct
 (fibrewise per arity): two injection renamings and a classifier, so that
 a slot of `Γ ⋈ S` dispatches uniformly between Γ-slots and S-slots. -/
-class Proper {C : Carrier} (Γ : Tele C.Arity) : Type 1 where
+class Proper {C : Carrier} (Γ : Shape C) : Type 1 where
   /-- Left injection, i.e, weakening Δ ↪ Δ ⋈ S. -/
   inl : (Δ : Shape C) → Δ →ʳ (Δ ⋈ Γ)
   /-- Right injection: the telescope's own shape `Γ` into `Δ ⋈ Γ`. -/
   inr : (Δ : Shape C) → Γ →ʳ (Δ ⋈ Γ)
   /-- Classifier (CPS): dispatch a slot of `Δ ⋈ Γ` into either a Δ-slot
   or a Γ-slot. -/
-  -- TODO: reverse the order of arguments, it's stupid to take in the right one first
   classify : (Δ : Shape C) → {α : C.Arity} → (X : Type) → (Δ ⋈ Γ) ∋ α →
-             (Γ ∋ α → X) → (Δ ∋ α → X) → X
+             (Δ ∋ α → X) → (Γ ∋ α → X) → X
   /-- Reflection: classifying a right-injected S-slot fires the S-continuation. -/
   classify_inr : ∀ (Δ : Shape C) (X : Type) {α : C.Arity} (x : Γ ∋ α)
-                   (f : Γ ∋ α → X) (g : Δ ∋ α → X),
-                   classify Δ X (inr Δ x) f g = f x
+                   (g : Δ ∋ α → X) (f : Γ ∋ α → X),
+                   classify Δ X (inr Δ x) g f = f x
   /-- Reflection: classifying a left-injected Δ-slot fires the Δ-continuation. -/
   classify_inl : ∀ (Δ : Shape C) (X : Type) {α : C.Arity} (y : Δ ∋ α)
-                   (f : Γ ∋ α → X) (g : Δ ∋ α → X),
-                   classify Δ X (inl Δ y) f g = g y
+                   (g : Δ ∋ α → X) (f : Γ ∋ α → X),
+                   classify Δ X (inl Δ y) g f = g y
   /-- Cover: every slot is in the image of `inr` or `inl`. -/
   cover : ∀ (Δ : Shape C) {α : C.Arity} (p : (Δ ⋈ Γ) ∋ α),
           (∃ x : Γ ∋ α, p = inr Δ x) ∨ (∃ y : Δ ∋ α, p = inl Δ y)
   /-- The right injection at empty base is the identity renaming. -/
   inr_nil_id : ∀ {α : C.Arity} (x : Γ ∋ α),
     inr .nil x = x
+  /-- `inr` injects `Γ`-slots into the prefix, preserving position. -/
+  inr_idx : ∀ (Δ : Shape C) {α : C.Arity} (x : Γ ∋ α),
+    (inr Δ x).idx = x.idx
+  /-- `inr` preserves the binder a slot picks out. -/
+  inr_tag : ∀ (Δ : Shape C) {α : C.Arity} (x : Γ ∋ α),
+    (inr Δ x).tag = x.tag
+  /-- `inl` weakens `Δ`-slots past the `Γ`-prefix, shifting position. -/
+  inl_idx : ∀ (Δ : Shape C) {α : C.Arity} (y : Δ ∋ α),
+    (inl Δ y).idx = Γ.toList.length + y.idx
+  /-- `inl` preserves the binder a slot picks out. -/
+  inl_tag : ∀ (Δ : Shape C) {α : C.Arity} (y : Δ ∋ α),
+    (inl Δ y).tag = y.tag
 
 namespace Proper
+
+/-- Two `Proper` witnesses on the same shape agree once their data fields do;
+the propositional fields are irrelevant. -/
+theorem ext_data {C : Carrier} {Γ : Shape C} (P Q : Proper Γ)
+    (hl : P.inl = Q.inl) (hr : P.inr = Q.inr) (hc : P.classify = Q.classify) : P = Q := by
+  cases P; cases Q
+  subst hl; subst hr; subst hc
+  rfl
+
+/-- `Proper Γ` is a subsingleton: the pin fields force the injections, the
+reflection laws then force the classifier, and the remaining fields are `Prop`. -/
+instance subsingleton {C : Carrier} (Γ : Shape C) : Subsingleton (Proper Γ)
+  := by
+    constructor ; intro P Q
+    have hl : P.inl = Q.inl := by
+      funext Δ; ext α y
+      apply ListSlotAt.ext
+      · rw [P.inl_idx, Q.inl_idx]
+      · rw [P.inl_tag, Q.inl_tag]
+    have hr : P.inr = Q.inr := by
+      funext Δ; ext α x
+      apply ListSlotAt.ext
+      · rw [P.inr_idx, Q.inr_idx]
+      · rw [P.inr_tag, Q.inr_tag]
+    have hc : P.classify = Q.classify := by
+      funext Δ α X p g f
+      rcases P.cover Δ p with ⟨x, rfl⟩ | ⟨y, rfl⟩
+      · rw [P.classify_inr, hr, Q.classify_inr]
+      · rw [P.classify_inl, hl, Q.classify_inl]
+    exact ext_data P Q hl hr hc
 
 /-- The identity telescope: empty; the classifier returns everything to Γ. -/
 instance instId {C : Carrier} : Proper (Tele.id C.Arity) where
   inl := fun Γ => Renaming.id Γ
   inr := fun _ {_} x => nomatch x
-  classify := fun _Γ _α _X p _f g => g p
-  classify_inr := fun _Γ _X _α x _f _g => nomatch x
-  classify_inl := fun _Γ _X _α _y _f _g => rfl
+  classify := fun _Γ _α _X p g _f => g p
+  classify_inr := fun _Γ _X _α x _g _f => nomatch x
+  classify_inl := fun _Γ _X _α _y _g _f => rfl
   cover := fun _Γ _α p => Or.inr ⟨p, rfl⟩
   inr_nil_id := fun x => nomatch x
+  inr_idx := fun _ => nofun
+  inr_tag := fun _ => nofun
+  inl_idx := fun _ _ y => (Nat.zero_add y.idx).symm
+  inl_tag := fun _ _ _ => rfl
 
 /-- Extend a `Proper` by one arity at the top. -/
-instance instCons {C : Carrier} (a : C.Arity) (T : Tele C.Arity) [Proper T] :
+instance instCons {C : Carrier} (a : C.Arity) (T : Shape C) [Proper T] :
     Proper (Tele.cons a ∘ᵗ T) where
   inl := fun Γ {_} x => .there (Proper.inl Γ x)
   inr := fun Γ {_} x =>
     match x with
     | .here i  => .here i
     | .there x => .there (Proper.inr Γ x)
-  classify := fun Γ _α X p f g =>
+  classify := fun Γ _α X p g f =>
     match p with
     | .here i   => f (.here i)
-    | .there p' => Proper.classify Γ X p' (fun y => f (.there y)) g
-  classify_inr := fun Γ X _α x f g => by
+    | .there p' => Proper.classify Γ X p' g (fun y => f (.there y))
+  classify_inr := fun Γ X _α x g f => by
     cases x with
     | here _i  => rfl
     | there x' =>
       exact Proper.classify_inr Γ X x'
-              (fun y => f (.there y)) g
-  classify_inl := fun Γ X _α y f g => by
+              g (fun y => f (.there y))
+  classify_inl := fun Γ X _α y g f => by
     exact Proper.classify_inl Γ X y
-            (fun z => f (.there z)) g
+            g (fun z => f (.there z))
   cover := fun Γ _α p => by
     cases p with
     | here i  => exact Or.inl ⟨.here i, rfl⟩
@@ -128,12 +173,23 @@ instance instCons {C : Carrier} (a : C.Arity) (T : Tele C.Arity) [Proper T] :
     | there x' =>
       show ListSlotAt.there ((Proper.inr Shape.nil) x') = .there x'
       rw [Proper.inr_nil_id x']
+  inr_idx := fun Δ _ x => by
+    cases x with
+    | here i => rfl
+    | there x' => exact congrArg (· + 1) (Proper.inr_idx Δ x')
+  inr_tag := fun Δ _ x => by
+    cases x with
+    | here i => rfl
+    | there x' => exact Proper.inr_tag Δ x'
+  inl_idx := fun Δ _ y =>
+    (congrArg (· + 1) (Proper.inl_idx (Γ := T) Δ y)).trans (Nat.add_right_comm _ _ 1)
+  inl_tag := fun Δ _ y => Proper.inl_tag Δ y
 
 /-- A singleton telescope.  Definitionally the same shape as
 `Tele.cons a ∘ᵗ Tele.id`; provided directly so instance search finds it
 once strict unit reduction has simplified the telescope to `Tele.cons a`. -/
 instance instSingleton {C : Carrier} (a : C.Arity) :
-    Proper (Tele.cons a : Tele C.Arity) :=
+    Proper (Tele.cons a : Shape C) :=
   inferInstanceAs (Proper (Tele.cons a ∘ᵗ (Tele.id C.Arity)))
 
 /-- Extend an already proper telescope by a concrete list of binders.  Unlike
@@ -240,30 +296,30 @@ def compose {C : Carrier} (S T : Shape C) [Proper S] [Proper T] :
 
   inr := fun Γ {_} p =>
     Proper.classify S _ p
-      (fun t => Proper.inr (Γ ⋈ S) t)
       (fun s => Proper.inl (Γ ⋈ S) (Proper.inr Γ s))
+      (fun t => Proper.inr (Γ ⋈ S) t)
 
-  classify := fun Γ _α X p f g =>
+  classify := fun Γ _α X p g f =>
     Proper.classify (Γ ⋈ S) X p
-      (fun t => f (Proper.inr S t))
       (fun q => Proper.classify Γ X q
-        (fun s => f (Proper.inl S s))
-        g)
+        g
+        (fun s => f (Proper.inl S s)))
+      (fun t => f (Proper.inr S t))
 
-  classify_inr := fun Γ X _α x f g => by
+  classify_inr := fun Γ X _α x g f => by
     rcases Proper.cover S x with ⟨t, h_t⟩ | ⟨s, h_s⟩
     · subst h_t
       simp only [Proper.classify_inr]
     · subst h_s
       simp only [Proper.classify_inl, Proper.classify_inr]
 
-  classify_inl := fun Γ X _α y f g => by
+  classify_inl := fun Γ X _α y g f => by
     change
       Proper.classify (Γ ⋈ S) X
         ((Proper.inl (Γ ⋈ S)) ((Proper.inl Γ) y))
-        (fun t => f ((Proper.inr S) t))
         (fun q => Proper.classify Γ X q
-          (fun s => f ((Proper.inl S) s)) g)
+          g (fun s => f ((Proper.inl S) s)))
+        (fun t => f ((Proper.inr S) t))
       =
       g y
     rw [Proper.classify_inl (Γ ⋈ S)]
@@ -289,6 +345,27 @@ def compose {C : Carrier} (S T : Shape C) [Proper S] [Proper T] :
     · subst h_s
       simp only [Proper.classify_inl, Proper.inr_nil_id]
       rfl
+  inr_idx := fun Δ _ p => by
+    rcases Proper.cover (Γ := T) S p with ⟨t, rfl⟩ | ⟨s, rfl⟩
+    · rw [Proper.classify_inr]
+      exact (Proper.inr_idx (Δ ⋈ S) t).trans (Proper.inr_idx S t).symm
+    · rw [Proper.classify_inl]
+      exact (Proper.inl_idx (Δ ⋈ S) (Proper.inr Δ s)).trans
+        (by rw [Proper.inr_idx, Proper.inl_idx])
+  inr_tag := fun Δ _ p => by
+    rcases Proper.cover (Γ := T) S p with ⟨t, rfl⟩ | ⟨s, rfl⟩
+    · rw [Proper.classify_inr]
+      exact (Proper.inr_tag (Δ ⋈ S) t).trans (Proper.inr_tag S t).symm
+    · rw [Proper.classify_inl]
+      exact ((Proper.inl_tag (Δ ⋈ S) (Proper.inr Δ s)).trans (Proper.inr_tag Δ s)).trans
+        (Proper.inl_tag S s).symm
+  inl_idx := fun Δ _ y => by
+    rw [Shape.extList_toList S T, List.length_append]
+    exact (Proper.inl_idx (Γ := T) (Δ ⋈ S) (Proper.inl (Γ := S) Δ y)).trans
+      (by rw [Proper.inl_idx (Γ := S) Δ y]; omega)
+  inl_tag := fun Δ _ y =>
+    (Proper.inl_tag (Γ := T) (Δ ⋈ S) (Proper.inl (Γ := S) Δ y)).trans
+      (Proper.inl_tag (Γ := S) Δ y)
 
 /-- `Proper.compose`'s right injection of a `T`-slot factors through `S ⋈ T`. -/
 theorem compose_inr_inr {C : Carrier} (S T : Shape C) [Proper S] [Proper T]
