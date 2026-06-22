@@ -41,7 +41,20 @@ theorem act_ap_depth {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     = Expr.ap (Proper.inl (Γ ⋈ Ξ ⋈ Λ ⋈ Φ) (Proper.inr (Γ ⋈ Ξ ⋈ Λ) z))
         (fun j => σ.act (Λ ⋈ (Φ ⋈ Ρ ∷ j.arity)) (args j))
   := by
-  sorry
+  convert act_ap_right σ (Λ ⋈ Φ ⋈ Ρ)
+      (Proper.inl (Λ ⋈ Φ) (Proper.inr Λ z)) args using 2
+  · congr 1
+    convert (Proper.compose_inr_inl (Λ ⋈ Φ) Ρ (Γ ⋈ Δ) (Proper.inr Λ z)).symm using 1
+    congr 1
+    symm
+    apply Proper.compose_inr_inr
+  · congr 1
+    · convert (Proper.compose_inr_inl (Λ ⋈ Φ) Ρ (Γ ⋈ Ξ) (Proper.inr Λ z)).symm using 1
+      congr 1
+      symm
+      apply Proper.compose_inr_inr
+    · funext j
+      apply Subst.act_irrel
 
 /-- Acting by `σ` commutes with instantiating `κ` (pushed forward along `σ`). -/
 theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
