@@ -388,7 +388,7 @@ theorem compose_inr_inl {C : Carrier} (S T : Shape C)
 
 /-- Weakening (`inl`) through the composed `Proper` is the two-stage
 weakening through its factors. -/
-theorem compose_inl {C : Carrier} (S T : Shape C)
+theorem compose_inl_inl {C : Carrier} (S T : Shape C)
     [Proper S] [Proper T] (Γ : Shape C)
     {α : C.Arity} (x : Γ ∋ α) :
     letI : Proper (S ⋈ T) := Proper.compose S T
@@ -447,7 +447,7 @@ abbrev AppendCoherence.compose {C : Carrier}
     AppendCoherence (Proper.compose S T) where
   inr_right := fun _ {_} x => Proper.classify_inr S _ x _ _
   inr_left := Proper.compose_inr_inl S T
-  inl := Proper.compose_inl S T
+  inl := Proper.compose_inl_inl S T
 
 /-- Append coherence for `Shape.nil ⋈ T`, where the composite witness is just
 the right-hand witness. -/

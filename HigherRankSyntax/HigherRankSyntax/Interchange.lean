@@ -81,8 +81,21 @@ theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
         rw [act_ap_left]
         convert act_ap_depth σ Shape.nil Θ (Ω ⋈ Φ) w _ using 2
         · apply Subsingleton.elim
-        · symm
-          convert congrArg ((pushforward σ κ).act Φ) (act_ap_depth σ Shape.nil Θ (Ψ ⋈ Φ) w args) using 2
+        · rw [← Proper.compose_inl_inl Ψ Φ (Γ ⋈ Δ ⋈ Θ) (Proper.inr (Γ ⋈ Δ) w)]
+          convert congrArg
+            (Subst.act (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ)
+            (act_ap_depth σ Shape.nil Θ (Ψ ⋈ Φ) w args) using 2
+          · congr 1
+            apply Subst.act_irrel
+          · symm
+            convert act_ap_left (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω)
+              (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ _ _ using 2
+            congr 1
+            funext i
+            convert act_interchange.aux σ κ (Φ ∷ i.arity) (args i) using 2
+            · apply Subsingleton.elim
+            · congr 1
+              apply Subst.act_irrel
       case middle =>           -- w : Δ  (σ fires)
         -- recursive call: per-argument interchange (σ-fire likely needs more)
         -- have cow := fun (i : C.Binder β) => act_interchange.aux σ κ (Φ ∷ i.arity) (args i)
