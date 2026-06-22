@@ -7,8 +7,8 @@
 - Each item includes date + "Do instead".
 
 ## Execution & Validation (Highest Priority)
-1. **[2026-05-25] Current active work is `endomaps` / `HigherRankSyntax`**
-   Do instead: start from root `PLAN.md` and `HigherRankSyntax/HigherRankSyntax/*.lean`; check with `lake env lean HigherRankSyntax/Equations.lean` and `lake build HigherRankSyntax` from `HigherRankSyntax/`.
+1. **[2026-06-22] `diamond-new` live backend is modular**
+   Do instead: treat `Equations.lean`/`Equations2.lean` as retired references only; work in `Dispatch.lean`, `Instantiation.lean`, `Interchange.lean`, and `MonadLaws.lean`, checking with `lake build HigherRankSyntax` from `HigherRankSyntax/`.
 2. **[2026-05-19] Scratch imports can use stale `.olean`s**
    Do instead: after changing an imported module, run `lake build HigherRankSyntax.Action.<Module>` before testing scratch files that `import` it.
 
@@ -17,25 +17,13 @@
    Do instead: exclude `*.agdai` from broad searches and file lists.
 
 ## Domain Behavior Guardrails
-1. **[2026-06-18] `Subst` is now full-context**
+1. **[2026-06-22] Current interchange theorem is `act_interchange.aux`**
+   Do instead: map old `diamondAt` regions to new variables as `P,D,D',T,S,S',U = Γ,Δ,Ξ,Θ,Ψ,Ω,Φ`; finish current active cases in `Interchange.lean`.
+2. **[2026-06-18] `Subst` is now full-context**
    Do instead: translate old prefix substitutions `Subst C pre dom cod` as `Subst C dom (pre ⋈ cod)`; when acting at the monad level use `(Γ := Shape.nil)` explicitly.
-2. **[2026-05-31] Interchange termination uses paired fuel plus subterms**
-   Do instead: for `Subst.act_inst.oneDiamondAt`/`oneLiftAt`, keep the private `InterchangeFuel` measure; use `DomLt` for filler jumps and `Expr.Subterm.of_arg_ofList_cons` for ordinary argument recursion.
-3. **[2026-06-15] General diamonds need explicit composite witnesses**
-   Do instead: parameterize `Diamond`/`Lift` facades by the exact `Proper (τ ⋈ src)` and `Proper (τ ⋈ dst)` witnesses; the `src` recursive call needs `Proper.extendList (τ ⋈ dst) υ`, not `Proper.compose (τ ⋈ dst) (Tele.ofList υ)`.
-4. **[2026-06-15] Env-centered singleton interaction still needs canonical spines**
-   Do instead: do not install a private `Env` bridge alone. The hard theorem still needs explicit coherence between `Γ ⋈ (base ∷ α ⋈ υ)` and `((Γ ⋈ base) ⋈ ⌊α⌋) ⋈ υ`; either keep `Proper.AppendCoherence`/diamond or first build a canonical spine layer for these witnesses.
-5. **[2026-06-08] Core interchange is a one-binder mutual pair**
-   Do instead: state the central commute through `OneDiamond`/`OneLift`; keep `PreNaturality` and `Interchange` only for remaining derived stages.
-6. **[2026-05-27] `act_kcomp` reduces to general substitution composition**
-   Do instead: use public `Subst.comp` and `Subst.act_comp`; the old `fusion` wrapper is deleted, while `interchange` still supports the `dom` branch of `act_comp`.
-7. **[2026-05-27] Keep singleton α-slots abstract in under-list proofs**
-   Do instead: avoid case-splitting the whole α-head branch on `xα`; use `ListSlotAt.sub_single xα` for termination and only case-split inside local definitional sub lemmas.
-8. **[2026-06-07] Single `diamondAt` facade is not enough**
-   Do instead: replace the interchange stack only with a mutual `oneDiamondAt`/`oneLiftAt` pair; the `dom` branch needs the lifted companion theorem, not just the main diamond.
-9. **[2026-05-25] Tele unit proofs need one-binder instantiation bundle**
+3. **[2026-05-25] Tele unit proofs need one-binder instantiation bundle**
    Do instead: prove beta-for-eta and identity instantiation together by arity; keep expression recursion in a separate fixed-shape helper like `Subst.act_inst.idOf`.
-10. **[2026-05-19] `inst.aux` carries target renaming**
+4. **[2026-05-19] `inst.aux` carries target renaming**
    Do instead: in `lift.aux`'s Γ-slot branch, call `inst.aux q.arity (Renaming.weakenList Δ τ) new_args [] (σ q)`; do not pre-weaken `σ q`.
 
 ## User Directives

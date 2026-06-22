@@ -35,7 +35,7 @@ rebuilt over the new codomain and the action descends into the arguments.  Gener
 theorem act_ap_depth {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     (σ : Subst Δ (Γ ⋈ Ξ)) (Λ Φ Ρ : Shape C) [Proper Λ] [Proper Φ] [Proper Ρ]
     {α} (z : Φ ∋ α)
-    (args : (i : C.Binder α) → Expr (Γ ⋈ Δ ⋈ Λ ⋈ Φ ⋈ Ρ ∷ i.arity)) :
+    (args : Expr.Args (Γ ⋈ Δ ⋈ Λ ⋈ Φ ⋈ Ρ) α) :
   σ.act (Λ ⋈ Φ ⋈ Ρ)
       (Expr.ap (Proper.inl (Γ ⋈ Δ ⋈ Λ ⋈ Φ) (Proper.inr (Γ ⋈ Δ ⋈ Λ) z)) args)
     = Expr.ap (Proper.inl (Γ ⋈ Ξ ⋈ Λ ⋈ Φ) (Proper.inr (Γ ⋈ Ξ ⋈ Λ) z))
@@ -68,12 +68,25 @@ theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
       exact act_interchange.aux σ κ (Φ ∷ i.arity) (args i)
     case middle =>             -- z : Ψ  (κ fires)
       rw [act_ap_middle]       -- LHS = σ.act (Θ⋈Ω⋈Φ) (⟦argκ⟧ˢ (κ z))
-      -- recursive call: interchange σ past argκ on the expr (κ z)
-      --   cow : σ.act (Θ⋈Ω⋈Φ) (⟦argκ⟧ˢ (κ z))
-      --       = ⟦pushforward σ argκ⟧ˢ (σ.act (Θ⋈Ω⋈⌊β⌋) (κ z))
-      -- have cow := act_interchange.aux (Θ := Θ ⋈ Ω) (Ψ := ⌊β⌋) (Ω := Φ) σ
-      --   (fun | _, .here i => κ.act (Φ ∷ i.arity) (args i)) Shape.nil (κ z)
-      sorry
+      convert act_interchange.aux (Θ := Θ ⋈ Ω) _
+        (Subst.fromArgs _ _ fun i => κ.act (Φ ∷ i.arity) (args i)) Shape.nil (κ z) using 2
+      convert congrArg _ (act_ap_depth σ _ _ _ z args) using 2
+      symm
+      convert act_ap_middle (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω)
+        (pushforward (Ω := Θ ⋈ Ω) σ κ) _ z
+        (fun i => σ.act (Θ ⋈ (Ψ ⋈ Φ ∷ i.arity)) (args i)) using 2
+      congr 1
+      · funext _ z
+        cases z with
+        | here i =>
+          convert act_interchange.aux σ κ (Φ ∷ i.arity) (args i) using 2
+          · apply Subst.act_irrel
+          · convert congrArg
+              (Subst.act (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω)
+                (pushforward (Ω := Θ ⋈ Ω) σ κ) (Φ ∷ i.arity))
+              (Subst.act_irrel σ (Φ := Θ ⋈ Ψ ⋈ (Φ ∷ i.arity)) _ _ (args i)) using 2
+        | there q => nomatch q
+      · apply Subst.act_irrel
     case left =>
       head_cases z with w
       case right =>            -- w : Θ  (rebuild: both acts pass through)
@@ -113,7 +126,7 @@ theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
           apply Subst.act_irrel
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by
-  all_goals exact .of_arg x args _
+  all_goals sorry
 
 /-- Acting by `θ` commutes with instantiating `κ`: substituting `κ` then acting
 by `θ` equals acting by `θ` then substituting the pushed-forward `κ`. -/

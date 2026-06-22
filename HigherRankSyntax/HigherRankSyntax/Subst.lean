@@ -69,6 +69,42 @@ as `Γ ⋈ Ξ`. -/
 abbrev Subst {C : Carrier} (dom cod : Shape C) :=
   ∀ ⦃ α : C.Arity ⦄, dom ∋ α → Expr (cod ∷ α)
 
+/-- Package an application argument family as a singleton-domain substitution. -/
+def Subst.fromArgs {C : Carrier} (α : C.Arity) (Γ : Shape C)
+    (args : Expr.Args Γ α) :
+    Subst ⌊α⌋ Γ :=
+  fun | _, .here i => args i
+
+/-- Recover the argument family carried by a singleton-domain substitution. -/
+def Subst.toArgs {C : Carrier} {α : C.Arity} {Γ : Shape C}
+    (σ : Subst ⌊α⌋ Γ) :
+    Expr.Args Γ α :=
+  fun i => σ (.here i)
+
+@[simp] theorem Subst.fromArgs_apply {C : Carrier} {α : C.Arity} {Γ : Shape C}
+    (args : Expr.Args Γ α) (i : C.Binder α) :
+    Subst.fromArgs α Γ args (.here i) = args i :=
+  rfl
+
+@[simp] theorem Subst.toArgs_apply {C : Carrier} {α : C.Arity} {Γ : Shape C}
+    (σ : Subst ⌊α⌋ Γ) (i : C.Binder α) :
+    Subst.toArgs σ i = σ (.here i) :=
+  rfl
+
+@[simp] theorem Subst.toArgs_fromArgs {C : Carrier} {α : C.Arity} {Γ : Shape C}
+    (args : Expr.Args Γ α) :
+    Subst.toArgs (Subst.fromArgs α Γ args) = args := by
+  funext i
+  rfl
+
+@[simp] theorem Subst.fromArgs_toArgs {C : Carrier} {α : C.Arity} {Γ : Shape C}
+    (σ : Subst ⌊α⌋ Γ) :
+    Subst.fromArgs α Γ (Subst.toArgs σ) = σ := by
+  funext β q
+  cases q with
+  | here i => rfl
+  | there q => nomatch q
+
 /-- The identity substitution at shape `Γ`. -/
 def Subst.id {C : Carrier} (Γ : Shape C) : Subst Γ Γ :=
   (fun ⦃β⦄ (p : Γ ∋ β) => Expr.η p)
@@ -183,7 +219,7 @@ theorem Subst.isReinject {C : Carrier} {Γ Δ Ξ : Shape C}
 
 /-- The identity instantiation for the one-binder telescope `⌊α⌋`, with an arbitrary fixed prefix `Δ`. -/
 def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) : Subst ⌊α⌋ (Δ ⋈ ⌊α⌋) :=
-  fun | _, .here i => Expr.η (.here i)
+  Subst.fromArgs α (Δ ⋈ ⌊α⌋) (fun i => Expr.η (.here i))
 
 
 /-! ### The substitution action -/
@@ -203,8 +239,8 @@ def Subst.act {C : Carrier} {Γ Δ Ξ : Shape C}
           .ap (Proper.inr _ x)
             (fun i => σ.act (τ ∷ i.arity) (args i))
       | .middle z =>
-          act ((fun | _, .here i => σ.act (τ ∷ i.arity) (args i))
-                : Subst ⌊α⌋ (Γ ⋈ Ξ ⋈ τ)) Shape.nil (σ z)
+          act (Subst.fromArgs α (Γ ⋈ Ξ ⋈ τ)
+                (fun i => σ.act (τ ∷ i.arity) (args i))) Shape.nil (σ z)
       | .left z =>
           .ap
             (Proper.inl _ (Proper.inl _ z))

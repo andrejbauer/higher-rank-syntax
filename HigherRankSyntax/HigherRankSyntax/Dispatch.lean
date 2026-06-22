@@ -39,7 +39,7 @@ macro "head_cases " x:term " with " z:ident " using " pre:term : tactic =>
 theorem act_ap_right {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
     {α} (x : Φ ∋ α)
-    (args : (i : C.Binder α) → Expr (Γ ⋈ Δ ⋈ Φ ∷ i.arity)) :
+    (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
   σ.act Φ (.ap (ι₂ x) args) = .ap (ι₂ x) (fun j => σ.act (Φ ∷ j.arity) (args j))
   := by
   conv => lhs; unfold Subst.act
@@ -49,19 +49,18 @@ theorem act_ap_right {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
 theorem act_ap_middle {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
     {α} (y : Δ ∋ α)
-    (args : (i : C.Binder α) → Expr (Γ ⋈ Δ ⋈ Φ ∷ i.arity)) :
+    (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
   σ.act Φ (.ap (ι₁ (ι₂ y)) args)
-    = ⟦ ((fun | _, .here i => σ.act (Φ ∷ i.arity) (args i)) : Subst ⌊α⌋ (Γ ⋈ Ξ ⋈ Φ)) ⟧ˢ (σ y)
+    = ⟦ Subst.fromArgs α (Γ ⋈ Ξ ⋈ Φ) (fun i => σ.act (Φ ∷ i.arity) (args i)) ⟧ˢ (σ y)
   := by
   conv => lhs; unfold Subst.act
   rw [Subst.threeway_inl_dom]
-  rfl
 
 /-- `σ.act` on a prefix head rebuilds the head. -/
 theorem act_ap_left {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
     {α} (z : Γ ∋ α)
-    (args : (i : C.Binder α) → Expr (Γ ⋈ Δ ⋈ Φ ∷ i.arity)) :
+    (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
   σ.act Φ (.ap (ι₁ (ι₁ z)) args)
     = .ap (ι₁ (ι₁ z)) (fun j => σ.act (Φ ∷ j.arity) (args j))
   := by
