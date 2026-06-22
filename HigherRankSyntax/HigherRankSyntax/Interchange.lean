@@ -58,87 +58,6 @@ theorem act_ap_depth {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     · funext j
       apply Subst.act_irrel
 
-private structure InterchangeMeasure (C : Carrier) where
-  fst : DomMeasure C
-  snd : DomMeasure C
-
-private inductive InterchangeMeasure.Lt {C : Carrier} :
-    InterchangeMeasure C → InterchangeMeasure C → Prop where
-  | right {a b b' : DomMeasure C}
-      (h : WellFoundedRelation.rel b' b) :
-      InterchangeMeasure.Lt ⟨a, b'⟩ ⟨a, b⟩
-  | left_swap {a b a' : DomMeasure C}
-      (h : WellFoundedRelation.rel a' a) :
-      InterchangeMeasure.Lt ⟨b, a'⟩ ⟨a, b⟩
-
-private instance {C : Carrier} : WellFoundedRelation (InterchangeMeasure C) where
-  rel := InterchangeMeasure.Lt
-  wf := by
-    let wf : WellFounded
-        (WellFoundedRelation.rel : DomMeasure C → DomMeasure C → Prop) :=
-      WellFoundedRelation.wf
-    refine ⟨fun f => ?_⟩
-    cases f with
-    | mk a b =>
-        have accPair :
-            Acc (InterchangeMeasure.Lt (C := C)) ⟨a, b⟩ ∧
-              Acc (InterchangeMeasure.Lt (C := C)) ⟨b, a⟩ :=
-          WellFounded.induction wf a (C := fun a =>
-              ∀ b : DomMeasure C,
-                Acc (InterchangeMeasure.Lt (C := C)) ⟨a, b⟩ ∧
-                  Acc (InterchangeMeasure.Lt (C := C)) ⟨b, a⟩)
-            (fun a IHa b =>
-              WellFounded.induction wf b (C := fun b =>
-                  Acc (InterchangeMeasure.Lt (C := C)) ⟨a, b⟩ ∧
-                    Acc (InterchangeMeasure.Lt (C := C)) ⟨b, a⟩)
-                (fun b IHb => by
-                  constructor
-                  · refine Acc.intro _ ?_
-                    intro y hy
-                    cases y with
-                    | mk y₀ y₁ =>
-                        cases hy with
-                        | right h => exact (IHb y₁ h).1
-                        | left_swap h => exact (IHa y₁ h b).2
-                  · refine Acc.intro _ ?_
-                    intro y hy
-                    cases y with
-                    | mk y₀ y₁ =>
-                        cases hy with
-                        | right h => exact (IHa y₁ h b).2
-                        | left_swap h => exact (IHb y₁ h).1))
-            b
-        exact accPair.1
-
-private inductive ExprMeasure (C : Carrier) where
-  | mk {Γ : Shape C} : Expr Γ → ExprMeasure C
-
-private inductive ExprMeasure.Lt {C : Carrier} : ExprMeasure C → ExprMeasure C → Prop where
-  | of_arg {Γ : Shape C} {α : C.Arity} (x : Γ ∋ α)
-      (args : Expr.Args Γ α) (i : C.Binder α) :
-      ExprMeasure.Lt (.mk (args i)) (.mk (.ap x args))
-
-private theorem ExprMeasure.Lt.wf {C : Carrier} : WellFounded (@ExprMeasure.Lt C) := by
-  refine ⟨fun e => ?_⟩
-  cases e with
-  | mk e =>
-      induction e with
-      | ap x args ih =>
-          refine Acc.intro _ ?_
-          intro y h
-          cases h
-          exact ih _
-
-private instance {C : Carrier} : WellFoundedRelation (ExprMeasure C) where
-  rel := ExprMeasure.Lt
-  wf := ExprMeasure.Lt.wf
-
-private theorem shape_extList_assoc4
-    {C : Carrier} {F : Shape C → Sort u} (Γ Ξ Θ Ω Φ : Shape C) :
-  F (Γ ⋈ Ξ ⋈ (Θ ⋈ Ω ⋈ Φ)) = F (Γ ⋈ Ξ ⋈ Θ ⋈ Ω ⋈ Φ) := by
-  apply congrArg
-  rfl
-
 mutual
 
 /-- Acting by `θ` commutes with applying `κ` when `θ` acts on variables that may
@@ -175,7 +94,6 @@ theorem act_interchange.subst {C : Carrier} {Γ Λ Θ Ψ Ω Φ Χ : Shape C}
         Shape.nil
         (κ z) using 2
       · rw [act_ap_middle]
-        unfold pushforward
         congr 1
         · funext _ q
           cases q with
@@ -195,17 +113,12 @@ theorem act_interchange.subst {C : Carrier} {Γ Λ Θ Ψ Ω Φ Χ : Shape C}
       convert act_interchange.subst (Χ := Χ ∷ i.arity) θ κ (args i) using 2
       apply Subst.act_irrel
 termination_by
-  ((⟨⟨Ψ.toList⟩, ⟨Λ.toList⟩⟩ : InterchangeMeasure C), ExprMeasure.mk e)
+  (ListArity.Pair.mk ⟨Ψ.toList⟩ ⟨Λ.toList⟩, (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
-  all_goals
-    subst_vars
-    first
-      | rfl
-      | apply shape_extList_assoc4 Γ Ξ Θ Ω Φ
-      | exact Prod.Lex.left _ _ (InterchangeMeasure.Lt.right (by
-          obtain ⟨γ, hmem, hsub⟩ := SlotAt.subWitness z
-          exact DomLt.step γ hmem _ hsub))
-      | exact Prod.Lex.right _ (ExprMeasure.Lt.of_arg x args _)
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact Prod.Lex.left _ _ (ListArity.Pair.lt_right (ListArity.Lt.of_slot z))
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
 
 /-- Acting by `σ` commutes with instantiating `κ` (pushed forward along `σ`). -/
 theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
@@ -308,19 +221,16 @@ theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
         · congr 1
           apply Subst.act_irrel
 termination_by
-  ((⟨⟨Δ.toList⟩, ⟨Ψ.toList⟩⟩ : InterchangeMeasure C), ExprMeasure.mk e)
+  (ListArity.Pair.mk ⟨Δ.toList⟩ ⟨Ψ.toList⟩, (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
-  all_goals
-    subst_vars
-    first
-      | rfl
-      | exact Prod.Lex.left _ _ (InterchangeMeasure.Lt.right (by
-          obtain ⟨γ, hmem, hsub⟩ := SlotAt.subWitness z
-          exact DomLt.step γ hmem _ hsub))
-      | exact Prod.Lex.left _ _ (InterchangeMeasure.Lt.left_swap (by
-          obtain ⟨γ, hmem, hsub⟩ := SlotAt.subWitness w
-          exact DomLt.step γ hmem _ hsub))
-      | sorry
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact Prod.Lex.left _ _ (ListArity.Pair.lt_right (ListArity.Lt.of_slot z))
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · sorry
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact Prod.Lex.left _ _ (ListArity.Pair.lt_swap (ListArity.Lt.of_slot w))
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
 
 end
 
