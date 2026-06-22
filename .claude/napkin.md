@@ -27,11 +27,13 @@
    Do instead: in `lift.aux`'s Γ-slot branch, call `inst.aux q.arity (Renaming.weakenList Δ τ) new_args [] (σ q)`; do not pre-weaken `σ q`.
 
 ## User Directives
-1. **[2026-06-16] Avoid defensive Lean witness boilerplate**
+1. **[2026-06-22] Prefer goal-directed `apply` for Proper coherence**
+   Do instead: orient small coherence goals with `symm`/`convert` as needed, then use bare `apply Proper.foo` so Lean infers shapes and slots; avoid `exact (Proper.foo _ _ _ z).symm` and similar explicit witness plumbing.
+2. **[2026-06-16] Avoid defensive Lean witness boilerplate**
    Do instead: add `letI`, type ascriptions, or explicit instance arguments only when they select a computationally necessary `Proper` witness; remove no-op `show ... from rfl` rewrites and tiny tactic wrappers when direct terms elaborate.
-2. **[2026-06-14] Present `Equations.lean` thesis-style**
+3. **[2026-06-14] Present `Equations.lean` thesis-style**
    Do instead: organize explanations/refactors around action, unit/generic application, action-instantiation interaction, composition, and relative-monad laws; use `HigherRankSyntax/equations-math.tex` and `HigherRankSyntax/equations-refactor-plan.md` as the current guide.
-3. **[2026-06-14] Treat `preNaturalityLiftAt` as a readability hotspot**
+4. **[2026-06-14] Treat `preNaturalityLiftAt` as a readability hotspot**
    Do instead: target the PreLift/β-side interaction with named head cases and branch helpers before retrying arbitrary-target diamonds.
-4. **[2026-05-19] Collaborator onboarding matters**
+5. **[2026-05-19] Collaborator onboarding matters**
    Do instead: keep `PLAN.md` aligned with the active formalization after implementation changes.
