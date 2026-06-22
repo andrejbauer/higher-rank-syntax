@@ -78,7 +78,11 @@ theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
       head_cases z with w
       case right =>            -- w : Θ  (rebuild: both acts pass through)
         have cow := fun (i : C.Binder β) => act_interchange.aux σ κ (Φ ∷ i.arity) (args i)
-        sorry
+        rw [act_ap_left]
+        convert act_ap_depth σ Shape.nil Θ (Ω ⋈ Φ) w _ using 2
+        · apply Subsingleton.elim
+        · symm
+          convert congrArg ((pushforward σ κ).act Φ) (act_ap_depth σ Shape.nil Θ (Ψ ⋈ Φ) w args) using 2
       case middle =>           -- w : Δ  (σ fires)
         -- recursive call: per-argument interchange (σ-fire likely needs more)
         -- have cow := fun (i : C.Binder β) => act_interchange.aux σ κ (Φ ∷ i.arity) (args i)

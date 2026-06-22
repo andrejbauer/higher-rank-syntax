@@ -1,162 +1,126 @@
-# Handoff
+# Handoff: `act_interchange.aux`, the `case left / case right` branch
 
-This file is for the next Claude instance picking up work on this project.
+(Previous handoff content for the `endomaps` Shape-migration session is in git
+history; this replaces it for the current `diamond-new` work.)
 
-## Repo state
+## Where we are
 
-- Branch: `endomaps`. 6 commits ahead of `origin/endomaps` (all cleanup;
-  see `git log` for messages).
-- Build green: `lake build HigherRankSyntax` (run from `HigherRankSyntax/`).
-- Working tree clean.
-- One unrelated stash: `stash@{0}` — the failed lists-to-Shape migration
-  attempt (see "Major pending task" below).
+File: `HigherRankSyntax/HigherRankSyntax/Interchange.lean`.
+Theorem: `act_interchange.aux` (line ~47). We are filling the last open
+rebuild branch of the `.ap` case.
 
-## What just happened (this session)
+`act_ap_depth` (line ~35) is still `sorry` and is assumed as a black box for
+this work.
 
-Sequence of cleanup commits, every one builds:
+## The proof skeleton
 
-1. `38f0893` — drop 19 redundant `change` clauses before
-   recursive-call `exact`s.
-2. `8bc7a7c` — drop 7 defensive `(by exact Proper.{extendList,ofList} …)`
-   instance supplies; 3 `«args✝»` hygiene names in `decreasing_by` → `_`;
-   40+ `(Tele.ofList υ : Shape C)` ascriptions → bare expressions.
-3. `49e88af` — drop 3 more `@`-explicit forms with `inferInstance`
-   defensive args.
-4. `4f5bad9` — doc comments on 22 sites in the interchange machinery;
-   `:= by` reflowed to its own line at every theorem statement.
-5. `dcfc261` — `Subst.act_inst.instOne`'s `cod` made explicit (was
-   implicit, caused decomposition ambiguity); the 8 facade abbrevs'
-   single-use `let κ := …; κ.act …` patterns inlined.
-6. `d51a042` — five proof-body `Subst.inst ⌊_⌋ (fun q => match q with | .here _ => …)`
-   collapsed to the equivalent `instOne` calls.
-7. `5b86740` — flatten the `Subst.act_inst.` private namespace: 18
-   private declarations now reside directly (`instOne`, `underListAt`,
-   `UnderList.actThenInst`, etc.) instead of under `Subst.act_inst.`.
-   Public `Subst.act_inst.{η, id}` kept as-is.
+After `match e with | .ap x args =>`, `head_cases x with z` splits the head into
+`right` / `middle` / `left`. The slot lives in the depth `Γ ⋈ Δ ⋈ Θ ⋈ Ψ ⋈ Φ`:
 
-## User preferences captured (apply to all future work)
+| head_cases path | slot | role | status |
+|---|---|---|---|
+| `right` | `z : Φ` | rebuild (both acts pass through) | **done** |
+| `middle` | `z : Ψ` | κ fires | `sorry` |
+| `left` → `right` | `w : Θ` | rebuild | **in progress (this handoff)** |
+| `left` → `middle` | `w : Δ` | σ fires | `sorry` |
+| `left` → `left` | `w : Γ` | rebuild | **done** |
 
-- **No `open`s** beyond the bare minimum. Andrej dislikes them.
-- **Shallow namespaces preferred over `open`.** Private declarations
-  should not be deeply namespaced — flatten when possible.
-- **Don't optimise for "less work".** "It is always valuable to make
-  the code better structured — it doesn't matter if that requires a
-  lot of work." Quality first.
-- **No just-in-case additions.** Don't add code, identifiers,
-  comments, infrastructure preemptively. Add when actually needed.
-  (This is also in `~/.claude/CLAUDE.md` under global rules.)
-- **`:= by` on its own line** at the same indent as the conclusion,
-  with the tactic body 2-space-indented below. (Confirmed style.)
-- **Empirical first.** Run preliminary experiments before mass edits;
-  build green between batches; don't trust assumed correctness.
-- **No proof structure rewrites** for hacky workarounds. Cleanup OK;
-  forcing things through with letI/show shadowing is not.
-- **No `git checkout` / `reset --hard` to revert** — Andrej decides
-  when to revert. Stash if you need to set aside.
-- **Andrej wants to review every commit.** Don't commit without an
-  explicit `commit` from him.
+The three rebuild branches all have the shape: fire κ on the LHS, fire the two
+σ-acts (LHS outer, RHS inner), fire the pushforward on the RHS, then per-argument
+the goal is the recursive call `act_interchange.aux σ κ (Φ ∷ i.arity) (args i)`.
 
-## Major pending task — the Shape migration
+## Per-act lemma choice (the key idea)
 
-The intended outcome: replace every `(ρ : List C.Arity)` τ-stack
-parameter with `(S : Shape C) [Proper S]`, and every `Tele.ofList ρ`
-expression with `S`. The user's goal is to lift the interchange
-machinery from working on list-shaped τ-stacks to working on arbitrary
-telescopes.
+Each act sorts the head slot into: its **prefix** → `act_ap_left`; its
+**domain** → fires; its **depth telescope** → `act_ap_depth` (`act_ap_right` is
+the `Λ = Ρ = nil` instance). The three computation rules live in `Dispatch.lean`.
 
-### What we learned by trying
+For the `w : Θ` branch:
+- κ (`Subst Ψ ((Γ⋈Δ⋈Θ) ⋈ Ω)`, depth `Φ`): `Θ` is in κ's **prefix** → `act_ap_left`.
+- σ (depth `Θ⋈Ω⋈Φ` resp. `Θ⋈Ψ⋈Φ`): `Θ` is at the **front of the depth telescope**
+  → `act_ap_depth` with `Λ = Shape.nil`, `Φ_lemma = Θ`, `Ρ = Ω⋈Φ` (resp. `Ψ⋈Φ`).
+- pushforward (`Subst Ψ ((Γ⋈Ξ⋈Θ) ⋈ Ω)`, depth `Φ`): `Θ` in its **prefix** → `act_ap_left`.
 
-Attempted in this session; 16 build errors; stashed at `stash@{0}`.
-The errors are NOT bugs in the swap — they are a genuine **associativity
-diamond** in Lean's `Proper` instance synthesis:
+So this branch genuinely **mixes** `act_ap_left` (κ, pushforward) and `act_ap_depth`
+(the two σ-acts). The two finished branches are uniform: `case right` is all
+depth-telescope (`Ρ = nil`), `case left/left` is all prefix.
 
-- Two `rfl`-equal shapes `(A ⋈ B) ∷ X` (left-assoc) and `A ⋈ (B ∷ X)`
-  (right-assoc) get **different `Proper` instance terms**
-  (`instCons X (A ⋈ B)` vs `compose A (B ∷ X)`) because Lean's
-  first-order instance synthesis matches on the outermost `⋈`/`∷`.
-- The two terms inhabit the same proposition, but `Proper` is not
-  `Subsingleton`, so they're not defeq.
-- The proofs of `underListAt`, `preNaturalityLiftAt`, `preNaturalityAt`,
-  `interchange` mix both associativity forms (the outer `have hfill`
-  uses one form, the recursive call's substituted abbrev body uses the
-  other), so the `change`/`exact` chain hits the diamond.
+## What's been established (true facts)
 
-### What works in the original code
+- `nil ⋈ X` and `(X ⋈ Y) ⋈ Z` are **definitionally** equal to `X` and
+  `X ⋈ (Y ⋈ Z)`. `⋈` is associative with `Shape.nil` as unit, definitionally.
+- `Proper Γ` is a `Subsingleton` instance. `Proper.compose (Θ⋈Ω) Φ` and
+  `Proper.compose Θ (Ω⋈Φ)` are **propositionally** equal (close with
+  `Subsingleton.elim`), NOT defeq as terms. `Subst.act_irrel` handles
+  act-depth-witness mismatches.
+- `rw` and other syntactic tactics work badly here — they cannot see the defeq
+  collapses above. The finished branches rely on `convert … using n` plus
+  `Subsingleton.elim` / `Subst.act_irrel` to discharge witness mismatches.
+- `act_ap_left` fires κ on this branch (`rw [act_ap_left]` succeeds: head
+  `inl(inl(inr w))` matches `ι₁(ι₁ z)` with `z := inr w`).
+- `convert act_ap_depth σ Shape.nil Θ (Ω⋈Φ) w _ using 2` fires the LHS outer
+  σ-act and leaves exactly two subgoals: a clean
+  `Proper.compose (Θ⋈Ω) Φ = Proper.compose (Shape.nil⋈Θ) (Ω⋈Φ)` (closed by
+  `apply Subsingleton.elim`) and the main equation.
 
-In the list-based version, `Tele.ofList` is `@[reducible]` and `Tele.ofList ρ`
-reduces to a uniquely-determined nested chain. `instExtendList` (also
-`@[reducible]`) follows the recursion, producing a canonical nested-`instCons`
-skeleton. Both syntactic forms of "the same composite shape" reduce to the
-same instance term modulo `@[reducible]`. The diamond is invisible.
+## Current code (committed, parked at the stuck point)
 
-With Shape (a structureless record over `List → List`), no canonical
-form exists, no `@[reducible]` reduction normalises the term, and the
-diamond becomes visible.
+```lean
+case right =>            -- w : Θ  (rebuild: both acts pass through)
+  have cow := fun (i : C.Binder β) => act_interchange.aux σ κ (Φ ∷ i.arity) (args i)
+  rw [act_ap_left]
+  convert act_ap_depth σ Shape.nil Θ (Ω ⋈ Φ) w _ using 2
+  · apply Subsingleton.elim
+  · symm
+    convert congrArg ((pushforward σ κ).act Φ) (act_ap_depth σ Shape.nil Θ (Ψ ⋈ Φ) w args) using 2   -- NO-OP, stuck here
+```
 
-### Options to bridge the diamond (decided against, but in scope)
+Goal at the stuck `convert` (after `symm`):
+```
+Expr.ap (inl(inr w)) (fun j ↦ σ.act (Θ⋈Ω⋈(Φ∷j)) (κ.act (Φ∷j) (args j)))
+  = (pushforward σ κ).act Φ (σ.act (Θ⋈Ψ⋈Φ) (Expr.ap (inl(inl(inr w))) args))
+```
 
-1. **Canonicalise parenthesisation in proofs.** Every shape expression
-   in proof bodies follows a fixed convention (left- or right-assoc;
-   `∷ α` vs `⋈ ⌊α⌋`). Mechanical but invasive; brittle to maintenance
-   (the convention lives in our heads, not in the type system).
-2. **`Subsingleton` (Proper S)` coherence lemma.** Provable from
-   the existing axioms by funext, then used as a transport at each
-   diamond site. Real proof work; expands the API.
-3. **Revert to explicit-passing.** Take composite `Proper` instances
-   as explicit non-instance binders, propagate by hand. Verbose
-   signatures, but no instance-synthesis surprises.
+## The obstacle
 
-Andrej preferred a different path: **clean up the proofs first to
-shrink the diamond's attack surface.** That's what the recent commits
-have been doing. After this cleanup, the diamond hits fewer sites in
-the proofs, but it's still there. The next attempt would benefit from
-trying option 1 or 2 with a smaller surface.
+We need to fire the inner σ-act `σ.act (Θ⋈Ψ⋈Φ) (Expr.ap (inl(inl(inr w))) args)`,
+which sits **under** `(pushforward σ κ).act Φ (·)`, while the other side of the
+equation is a bare `Expr.ap`.
 
-## Bucket list (deferred, in rough priority order)
+```
+goal inner head:    Proper.inl (Γ⋈Δ⋈Θ⋈Ψ) (Proper.inl (Γ⋈Δ⋈Θ) (Proper.inr (Γ⋈Δ) w))   -- double inl
+act_ap_depth head:  Proper.inl (Γ⋈Δ⋈Θ)   (Proper.inr (Γ⋈Δ) w)                          -- single inl (weakening past Ρ=Ψ⋈Φ)
+```
 
-1. Retry the Shape migration. The cleanups have reduced the diamond
-   surface; option 1 or 2 above is the bridging strategy. See
-   `stash@{0}` for prior work.
-2. The remaining 22 `change` / `show` clauses in proof bodies. Most
-   are load-bearing (`change` before `rw` to expose a head shape).
-   Some may yield to higher-level lemma extraction.
-3. Higher-level lemmas extracting repeated tactic patterns. E.g.
-   `refine (congrArg (κ'.act _) (Subst.act_ap_inr σ _ x args)).trans ?_;
-   rw [extendList_inr_inr …]` shows up 4–5 times across the proofs;
-   a named lemma would compress these.
-4. Reformulate metric plumbing (`DomLt`, `DomMeasure`,
-   `SlotAt.subWitness`) onto `Shape` instead of `List`. Currently the
-   only remaining `List C.Arity` use outside τ-stacks.
-5. Long-line / 100-col reflow pass — deferred.
+Defeq only if `inl` past the composite `Ψ⋈Φ` equals `inl` past `Φ` ∘ `inl` past `Ψ`.
 
-## Key files
+Tried, all fail to fire it:
+- `convert congrArg ((pushforward σ κ).act Φ) (act_ap_depth …) using 2` → no-op
+  (different head symbols `Subst.act` vs `Expr.ap` block congruence descent into
+  the `pushforward.act` argument).
+- `convert congrArg _ (act_ap_depth …) using 2` → leaves the wrapper as an
+  unsolvable function metavariable `?convert_2`.
+- `… using 3` → `congrArg` application type mismatch.
+- `rw` cannot match double-`inl` vs single-`inl`.
 
-- `HigherRankSyntax/HigherRankSyntax/Equations.lean` — the main file
-  (most cleanup happened here).
-- `HigherRankSyntax/HigherRankSyntax/Proper.lean` — `Proper`
-  class + `compose` def + instances. The `compose` is currently a
-  `def` (not an instance) and `instExtendList` is alive.
-- `HigherRankSyntax/HigherRankSyntax/Subst.lean` — `Subst.act` and
-  related infrastructure.
-- `HigherRankSyntax/HigherRankSyntax/SyntaxMonad.lean` — the relative
-  monad witness.
+`case right` dodged this entirely: there the inner head was a single `inr z`
+(`Φ` rightmost, `Ρ = nil`), so `convert congrArg _ (act_ap_depth …) using 2`
+fired cleanly. This front-slot can't.
 
-## Plan-file references
+**Open question:** how to fire an inner `.act` whose head is the multi-`inl`
+form when it is nested under another `.act`? Is there an `act`-congruence helper,
+or a preferred idiom for rewriting an act under an act?
 
-- `~/.claude/plans/lazy-weaving-cascade.md` — the running session
-  plan file with detailed write-ups of each cleanup step taken. The
-  newest plan at the top, older plans below.
-- `PLAN.md` and `HigherRankSyntax/PLAN.md` — pre-session high-level
-  plans about the project as a whole.
+## Working rules (must follow)
 
-## How to talk to Andrej
-
-- Direct answers. No "shall I…?" closers.
-- Don't restate what you've done after the fact — he can read the diff.
-- Use his global preferences (`~/.claude/CLAUDE.md`): modifier placement,
-  active voice, etc.
-- If he asks a question, answer the question — don't infer permission
-  to act from it.
-- If he tells you you weren't authorised, stop and wait — do not
-  auto-revert.
-- He prefers terse responses that fit on the screen.
+- Idiomatic, human Lean. NO `<;>` / `try` cleverness. Address each generated
+  subgoal by opening a bullet `·` and proving it there.
+- No `show` / `change`. Exploit defeq through `convert` / `exact` / `apply` / `calc`.
+- `Proper` mismatches → `Subsingleton.elim`; act-depth mismatches → `Subst.act_irrel`.
+- Do NOT use `cow`. It is a read-only marker showing the shape the recursive call
+  must take; it will be deleted once the branch is complete. The branch must end
+  by aiming the rebuilt args at `act_interchange.aux σ κ (Φ ∷ i.arity) (args i)`.
+- Never copy from `Equations.lean` / `Equations2.lean` (retired references).
+- The LSP MCP reports goals correctly but fragment-by-fragment checks can hide an
+  unsound flat structure; verify the whole branch with a real build. Do not
+  trigger a Mathlib source compile — use `lake exe cache get` first if needed.
