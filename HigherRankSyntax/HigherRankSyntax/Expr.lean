@@ -33,7 +33,7 @@ theorem Expr.Subterm.wf {C : Carrier} : WellFounded (@Expr.Subterm C) := by
     apply Acc.intro
     rintro ⟨_, _⟩ h
     cases h
-    exact ih _
+    apply ih
 
 instance Expr.Subterm.wellFoundedRelation {C : Carrier} : WellFoundedRelation (Σ Γ : Shape C, Expr Γ) where
   rel := @Expr.Subterm C
@@ -64,16 +64,15 @@ theorem Renaming.act_id {C : Carrier} {Γ : Shape C} :
   | .ap x args => by
     simp [act_ap]
     funext i
-    exact Renaming.act_id (args i)
+    apply act_id
 
 theorem Renaming.act_comp
     {C : Carrier} {Γ Δ Ξ : Shape C}
     (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ξ) :
   ∀ (e : Expr Γ), ⟦ σ ∘ʳ ρ ⟧ʳ e = ⟦ σ ⟧ʳ (⟦ ρ ⟧ʳ e)
   | .ap x args => by
-    show Expr.ap (σ (ρ x)) (fun i => ⟦ (σ ∘ʳ ρ) ⇑ʳ i.arity ⟧ʳ args i)
-      = Expr.ap (σ (ρ x)) (fun i => ⟦ σ ⇑ʳ i.arity ⟧ʳ (⟦ ρ ⇑ʳ i.arity ⟧ʳ args i))
+    rw [act_ap, act_ap, act_ap]
     congr 1
     funext i
     rw [Renaming.extend_comp]
-    exact Renaming.act_comp _ _ (args i)
+    apply act_comp
