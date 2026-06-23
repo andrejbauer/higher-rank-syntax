@@ -56,14 +56,14 @@ theorem Renaming.extend_inl
     {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     (f : Γ →ʳ Δ) {α : C.Arity} (i : Γ ∋ α) :
   (f ⇑ʳ Ξ) (C.inl i) = C.inl (f i)
-  := C.classify_inr _ _ _ i (fun y => C.inl (f y)) (fun z => C.inr z)
+  := C.copair_inr _ _ _ i (fun y => C.inl (f y)) (fun z => C.inr z)
 
 @[simp]
 theorem Renaming.extend_inr
     {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     (f : Γ →ʳ Δ) {α : C.Arity} (i : Ξ ∋ α) :
   (f ⇑ʳ Ξ) (C.inr i) = C.inr i
-  := C.classify_inl _ _ _ i (fun y => C.inl (f y)) (fun z => C.inr z)
+  := C.copair_inl _ _ _ i (fun y => C.inl (f y)) (fun z => C.inr z)
 
 @[simp]
 theorem Renaming.id_apply

@@ -14,10 +14,10 @@ structure Carrier (A : Type) where
   inr : ∀ {Γ Δ α} , slotAt Δ α → slotAt (Γ * Δ) α
   copair : ∀ (Γ Δ) {α} , (X : Type) → slotAt (Γ * Δ) α →
     (slotAt Γ α → X) → (slotAt Δ α → X) → X
-  classify_inl : ∀ (Γ Δ : Arity) {α : Arity} (X : Type) (x : slotAt Δ α)
+  copair_inl : ∀ (Γ Δ : Arity) {α : Arity} (X : Type) (x : slotAt Δ α)
                    (f : slotAt Γ α → X) (g : slotAt Δ α → X),
                    copair Γ Δ X (inr x) f g = g x
-  classify_inr : ∀ (Γ Δ : Arity) {α : Arity} (X : Type) (x : slotAt Γ α)
+  copair_inr : ∀ (Γ Δ : Arity) {α : Arity} (X : Type) (x : slotAt Γ α)
                    (f : slotAt Γ α → X) (g : slotAt Δ α → X),
                    copair Γ Δ X (inl x) f g = f x
   /-- Cover: every slot of a product comes from the right or left injection. -/
