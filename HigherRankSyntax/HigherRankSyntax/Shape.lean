@@ -32,7 +32,7 @@ end Shape
 infixl:65 " ∷ " => Shape.ext
 
 /-- The singleton telescope `⌊α⌋`: the shape consisting of a single
-binder of arity `α`. -/
+position of arity `α`. -/
 abbrev Shape.singleton {C : Carrier} (α : C.Arity) : Shape C := Shape.nil ∷ α
 
 @[inherit_doc Shape.singleton]

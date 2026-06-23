@@ -99,21 +99,4 @@ def ofList {α : Type} : List α → Tele α
       show β :: (ofList rest).toList = β :: rest
       rw [ofList_toList rest]
 
-theorem ofList_apply {α : Type} :
-    ∀ (lst : List α) (xs : List α), (ofList lst) xs = lst ++ xs
-  | [], _ => rfl
-  | β :: rest, xs => by
-      show (Tele.cons β ∘ᵗ ofList rest) xs = (β :: rest) ++ xs
-      show β :: (ofList rest) xs = β :: (rest ++ xs)
-      rw [ofList_apply rest xs]
-
-/-- Every telescope is appending with a list. -/
-theorem isOfList {α : Type} (t : Tele α) :
-    t = Tele.ofList t.toList
-  := by
-    apply Tele.ext
-    funext xs
-    rw [ofList_apply]
-    exact congrFun t.isAppend xs
-
 end Tele

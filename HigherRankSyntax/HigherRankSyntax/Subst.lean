@@ -32,47 +32,9 @@ def Subst.fromArgs {C : Carrier} (α : C.Arity) (Γ : Shape C)
     Subst ⌊α⌋ Γ :=
   fun | _, .here i => args i
 
-/-- Recover the argument family carried by a singleton-domain substitution. -/
-def Subst.toArgs {C : Carrier} {α : C.Arity} {Γ : Shape C}
-    (σ : Subst ⌊α⌋ Γ) :
-    Expr.Args Γ α :=
-  fun i => σ (.here i)
-
-@[simp] theorem Subst.fromArgs_apply {C : Carrier} {α : C.Arity} {Γ : Shape C}
-    (args : Expr.Args Γ α) (i : C.Binder α) :
-    Subst.fromArgs α Γ args (.here i) = args i :=
-  rfl
-
-@[simp] theorem Subst.toArgs_apply {C : Carrier} {α : C.Arity} {Γ : Shape C}
-    (σ : Subst ⌊α⌋ Γ) (i : C.Binder α) :
-    Subst.toArgs σ i = σ (.here i) :=
-  rfl
-
-@[simp] theorem Subst.toArgs_fromArgs {C : Carrier} {α : C.Arity} {Γ : Shape C}
-    (args : Expr.Args Γ α) :
-    Subst.toArgs (Subst.fromArgs α Γ args) = args := by
-  funext i
-  rfl
-
-@[simp] theorem Subst.fromArgs_toArgs {C : Carrier} {α : C.Arity} {Γ : Shape C}
-    (σ : Subst ⌊α⌋ Γ) :
-    Subst.fromArgs α Γ (Subst.toArgs σ) = σ := by
-  funext β q
-  cases q with
-  | here i => rfl
-  | there q => nomatch q
-
 /-- The identity substitution at shape `Γ`. -/
 def Subst.id {C : Carrier} (Γ : Shape C) : Subst Γ Γ :=
   (fun ⦃β⦄ (p : Γ ∋ β) => Expr.η p)
-
-/-- Dispatching a slot of `Γ ⋈ Δ` into the `Γ` summand vs the `Δ` summand.
-Returned by `Subst.classifyDom`. -/
-inductive LeftRight {C : Carrier} (Γ Δ : Shape C) (α : C.Arity) : Type where
-  /-- The slot belongs to the left summand `Γ`. -/
-  | left (q : Γ ∋ α)
-  /-- The slot belongs to the right summand `Δ`. -/
-  | right (q : Δ ∋ α)
 
 /-- Three-way dispatch of a slot of `Γ ⋈ Δ ⋈ Ξ`, used by `Subst.act`: the
 prefix `Γ`, the substitution domain `Δ`, or the current depth `Ξ`. -/
@@ -83,11 +45,6 @@ inductive LeftMiddleRight {C : Carrier} (Γ Δ Ξ : Shape C) (α : C.Arity) : Ty
   | middle (q : Δ ∋ α)
   /-- The slot belongs to the current depth `Ξ`. -/
   | right (q : Ξ ∋ α)
-
-/-- Dispatching a `Γ ⋈ Δ`-slot into `Γ` vs `Δ`, via `[Proper Δ]`. -/
-def classifyLeftRight {C : Carrier} {Γ Δ : Shape C} [Proper Δ]
-    {α} (p : (Γ ⋈ Δ) ∋ α) : LeftRight Γ Δ α :=
-  Proper.classify Γ (LeftRight Γ Δ α) p .left .right
 
 /-- Dispatching a `Γ ⋈ Δ ⋈ Ξ`-slot into its source: prefix `Γ`, substitution
 domain `Δ`, or current depth `Ξ`. -/
@@ -121,32 +78,6 @@ theorem Subst.isReinject {C : Carrier} {Γ Δ Ξ : Shape C}
     · subst h_y
       exact ⟨.left w, by rw [h_w]; rfl⟩
 
-/-- Classifying an embedded `Ξ`-site returns the same `Ξ`-site. -/
-@[simp] theorem Subst.threeway_right {C : Carrier} {Γ Δ Ξ : Shape C}
-    [Proper Δ] [Proper Ξ] {α} (x : Ξ ∋ α) :
-  threeway (Γ := Γ) (Δ := Δ) (reinject (.right x)) = .right x
-  := by
-  unfold Subst.threeway Subst.reinject
-  rw [Proper.classify_inr]
-
-/-- Classifying an embedded `Δ`-site returns the same `Δ`-site. -/
-@[simp] theorem Subst.threeway_middle {C : Carrier} {Γ Δ Ξ : Shape C}
-    [Proper Δ] [Proper Ξ] {α} (x : Δ ∋ α) :
-  threeway (Γ := Γ) (Ξ := Ξ) (reinject (.middle x)) = .middle x
-  := by
-  unfold threeway reinject
-  rw [Proper.classify_inl]
-  rw [Proper.classify_inr]
-
-/-- Classifying an embedded `Γ`-site returns the same `Γ`-site. -/
-@[simp] theorem  Subst.threeway_left {C : Carrier} {Γ Δ Ξ : Shape C}
-    [Proper Δ] [Proper Ξ] {α} (x : Γ ∋ α) :
-  threeway (Δ := Δ) (Ξ := Ξ) (reinject (.left x)) = .left x
-  := by
-  unfold threeway reinject
-  rw [Proper.classify_inl]
-  rw [Proper.classify_inl]
-
 /-- Classifying a concrete right-injected `Ξ` head returns the right site. -/
 @[simp] theorem Subst.threeway_inr {C : Carrier} {Γ Δ Ξ : Shape C}
     [Proper Δ] [Proper Ξ] {α : C.Arity} (x : Ξ ∋ α) :
@@ -173,7 +104,7 @@ theorem Subst.isReinject {C : Carrier} {Γ Δ Ξ : Shape C}
   rw [Proper.classify_inl]
   rw [Proper.classify_inl]
 
-/-- The identity instantiation for the one-binder telescope `⌊α⌋`, with an arbitrary fixed prefix `Δ`. -/
+/-- The identity instantiation for the one-position telescope `⌊α⌋`, with an arbitrary fixed prefix `Δ`. -/
 def Subst.instId {C : Carrier} (Δ : Shape C) (α : C.Arity) : Subst ⌊α⌋ (Δ ⋈ ⌊α⌋) :=
   Subst.fromArgs α (Δ ⋈ ⌊α⌋) (fun i => Expr.η (.here i))
 

@@ -107,8 +107,8 @@ module Make (C : CARRIER) = struct
     let new_args =
       List.map
         (fun (y, child) ->
-          let child_binder = arity_lookup head_arity y in
-          (y, subst sigma (child_binder :: tau) child))
+          let child_position = arity_lookup head_arity y in
+          (y, subst sigma (child_position :: tau) child))
         args
     in
     match classify sigma tau x with
@@ -394,11 +394,11 @@ let test_tree () =
   ignore (try_validate "λ y . y" gamma_expr e_lam) ;
 
   (* Π ℕ (n . Vec n): Π's arity is TOplus(TSlot var, TSlot bind1_arity).
-     First arg ℕ lives in gamma_expr ** Arity TEmpty (the var binder, contributes
+     First arg ℕ lives in gamma_expr ** Arity TEmpty (the var position, contributes
      no slots but still wraps the tree); ℕ is therefore at L p_nat there.
      Second arg lives in gamma_expr ** bind1_arity: Vec at L p_vec, bound n at R Here.
      Vec's own child (the "n") lives in (gamma_expr ** bind1_arity) ** Arity TEmpty
-     (the var binder of Vec's slot), which wraps once more — so n is at L (R Here). *)
+     (the var position of Vec's slot), which wraps once more — so n is at L (R Here). *)
   let e_pi =
     Apply (p_pi, [
       (L Here, Apply (L p_nat, [])) ;
@@ -410,9 +410,9 @@ let test_tree () =
   Format.printf "------ ExampleSubst1 ------@\n" ;
   (* pre : single-slot shape, slot's arity = λ_arity. *)
   let pre1 = sh_list [lam_arity] in
-  (* dom : single arity for the binder of x. *)
+  (* dom : single arity for the position of x. *)
   let dom1 = ar_list [var] in  (* = bind1_arity, but explicit *)
-  (* cod : single arity with three sub-binders (y, z, w as binders). *)
+  (* cod : single arity with three sub-positions (y, z, w as positions). *)
   let cod1 = [ar_list [var; var; var]] in
   let pre_dom1 = pre1 ** dom1 in
   let pre_cod1 = pre1 *** cod1 in

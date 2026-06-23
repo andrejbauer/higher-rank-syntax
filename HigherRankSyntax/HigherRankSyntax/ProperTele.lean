@@ -17,7 +17,7 @@ operations needed to dispatch a slot of `Γ ⋈ Δ` between the Γ-side and the 
 Two instances are declared:
 
 * `Tele.id` — trivial (no S-slots).
-* `Tele.cons a ∘ᵗ T` from `[Proper T]` — extend by one binder.
+* `Tele.cons a ∘ᵗ T` from `[Proper T]` — extend by one position.
 
 Tele equality is unchanged by the class — instances live in the
 instance slot, not in Tele's data, so the strict-monoid laws on Tele
@@ -79,13 +79,13 @@ class Proper {C : Carrier} (Γ : Shape C) : Type 1 where
   /-- `inr` injects `Γ`-slots into the prefix, preserving position. -/
   inr_idx : ∀ (Δ : Shape C) {α : C.Arity} (x : Γ ∋ α),
     (inr Δ x).idx = x.idx
-  /-- `inr` preserves the binder a slot picks out. -/
+  /-- `inr` preserves the position a slot picks out. -/
   inr_tag : ∀ (Δ : Shape C) {α : C.Arity} (x : Γ ∋ α),
     (inr Δ x).tag = x.tag
   /-- `inl` weakens `Δ`-slots past the `Γ`-prefix, shifting position. -/
   inl_idx : ∀ (Δ : Shape C) {α : C.Arity} (y : Δ ∋ α),
     (inl Δ y).idx = Γ.toList.length + y.idx
-  /-- `inl` preserves the binder a slot picks out. -/
+  /-- `inl` preserves the position a slot picks out. -/
   inl_tag : ∀ (Δ : Shape C) {α : C.Arity} (y : Δ ∋ α),
     (inl Δ y).tag = y.tag
 
@@ -185,103 +185,6 @@ instance instCons {C : Carrier} (a : C.Arity) (T : Shape C) [Proper T] :
     (congrArg (· + 1) (Proper.inl_idx (Γ := T) Δ y)).trans (Nat.add_right_comm _ _ 1)
   inl_tag := fun Δ _ y => Proper.inl_tag Δ y
 
-/-- A singleton telescope.  Definitionally the same shape as
-`Tele.cons a ∘ᵗ Tele.id`; provided directly so instance search finds it
-once strict unit reduction has simplified the telescope to `Tele.cons a`. -/
-instance instSingleton {C : Carrier} (a : C.Arity) :
-    Proper (Tele.cons a : Shape C) :=
-  inferInstanceAs (Proper (Tele.cons a ∘ᵗ (Tele.id C.Arity)))
-
-/-- Extend an already proper telescope by a concrete list of binders.  Unlike
-`compose`, this recurses over the list, so extension by one more binder is
-definitionally the `instCons` instance needed by recursive expression proofs. -/
-@[reducible]
-instance extendList {C : Carrier} (S : Shape C) [Proper S] :
-    (ρ : List C.Arity) → Proper (S ⋈ Tele.ofList ρ)
-  | [] => inferInstanceAs (Proper S)
-  | β :: rest =>
-      letI : Proper (S ⋈ Tele.ofList rest) := extendList S rest
-      inferInstanceAs (Proper ((S ⋈ Tele.ofList rest) ∷ β))
-
-/-- A concrete list of binders is a proper telescope. -/
-@[reducible]
-instance ofList {C : Carrier} (ρ : List C.Arity) :
-    Proper (Tele.ofList ρ : Shape C) :=
-  extendList (Shape.nil : Shape C) ρ
-
-/-- In a concrete list extension, the right injection of a list-side slot is
-the same as first injecting it into `S ⋈ Tele.ofList ρ` and then injecting the
-composite. -/
-theorem extendList_inr_inr {C : Carrier} (S : Shape C) [Proper S]
-    (ρ : List C.Arity) (Γ : Shape C)
-    {α : C.Arity} (x : Tele.ofList ρ ∋ α) :
-  Proper.inr Γ (Proper.inr S x) = Proper.inr (Γ ⋈ S) x
-  := by
-  induction ρ with
-  | nil => exact nomatch x
-  | cons β rest ih =>
-      cases x with
-      | here i => rfl
-      | there x' =>
-          change
-            ListSlotAt.there
-              ((Proper.inr Γ : S ⋈ Tele.ofList rest →ʳ
-                Γ ⋈ (S ⋈ Tele.ofList rest))
-                ((Proper.inr S : Tele.ofList rest →ʳ
-                  S ⋈ Tele.ofList rest) x'))
-            =
-            ListSlotAt.there
-              ((Proper.inr (Γ ⋈ S) : Tele.ofList rest →ʳ
-                (Γ ⋈ S) ⋈ Tele.ofList rest) x')
-          congr 1
-          exact ih x'
-
-/-- In a concrete list extension, the right injection of an `S`-slot into the
-composite is the same as injecting it into the base and then weakening through
-the list. -/
-theorem extendList_inr_inl {C : Carrier} (S : Shape C) [Proper S]
-    (ρ : List C.Arity) (Γ : Shape C)
-    {α : C.Arity} (x : S ∋ α) :
-  Proper.inr Γ (Proper.inl (Γ := Tele.ofList ρ) S x) = Proper.inl (Γ ⋈ S) (Proper.inr Γ x)
-  := by
-  induction ρ with
-  | nil =>
-      change (Proper.inr Γ) x = (Proper.inr Γ) x
-      rfl
-  | cons β rest ih =>
-      change
-        ListSlotAt.there
-          ((Proper.inr Γ : S ⋈ Tele.ofList rest →ʳ
-            Γ ⋈ (S ⋈ Tele.ofList rest))
-            ((Proper.inl S : S →ʳ S ⋈ Tele.ofList rest) x))
-        =
-        ListSlotAt.there
-          ((Proper.inl (Γ ⋈ S) : Γ ⋈ S →ʳ
-            (Γ ⋈ S) ⋈ Tele.ofList rest)
-            ((Proper.inr Γ : S →ʳ Γ ⋈ S) x))
-      congr 1
-
-/-- Weakening through a concrete list extension is the iterated weakening
-through that list. -/
-theorem extendList_inl
-    {C : Carrier} (S : Shape C) [Proper S]
-    (ρ : List C.Arity) (Γ : Shape C)
-    {α : C.Arity} (x : Γ ∋ α) :
-  Proper.inl (Γ := S ⋈ Tele.ofList ρ) Γ x = Proper.inl (Γ ⋈ S) (Proper.inl Γ x)
-  := by
-  induction ρ with
-  | nil => rfl
-  | cons β rest ih =>
-      change
-        ListSlotAt.there
-          ((Proper.inl Γ : Γ →ʳ Γ ⋈ (S ⋈ Tele.ofList rest)) x)
-        =
-        ListSlotAt.there
-          ((Proper.inl (Γ ⋈ S) : Γ ⋈ S →ʳ
-            (Γ ⋈ S) ⋈ Tele.ofList rest)
-            ((Proper.inl Γ : Γ →ʳ Γ ⋈ S) x))
-      congr 1
-
 /-- Compose two proper telescopes, keeping the structural operations coherent
 with the two-stage view of `(Γ ⋈ S) ⋈ T`.  This is deliberately a named
 constructor rather than a global instance, to avoid making typeclass search
@@ -290,205 +193,93 @@ try arbitrary telescope decompositions. -/
 def compose {C : Carrier} (S T : Shape C) [Proper S] [Proper T] :
     Proper (S ⋈ T) where
 
-  inl := fun Γ =>
-    (Proper.inl (Γ ⋈ S) : Γ ⋈ S →ʳ (Γ ⋈ S) ⋈ T) ∘ʳʳ
-      (Proper.inl Γ : Γ →ʳ Γ ⋈ S)
+  inl Γ := inl (Γ ⋈ S) ∘ʳ inl Γ
 
-  inr := fun Γ {_} p =>
-    Proper.classify S _ p
-      (fun s => Proper.inl (Γ ⋈ S) (Proper.inr Γ s))
-      (fun t => Proper.inr (Γ ⋈ S) t)
+  inr Γ {_} x :=
+    classify S _ x
+      (fun y => inl (Γ ⋈ S) (inr Γ y))
+      (fun z => inr (Γ ⋈ S) z)
 
-  classify := fun Γ _α X p g f =>
-    Proper.classify (Γ ⋈ S) X p
-      (fun q => Proper.classify Γ X q
-        g
-        (fun s => f (Proper.inl S s)))
-      (fun t => f (Proper.inr S t))
+  classify Γ _ X x g f :=
+    classify (Γ ⋈ S) X x
+      (fun y => classify Γ X y g (fun w => f (inl S w)))
+      (fun z => f (inr S z))
 
-  classify_inr := fun Γ X _α x g f => by
-    rcases Proper.cover S x with ⟨t, h_t⟩ | ⟨s, h_s⟩
-    · subst h_t
-      simp only [Proper.classify_inr]
-    · subst h_s
-      simp only [Proper.classify_inl, Proper.classify_inr]
+  classify_inr Γ X _ x g f := by
+    rcases cover S x with ⟨x, rfl⟩ | ⟨y, rfl⟩
+    · simp only [classify_inr]
+    · simp only [classify_inl, classify_inr]
 
-  classify_inl := fun Γ X _α y g f => by
-    change
-      Proper.classify (Γ ⋈ S) X
-        ((Proper.inl (Γ ⋈ S)) ((Proper.inl Γ) y))
-        (fun q => Proper.classify Γ X q
-          g (fun s => f ((Proper.inl S) s)))
-        (fun t => f ((Proper.inr S) t))
-      =
-      g y
-    rw [Proper.classify_inl (Γ ⋈ S)]
-    rw [Proper.classify_inl Γ]
-  cover := fun Γ _α p => by
-    rcases Proper.cover (Γ ⋈ S) p with ⟨t, h_t⟩ | ⟨q, h_q⟩
-    · refine Or.inl ⟨(Proper.inr S) t, ?_⟩
-      subst h_t
-      simp only [Proper.classify_inr]
-    · subst h_q
-      rcases Proper.cover Γ q with ⟨s, h_s⟩ | ⟨y, h_y⟩
-      · refine Or.inl ⟨(Proper.inl S) s, ?_⟩
-        subst h_s
-        simp only [Proper.classify_inl]
-      · refine Or.inr ⟨y, ?_⟩
-        subst h_y
-        rfl
-  inr_nil_id := fun {_α} x => by
-    rcases Proper.cover S x with ⟨t, h_t⟩ | ⟨s, h_s⟩
-    · subst h_t
-      simp only [Proper.classify_inr]
-      rfl
-    · subst h_s
-      simp only [Proper.classify_inl, Proper.inr_nil_id]
-      rfl
-  inr_idx := fun Δ _ p => by
-    rcases Proper.cover (Γ := T) S p with ⟨t, rfl⟩ | ⟨s, rfl⟩
-    · rw [Proper.classify_inr]
-      exact (Proper.inr_idx (Δ ⋈ S) t).trans (Proper.inr_idx S t).symm
-    · rw [Proper.classify_inl]
-      exact (Proper.inl_idx (Δ ⋈ S) (Proper.inr Δ s)).trans
-        (by rw [Proper.inr_idx, Proper.inl_idx])
-  inr_tag := fun Δ _ p => by
-    rcases Proper.cover (Γ := T) S p with ⟨t, rfl⟩ | ⟨s, rfl⟩
-    · rw [Proper.classify_inr]
-      exact (Proper.inr_tag (Δ ⋈ S) t).trans (Proper.inr_tag S t).symm
-    · rw [Proper.classify_inl]
-      exact ((Proper.inl_tag (Δ ⋈ S) (Proper.inr Δ s)).trans (Proper.inr_tag Δ s)).trans
-        (Proper.inl_tag S s).symm
-  inl_idx := fun Δ _ y => by
-    rw [Shape.extList_toList S T, List.length_append]
-    exact (Proper.inl_idx (Γ := T) (Δ ⋈ S) (Proper.inl (Γ := S) Δ y)).trans
-      (by rw [Proper.inl_idx (Γ := S) Δ y]; omega)
-  inl_tag := fun Δ _ y =>
-    (Proper.inl_tag (Γ := T) (Δ ⋈ S) (Proper.inl (Γ := S) Δ y)).trans
-      (Proper.inl_tag (Γ := S) Δ y)
+  classify_inl := fun Γ X _α y g f =>
+    (classify_inl (Γ ⋈ S) X ((inl Γ) y) _ _).trans
+      (classify_inl Γ X y g _)
 
-/-- `Proper.compose`'s right injection of a `T`-slot factors through `S ⋈ T`. -/
-theorem compose_inr_inr {C : Carrier} (S T : Shape C) [Proper S] [Proper T]
-    (Γ : Shape C) {α : C.Arity} (x : T ∋ α) :
-  (Proper.compose S T).inr Γ (Proper.inr S x) = Proper.inr (Γ ⋈ S) x
-  := Proper.classify_inr S _ x _ _
+  cover Γ {_} p := by
+    rcases cover (Γ ⋈ S) p with ⟨x, rfl⟩ | ⟨y, rfl⟩
+    · left ; exists (inr _ x) ; simp only [classify_inr]
+    · rcases cover Γ y with ⟨y, rfl⟩ | ⟨z, rfl⟩
+      · left
+        exists (inl _ y)
+        simp only [classify_inl]
+      · right ; exists z
 
-/-- In the composed `Proper`, the right injection of an `inl_S`-slot is
-the base right injection followed by weakening (`inl`) through `T`. -/
-theorem compose_inr_inl {C : Carrier} (S T : Shape C)
-    [Proper S] [Proper T] (Γ : Shape C)
-    {α : C.Arity} (x : S ∋ α) :
-    letI : Proper (S ⋈ T) := Proper.compose S T
-    (Proper.inr Γ : (S ⋈ T) →ʳ Γ ⋈ (S ⋈ T))
-      ((Proper.inl S : S →ʳ S ⋈ T) x)
-      =
-    (Proper.inl (Γ ⋈ S) : Γ ⋈ S →ʳ (Γ ⋈ S) ⋈ T)
-      ((Proper.inr Γ : S →ʳ Γ ⋈ S) x) := by
-  exact Proper.classify_inl S _ x _ _
+  inr_nil_id {_α} x := by
+    rcases cover S x with ⟨x, rfl⟩ | ⟨y, rfl⟩
+    · simp only [classify_inr] ; rfl
+    · simp only [classify_inl, inr_nil_id] ; rfl
+
+  inr_idx Δ _ p := by
+    rcases cover (Γ := T) S p with ⟨x, rfl⟩ | ⟨y, rfl⟩
+    · rw [classify_inr]
+      apply Eq.trans
+      · apply inr_idx
+      · symm ; apply inr_idx
+    · rw [classify_inl]
+      calc ((inl (Δ ⋈ S)) ((inr Δ) y)).idx
+          = _  := by rw [inl_idx, inr_idx]
+        _ = _  := by symm ; apply inl_idx
+
+  inr_tag Δ _ p := by
+    rcases cover (Γ := T) S p with ⟨x, rfl⟩ | ⟨y, rfl⟩
+    · rw [classify_inr]
+      apply Eq.trans
+      · apply inr_tag
+      · symm ; apply inr_tag
+    · rw [classify_inl]
+      calc ((inl (Δ ⋈ S)) ((inr Δ) y)).tag
+          = _      := by rw [inl_tag, inr_tag]
+        _ = _      := by symm ; apply inl_tag
+
+  inl_idx Δ _ y :=
+    calc ((inl (Δ ⋈ S)) ((inl Δ) y)).idx
+        = _ := by apply inl_idx
+      _ = _ := by rw [inl_idx Δ y]
+      _ = _ := by rw [Shape.extList_toList, List.length_append] ; symm ; apply Nat.add_assoc
+
+  inl_tag Δ _ y := by apply Eq.trans <;> apply inl_tag
+
+/-- `Proper.compose`'s right injection of a `Ξ`-slot factors through `Δ ⋈ Ξ`. -/
+theorem inr_inr {C : Carrier} (Δ Ξ : Shape C) [Proper Δ] [Proper Ξ]
+    (Γ : Shape C) {α : C.Arity} (x : Ξ ∋ α) :
+  (Proper.compose Δ Ξ).inr Γ (Proper.inr Δ x) = Proper.inr (Γ ⋈ Δ) x
+  := Proper.classify_inr Δ _ x _ _
+
+/-- In the composed `Proper`, the right injection of an `inl_Δ`-slot is
+the base right injection followed by weakening (`inl`) through `Ξ`. -/
+theorem inr_inl {C : Carrier} (Δ Ξ : Shape C)
+    [Proper Δ] [Proper Ξ] (Γ : Shape C)
+    {α : C.Arity} (x : Δ ∋ α) :
+    (Proper.compose Δ Ξ).inr Γ (Proper.inl Δ x)
+      = Proper.inl (Γ ⋈ Δ) (Proper.inr Γ x)
+  := Proper.classify_inl Δ _ x _ _
 
 /-- Weakening (`inl`) through the composed `Proper` is the two-stage
 weakening through its factors. -/
-theorem compose_inl_inl {C : Carrier} (S T : Shape C)
-    [Proper S] [Proper T] (Γ : Shape C)
+theorem inl_inl {C : Carrier} (Δ Ξ : Shape C)
+    [Proper Δ] [Proper Ξ] (Γ : Shape C)
     {α : C.Arity} (x : Γ ∋ α) :
-    letI : Proper (S ⋈ T) := Proper.compose S T
-    (Proper.inl Γ : Γ →ʳ Γ ⋈ (S ⋈ T)) x
-      =
-    (Proper.inl (Γ ⋈ S) : Γ ⋈ S →ʳ (Γ ⋈ S) ⋈ T)
-      ((Proper.inl Γ : Γ →ʳ Γ ⋈ S) x) := by
-  rfl
-
-/-- Coherence data for a chosen `Proper (S ⋈ T)` witness.
-
-This is proof-facing infrastructure for code that must use a specific
-composite witness instead of letting typeclass search pick an extensionally
-equal one.  The three fields say how the chosen witness's injections agree
-with the two-step view through `S` and then `T`.
--/
-structure AppendCoherence {C : Carrier} {S T : Shape C}
-    [hS : Proper S] [hT : Proper T] (hST : Proper (S ⋈ T)) where
-  /-- A right-side `T` head agrees with the two-stage right injection. -/
-  inr_right : ∀ (Γ : Shape C) {α : C.Arity} (x : T ∋ α),
-    (@Proper.inr C (S ⋈ T) hST Γ)
-      ((@Proper.inr C T hT S) x)
-    =
-    (@Proper.inr C T hT (Γ ⋈ S)) x
-  /-- A left-side `S` head agrees with right injection into `S`, then left
-  injection through `T`. -/
-  inr_left : ∀ (Γ : Shape C) {α : C.Arity} (x : S ∋ α),
-    (@Proper.inr C (S ⋈ T) hST Γ)
-      ((@Proper.inl C T hT S) x)
-    =
-    (@Proper.inl C T hT (Γ ⋈ S))
-      ((@Proper.inr C S hS Γ) x)
-  /-- External prefix weakening through the composite agrees with weakening in
-  two stages. -/
-  inl : ∀ (Γ : Shape C) {α : C.Arity} (x : Γ ∋ α),
-    (@Proper.inl C (S ⋈ T) hST Γ) x
-    =
-    (@Proper.inl C T hT (Γ ⋈ S))
-      ((@Proper.inl C S hS Γ) x)
-
-/-- Extend a chosen composite witness through a concrete argument list. -/
-abbrev underList {C : Carrier} {S T : Shape C}
-    (hST : Proper (S ⋈ T)) (υ : List C.Arity) :
-    Proper ((S ⋈ T) ⋈ Tele.ofList υ) :=
-  @Proper.extendList C (S ⋈ T) hST υ
-
-/-- Extend a chosen composite witness under one fresh application argument. -/
-abbrev underBinder {C : Carrier} {S T : Shape C}
-    (hST : Proper (S ⋈ T)) (β : C.Arity) :
-    Proper ((S ⋈ T) ∷ β) :=
-  @Proper.instCons C β (S ⋈ T) hST
-
-/-- Append coherence for the ordinary `Proper.compose` witness. -/
-abbrev AppendCoherence.compose {C : Carrier}
-    (S T : Shape C) [hS : Proper S] [hT : Proper T] :
-    AppendCoherence (Proper.compose S T) where
-  inr_right := fun _ {_} x => Proper.classify_inr S _ x _ _
-  inr_left := Proper.compose_inr_inl S T
-  inl := Proper.compose_inl_inl S T
-
-/-- Append coherence for `Shape.nil ⋈ T`, where the composite witness is just
-the right-hand witness. -/
-abbrev AppendCoherence.nil {C : Carrier}
-    (T : Shape C) [hT : Proper T] :
-    AppendCoherence (S := Shape.nil) (T := T) hT where
-  inr_right := by
-    intro Γ α x
-    rw [Proper.inr_nil_id x]
-    rfl
-  inr_left := by
-    intro Γ α x
-    nomatch x
-  inl := by
-    intro Γ α x
-    rfl
-
-/-- Append coherence for concrete-list extension. -/
-abbrev AppendCoherence.extendList {C : Carrier}
-    (S : Shape C) [hS : Proper S] (ρ : List C.Arity) :
-    AppendCoherence (Proper.extendList S ρ) where
-  inr_right := Proper.extendList_inr_inr S ρ
-  inr_left := Proper.extendList_inr_inl S ρ
-  inl := Proper.extendList_inl S ρ
-
-/-- Append coherence for appending a singleton binder with the computation rule
-used by application-argument recursion. -/
-abbrev AppendCoherence.singleton {C : Carrier}
-    (S : Shape C) [hS : Proper S] (β : C.Arity) :
-    AppendCoherence (@Proper.instCons C β S hS) where
-  inr_right := by
-    intro Γ α x
-    cases x with
-    | here i => rfl
-    | there z => nomatch z
-  inr_left := by
-    intro Γ α x
-    rfl
-  inl := by
-    intro Γ α x
-    rfl
+    (Proper.compose Δ Ξ).inl Γ x = Proper.inl (Γ ⋈ Δ) (Proper.inl Γ x)
+  := rfl
 
 end Proper
 

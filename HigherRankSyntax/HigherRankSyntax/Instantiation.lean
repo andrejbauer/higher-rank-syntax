@@ -4,7 +4,7 @@ import Batteries.Tactic.Trans
 /-!
 # Instantiation lemmas
 
-η-substitutions and one-binder instantiation: `act_η_right` (acting on a
+η-substitutions and one-position instantiation: `act_η_right` (acting on a
 current-depth η reproduces it), `act_idOfη` (an η-substitution acts as the
 identity), and the mutual `act_inst_η` (β-for-η) / `act_inst_id` (the identity
 instantiation acts as the identity).
@@ -18,7 +18,7 @@ theorem act_η_right {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
   := by
   rw [Expr.η.eq_1]
   trans
-  · exact act_ap_right σ (Φ ∷ α) (.there x) (fun i => Expr.η (.here i))
+  · exact act_right σ (Φ ∷ α) (.there x) (fun i => Expr.η (.here i))
   · rw [Expr.η.eq_1]
     congr 1
     funext i
@@ -40,32 +40,32 @@ theorem act_idOfη {C : Carrier} {Γ Δ : Shape C} [Proper Δ]
   match e with
   | .ap (α := β) x args =>
     head_cases x with z
-    case right => rw [act_ap_right]; congr 1; funext i; exact act_idOfη σ hσ hη (Φ ∷ i.arity) (args i)
+    case right => rw [act_right]; congr 1; funext i; exact act_idOfη σ hσ hη (Φ ∷ i.arity) (args i)
     case middle =>
-      rw [act_ap_middle, hσ]
+      rw [act_left_right, hσ]
       trans
       · exact hη z _ (ι₂ z)
       · congr 1; funext i; exact act_idOfη σ hσ hη (Φ ∷ i.arity) (args i)
-    case left => rw [act_ap_left]; congr 1; funext i; exact act_idOfη σ hσ hη (Φ ∷ i.arity) (args i)
+    case left => rw [act_left]; congr 1; funext i; exact act_idOfη σ hσ hη (Φ ∷ i.arity) (args i)
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg x args _
 
 mutual
 
 /-- β-for-η: instantiating the η-expansion of a non-substituted variable exposes
-the kit's binders. -/
+the kit's positions. -/
 theorem act_inst_η {C : Carrier} {Γ Ξ : Shape C} [Proper Ξ]
     {α} (ι : Subst ⌊α⌋ (Γ ⋈ Ξ)) (x : Γ ∋ α) :
   ⟦ ι ⟧ˢ (.η x) = .ap (Proper.inl Γ x) (fun i => ι (.here i))
   := by
   rw [Expr.η.eq_1]
   trans
-  · exact act_ap_left ι Shape.nil x (fun i => Expr.η (.here i))
+  · exact act_left ι Shape.nil x (fun i => Expr.η (.here i))
   · congr 1
     funext j
     rw [Expr.η.eq_1]
     trans
-    · exact act_ap_middle ι ⌊j.arity⌋ (.here j) (fun k => Expr.η (.here k))
+    · exact act_left_right ι ⌊j.arity⌋ (.here j) (fun k => Expr.η (.here k))
     · conv => rhs; rw [← act_inst_id j.arity (Γ ⋈ Ξ) Shape.nil (ι (.here j))]
       congr 1
       funext _ q

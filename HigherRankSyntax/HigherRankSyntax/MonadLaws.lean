@@ -26,7 +26,7 @@ theorem act_η {C : Carrier} {Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
   rw [Expr.η.eq_1]
   obtain ⟨y, rfl⟩ | ⟨z, _⟩ := Proper.cover Shape.nil x
   · trans
-    · exact act_ap_middle (Γ := Shape.nil) σ ⌊α⌋ y (fun i => Expr.η (.here i))
+    · exact act_left_right (Γ := Shape.nil) σ ⌊α⌋ y (fun i => Expr.η (.here i))
     · rw [Proper.inr_nil_id]
       conv => rhs; rw [← act_inst_id α Ξ Shape.nil (σ y)]
       congr 1
@@ -46,17 +46,17 @@ theorem act_comp {C : Carrier} {Γ Δ Θ Ξ : Shape C} [Proper Δ] [Proper Θ] [
   | .ap (α := β) x args =>
     head_cases x with z
     case right =>
-      simp only [act_ap_right]
+      simp only [act_right]
       congr 1; funext i; exact act_comp σ θ (Φ ∷ i.arity) (args i)
     case middle =>
-      rw [act_ap_middle, act_ap_middle, act_interchange]
+      rw [act_left_right, act_left_right, act_interchange]
       congr 1
       funext _ q
       cases q with
       | here i => exact act_comp σ θ (Φ ∷ i.arity) (args i)
       | there w => nomatch w
     case left =>
-      simp only [act_ap_left]
+      simp only [act_left]
       congr 1; funext i; exact act_comp σ θ (Φ ∷ i.arity) (args i)
 termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg x args _

@@ -29,14 +29,10 @@ pins the prefix when it would collapse (e.g. an empty prefix). -/
 macro "head_cases " x:term " with " z:ident : tactic =>
   `(tactic| refine threewayOn (fun $z => ?right) (fun $z => ?middle) (fun $z => ?left) $x)
 
-/-- `head_cases … using Γ` — variant pinning the prefix `Γ`. -/
-macro "head_cases " x:term " with " z:ident " using " pre:term : tactic =>
-  `(tactic| refine threewayOn (Γ := $pre) (fun $z => ?right) (fun $z => ?middle) (fun $z => ?left) $x)
-
 /-! ## Computation rules for `Subst.act` on a classified head -/
 
 /-- `σ.act` on a current-depth head. -/
-theorem act_ap_right {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
+theorem act_right {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
     {α} (x : Φ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
@@ -46,7 +42,7 @@ theorem act_ap_right {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
   rw [Subst.threeway_inr]
 
 /-- `σ.act` on a substitution-domain head fires the instantiation. -/
-theorem act_ap_middle {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
+theorem act_left_right {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
     {α} (y : Δ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
@@ -57,7 +53,7 @@ theorem act_ap_middle {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
   rw [Subst.threeway_inl_dom]
 
 /-- `σ.act` on a prefix head rebuilds the head. -/
-theorem act_ap_left {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
+theorem act_left {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
     {α} (z : Γ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :

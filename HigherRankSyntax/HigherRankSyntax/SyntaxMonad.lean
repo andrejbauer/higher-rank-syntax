@@ -38,7 +38,7 @@ telescopes as morphisms. -/
 instance ShapeCat (C : Carrier) : Category (PShape C) where
   Hom Γ Δ := Γ.tele →ʳ Δ.tele
   id Γ := Renaming.id Γ.tele
-  comp f g := g ∘ʳʳ f
+  comp f g := g ∘ʳ f
 
 /-- The arity-indexed family category: a wrapper around `C.Arity → Type` so we can put
 a `Category` instance on it without conflicting with the global `Type → Type` setup. -/
@@ -73,7 +73,7 @@ def T (C : Carrier) : PShape C ⥤ ArityFunc C where
 
   map_comp {Γ Δ Ξ} (ρ : Γ.tele →ʳ Δ.tele) (σ : Δ.tele →ʳ Ξ.tele) := by
     funext α e
-    show ⟦ (σ ∘ʳʳ ρ) ⇑ʳ α ⟧ʳ e = ⟦ σ ⇑ʳ α ⟧ʳ (⟦ ρ ⇑ʳ α ⟧ʳ e)
+    show ⟦ (σ ∘ʳ ρ) ⇑ʳ α ⟧ʳ e = ⟦ σ ⇑ʳ α ⟧ʳ (⟦ ρ ⇑ʳ α ⟧ʳ e)
     rw [Renaming.extend_comp]
     apply Renaming.act_comp
 

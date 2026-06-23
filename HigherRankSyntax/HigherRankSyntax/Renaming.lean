@@ -9,8 +9,8 @@ A *renaming* `Γ →ʳ Δ` is an arity-preserving slot map.
 
   - `Γ →ʳ Δ` is the type of renamings from `Γ` to `Δ`.
   - `𝟙ʳ` is the identity renaming.
-  - `g ∘ʳʳ f` is composition "g after f".
-  - `ρ ⇑ʳ α` extends a renaming through a fresh binder.
+  - `g ∘ʳ f` is composition "g after f".
+  - `ρ ⇑ʳ α` extends a renaming through a fresh position.
 -/
 
 /-- A renaming of shapes from `Γ` to `Δ`: an arity-preserving slot map. -/
@@ -34,19 +34,9 @@ def Renaming.comp
   fun ⦃_⦄ x => g (f x)
 
 @[inherit_doc Renaming.comp]
-notation:90 g:90 " ∘ʳʳ " f:91 => Renaming.comp f g
+notation:90 g:90 " ∘ʳ " f:91 => Renaming.comp f g
 
-@[ext]
-theorem Renaming.ext
-    {C : Carrier} {Γ Δ : Shape C}
-    {f g : Γ →ʳ Δ}
-    (h : ∀ α (x : Γ ∋ α), f x = g x) :
-  @f = @g
-  := by
-  funext α x
-  exact h α x
-
-/-- Extend a renaming through a fresh binder of arity `β`. -/
+/-- Extend a renaming through a fresh position of arity `β`. -/
 def Renaming.extend
     {C : Carrier} {Γ Δ : Shape C}
     (f : Γ →ʳ Δ) (β : C.Arity) :
@@ -60,7 +50,7 @@ infixl:95 " ⇑ʳ " => Renaming.extend
 @[simp]
 theorem Renaming.extend_here
   {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ)
-    {β : C.Arity} (i : C.Binder β) :
+    {β : C.Arity} (i : C.Position β) :
   (f ⇑ʳ β) (.here i) = .here i
   := rfl
 
@@ -90,7 +80,7 @@ theorem Renaming.extend_id
 theorem Renaming.extend_comp
     {C : Carrier} {Γ Δ Ξ : Shape C}
     (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ) (β : C.Arity) :
-  (g ∘ʳʳ f) ⇑ʳ β = (g ⇑ʳ β) ∘ʳʳ (f ⇑ʳ β)
+  (g ∘ʳ f) ⇑ʳ β = (g ⇑ʳ β) ∘ʳ (f ⇑ʳ β)
   := by
   ext α x
   cases x with

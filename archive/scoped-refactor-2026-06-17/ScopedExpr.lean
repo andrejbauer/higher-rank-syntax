@@ -141,7 +141,7 @@ theorem renameFree_id {C : Carrier} {Γ τ : Shape C}
 
 theorem renameFree_comp {C : Carrier} {Γ Δ Ξ τ : Shape C}
     (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ξ) (e : ScopedExpr Γ τ) :
-    renameFree (σ ∘ʳʳ ρ) e = renameFree σ (renameFree ρ e) := by
+    renameFree (σ ∘ʳ ρ) e = renameFree σ (renameFree ρ e) := by
   induction e generalizing Δ Ξ with
   | ap head args ih =>
       cases head <;> simp [renameFree, ScopedHead.renameFree]
@@ -165,7 +165,7 @@ theorem renameLocal_id {C : Carrier} {Γ τ : Shape C}
 
 theorem renameLocal_comp {C : Carrier} {Γ τ ν ξ : Shape C}
     (ρ : τ →ʳ ν) (σ : ν →ʳ ξ) (e : ScopedExpr Γ τ) :
-    renameLocal (σ ∘ʳʳ ρ) e =
+    renameLocal (σ ∘ʳ ρ) e =
       renameLocal σ (renameLocal ρ e) := by
   induction e generalizing ν ξ with
   | ap head args ih =>
