@@ -115,10 +115,10 @@ theorem act_interchange.subst {C : Carrier} {Γ Λ Θ Ψ Ω Φ Χ : Shape C}
 termination_by
   (ListArity.Pair.mk ⟨Ψ.toList⟩ ⟨Λ.toList⟩, (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
-  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
-  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
-  · exact Prod.Lex.left _ _ (ListArity.Pair.lt_right (ListArity.Lt.of_slot z))
-  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact .right _ (.of_arg x args _)
+  · exact .right _ (.of_arg x args _)
+  · exact .left _ _ (ListArity.Pair.lt_right (.of_slot z))
+  · exact .right _ (.of_arg x args _)
 
 /-- Acting by `σ` commutes with instantiating `κ` (pushed forward along `σ`). -/
 theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
@@ -223,14 +223,14 @@ theorem act_interchange.aux {C : Carrier} {Γ Δ Ξ Θ Ψ Ω : Shape C}
 termination_by
   (ListArity.Pair.mk ⟨Δ.toList⟩ ⟨Ψ.toList⟩, (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ))
 decreasing_by
-  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
-  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
-  · exact Prod.Lex.left _ _ (ListArity.Pair.lt_right (ListArity.Lt.of_slot z))
-  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
-  · exact .right _ (.of_arg x args _) -- very strange, **only this** goal must be written like this
-  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
-  · exact Prod.Lex.left _ _ (ListArity.Pair.lt_swap (ListArity.Lt.of_slot w))
-  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact .right _ (.of_arg x args _)
+  · exact .right _ (.of_arg x args _)
+  · exact .left _ _ (ListArity.Pair.lt_right (.of_slot z))
+  · exact .right _ (.of_arg x args _)
+  · exact .right _ (.of_arg x args _)
+  · exact .right _ (.of_arg x args _)
+  · exact .left _ _ (ListArity.Pair.lt_swap (.of_slot w))
+  · exact .right _ (.of_arg x args _)
 
 end
 
