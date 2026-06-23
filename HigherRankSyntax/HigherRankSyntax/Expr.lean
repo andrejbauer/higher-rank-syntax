@@ -12,10 +12,8 @@ indexed by `C.Position α`, each child living in `Γ` extended by the position's
 
 /-- Expressions in shape `Γ` over a carrier `C`. -/
 inductive Expr {C : Carrier} : Shape C → Type where
-  /-- An application of a head slot `p : Γ ∋ α` to a dependent family of children, one
-      per position of `α`. -/
-  | ap : {Γ : Shape C} → {α : C.Arity} → Γ ∋ α →
-         ((i : C.Position α) → Expr (Γ ∷ i.arity)) → Expr Γ
+  /-- An application of a head slot `x : Γ ∋ α` to a dependent family of children, one per position of `α`. -/
+  | ap : {Γ : Shape C} → {α : C.Arity} → (x : Γ ∋ α) → ((i : C.Position α) → Expr (Γ ∷ i.arity)) → Expr Γ
 
 /-- The argument family of an application headed by an `α`-slot in context `Γ`. -/
 abbrev Expr.Args {C : Carrier} (Γ : Shape C) (α : C.Arity) :=
@@ -23,24 +21,21 @@ abbrev Expr.Args {C : Carrier} (Γ : Shape C) (α : C.Arity) :=
 
 /-- `Expr.Subterm e' e` holds when `e = ap p args` and `e'` is one of its arguments
 `args j`. -/
-inductive Expr.Subterm {C : Carrier} :
-    (Σ Γ : Shape C, Expr Γ) → (Σ Γ : Shape C, Expr Γ) → Prop where
-  | of_arg {Γ : Shape C} {α : C.Arity} (p : Γ ∋ α)
-      (args : Expr.Args Γ α)
-      (j : C.Position α) :
-      Expr.Subterm ⟨Γ ∷ j.arity, args j⟩ ⟨Γ, Expr.ap p args⟩
+inductive Expr.Subterm {C : Carrier} : (Σ Γ : Shape C, Expr Γ) → (Σ Γ : Shape C, Expr Γ) → Prop where
+  | of_arg {Γ : Shape C} {α : C.Arity} (x : Γ ∋ α) (args : Args Γ α) (j : C.Position α) :
+      Subterm ⟨Γ ∷ j.arity, args j⟩ ⟨Γ, ap x args⟩
 
 theorem Expr.Subterm.wf {C : Carrier} : WellFounded (@Expr.Subterm C) := by
-  refine ⟨fun ⟨Γ, e⟩ => ?_⟩
+  constructor
+  intro ⟨Γ, e⟩
   induction e with
   | ap p args ih =>
-    refine Acc.intro _ ?_
+    apply Acc.intro
     rintro ⟨_, _⟩ h
     cases h
     exact ih _
 
-instance Expr.Subterm.wellFoundedRelation {C : Carrier} :
-    WellFoundedRelation (Σ Γ : Shape C, Expr Γ) where
+instance Expr.Subterm.wellFoundedRelation {C : Carrier} : WellFoundedRelation (Σ Γ : Shape C, Expr Γ) where
   rel := @Expr.Subterm C
   wf := Expr.Subterm.wf
 
@@ -58,22 +53,19 @@ def Renaming.act {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ) : Expr Γ �
 @[inherit_doc Renaming.act]
 notation:60 "⟦" ρ "⟧ʳ " e:61 => Renaming.act ρ e
 
-@[simp]
 theorem Renaming.act_ap {C : Carrier} {Γ Δ : Shape C} (ρ : Γ →ʳ Δ)
     {α : C.Arity} (x : Γ ∋ α)
     (args : Expr.Args Γ α) :
   ⟦ ρ ⟧ʳ (.ap x args) = .ap (ρ x) (fun i => ⟦ ρ ⇑ʳ i.arity ⟧ʳ (args i))
   := rfl
 
-@[simp]
 theorem Renaming.act_id {C : Carrier} {Γ : Shape C} :
   ∀ (e : Expr Γ), ⟦ 𝟙ʳ Γ ⟧ʳ e = e
   | .ap x args => by
-    simp
+    simp [act_ap]
     funext i
     exact Renaming.act_id (args i)
 
-@[simp]
 theorem Renaming.act_comp
     {C : Carrier} {Γ Δ Ξ : Shape C}
     (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ξ) :

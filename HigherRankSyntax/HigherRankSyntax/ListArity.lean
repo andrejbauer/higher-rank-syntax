@@ -31,7 +31,7 @@ private theorem ListArity.Lt.acc_singleton {C : Carrier} (α : C.Arity)
     Acc (ListArity.Lt (C := C)) [α] := by
   induction hα with
   | intro α _ ih =>
-      refine ⟨_, ?_⟩
+      constructor
       intro αs' hαs'
       cases hαs' with
       | step αⱼ h_in β h_sub =>
@@ -40,11 +40,12 @@ private theorem ListArity.Lt.acc_singleton {C : Carrier} (α : C.Arity)
           | tail _ h_nil => cases h_nil
 
 private theorem ListArity.Lt.wf {C : Carrier} : WellFounded (ListArity.Lt (C := C)) := by
-  refine ⟨fun αs => ?_⟩
-  refine ⟨_, ?_⟩
+  constructor
+  intro αs
+  constructor
   intro αs' hαs'
   cases hαs' with
-  | step _ _ β _ => exact ListArity.Lt.acc_singleton β (C.subWf.apply β)
+  | step _ _ β _ => apply ListArity.Lt.acc_singleton ; apply C.subWf.apply
 
 /-- A slot of `αs` descends to the singleton list of its own arity. -/
 theorem ListArity.Lt.of_slot {C : Carrier} {αs : List C.Arity} {α : C.Arity}
