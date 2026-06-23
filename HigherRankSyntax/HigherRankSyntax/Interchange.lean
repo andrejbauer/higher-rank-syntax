@@ -227,7 +227,7 @@ decreasing_by
   · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
   · exact Prod.Lex.left _ _ (ListArity.Pair.lt_right (ListArity.Lt.of_slot z))
   · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
-  · sorry
+  · exact .right _ (.of_arg x args _) -- very strange, **only this** goal must be written like this
   · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
   · exact Prod.Lex.left _ _ (ListArity.Pair.lt_swap (ListArity.Lt.of_slot w))
   · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)

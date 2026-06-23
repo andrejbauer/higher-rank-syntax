@@ -1,41 +1,41 @@
 # Handoff
 
-Picking up the termination of `act_interchange` in
-`HigherRankSyntax/HigherRankSyntax/Interchange.lean`.
+🎉 The substitution commuting square is **done**. `act_interchange` and its
+machinery in `HigherRankSyntax/HigherRankSyntax/Interchange.lean` are fully
+proven, termination and all — no `sorry`, no errors.
 
 ## Repo state
 
-- Branch: `diamond-new`. Most recent commit: `9fafd8e`.
-- Does NOT build clean: `act_interchange.aux`'s `decreasing_by` has one
-  failing bullet (line ~230), left in place at the stuck point. Everything
-  else in the file is complete and error-free.
-- `lake build` currently hits a macOS permission error
-  (`couldn't find value of ELAN_HOME` / `Operation not permitted`) — that is
-  a TCC / Full Disk Access issue, NOT a Lean error. Do not misread it. The
-  Lean LSP (`lean_diagnostic_messages`, `lean_goal`) works and is the way to
-  see errors/goals.
+- Branch: `diamond-new`.
+- `lake build HigherRankSyntax` is green. `Interchange` builds `✔` (no
+  `sorry`, no `⚠`).
+- If `lake build` ever dies with `couldn't find value of ELAN_HOME` /
+  `Operation not permitted`, that is a macOS TCC / Full Disk Access issue, NOT
+  a Lean error — restart resolves it. The Lean LSP (`lean_diagnostic_messages`,
+  `lean_goal`) is the fast way to see errors/goals, but it can show stale
+  goals mid-elaboration in the slow `mutual` block; trust a full `lake build`.
 
-## What is done
+## What got built
 
-- `act_ap_depth` (Interchange.lean): proven (no longer `sorry`).
+- `act_ap_depth`: proven.
 - `act_interchange.aux`: all five head branches proven; mutual with the
-  companion `act_interchange.subst`, which is fully proven.
-- `act_interchange` wrapper: proven.
-- Termination measures extracted into a new file `ListArity.lean`:
-  - `ListArity C` (was `DomMeasure`), `ListArity.Lt` (was `DomLt`, with
-    `.step`/`.acc_singleton`/`.wf`), `SlotAt.subArity` (was `subWitness`),
+  companion `act_interchange.subst`, also fully proven.
+- `act_interchange` wrapper: proven (the `Θ = nil`, `Φ = nil` instance; the
+  consumer is `act_comp`).
+- New file `ListArity.lean` holds the termination measures:
+  - `ListArity C` (was `DomMeasure`), `ListArity.Lt` (was `DomLt`; `.step`,
+    `.acc_singleton`, `.wf`), `SlotAt.subArity` (was `subWitness`),
     `ListArity.Lt.of_slot` (slot → singleton descent).
-  - `ListArity.Pair C`: opaque unordered pair of domains (`structure`
-    wrapping `Sym2 (ListArity C)`, constructor `ofSym2`), well-founded via
+  - `ListArity.Pair C`: opaque unordered pair of domains (`structure` over
+    `Sym2 (ListArity C)`, constructor `ofSym2`), well-founded via
     `Sym2.GameAdd` + `WellFounded.sym2_gameAdd`. API: `mk`, `lt_left`,
-    `lt_right`, `lt_swap`. **`Sym2` is named only inside this file** — a
-    future switch to `Multiset.IsDershowitzMannaLT` is confined here.
-- `Subst.lean`: imports `ListArity`; `Subst.act`'s termination uses the
-  relocated names. Greek cleanup done (`pre/dom/cod → Γ/Δ/Ξ`, depth `τ → Φ`);
-  `LeftMiddleRight` constructor comments corrected (left = `Γ` prefix,
-  middle = `Δ` domain, right = `Ξ` depth).
+    `lt_right`, `lt_swap`. **`Sym2` appears only in this file** — switching to
+    `Multiset.IsDershowitzMannaLT` later is confined here.
+- `Subst.lean`: imports `ListArity`; Greek cleanup (`pre/dom/cod → Γ/Δ/Ξ`,
+  depth `τ → Φ`); `LeftMiddleRight` constructor comments corrected
+  (left = `Γ` prefix, middle = `Δ` domain, right = `Ξ` depth).
 
-## The measure
+## The termination measure
 
 Both mutual functions use the lexicographic measure
 `(ListArity.Pair.mk ⟨A.toList⟩ ⟨B.toList⟩, (⟨_, e⟩ : Σ Γ, Expr Γ))`:
@@ -45,46 +45,36 @@ Both mutual functions use the lexicographic measure
 Each firing replaces one domain by the fired slot's singleton `⌊β⌋`
 (`ListArity.Lt`-smaller) and keeps the other; the action↔instantiation role
 swap at `aux.left→middle` is absorbed by the unordered `Sym2`. Per-argument
-recursions keep the pair and shrink the `Expr`.
+recursions keep the pair and shrink the `Expr` (`Expr.Subterm`).
 
-`decreasing_by` proof shapes:
-- per-argument: `exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)`
-- κ fires (slot `z`): `exact Prod.Lex.left _ _ (ListArity.Pair.lt_right (ListArity.Lt.of_slot z))`
-- σ fires (slot `w`, swap): `exact Prod.Lex.left _ _ (ListArity.Pair.lt_swap (ListArity.Lt.of_slot w))`
+`decreasing_by` is written as one `·` bullet per goal (no `all_goals`/`first`).
+Bullet order is NOT source order — read each goal off the LSP/build. Shapes:
+- per-argument: `exact .right _ (.of_arg x args _)`
+- κ fires (slot `z`): `exact .left _ _ (ListArity.Pair.lt_right (.of_slot z))`
+- σ fires (slot `w`, swap): `exact .left _ _ (ListArity.Pair.lt_swap (.of_slot w))`
 
-`subst`'s `decreasing_by` is complete as four bullets in the order
-`[per-arg, per-arg, κ-fire, per-arg]` (NOT source order).
+## Lesson: the `Eq.Prod` / `lean.invalidField` trap
 
-## The open blocker (`aux.decreasing_by`)
-
-`aux` produces 8 goals: per-argument descents, the κ/σ firing descents, and
-at least one **type-coherence** goal
-`Expr (Γ⋈Ξ⋈(Θ⋈Ω⋈Φ)) = Expr (Γ⋈Ξ⋈Θ⋈Ω⋈Φ)` (the dependent `Expr` index
-re-associates at the σ-fire cross-call to `subst`; defeq by `⋈` associativity).
-
-With positional `·` bullets the goals are interdependent: bullet 5 (line 230)
-presents as a per-argument goal when it holds `rfl`, but as the coherence
-equality when it holds `Prod.Lex.right` — i.e. whether/how an earlier bullet
-closes shifts which goal a later bullet faces. So positional bullets cannot
-stably hit each goal. This is exactly why `Subst.act` and the removed Codex
-code used an order-independent `first | …` combinator.
-
-Unresolved design point for Andrej: bullets (his stated preference, but they
-do not stably target these interdependent goals) vs. one order-independent
-closer (no `all_goals`/`try` — just `first` over the handful of clean
-closers: the two descents and the coherence `rfl`/`congrArg Expr rfl`).
+Writing the fully-qualified `Prod.Lex.right` / `Expr.Subterm.of_arg` made Lean,
+when the bullet's expected type momentarily appeared as a coherence equality
+`Expr X = Expr Y`, fall into field-notation resolution — projecting field
+`Prod` off a term of the `Eq`-headed type, i.e. looking up `Eq.Prod` →
+`Invalid field 'Prod'`. **Fix: leading-dot notation** (`.right`, `.left`,
+`.of_arg`, `.of_slot`), which resolves the constructor purely from the expected
+type's namespace and never tries the spurious field projection. The only names
+that must stay qualified are `ListArity.Pair.lt_right`/`lt_swap` — their result
+type is `Sym2.GameAdd`-headed, so `.lt_right` would look for
+`Sym2.GameAdd.lt_right`.
 
 ## Working rules (project `CLAUDE.md` is canonical)
 
 - Idiomatic, human Lean. No `show`/`change`; exploit defeq via
-  `convert`/`exact`/`apply`/`calc`. Bullets per subgoal; the user dislikes
-  `all_goals first` and `refine ?_ … obtain … exact step _ _` scaffolding.
+  `convert`/`exact`/`apply`/`calc`. One `·` bullet per subgoal; no
+  `all_goals first`, no `refine ?_ … obtain … exact step _ _` scaffolding.
 - `Proper` mismatches → `Subsingleton.elim`; act-depth mismatches →
-  `Subst.act_irrel`.
-- `rw` does not see through `Shape.nil ⋈ X = X` or `⋈` associativity; use
-  `convert`.
+  `Subst.act_irrel`. `rw` does not see through `Shape.nil ⋈ X = X` or `⋈`
+  associativity; use `convert`.
 - Never copy from `Equations.lean`/`Equations2.lean`.
-- ASK rather than work around. Report at the first failure; do not iterate
-  hacks. Never disable the sandbox. Leave failing attempts in place at the
-  stuck point — do NOT bury them under `sorry`.
+- ASK rather than work around. Report at the first failure; never disable the
+  sandbox. Leave failing attempts in place — do NOT bury them under `sorry`.
 - Commits need explicit approval; never push without being asked.
