@@ -89,6 +89,9 @@ class Proper {C : Carrier} (Γ : Shape C) : Type 1 where
   inl_tag : ∀ (Δ : Shape C) {α : C.Arity} (y : Δ ∋ α),
     (inl Δ y).tag = y.tag
 
+-- plan: dokazat (narest 'instance'),
+-- da je vsak Tele (List Arity) proper?
+
 namespace Proper
 
 /-- Two `Proper` witnesses on the same shape agree once their data fields do;

@@ -14,7 +14,7 @@ principle.
 -/
 
 /-- A slot of a list of arities with its arity tracked as a type index. -/
-inductive ListSlotAt {C : Carrier} : List C.Arity → C.Arity → Type where
+inductive ListSlotAt {C : Carrier} : List C.Arity → List C.Arity → Type where
   /-- A position introduced by the topmost extension at its position's arity. -/
   | here  : {β : C.Arity} → {rest : List C.Arity} → (i : C.Position β) →
             ListSlotAt (β :: rest) i.arity

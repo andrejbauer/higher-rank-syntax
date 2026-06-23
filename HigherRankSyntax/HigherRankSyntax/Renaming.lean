@@ -1,4 +1,5 @@
-import HigherRankSyntax.Shape
+import HigherRankSyntax.Carrier
+-- import HigherRankSyntax.ProperTele
 
 /-!
 # Renamings of shapes
@@ -14,13 +15,14 @@ A *renaming* `Γ →ʳ Δ` is an arity-preserving slot map.
 -/
 
 /-- A renaming of shapes from `Γ` to `Δ`: an arity-preserving slot map. -/
-abbrev Renaming {C : Carrier} (Γ Δ : Shape C) := ∀ ⦃ α ⦄, Γ ∋ α → Δ ∋ α
+abbrev Renaming {A : Type} {C : Carrier A} (Γ Δ : C.Arity) :=
+  ∀ ⦃ α ⦄, Γ ∋ α → Δ ∋ α
 
 @[inherit_doc Renaming]
 infixr:25 " →ʳ " => Renaming
 
 /-- The identity renaming on `Γ`. -/
-def Renaming.id {C : Carrier} (Γ : Shape C) : Γ →ʳ Γ :=
+def Renaming.id {A : Type} {C : Carrier A} (Γ : C.Arity) : Γ →ʳ Γ :=
   fun ⦃_⦄ x => x
 
 @[inherit_doc Renaming.id]
@@ -28,7 +30,7 @@ notation "𝟙ʳ" => Renaming.id
 
 /-- Composition of renamings: `comp f g` sends a slot through `f`, then through `g`. -/
 def Renaming.comp
-    {C : Carrier} {Γ Δ Ξ : Shape C}
+    {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ)
   : Γ →ʳ Ξ :=
   fun ⦃_⦄ x => g (f x)
@@ -37,52 +39,56 @@ def Renaming.comp
 notation:90 g:90 " ∘ʳ " f:91 => Renaming.comp f g
 
 /-- Extend a renaming through a fresh position of arity `β`. -/
+@[reducible]
 def Renaming.extend
-    {C : Carrier} {Γ Δ : Shape C}
-    (f : Γ →ʳ Δ) (β : C.Arity) :
-  Γ ∷ β →ʳ Δ ∷ β
-  | _, .here i  => .here i
-  | _, .there x => .there (f x)
+    {A : Type} {C : Carrier A} {Γ Δ : C.Arity}
+    (f : Γ →ʳ Δ) (Ξ : C.Arity) :
+  Γ ⋈ Ξ →ʳ Δ ⋈ Ξ :=
+  fun ⦃ α ⦄ x => C.copair _ _ (Δ ⋈ Ξ ∋ α) x
+    (fun y => C.inl (f y))
+    (fun z => C.inr z)
 
 @[inherit_doc Renaming.extend]
 infixl:95 " ⇑ʳ " => Renaming.extend
 
 @[simp]
-theorem Renaming.extend_here
-  {C : Carrier} {Γ Δ : Shape C} (f : Γ →ʳ Δ)
-    {β : C.Arity} (i : C.Position β) :
-  (f ⇑ʳ β) (.here i) = .here i
-  := rfl
+theorem Renaming.extend_inl
+    {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    (f : Γ →ʳ Δ) {α : C.Arity} (i : Γ ∋ α) :
+  (f ⇑ʳ Ξ) (C.inl i) = C.inl (f i)
+  := C.classify_inr _ _ _ i (fun y => C.inl (f y)) (fun z => C.inr z)
 
 @[simp]
-theorem Renaming.extend_there
-    {C : Carrier} {Γ Δ : Shape C}
-    (f : Γ →ʳ Δ)
-    {β α : C.Arity} (x : Γ ∋ α) :
-  (f ⇑ʳ β) (.there x) = .there (f x)
-  := rfl
+theorem Renaming.extend_inr
+    {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    (f : Γ →ʳ Δ) {α : C.Arity} (i : Ξ ∋ α) :
+  (f ⇑ʳ Ξ) (C.inr i) = C.inr i
+  := C.classify_inl _ _ _ i (fun y => C.inl (f y)) (fun z => C.inr z)
 
 @[simp]
 theorem Renaming.id_apply
-    {C : Carrier} {Γ : Shape C} {α : C.Arity}
+    {A : Type} {C : Carrier A} {Γ α : C.Arity}
     (x : Γ ∋ α) :
   𝟙ʳ Γ x = x
   := rfl
 
 @[simp]
 theorem Renaming.extend_id
-    {C : Carrier} (Γ : Shape C) (β : C.Arity) :
-  𝟙ʳ Γ ⇑ʳ β = 𝟙ʳ (Γ ∷ β)
+    {A : Type} {C : Carrier A} (Γ Δ : C.Arity) :
+  𝟙ʳ Γ ⇑ʳ Δ = 𝟙ʳ (Γ ⋈ Δ)
   := by
-  ext α x ; cases x <;> rfl
+  funext α x
+  rcases C.cover Γ Δ x with ⟨y, rfl⟩ | ⟨y, rfl⟩
+  · simp [Renaming.id]
+  · simp [Renaming.id]
 
 @[simp]
 theorem Renaming.extend_comp
-    {C : Carrier} {Γ Δ Ξ : Shape C}
-    (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ) (β : C.Arity) :
-  (g ∘ʳ f) ⇑ʳ β = (g ⇑ʳ β) ∘ʳ (f ⇑ʳ β)
+    {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ) (Ω : C.Arity) :
+  (g ∘ʳ f) ⇑ʳ Ω = (g ⇑ʳ Ω) ∘ʳ (f ⇑ʳ Ω)
   := by
-  ext α x
-  cases x with
-  | here _  => rfl
-  | there _ => rfl
+  funext α x
+  rcases C.cover Γ Ω x with ⟨y, rfl⟩ | ⟨y, rfl⟩
+  · simp [Renaming.comp]
+  · simp [Renaming.comp]

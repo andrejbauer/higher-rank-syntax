@@ -45,41 +45,41 @@ def comp {α : Type} (t s : Tele α) : Tele α where
 @[inherit_doc Tele.comp]
 infixl:90 " ∘ᵗ " => Tele.comp
 
-/-- The "cons" telescope: `xs ↦ a :: xs`.  Underlying list: `[a]`. -/
-def cons {α : Type} (a : α) : Tele α where
-  act := fun xs => a :: xs
-  isAppend := by rfl
+-- /-- The "cons" telescope: `xs ↦ a :: xs`.  Underlying list: `[a]`. -/
+-- def cons {α : Type} (a : α) : Tele α where
+--   act := fun xs => a :: xs
+--   isAppend := by rfl
 
 /-- The underlying list of a telescope: `t.toList = t []`. -/
 def toList {α : Type} (t : Tele α) : List α := t []
 
-/-- The "tele" map from `List α` to `Tele α`, defined recursively so that
-`ofList (β :: rest) = Tele.cons β ∘ᵗ ofList rest` is `rfl`. -/
-def ofList {α : Type} : List α → Tele α
-  | []        => Tele.id _
-  | β :: rest => Tele.cons β ∘ᵗ ofList rest
+-- /-- The "tele" map from `List α` to `Tele α`, defined recursively so that
+-- `ofList (β :: rest) = Tele.cons β ∘ᵗ ofList rest` is `rfl`. -/
+-- def ofList {α : Type} : List α → Tele α
+--   | []        => Tele.id _
+--   | β :: rest => Tele.cons β ∘ᵗ ofList rest
 
 /-! ### Reductions -/
 
 @[simp] theorem id_apply {α : Type} (xs : List α) : (Tele.id α) xs = xs := rfl
 
-@[simp] theorem cons_apply {α : Type} (a : α) (xs : List α) :
-    (Tele.cons a) xs = a :: xs := rfl
+-- @[simp] theorem cons_apply {α : Type} (a : α) (xs : List α) :
+--     (Tele.cons a) xs = a :: xs := rfl
 
 @[simp] theorem comp_apply {α : Type} (t s : Tele α) (xs : List α) :
     (t ∘ᵗ s) xs = t (s xs) := rfl
 
 @[simp] theorem id_toList {α : Type} : (Tele.id α).toList = [] := rfl
 
-@[simp] theorem cons_toList {α : Type} (a : α) : (Tele.cons a).toList = [a] := rfl
+-- @[simp] theorem cons_toList {α : Type} (a : α) : (Tele.cons a).toList = [a] := rfl
 
-@[simp] theorem cons_comp_toList {α : Type} (a : α) (t : Tele α) :
-    (Tele.cons a ∘ᵗ t).toList = a :: t.toList := rfl
+-- @[simp] theorem cons_comp_toList {α : Type} (a : α) (t : Tele α) :
+--     (Tele.cons a ∘ᵗ t).toList = a :: t.toList := rfl
 
-@[simp] theorem ofList_nil {α : Type} : (ofList ([] : List α)) = Tele.id _ := rfl
+-- @[simp] theorem ofList_nil {α : Type} : (ofList ([] : List α)) = Tele.id _ := rfl
 
-@[simp] theorem ofList_cons {α : Type} (β : α) (rest : List α) :
-    ofList (β :: rest) = Tele.cons β ∘ᵗ ofList rest := rfl
+-- @[simp] theorem ofList_cons {α : Type} (β : α) (rest : List α) :
+--     ofList (β :: rest) = Tele.cons β ∘ᵗ ofList rest := rfl
 
 /-! ### Monoid laws -/
 
@@ -92,11 +92,11 @@ def ofList {α : Type} : List α → Tele α
 
 /-! ### Round trip -/
 
-@[simp] theorem ofList_toList {α : Type} : ∀ (lst : List α), (ofList lst).toList = lst
-  | [] => rfl
-  | β :: rest => by
-      show (Tele.cons β ∘ᵗ ofList rest).toList = β :: rest
-      show β :: (ofList rest).toList = β :: rest
-      rw [ofList_toList rest]
+-- @[simp] theorem ofList_toList {α : Type} : ∀ (lst : List α), (ofList lst).toList = lst
+--   | [] => rfl
+--   | β :: rest => by
+--       show (Tele.cons β ∘ᵗ ofList rest).toList = β :: rest
+--       show β :: (ofList rest).toList = β :: rest
+--       rw [ofList_toList rest]
 
 end Tele

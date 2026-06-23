@@ -1,4 +1,4 @@
-import HigherRankSyntax.Shape
+import HigherRankSyntax.Carrier
 import HigherRankSyntax.Renaming
 
 /-!
@@ -11,9 +11,9 @@ indexed by `C.Position α`, each child living in `Γ` extended by the position's
 
 
 /-- Expressions in shape `Γ` over a carrier `C`. -/
-inductive Expr {C : Carrier} : Shape C → Type where
+inductive Expr {A : Type} {C : Carrier A} : C.Arity → Type where
   /-- An application of a head slot `x : Γ ∋ α` to a dependent family of children, one per position of `α`. -/
-  | ap : {Γ : Shape C} → {α : C.Arity} → (x : Γ ∋ α) → ((i : C.Position α) → Expr (Γ ∷ i.arity)) → Expr Γ
+  | ap : {Γ α : C.Arity} → (x : Γ ∋ α) → (∀ {Δ} (_i : α ∋ Δ) , Expr (Γ ⋈ Δ)) → Expr Γ
 
 /-- The argument family of an application headed by an `α`-slot in context `Γ`. -/
 abbrev Expr.Args {C : Carrier} (Γ : Shape C) (α : C.Arity) :=
