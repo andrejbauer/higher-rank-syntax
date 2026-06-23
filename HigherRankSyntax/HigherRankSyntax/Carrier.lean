@@ -23,12 +23,12 @@ structure Carrier (A : Type) where
   /-- Cover: every slot of a product comes from the right or left injection. -/
   cover : ∀ (Γ Δ : Arity) {α : Arity} (p : slotAt (Γ * Δ) α),
     (∃ x : slotAt Δ α, p = inr x) ∨ (∃ y : slotAt Γ α, p = inl y)
-  subWf : WellFounded (fun Γ Δ => Nonempty (slotAt Γ Δ))
+  subWf : WellFounded (fun Δ Γ => Nonempty (slotAt Γ Δ))
 
 
 /-- One-step sub-arity relation: `α' ≺ α` when `α'` is the sub-arity of some position of
 `α`.  Well-founded by `subWf`. -/
-abbrev Carrier.Sub {A : Type} {C : Carrier A} (Γ Δ : C.Arity) : Prop :=
+abbrev Carrier.Sub {A : Type} {C : Carrier A} (Δ Γ : C.Arity) : Prop :=
   Nonempty (C.slotAt Γ Δ)
 
 /-- The carrier's sub-arity well-founded relation, packaged as a `WellFoundedRelation`
