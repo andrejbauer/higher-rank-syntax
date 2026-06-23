@@ -11,11 +11,11 @@ computation rules each branch uses to fire `Subst.act`.
 /-- Slot eliminator for `Γ ⋈ Δ ⋈ Ξ`: split a head slot by its origin — current
 depth `Ξ` (`right`), substitution domain `Δ` (`middle`), or prefix `Γ` (`left`). -/
 @[elab_as_elim]
-theorem threewayOn {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
+theorem threewayOn {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     {α : C.Arity} {motive : Γ ⋈ Δ ⋈ Ξ ∋ α → Prop}
-    (right : (z : Ξ ∋ α) → motive (ι₂ z))
-    (middle : (z : Δ ∋ α) → motive (ι₁ (ι₂ z)))
-    (left : (z : Γ ∋ α) → motive (ι₁ (ι₁ z)))
+    (right : (z : Ξ ∋ α) → motive (C.inr z))
+    (middle : (z : Δ ∋ α) → motive (C.inl (C.inr z)))
+    (left : (z : Γ ∋ α) → motive (C.inl (C.inl z)))
     (x : Γ ⋈ Δ ⋈ Ξ ∋ α) : motive x := by
   obtain ⟨y, rfl⟩ := Subst.isReinject x
   cases y with
@@ -32,33 +32,33 @@ macro "head_cases " x:term " with " z:ident : tactic =>
 /-! ## Computation rules for `Subst.act` on a classified head -/
 
 /-- `σ.act` on a current-depth head. -/
-theorem act_right {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
+theorem act_right {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity)
     {α} (x : Φ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
-  σ.act Φ (.ap (ι₂ x) args) = .ap (ι₂ x) (fun j => σ.act (Φ ∷ j.arity) (args j))
+  σ.act Φ (.ap (C.inr x) args) = .ap (C.inr x) (fun {_} j => σ.act (Φ ⋈ _) (args j))
   := by
   conv => lhs; unfold Subst.act
   rw [Subst.threeway_inr]
 
 /-- `σ.act` on a substitution-domain head fires the instantiation. -/
-theorem act_left_right {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
+theorem act_left_right {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity)
     {α} (y : Δ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
-  σ.act Φ (.ap (ι₁ (ι₂ y)) args)
-    = ⟦ Subst.fromArgs α (Γ ⋈ Ξ ⋈ Φ) (fun i => σ.act (Φ ∷ i.arity) (args i)) ⟧ˢ (σ y)
+  σ.act Φ (.ap (C.inl (C.inr y)) args)
+    = ⟦ Subst.fromArgs (Γ ⋈ Ξ ⋈ Φ) α (fun {_} i => σ.act (Φ ⋈ _) (args i)) ⟧ˢ (σ y)
   := by
   conv => lhs; unfold Subst.act
   rw [Subst.threeway_inl_dom]
 
 /-- `σ.act` on a prefix head rebuilds the head. -/
-theorem act_left {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
+theorem act_left {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity)
     {α} (z : Γ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
-  σ.act Φ (.ap (ι₁ (ι₁ z)) args)
-    = .ap (ι₁ (ι₁ z)) (fun j => σ.act (Φ ∷ j.arity) (args j))
+  σ.act Φ (.ap (C.inl (C.inl z)) args)
+    = .ap (C.inl (C.inl z)) (fun {_} j => σ.act (Φ ⋈ _) (args j))
   := by
   conv => lhs; unfold Subst.act
   rw [Subst.threeway_inl_pre]
