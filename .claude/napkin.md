@@ -17,13 +17,15 @@
    Do instead: exclude `*.agdai` from broad searches and file lists.
 
 ## Domain Behavior Guardrails
-1. **[2026-06-22] Current interchange theorem is `act_interchange.aux`**
+1. **[2026-06-24] Carrier products need reassociation and unit laws**
+   Do instead: when porting old `ProperTele` proofs, use `Carrier.inr_inl`, `Carrier.inr_inr`, `Carrier.unit_right`, and `Carrier.unit_left`; add `Expr.η` type ascriptions when Lean guesses the wrong product spine.
+2. **[2026-06-22] Current interchange theorem is `act_interchange.aux`**
    Do instead: map old `diamondAt` regions to new variables as `P,D,D',T,S,S',U = Γ,Δ,Ξ,Θ,Ψ,Ω,Φ`; finish current active cases in `Interchange.lean`.
-2. **[2026-06-18] `Subst` is now full-context**
+3. **[2026-06-18] `Subst` is now full-context**
    Do instead: translate old prefix substitutions `Subst C pre dom cod` as `Subst C dom (pre ⋈ cod)`; when acting at the monad level use `(Γ := Shape.nil)` explicitly.
-3. **[2026-05-25] Tele unit proofs need one-binder instantiation bundle**
+4. **[2026-05-25] Tele unit proofs need one-binder instantiation bundle**
    Do instead: prove beta-for-eta and identity instantiation together by arity; keep expression recursion in a separate fixed-shape helper like `Subst.act_inst.idOf`.
-4. **[2026-05-19] `inst.aux` carries target renaming**
+5. **[2026-05-19] `inst.aux` carries target renaming**
    Do instead: in `lift.aux`'s Γ-slot branch, call `inst.aux q.arity (Renaming.weakenList Δ τ) new_args [] (σ q)`; do not pre-weaken `σ q`.
 
 ## User Directives

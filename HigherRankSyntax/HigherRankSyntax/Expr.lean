@@ -13,11 +13,11 @@ indexed by the slots of `α`, each child living in `Γ` extended by that slot's 
 /-- Expressions in shape `Γ` over a carrier `C`. -/
 inductive Expr {A : Type} {C : Carrier A} : C.Arity → Type where
   /-- An application of a head slot `x : Γ ∋ α` to a dependent family of children, one per position of `α`. -/
-  | ap : {Γ α : C.Arity} → (x : Γ ∋ α) → (∀ {Δ} (_i : α ∋ Δ) , Expr (Γ ⋈ Δ)) → Expr Γ
+  | ap : {Γ α : C.Arity} → (x : Γ ∋ α) → (∀ ⦃Δ⦄ (_i : α ∋ Δ) , Expr (Γ ⋈ Δ)) → Expr Γ
 
 /-- The argument family of an application headed by an `α`-slot in context `Γ`. -/
 abbrev Expr.Args {A : Type} {C : Carrier A} (Γ α : C.Arity) :=
-  ∀ {Δ} (_i : α ∋ Δ) , Expr (Γ ⋈ Δ)
+  ∀ ⦃Δ⦄ (_i : α ∋ Δ) , Expr (Γ ⋈ Δ)
 
 /-- `Expr.Subterm e' e` holds when `e = ap p args` and `e'` is one of its arguments
 `args j`. -/

@@ -27,8 +27,7 @@ abbrev Subst {A : Type} {C : Carrier A} (Δ Γ : C.Arity) :=
 /-- Package an application argument family as a substitution from its head arity. -/
 def Subst.fromArgs {A : Type} {C : Carrier A} (Γ Δ : C.Arity)
     (args : Expr.Args Γ Δ) :
-    Subst Δ Γ :=
-  fun ⦃_⦄ i => args i
+    Subst Δ Γ := args
 
 /-- The identity substitution at shape `Γ`. -/
 def Subst.id {A : Type} {C : Carrier A} (Γ : C.Arity) : Subst Γ Γ :=
