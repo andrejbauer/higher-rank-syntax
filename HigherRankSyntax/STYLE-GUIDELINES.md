@@ -13,7 +13,7 @@ A typical statement should be indented as follows:
 ```lean
 @[ext]
 theorem Cow
-    {param} ... (param}
+    {param} ... {param}
     (param) ... (param) :
   main-statement
   := by
@@ -26,7 +26,7 @@ If there are few parameters that easily fit on a line you may use:
 
 ```lean
 @[ext]
-theorem Cow {param} ... (param} :
+theorem Cow {param} ... {param} :
   main-statement
   := by
   proof
@@ -39,54 +39,35 @@ Write short equations on a single line and long equations as follows:
      = long-right-hand-side
 ```
 
-### Do not write large proof terms
+### Prefer `apply` over `exact`
 
-Large proof terms are strongly discouraged, in particular those appearing in `exact`, `refine`, `change` and `show`.
+A short `exact h` is acceptable, but `apply h` is preferred when arguments are inferable.  A long `exact <complicated-term>` is forbidden — break it into smaller tactic steps.
 
-Do not write `(some-term).symm` or `(some-term).trans`, use tactics such as `symm` and `trans`, or `apply Eq.trans`.
+### No `show`, `change`, `refine` or `unfold` without need
 
-### Forbidden tactics
+Don't use `show` or `change` to reshape a goal; exploit definitional equality through term mode, `apply`, `calc`, or `rw`.  Don't `unfold` definitions unless the proof genuinely cannot proceed otherwise.
 
-The following tactics are forbidden in general:
+Do not use `refine` when other tactics can be used instead. Only use it as a last resort.
 
-- `exact`
-- `show`
-- `change`
-- `refine`
+### No large proof terms
 
-All of the above can usually be replaced by `apply`, `induction`, and various forms of equational reasoning.
+Don't write `(some-term).symm` or `(some-term).trans` chains; use the tactics `symm`, `trans`, `apply Eq.trans`.  Don't write multi-line anonymous-constructor blocks `⟨…, …⟩` as proof terms — break them up.
 
-If you do not see how to prove a goal without these forbidden tactics, talk to the user and get their approval first.
+If you cannot prove a goal without one of the forbidden constructs above, talk to the user before proceeding.
 
-### Do not insert explicit typing annotations
+### Don't insert explicit type annotations
 
-Do not insert explicit typing annotations in terms, let Lean infer types: do not write `... (e : long-type-expression) ...` when only `e` will work.
+Let Lean infer types: don't write `(e : long-type-expression)` when `e` will work.  Don't explicitly type definitions whose type can be inferred: instead of `have x : long-type-expression := ...`, write `have x := ...`.  Same for `let`.
 
-Do not explicitly type definitions whose type can be inferred by Lean: instead of `have x : long-type-exprssion := ...` just write `have x := ...`
-and similarly for `let`.
+### Drop redundant namespace prefixes
 
-### Do not unfold unless necessary
+Inside `namespace Foo`, write `bar`, not `Foo.bar`.
 
-Do not `unfold` definitions unless necessary for the proof to proceed.
+### One subgoal per bullet
 
-### Tactics to reach for
+Use `·` or `case <name> => …` to discharge each subgoal.  No nested tacticals, no `<;>` or `try` as catch-alls — humans must be able to read each step.
 
-- **Field-syntax for structure methods**: `inl Γ := body`, not `inl := fun Γ => body`.  Arguments live on the LHS of `:=`; anonymise implicit arguments with `{_}`.
-- **`apply f`** when args are inferable, over `exact f a b c`.
-- **`constructor`** (+ `intro`) over `refine ⟨fun x => ?_⟩`.
-- **`apply Acc.intro`** over `refine Acc.intro _ ?_`.
-- **`exists w`** (Lean core), not `use w` (Mathlib), to introduce an existential witness.
-- **`left` / `right`** to discharge `Or`, not `apply Or.inl` or `refine Or.inl ⟨_, ?_⟩`.
-
-### Use bullets and `case <name> ...  => ...`
-
-Use bullets or `case` to discharge subgoals.
-
-Only discharge subgoals using `<;>` followed by a tactic when the tactic is the same and short on all subgoals.
-
-### Do not write complicated tacticals
-
-Do not write complicated tactics that humans cannot understand. Use bullets and cases to address goals.
+Exception: when a single tactic discharges all subgoals symmetrically (e.g. `apply Eq.trans <;> apply inl_tag`), `<;>` is acceptable.
 
 ### `calc` with `_` placeholders
 
@@ -98,60 +79,75 @@ calc lhs
   _ = _ := by symm ; apply baz
 ```
 
-### Counting subgoals
+### Counting subgoals before proving
 
 `convert … using N` and `congr 1` produce an unknown number of subgoals — don't assume.  Probe with `· done` (or `· sorry`) bullets and build; Lean reports the open goal or "No goals to be solved".  `all_goals sorry` is a useful preliminary to confirm the outer tactic accepted.
 
 ### Two-step strategy: explicit, then shrink
 
-If necessary to get the proof done, you may first write a proof that is very explicit at first — named arguments, `@`-forms, `inferInstance`, full type ascriptions.  Once green, shrink the proof by removing everything that Lean can infer by itself:
-
-1. `inferInstance` → `_`.
-2. `@F a b c …` → `F` with named arguments (`(binder := value)`).
-3. Drop leading positional arguments.
-4. Drop named arguments where Lean can still infer.
-5. Drop type ascriptions where the expected-type machinery suffices.
-
-### Drop redundant namespace prefixes
-
-Inside `namespace Foo`, write `bar`, not `Foo.bar`.
-
-### Don't write `let` and `have` definitions that are used only once
-
-Inline them instead, unless they significantly improve readability of code.
+If a proof is hard to find, write it with everything explicit first — named arguments, `@`-forms, `inferInstance`, full type ascriptions.  Once green, shrink incrementally and build between each step: `inferInstance` → `_`; `@F …` → `F` with named arguments; drop positional arguments; drop named arguments where Lean infers; drop type ascriptions where expected-type machinery suffices.
 
 ### Don't `@[simp]` for a single use site
 
-Pass the lemma explicitly: `simp only [my_lemma]`.  A `@[simp]` attribute fires automatically in every simp call across the project; reserve it for lemmas that justify global use.
+A `@[simp]` attribute fires automatically in every simp call across the project.  Reserve it for lemmas that justify global use; otherwise pass the lemma explicitly: `simp only [my_lemma]`.
 
-### `rw` versus `convert`
+### Don't introduce single-use `let` or `have`
 
-Pay attention to the fact that `rw` does syntactic matching only and may fail in cases where full definitional equality must be checked. In these cases, use other tactics that work with full definitional equality, such as `convert` and `congr`.
+Inline them, unless naming substantially improves readability.
 
-### Layout
+### `rw` is syntactic — use `convert`/`congr` for defeq
 
-- Bullet `·` per subgoal; prove the subgoal in that bullet.
-- One semicolon-chained line is acceptable for tight branches; multi-tactic branches go on their own indented lines.
-- No `<;>` or `try` as a catch-all (the symmetric-close exception above is the only case).
+`rw`'s matcher is purely syntactic.  When full definitional equality is needed (associativity rewrites, instance-witness mismatches, `nil ⋈ X = X`-style reductions), use `convert` or `congr` and discharge the leftovers with `Subsingleton.elim` or a dedicated coherence lemma.  Plain `rw` is fine when the goal literally contains the pattern.
 
-### Anti-patterns
+### Don't introduce helpers without need
 
-- **No `show` or `change` to reshape a goal.**  Exploit definitional equality through term-mode, `apply` / `exact` / `calc` / `rw`.
-- **No large hand-written proof terms.**  `(X.trans Y).trans Z.symm`, `exact (foo.trans (by rw […]; omega))` with embedded tactics, multi-line anonymous constructors — reach for tactic mode and break it up.
-- **No `refine X ⟨_, ?_⟩`** to provide a witness and open a hole in one step.  Split into `left`/`right`/`exists`, then prove the subgoal separately.
-- **No `if … return; rest`** — use `if … else`.
-- **No single-use `let`s** that don't earn their name; inline them.  Exception: a name that substantially improves readability.
-- **Don't pave roads before there's traffic.**  Don't introduce helper abbrevs, defs, or inductives until the same construction has appeared two or three times.  Inline first, abstract later.
-- **Reuse existing apparatus.**  Before defining a new dispatch type, classifier, termination measure, or coherence lemma, search for an existing one.
-- **Auxiliaries are standalone mathematical claims.**  A helper shaped like the goal at one branch is a tactic step in lemma's clothing.  Either generalise it or inline it.
+If you think that a new definition, lemma or a theorem shoud be introduced, you must first propose it to the user and get their permission to do so.
+
+### Helper statements must be general and mathematically meaningful
+
+When you propose helper statements to the user, make sure they have value beyond a single use case in the current proof. Ideally, hepler lemmas should be generalized and have independent mathematical meaning. Investigate the code to see if a helper lemma might have multiple uses.
+
+When introducing a helper statement that will solve a goal, proceed as follows:
+
+1. Consult the user.
+2. State the helper statement and `sorry` its proof.
+3. Immediately use the helper statement to close the goal. If the goal cannot be easily closed, this indicates the helper statement might be inappropriate or wrong.
+4. Once you are sure the helper statement is warranted, prove it.
+
+### Top-down approach
+
+When working on a main goal that has several subgoals that require furhter helper statements, proceed in a breadth-first fashion:
+
+1. Make a little bit of progress on the immediate subgoals.
+2. Observe similarities between the subgoals and formulate helper statements as necessary, consult the user about further plans.
+3. Test the helper statements to see if they will close the subgoals.
+4. Proceed to the subgoals, always looking for similarities. Do not deeep-dive into a single small goal, lest you lose track of the big picture.
+5. Periodically review progress and update your idea of the big picture.
 
 ## Project guidelines
 
 ### Naming
 
-- **Arity:** upper-case Greek letters `Γ Δ Ξ Θ Ψ Ω Φ Π Σ Λ` for arities appearing on the left of `∋` and lower Greek letters `α β γ` for arities appearing on the right of `∋`. This is not always possible, in which case the default choise is an upper-case Greek letter.
+- **Arity**: upper-case Greek letters `Γ Δ Ξ Θ Ψ Ω Φ Π Σ Λ` for arities appearing on the left of `∋`, and lower-case Greek letters `α β γ` for arities appearing on the right of `∋`.  When this is not possible, default to upper-case Greek.
 - **Substitutions**: `σ θ κ`.
 - **Slots, positions, indices**: lowercase (`x z w i j`).
-- **No abbreviations.**  Spell identifiers out: `Config`, not `Cfg`; `parseDependentPair`, not `parseDepPair`; `unique`, not `uniq`. Established acronyms (`IO`, `JSON`) are fine.
-- **Pair related identifiers with two distinct letters**, never with an `X_in` / `X_out` suffix scheme.
-- **Drop redundant prefixes.**  Theorem names should not repeat what the surrounding namespace conveys: `Proper.inr_inr`, not `Proper.compose_inr_inr`.
+
+### No abbreviations
+
+Spell identifiers out: `Config`, not `Cfg`; `parseDependentPair`, not `parseDepPair`; `unique`, not `uniq`.  Established acronyms (`IO`, `JSON`) are fine.  For a pair of related identifiers pick two distinct letters; never an `X_in` / `X_out` suffix scheme.
+
+### Drop redundant prefixes in theorem names
+
+Theorem names should not repeat what the surrounding namespace already conveys: `Proper.inr_inr`, not `Proper.compose_inr_inr`.
+
+### `Proper` is a `Subsingleton` — use it
+
+`Proper Γ` is a subsingleton (`Proper.subsingleton`); keep it an `instance`.  For two `Proper Γ` witnesses on the same shape, `apply Subsingleton.elim` (inside `convert`) closes the mismatch.  For `Subst.act` calls on the same shape with different `Proper` witnesses for the depth, `apply Subst.act_irrel`.  Never carry `Proper` witnesses as structure fields with coherence laws; let `convert` + the two lemmas above do the work.
+
+### Renaming notation
+
+`Γ →ʳ Δ` is the type of renamings; `𝟙ʳ` is the identity; `g ∘ʳ f` is composition "g after f" (single `ʳ`); `ρ ⇑ʳ α` extends a renaming through a fresh position.
+
+### Substitution notation
+
+`Subst Δ Γ` is a substitution from domain `Δ` into target `Γ`.  `σ.act Φ e` is the action at depth `Φ`.  `⟦ σ ⟧ˢ e` is the ground action, `Subst.act σ Shape.nil e`.
