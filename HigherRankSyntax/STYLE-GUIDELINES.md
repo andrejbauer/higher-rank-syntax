@@ -39,6 +39,20 @@ Write short equations on a single line and long equations as follows:
      = long-right-hand-side
 ```
 
+### No `let` or `letI` in theorem statement
+
+A theorem statement may not contain any `let` or `letI`, so the following is forbidden:
+
+```lean
+theorem Cow (param) ... (param) :
+  let x := ...
+  letI y := ...
+    main-statement
+```
+
+If you think `letI` is needed, you must talk to the user to first solve issues with typeclass instance resolution (do not work around problems, report them instead).
+
+
 ### Prefer `apply` over `exact`
 
 A short `exact h` is acceptable, but `apply h` is preferred when arguments are inferable.  A long `exact <complicated-term>` is forbidden — break it into smaller tactic steps.
