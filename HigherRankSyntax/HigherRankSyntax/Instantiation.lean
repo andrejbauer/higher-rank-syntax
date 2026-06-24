@@ -15,24 +15,22 @@ theorem act_η_right {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity)
     {α} (x : Φ ∋ α) :
   σ.act (Φ ⋈ α)
-      ((Expr.η (C.inr x) : Expr ((Γ ⋈ Δ ⋈ Φ) ⋈ α)) :
+      ((Expr.η (C.inl x) : Expr ((Γ ⋈ Δ ⋈ Φ) ⋈ α)) :
         Expr (Γ ⋈ Δ ⋈ (Φ ⋈ α)))
     =
-      ((Expr.η (C.inr x) : Expr ((Γ ⋈ Ξ ⋈ Φ) ⋈ α)) :
+      ((Expr.η (C.inl x) : Expr ((Γ ⋈ Ξ ⋈ Φ) ⋈ α)) :
         Expr (Γ ⋈ Ξ ⋈ (Φ ⋈ α)))
   := by
-  rw [Expr.η.eq_1]
-  rw [← C.inr_inl]
+  rw [Expr.η.eq_1, C.inr_inl]
   trans
-  · exact act_right σ (Φ ⋈ α) (C.inl x)
-      (fun ⦃Ω⦄ i => (Expr.η (C.inr i) : Expr ((Γ ⋈ Δ ⋈ Φ ⋈ α) ⋈ Ω)))
-  · rw [Expr.η.eq_1]
-    rw [← C.inr_inl]
+  · exact act_right σ (Φ ⋈ α) (C.inr x)
+      (fun ⦃Ω⦄ i => (Expr.η (C.inl i) : Expr ((Γ ⋈ Δ ⋈ Φ ⋈ α) ⋈ Ω)))
+  · rw [Expr.η.eq_1, C.inr_inl]
     congr 1
     funext Ω i
-    rw [← C.inr_inr]
-    rw [← C.inr_inr]
-    exact act_η_right σ (Φ ⋈ α) (x := C.inr i)
+    rw [C.inl_inl]
+    conv => rhs; rw [C.inl_inl]
+    exact act_η_right σ (Φ ⋈ α) (x := C.inl i)
 termination_by α
 decreasing_by exact ⟨i⟩
 
@@ -40,12 +38,12 @@ decreasing_by exact ⟨i⟩
 arity (`hη`). -/
 theorem act_idOfη {A : Type} {C : Carrier A} {Γ Δ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Δ))
-    (hσ : ∀ {β} (z : Δ ∋ β), σ z = Expr.η (C.inr z))
+    (hσ : ∀ {β} (z : Δ ∋ β), σ z = Expr.η (C.inl z))
     (hη : ∀ {β} (_ : Δ ∋ β) {Θ Ξ : C.Arity}
             (ι : Subst β (Θ ⋈ Ξ)) (x : Θ ∋ β),
             ⟦ ι ⟧ˢ ((Expr.η x : Expr (Θ ⋈ β)) : Expr (Θ ⋈ β ⋈ 1))
               =
-            ((.ap (C.inl x) (fun ⦃_⦄ i => ι i) : Expr (Θ ⋈ Ξ)) :
+            ((.ap (C.inr x) (fun ⦃_⦄ i => ι i) : Expr (Θ ⋈ Ξ)) :
               Expr (Θ ⋈ Ξ ⋈ 1)))
     (Φ : C.Arity) (e : Expr (Γ ⋈ Δ ⋈ Φ)) :
   Subst.act σ Φ e = e
@@ -61,7 +59,7 @@ theorem act_idOfη {A : Type} {C : Carrier A} {Γ Δ : C.Arity}
     case middle =>
       rw [act_left_right, hσ]
       trans
-      · exact hη z _ (C.inr z)
+      · exact hη z _ (C.inl z)
       · congr 1
         funext Ω i
         exact act_idOfη σ hσ hη (Φ ⋈ Ω) (args i)
@@ -81,24 +79,23 @@ theorem act_inst_η {A : Type} {C : Carrier A} {Γ Ξ : C.Arity}
     {α} (ι : Subst α (Γ ⋈ Ξ)) (x : Γ ∋ α) :
   ⟦ ι ⟧ˢ ((Expr.η x : Expr (Γ ⋈ α)) : Expr (Γ ⋈ α ⋈ 1))
     =
-      ((.ap (C.inl x) (fun ⦃_⦄ i => ι i) : Expr (Γ ⋈ Ξ)) :
+      ((.ap (C.inr x) (fun ⦃_⦄ i => ι i) : Expr (Γ ⋈ Ξ)) :
         Expr (Γ ⋈ Ξ ⋈ 1))
   := by
-  rw [Expr.η.eq_1]
-  rw [← C.unit_right (Γ ⋈ α) (C.inl x)]
+  rw [Expr.η.eq_1, ← C.unit_left (Γ ⋈ α) (C.inr x)]
   trans
   · exact act_left ι 1 x
       (fun ⦃Ω⦄ i =>
-        ((Expr.η (C.inr i) : Expr ((Γ ⋈ α) ⋈ Ω)) :
+        ((Expr.η (C.inl i) : Expr ((Γ ⋈ α) ⋈ Ω)) :
           Expr ((Γ ⋈ α ⋈ 1) ⋈ Ω)))
-  · rw [C.unit_right (Γ ⋈ Ξ) (C.inl x)]
+  · rw [C.unit_left (Γ ⋈ Ξ) (C.inr x)]
     congr 1
     funext β j
     rw [Expr.η.eq_1]
     trans
     · exact act_left_right ι (1 ⋈ β) j
         (fun ⦃Ω⦄ k =>
-          ((Expr.η (C.inr k) : Expr (((Γ ⋈ α) ⋈ β) ⋈ Ω)) :
+          ((Expr.η (C.inl k) : Expr (((Γ ⋈ α) ⋈ β) ⋈ Ω)) :
             Expr ((Γ ⋈ α ⋈ (1 ⋈ β)) ⋈ Ω)))
     · conv => rhs; rw [← act_inst_id β (Γ ⋈ Ξ) 1 (ι j)]
       congr 1

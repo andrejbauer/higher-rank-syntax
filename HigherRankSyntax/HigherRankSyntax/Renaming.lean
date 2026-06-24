@@ -44,9 +44,10 @@ def Renaming.extend
     {A : Type} {C : Carrier A} {Γ Δ : C.Arity}
     (f : Γ →ʳ Δ) (Ξ : C.Arity) :
   Γ ⋈ Ξ →ʳ Δ ⋈ Ξ :=
-  fun ⦃ α ⦄ x => C.copair _ _ (Δ ⋈ Ξ ∋ α) x
-    (fun y => C.inl (f y))
-    (fun z => C.inr z)
+  fun ⦃ α ⦄ x => C.copair Ξ Γ (Δ ⋈ Ξ ∋ α)
+    (fun z => C.inl z)
+    (fun y => C.inr (f y))
+    x
 
 @[inherit_doc Renaming.extend]
 infixl:95 " ⇑ʳ " => Renaming.extend
@@ -54,16 +55,20 @@ infixl:95 " ⇑ʳ " => Renaming.extend
 @[simp]
 theorem Renaming.extend_inl
     {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
-    (f : Γ →ʳ Δ) {α : C.Arity} (i : Γ ∋ α) :
-  (f ⇑ʳ Ξ) (C.inl i) = C.inl (f i)
-  := C.copair_inr _ _ _ i (fun y => C.inl (f y)) (fun z => C.inr z)
+    (f : Γ →ʳ Δ) {α : C.Arity} (i : Ξ ∋ α) :
+  (f ⇑ʳ Ξ) (C.inl i) = C.inl i
+  := by
+  simpa [Renaming.extend] using congrFun (C.copair_inl Ξ Γ (Δ ⋈ Ξ ∋ α)
+    (fun z => C.inl z) (fun y => C.inr (f y))) i
 
 @[simp]
 theorem Renaming.extend_inr
     {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
-    (f : Γ →ʳ Δ) {α : C.Arity} (i : Ξ ∋ α) :
-  (f ⇑ʳ Ξ) (C.inr i) = C.inr i
-  := C.copair_inl _ _ _ i (fun y => C.inl (f y)) (fun z => C.inr z)
+    (f : Γ →ʳ Δ) {α : C.Arity} (i : Γ ∋ α) :
+  (f ⇑ʳ Ξ) (C.inr i) = C.inr (f i)
+  := by
+  simpa [Renaming.extend] using congrFun (C.copair_inr Ξ Γ (Δ ⋈ Ξ ∋ α)
+    (fun z => C.inl z) (fun y => C.inr (f y))) i
 
 @[simp]
 theorem Renaming.id_apply
@@ -78,7 +83,7 @@ theorem Renaming.extend_id
   𝟙ʳ Γ ⇑ʳ Δ = 𝟙ʳ (Γ ⋈ Δ)
   := by
   funext α x
-  rcases C.cover Γ Δ x with ⟨y, rfl⟩ | ⟨y, rfl⟩
+  rcases C.cover Δ Γ x with ⟨y, rfl⟩ | ⟨y, rfl⟩
   · simp [Renaming.id]
   · simp [Renaming.id]
 
@@ -89,6 +94,6 @@ theorem Renaming.extend_comp
   (g ∘ʳ f) ⇑ʳ Ω = (g ⇑ʳ Ω) ∘ʳ (f ⇑ʳ Ω)
   := by
   funext α x
-  rcases C.cover Γ Ω x with ⟨y, rfl⟩ | ⟨y, rfl⟩
+  rcases C.cover Ω Γ x with ⟨y, rfl⟩ | ⟨y, rfl⟩
   · simp [Renaming.comp]
   · simp [Renaming.comp]

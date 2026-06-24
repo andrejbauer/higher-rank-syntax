@@ -47,62 +47,54 @@ inductive LeftMiddleRight {A : Type} {C : Carrier A} (Γ Δ Ξ α : C.Arity) : T
 domain `Δ`, or current depth `Ξ`. -/
 def Subst.threeway {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     {α} (p : (Γ ⋈ Δ ⋈ Ξ) ∋ α) : LeftMiddleRight Γ Δ Ξ α :=
-  C.copair (Γ ⋈ Δ) Ξ _ p
-    (fun q => C.copair Γ Δ _ q .left .middle)
-    .right
+  C.copair Ξ (Γ ⋈ Δ) _
+    (fun q => .right q)
+    (fun q => C.copair Δ Γ _ (fun y => .middle y) (fun x => .left x) q) p
 
 /-- Embed a classified site back into `Γ ⋈ Δ ⋈ Ξ`. -/
 def Subst.reinject {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity} {α} :
   LeftMiddleRight Γ Δ Ξ α → (Γ ⋈ Δ ⋈ Ξ) ∋ α
-  | .left x => C.inl (C.inl x)
-  | .middle x => C.inl (C.inr x)
-  | .right x => C.inr x
+  | .left x => C.inr (C.inr x)
+  | .middle x => C.inr (C.inl x)
+  | .right x => C.inl x
 
 /-- Every source slot is the embedding of a unique-looking `SubstSite`.
 This is the proof-facing inverse of `Subst.threeway`; use it to replace
 nested `Proper.cover` splits. -/
-theorem Subst.isReinject {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
-      {α}
+theorem Subst.isReinject {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity} {α}
       (x : (Γ ⋈ Δ ⋈ Ξ) ∋ α) :
     ∃ y : LeftMiddleRight Γ Δ Ξ α, x = reinject y
   := by
-  rcases C.cover (Γ ⋈ Δ) Ξ x with ⟨x, h_x⟩ | ⟨y, h_y⟩
-  · exact ⟨.right x, h_x⟩
-  · rcases C.cover Γ Δ y with ⟨z, h_z⟩ | ⟨w, h_w⟩
-    · subst h_y
-      exact ⟨.middle z, by rw [h_z]; rfl⟩
-    · subst h_y
-      exact ⟨.left w, by rw [h_w]; rfl⟩
+  rcases C.cover Ξ (Γ ⋈ Δ) x with ⟨x, rfl⟩ | ⟨y, rfl⟩
+  · exact ⟨.right x, rfl⟩
+  · rcases C.cover Δ Γ y with ⟨z, rfl⟩ | ⟨w, rfl⟩
+    · exact ⟨.middle z, rfl⟩
+    · exact ⟨.left w, rfl⟩
 
 /-- Classifying a concrete right-injected `Ξ` head returns the right site. -/
 @[simp] theorem Subst.threeway_inr {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     {α : C.Arity} (x : Ξ ∋ α) :
-  threeway (Γ := Γ) (Δ := Δ) (C.inr x) = .right x
+  threeway (Γ := Γ) (Δ := Δ) (C.inl x) = .right x
   := by
-  unfold threeway
-  rw [C.copair_inl]
+  simp [threeway, Carrier.copair, Carrier.inl]
 
 /-- Classifying a concrete middle-domain head returns the middle site. -/
 @[simp] theorem Subst.threeway_inl_dom {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     {α : C.Arity} (x : Δ ∋ α) :
-  threeway (Γ := Γ) (Ξ := Ξ) (C.inl (C.inr x)) = .middle x
+  threeway (Γ := Γ) (Ξ := Ξ) (C.inr (C.inl x)) = .middle x
   := by
-  unfold threeway
-  rw [C.copair_inr]
-  rw [C.copair_inl]
+  simp [threeway, Carrier.copair, Carrier.inl, Carrier.inr]
 
 /-- Classifying a concrete left-prefix head returns the left site. -/
 @[simp] theorem Subst.threeway_inl_pre {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     {α : C.Arity} (x : Γ ∋ α) :
-  threeway (Δ := Δ) (Ξ := Ξ) (C.inl (C.inl x)) = .left x
+  threeway (Δ := Δ) (Ξ := Ξ) (C.inr (C.inr x)) = .left x
   := by
-  unfold threeway
-  rw [C.copair_inr]
-  rw [C.copair_inr]
+  simp [threeway, Carrier.copair, Carrier.inr]
 
 /-- The identity instantiation for the one-position telescope `⌊α⌋`, with an arbitrary fixed prefix `Δ`. -/
 def Subst.instId {A : Type} {C : Carrier A} (Δ α : C.Arity) : Subst α (Δ ⋈ α) :=
-  fun ⦃β⦄ (i : α ∋ β) => Expr.η (C.inr i)
+  fun ⦃β⦄ (i : α ∋ β) => Expr.η (C.inl i)
 
 
 /-! ### The substitution action -/
@@ -115,13 +107,13 @@ def Subst.act {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
   | .ap (α := α) x args =>
       match threeway x with
       | .right x =>
-          .ap (C.inr x)
+          .ap (C.inl x)
             (fun {_} i => σ.act (Φ ⋈ _) (args i))
       | .middle z =>
           act (Subst.fromArgs (Γ ⋈ Ξ ⋈ Φ) α
                 (fun {_} i => σ.act (Φ ⋈ _) (args i))) 1 (σ z)
       | .left z =>
-          .ap (C.inl (C.inl z))
+          .ap (C.inr (C.inr z))
             (fun {_} i => σ.act (Φ ⋈ _) (args i))
 termination_by e =>
   (Δ, (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ))

@@ -14,34 +14,21 @@ instantiating `κ` (pushed forward along `σ`).  `act_interchange` is its
 
 /-- Push `κ` forward along `σ`: `(pushforward σ κ) x = σ.act (κ x)` at the
 passive depth determined by the filler. -/
-abbrev pushforward {C : Carrier} {Γ Δ Ξ Θ Ω : Shape C}
-    [Proper Δ] [Proper Ξ] [Proper Ω] [Proper Θ]
+abbrev pushforward {A : Type} {C : Carrier A} {Γ Δ Ξ Θ Ω : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (κ : Subst Θ (Γ ⋈ Δ ⋈ Ω)) :
     Subst Θ (Γ ⋈ Ξ ⋈ Ω) :=
-  fun {β} x => σ.act (Ω ∷ β) (κ x)
-
-attribute [local instance] Proper.compose
-
-/-- `Subst.act` does not depend on the chosen `Proper` witness for its depth. -/
-theorem Subst.act_irrel {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (σ : Subst Δ (Γ ⋈ Ξ)) {Φ : Shape C} (i i' : Proper Φ) (e : Expr (Γ ⋈ Δ ⋈ Φ)) :
-    @Subst.act C Γ Δ Ξ _ _ σ Φ i e = @Subst.act C Γ Δ Ξ _ _ σ Φ i' e
-  := by
-  haveI := Proper.subsingleton Φ
-  rw [Subsingleton.elim i i']
+  fun {β} x => σ.act (Ω ⋈ β) (κ x)
 
 /-- `σ.act` on a head whose slot lies in a telescope `Φ` sitting in the depth
 `Λ ⋈ Φ ⋈ Ρ` (injected past the prefix `Γ ⋈ Δ ⋈ Λ` and weakened past `Ρ`): the head is
 rebuilt over the new codomain and the action descends into the arguments.  Generalizes
 `act_right` (`Λ = Ρ = Shape.nil`). -/
-theorem act_ap_depth {C : Carrier} {Γ Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (σ : Subst Δ (Γ ⋈ Ξ)) (Λ Φ Ρ : Shape C) [Proper Λ] [Proper Φ] [Proper Ρ]
-    {α} (z : Φ ∋ α)
+theorem act_ap_depth {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    (σ : Subst Δ (Γ ⋈ Ξ)) (Λ Φ Ρ : C.Arity) {α} (z : Φ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Λ ⋈ Φ ⋈ Ρ) α) :
-  σ.act (Λ ⋈ Φ ⋈ Ρ)
-      (Expr.ap (Proper.inl (Γ ⋈ Δ ⋈ Λ ⋈ Φ) (Proper.inr (Γ ⋈ Δ ⋈ Λ) z)) args)
-    = Expr.ap (Proper.inl (Γ ⋈ Ξ ⋈ Λ ⋈ Φ) (Proper.inr (Γ ⋈ Ξ ⋈ Λ) z))
-        (fun j => σ.act (Λ ⋈ (Φ ⋈ Ρ ∷ j.arity)) (args j))
+  σ.act (Λ ⋈ Φ ⋈ Ρ) (Expr.ap (C.inr (C.inr z)) args)
+    = Expr.ap (C.inl (C.inr z))
+        (fun {Ω} j => σ.act (Λ ⋈ (Φ ⋈ Ρ ⋈ Ω)) (args j))
   := by
   convert act_right σ (Λ ⋈ Φ ⋈ Ρ)
       (Proper.inl (Λ ⋈ Φ) (Proper.inr Λ z)) args using 2

@@ -13,9 +13,9 @@ depth `Ξ` (`right`), substitution domain `Δ` (`middle`), or prefix `Γ` (`left
 @[elab_as_elim]
 theorem threewayOn {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     {α : C.Arity} {motive : Γ ⋈ Δ ⋈ Ξ ∋ α → Prop}
-    (right : (z : Ξ ∋ α) → motive (C.inr z))
-    (middle : (z : Δ ∋ α) → motive (C.inl (C.inr z)))
-    (left : (z : Γ ∋ α) → motive (C.inl (C.inl z)))
+    (right : (z : Ξ ∋ α) → motive (C.inl z))
+    (middle : (z : Δ ∋ α) → motive (C.inr (C.inl z)))
+    (left : (z : Γ ∋ α) → motive (C.inr (C.inr z)))
     (x : Γ ⋈ Δ ⋈ Ξ ∋ α) : motive x := by
   obtain ⟨y, rfl⟩ := Subst.isReinject x
   cases y with
@@ -36,29 +36,29 @@ theorem act_right {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity)
     {α} (x : Φ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
-  σ.act Φ (.ap (C.inr x) args) = .ap (C.inr x) (fun {_} j => σ.act (Φ ⋈ _) (args j))
+  σ.act Φ (.ap (C.inl x) args) = .ap (C.inl x) (fun {_} j => σ.act (Φ ⋈ _) (args j))
   := by
-  conv => lhs; unfold Subst.act
-  rw [Subst.threeway_inr]
+  conv_lhs => unfold Subst.act
+  simp
 
 /-- `σ.act` on a substitution-domain head fires the instantiation. -/
 theorem act_left_right {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity)
     {α} (y : Δ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
-  σ.act Φ (.ap (C.inl (C.inr y)) args)
+  σ.act Φ (.ap (C.inr (C.inl y)) args)
     = ⟦ Subst.fromArgs (Γ ⋈ Ξ ⋈ Φ) α (fun {_} i => σ.act (Φ ⋈ _) (args i)) ⟧ˢ (σ y)
   := by
-  conv => lhs; unfold Subst.act
-  rw [Subst.threeway_inl_dom]
+  conv_lhs => unfold Subst.act
+  simp
 
 /-- `σ.act` on a prefix head rebuilds the head. -/
 theorem act_left {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity)
     {α} (z : Γ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
-  σ.act Φ (.ap (C.inl (C.inl z)) args)
-    = .ap (C.inl (C.inl z)) (fun {_} j => σ.act (Φ ⋈ _) (args j))
+  σ.act Φ (.ap (C.inr (C.inr z)) args)
+    = .ap (C.inr (C.inr z)) (fun {_} j => σ.act (Φ ⋈ _) (args j))
   := by
-  conv => lhs; unfold Subst.act
-  rw [Subst.threeway_inl_pre]
+  conv_lhs => unfold Subst.act
+  simp

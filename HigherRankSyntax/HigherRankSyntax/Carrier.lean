@@ -33,8 +33,7 @@ private theorem relIso_of_wellOrder_eq {α β : Type} {r : α → α → Prop} {
       simpa [y] using hey
     exact (irrefl_of r x (hxy ▸ hyx)).elim
 
-instance : CoeSort WellOrder (Type _) where
-  coe W := W.α
+instance : CoeSort WellOrder (Type _) where coe W := W.α
 
 /-- A carrier of a higher-rank binding syntax: the base data from which the framework
 builds expressions, renamings, and substitutions. -/
@@ -192,6 +191,25 @@ theorem inr_inr {A : Type} (C : Carrier A)
         (C.slotAt_mul (Γ * Δ) Ξ α))
   have h : L = R := relIso_of_wellOrder_eq L R
   change L (Sum.inr (Sum.inr x)) = R (Sum.inr (Sum.inr x))
+  rw [h]
+
+theorem inl_inl {A : Type} (C : Carrier A)
+    (Γ Δ Ξ : C.Arity) {α : C.Arity} (x : Γ ∋ α) :
+  (C.inl x : Γ * (Δ * Ξ) ∋ α)
+    =
+  (C.inl (C.inl x) : (Γ * Δ) * Ξ ∋ α) := by
+  let rΓ := (C.slotAt Γ α).r
+  let rΔ := (C.slotAt Δ α).r
+  let rΞ := (C.slotAt Ξ α).r
+  let L : Sum.Lex rΓ (Sum.Lex rΔ rΞ) ≃r (C.slotAt (Γ * (Δ * Ξ)) α).r :=
+    (RelIso.sumLexCongr (RelIso.refl rΓ) (C.slotAt_mul Δ Ξ α)).trans
+      (C.slotAt_mul Γ (Δ * Ξ) α)
+  let R : Sum.Lex rΓ (Sum.Lex rΔ rΞ) ≃r (C.slotAt (Γ * (Δ * Ξ)) α).r :=
+    (sumLexAssocRel rΓ rΔ rΞ).symm.trans
+      ((RelIso.sumLexCongr (C.slotAt_mul Γ Δ α) (RelIso.refl rΞ)).trans
+        (C.slotAt_mul (Γ * Δ) Ξ α))
+  have h : L = R := relIso_of_wellOrder_eq L R
+  change L (Sum.inl x) = R (Sum.inl x)
   rw [h]
 
 theorem unit_right {A : Type} (C : Carrier A) (Γ : C.Arity)

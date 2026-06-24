@@ -44,7 +44,7 @@ instance Expr.Subterm.wellFoundedRelation {A : Type} {C : Carrier A} :
 /-- η-expansion: a variable `p : Γ ∋ α` becomes the fully-applied tree
 `ap (C.inl p) (fun i => η (C.inr i))`. -/
 def Expr.η {A : Type} {C : Carrier A} {Γ α : C.Arity} : Γ ∋ α → Expr (Γ ⋈ α)
-  | x => .ap (C.inl x) (fun {_} i => η (C.inr i))
+  | x => .ap (C.inr x) (fun {_} i => η (C.inl i))
 termination_by _ => α
 decreasing_by exact ⟨i⟩
 
