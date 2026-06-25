@@ -108,17 +108,18 @@ theorem act_interchange.aux {A : Type} {C : Carrier A} {Γ Δ Ξ Θ Ψ Ω : C.Ar
   | .ap (α := β) x args =>
     head_cases x with z
     case right =>
+      have hΨ :
+          (Expr.ap (C.inl z) args : Expr (Γ ⋈ Δ ⋈ Θ ⋈ Ψ ⋈ Φ)) =
+          Expr.ap (C.inl (C.inl z)) args := by
+        congr 1
+        exact C.inl_inl Φ (Ψ * Θ) (Δ * Γ) z
       rw [act_right]
       convert act_right σ (Θ ⋈ Ω ⋈ Φ) (C.inl z)
         (fun {_} j => κ.act (Φ ⋈ _) (args j)) using 2
       · congr 1
         exact C.inl_inl Φ (Ω * Θ) (Δ * Γ) z
-      · convert (congrArg
-          (Subst.act (Γ := Γ ⋈ Ξ ⋈ Θ) (Δ := Ψ) (Ξ := Ω)
-            (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ)
-          (act_right σ (Θ ⋈ Ψ ⋈ Φ) (C.inl z) args)) using 2
-        · congr 1
-          exact C.inl_inl Φ (Ψ * Θ) (Δ * Γ) z
+      · rw [hΨ]
+        rw [act_right]
         symm
         convert act_right (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω)
           (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ z _ using 2
