@@ -16,7 +16,8 @@ theorem threewayOn {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     (right : (z : Ξ ∋ α) → motive (C.inl z))
     (middle : (z : Δ ∋ α) → motive (C.inr (C.inl z)))
     (left : (z : Γ ∋ α) → motive (C.inr (C.inr z)))
-    (x : Γ ⋈ Δ ⋈ Ξ ∋ α) : motive x := by
+  (x : Γ ⋈ Δ ⋈ Ξ ∋ α) : motive x
+  := by
   obtain ⟨y, rfl⟩ := Subst.isReinject x
   cases y with
   | right z => exact right z
@@ -34,20 +35,19 @@ macro "head_cases " x:term " with " z:ident : tactic =>
 /-- `σ.act` on a current-depth head. -/
 theorem act_right {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity)
-    {α} (x : Φ ∋ α)
-    (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
-  σ.act Φ (.ap (C.inl x) args) = .ap (C.inl x) (fun {_} j => σ.act (Φ ⋈ _) (args j))
+    {α} (x : Φ ∋ α) (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
+  σ.act Φ (.ap (C.inl x) args)
+    = .ap (C.inl x) (fun {_} j => σ.act (Φ ⋈ _) (args j))
   := by
   conv_lhs => unfold Subst.act
   simp
 
 /-- `σ.act` on a substitution-domain head fires the instantiation. -/
 theorem act_left_right {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
-    (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity)
-    {α} (y : Δ ∋ α)
+    (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity) {α} (y : Δ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
   σ.act Φ (.ap (C.inr (C.inl y)) args)
-    = ⟦ Subst.fromArgs (Γ ⋈ Ξ ⋈ Φ) α (fun {_} i => σ.act (Φ ⋈ _) (args i)) ⟧ˢ (σ y)
+    = ⟦ (fun {_} i => σ.act (Φ ⋈ _) (args i)) ⟧ˢ (σ y)
   := by
   conv_lhs => unfold Subst.act
   simp

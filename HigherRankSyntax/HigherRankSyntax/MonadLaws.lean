@@ -11,30 +11,29 @@ import Batteries.Tactic.Trans
 -/
 
 /-- **`act_id`** — the identity substitution acts as the identity (unit_right). -/
-theorem act_id {C : Carrier} (Γ : Shape C) [Proper Γ] (Φ : Shape C) [Proper Φ]
-    (e : Expr (Γ ⋈ Φ)) :
-  Subst.act (Subst.id Γ) (Γ := Shape.nil) Φ e = e
-  := act_idOfη (Γ := Shape.nil) (Subst.id Γ)
-       (fun z => by rw [Proper.inr_nil_id]; rfl)
+theorem act_id {A : Type} {C : Carrier A} (Γ Φ : C.Arity) (e : Expr (Γ ⋈ Φ)) :
+  Subst.act (Subst.id Γ) (Γ := 1) Φ e = e
+  := act_idOfη (Γ := 1) (Subst.id Γ)
+       (fun z => by rw [C.unit_right Γ z]; rfl)
        (fun _ => act_inst_η) Φ e
 
 /-- **`act_η`** — acting on an η-expansion reduces to applying `σ` (unit_left). -/
-theorem act_η {C : Carrier} {Δ Ξ : Shape C} [Proper Δ] [Proper Ξ]
-    (σ : Subst Δ Ξ) (α : C.Arity) (x : Δ ∋ α) :
-  σ.act (Γ := Shape.nil) ⌊α⌋ (.η x) = σ x
+theorem act_η
+    {A : Type} {C : Carrier A} {Δ Ξ : C.Arity}
+    (σ : Subst Δ Ξ) (Θ : C.Arity) (x : Δ ∋ Θ) :
+  σ.act (Γ := 1) Θ (.η x) = σ x
   := by
   rw [Expr.η.eq_1]
-  obtain ⟨y, rfl⟩ | ⟨z, _⟩ := Proper.cover Shape.nil x
-  · trans
-    · exact act_left_right (Γ := Shape.nil) σ ⌊α⌋ y (fun i => Expr.η (.here i))
-    · rw [Proper.inr_nil_id]
-      conv => rhs; rw [← act_inst_id α Ξ Shape.nil (σ y)]
-      congr 1
-      funext _ q
-      cases q with
-      | here k => exact act_η_right (Γ := Shape.nil) σ ⌊α⌋ (x := .here k)
-      | there w => nomatch w
-  · nomatch z
+  trans
+  · convert act_left_right (Γ := 1) σ Θ x (fun {_} i => Expr.η (C.inl i)) using 2
+    · congr 1
+      rw [C.unit_right Δ x]
+  · calc
+      _ = Subst.act (Subst.instId Ξ Θ) 1 (σ x) := by
+            congr 1
+            funext Ω i
+            apply act_η_right
+      _ = σ x := by apply act_inst_id
 
 /-- **`act_comp`** — action by a composite factors (comp_lift). -/
 theorem act_comp {C : Carrier} {Γ Δ Θ Ξ : Shape C} [Proper Δ] [Proper Θ] [Proper Ξ]

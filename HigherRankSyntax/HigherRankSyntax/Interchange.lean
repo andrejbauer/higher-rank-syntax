@@ -14,32 +14,31 @@ instantiating `κ` (pushed forward along `σ`).  `act_interchange` is its
 
 /-- Push `κ` forward along `σ`: `(pushforward σ κ) x = σ.act (κ x)` at the
 passive depth determined by the filler. -/
-abbrev pushforward {A : Type} {C : Carrier A} {Γ Δ Ξ Θ Ω : C.Arity}
+abbrev pushforward
+    {A : Type} {C : Carrier A} {Γ Δ Ξ Θ Ω : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (κ : Subst Θ (Γ ⋈ Δ ⋈ Ω)) :
-    Subst Θ (Γ ⋈ Ξ ⋈ Ω) :=
-  fun {β} x => σ.act (Ω ⋈ β) (κ x)
+  Subst Θ (Γ ⋈ Ξ ⋈ Ω) :=
+    fun {β} x => σ.act (Ω ⋈ β) (κ x)
 
 /-- `σ.act` on a head whose slot lies in a telescope `Φ` sitting in the depth
 `Λ ⋈ Φ ⋈ Ρ` (injected past the prefix `Γ ⋈ Δ ⋈ Λ` and weakened past `Ρ`): the head is
 rebuilt over the new codomain and the action descends into the arguments.  Generalizes
 `act_right` (`Λ = Ρ = Shape.nil`). -/
-theorem act_ap_depth {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+theorem act_ap_depth
+    {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (Λ Φ Ρ : C.Arity) {α} (z : Φ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Λ ⋈ Φ ⋈ Ρ) α) :
-  σ.act (Λ ⋈ Φ ⋈ Ρ)
-      (Expr.ap (C.inr (Γ := Ρ) (C.inl (Δ := Λ * (Δ * Γ)) z)) args)
-    =
-  Expr.ap (C.inr (C.inl (Δ := Λ * (Ξ * Γ)) z))
-    (fun {Ω} j => σ.act (Λ ⋈ Φ ⋈ Ρ ⋈ Ω) (args j))
+  σ.act (Λ ⋈ Φ ⋈ Ρ) (Expr.ap (C.inr (Γ := Ρ) (C.inl (Δ := Λ * (Δ * Γ)) z)) args)
+    = Expr.ap (C.inr (C.inl (Δ := Λ * (Ξ * Γ)) z))
+        (fun {Ω} j => σ.act (Λ ⋈ Φ ⋈ Ρ ⋈ Ω) (args j))
   := by
-  let p := C.inr (Γ := Ρ) (Δ := Φ * Λ) (C.inl z)
-  have h {Τ : C.Arity} :
-      (C.inr (C.inl z) : Ρ * (Φ * (Λ * Τ)) ∋ α) = (C.inl p) := by
-    rw [C.inl_inl Φ Λ Τ z]
-    exact C.inr_inl Ρ (Φ * Λ) Τ (C.inl z)
-  rw [h]
-  conv => rhs; rw [h]
-  exact act_right σ (Λ ⋈ Φ ⋈ Ρ) p args
+  convert act_right σ (Λ ⋈ Φ ⋈ Ρ) (C.inr (Γ := Ρ) (Δ := Φ * Λ) (C.inl z)) args using 2
+  · congr 1
+    rw [C.inl_inl]
+    apply C.inr_inl
+  · congr 1
+    · rw [C.inl_inl]
+      apply C.inr_inl
 
 mutual
 
@@ -68,8 +67,7 @@ theorem act_interchange.subst {A : Type} {C : Carrier A} {Γ Λ Θ Ψ Ω Φ Χ :
     case middle =>
       rw [act_left_right]
       convert act_interchange.aux θ
-        (Subst.fromArgs (Γ ⋈ Θ ⋈ Ψ ⋈ Φ ⋈ Χ) β
-          fun {_} i => Subst.act (Ξ := Θ ⋈ Ψ ⋈ Φ) κ (Χ ⋈ _) (args i))
+        (fun {_} i => Subst.act (Ξ := Θ ⋈ Ψ ⋈ Φ) κ (Χ ⋈ _) (args i))
         1 (κ z) using 2
       · rw [act_left_right]
         congr 1
@@ -112,20 +110,35 @@ theorem act_interchange.aux {A : Type} {C : Carrier A} {Γ Δ Ξ Θ Ψ Ω : C.Ar
           (Expr.ap (C.inl z) args : Expr (Γ ⋈ Δ ⋈ Θ ⋈ Ψ ⋈ Φ)) =
           Expr.ap (C.inl (C.inl z)) args := by
         congr 1
-        exact C.inl_inl Φ (Ψ * Θ) (Δ * Γ) z
+        apply C.inl_inl Φ Ψ (Θ * (Δ * Γ)) z
       rw [act_right]
       convert act_right σ (Θ ⋈ Ω ⋈ Φ) (C.inl z)
         (fun {_} j => κ.act (Φ ⋈ _) (args j)) using 2
       · congr 1
-        exact C.inl_inl Φ (Ω * Θ) (Δ * Γ) z
+        apply C.inl_inl Φ (Ω * Θ) (Δ * Γ) z
       · rw [hΨ]
-        rw [act_right]
-        symm
-        convert act_right (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω)
-          (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ z _ using 2
-        congr 1
-        funext Ω' i
-        exact act_interchange.aux σ κ (Φ ⋈ Ω') (args i)
+        let applyPush := fun e =>
+          Subst.act (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω)
+            (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ e
+        trans applyPush
+            (Expr.ap (C.inl z)
+              (fun {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
+        · apply congrArg
+          convert act_right σ (Θ ⋈ Ψ ⋈ Φ) (C.inl z) args using 2
+          · apply Eq.trans
+            · symm
+              apply hΨ
+            · congr 1
+              apply C.inl_inl Φ (Θ ⋈ Ψ) (Δ * Γ) z
+          · congr 1
+            apply C.inl_inl Φ (Θ ⋈ Ψ) (Ξ * Γ) z
+        · dsimp [applyPush]
+          rw [act_right]
+          congr 1
+          · apply C.inl_inl Φ (Θ ⋈ Ω) (Ξ * Γ) z
+          · funext Ω' i
+            symm
+            convert act_interchange.aux σ κ (Φ ⋈ Ω') (args i) using 2
     case middle => sorry
     case left => sorry
 termination_by (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
@@ -234,15 +247,11 @@ decreasing_by all_goals exact Expr.Subterm.of_arg x args _
 end
 
 
--- /-- Acting by `θ` commutes with instantiating `κ`: substituting `κ` then acting
--- by `θ` equals acting by `θ` then substituting the pushed-forward `κ`. -/
--- theorem act_interchange {C : Carrier} {Γ Θ Ξ Ψ Ω : Shape C}
---     [Proper Θ] [Proper Ξ] [Proper Ψ] [Proper Ω]
---     (θ : Subst Θ (Γ ⋈ Ξ)) (κ : Subst Ψ (Γ ⋈ Θ ⋈ Ω))
---     (e : Expr (Γ ⋈ Θ ⋈ Ψ)) :
---   θ.act Ω (κ.act Shape.nil e)
---     = Subst.act (pushforward θ κ) Shape.nil (θ.act Ψ e)
---   := by
---   convert act_interchange.aux (Θ := Shape.nil) θ κ Shape.nil e
---   · apply Subsingleton.elim
---   · congr <;> apply Subsingleton.elim
+/-- Acting by `θ` commutes with instantiating `κ`: substituting `κ` then acting
+by `θ` equals acting by `θ` then substituting the pushed-forward `κ`. -/
+theorem act_interchange
+    {A : Type} {C : Carrier A} {Γ Θ Ξ Ψ Ω : C.Arity}
+    (θ : Subst Θ (Γ ⋈ Ξ)) (κ : Subst Ψ (Γ ⋈ Θ ⋈ Ω)) (e : Expr (Γ ⋈ Θ ⋈ Ψ)) :
+  θ.act Ω (κ.act 1 e) = Subst.act (pushforward θ κ) 1 (θ.act Ψ e)
+  := by
+  apply act_interchange.aux (Θ := 1) _ _ 1

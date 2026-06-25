@@ -26,7 +26,8 @@ inductive Expr.Subterm {A : Type} {C : Carrier A} : (Σ Γ : C.Arity, Expr Γ) �
       Subterm ⟨Γ ⋈ Δ, args j⟩ ⟨Γ, ap x args⟩
 
 theorem Expr.Subterm.wf {A : Type} {C : Carrier A} :
-    WellFounded (@Expr.Subterm A C) := by
+    WellFounded (@Expr.Subterm A C)
+  := by
   constructor
   intro ⟨Γ, e⟩
   induction e with
@@ -64,7 +65,7 @@ theorem Renaming.act_ap {A : Type} {C : Carrier A} {Γ Δ : C.Arity} (ρ : Γ �
 theorem Renaming.act_id {A : Type} {C : Carrier A} {Γ : C.Arity} :
   ∀ (e : Expr Γ), ⟦ 𝟙ʳ Γ ⟧ʳ e = e
   | .ap x args => by
-    simp [act_ap]
+    simp [act_ap, Renaming.id]
     funext
     apply act_id
 
@@ -73,7 +74,7 @@ theorem Renaming.act_comp
     (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ξ) :
   ∀ (e : Expr Γ), ⟦ σ ∘ʳ ρ ⟧ʳ e = ⟦ σ ⟧ʳ (⟦ ρ ⟧ʳ e)
   | .ap x args => by
-    rw [act_ap, act_ap, act_ap]
+    rw [act_ap]
     congr 1
     funext
     rw [Renaming.extend_comp]

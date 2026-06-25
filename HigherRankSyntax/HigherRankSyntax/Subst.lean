@@ -24,11 +24,6 @@ as `Γ ⋈ Ξ`. -/
 abbrev Subst {A : Type} {C : Carrier A} (Δ Γ : C.Arity) :=
   ∀ ⦃ α : C.Arity ⦄, Δ ∋ α → Expr (Γ ⋈ α)
 
-/-- Package an application argument family as a substitution from its head arity. -/
-def Subst.fromArgs {A : Type} {C : Carrier A} (Γ Δ : C.Arity)
-    (args : Expr.Args Γ Δ) :
-    Subst Δ Γ := args
-
 /-- The identity substitution at shape `Γ`. -/
 def Subst.id {A : Type} {C : Carrier A} (Γ : C.Arity) : Subst Γ Γ :=
   (fun ⦃β⦄ (p : Γ ∋ β) => Expr.η p)
@@ -62,8 +57,8 @@ def Subst.reinject {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity} {α} :
 This is the proof-facing inverse of `Subst.threeway`; use it to replace
 nested `Proper.cover` splits. -/
 theorem Subst.isReinject {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity} {α}
-      (x : (Γ ⋈ Δ ⋈ Ξ) ∋ α) :
-    ∃ y : LeftMiddleRight Γ Δ Ξ α, x = reinject y
+    (x : (Γ ⋈ Δ ⋈ Ξ) ∋ α) :
+  ∃ y : LeftMiddleRight Γ Δ Ξ α, x = reinject y
   := by
   rcases C.cover Ξ (Γ ⋈ Δ) x with ⟨x, rfl⟩ | ⟨y, rfl⟩
   · exact ⟨.right x, rfl⟩
@@ -101,22 +96,17 @@ def Subst.instId {A : Type} {C : Carrier A} (Δ α : C.Arity) : Subst α (Δ ⋈
 
 /-- Apply the substitution `σ` to an expression at depth `Φ`. -/
 def Subst.act {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
-    (σ : Subst Δ (Γ ⋈ Ξ))
-    (Φ : C.Arity) :
+      (σ : Subst Δ (Γ ⋈ Ξ))(Φ : C.Arity) :
     Expr (Γ ⋈ Δ ⋈ Φ) → Expr (Γ ⋈ Ξ ⋈ Φ)
   | .ap (α := α) x args =>
       match threeway x with
       | .right x =>
-          .ap (C.inl x)
-            (fun {_} i => σ.act (Φ ⋈ _) (args i))
+          .ap (C.inl x) (fun {_} i => σ.act (Φ ⋈ _) (args i))
       | .middle z =>
-          act (Subst.fromArgs (Γ ⋈ Ξ ⋈ Φ) α
-                (fun {_} i => σ.act (Φ ⋈ _) (args i))) 1 (σ z)
+          act (fun {_} i => σ.act (Φ ⋈ _) (args i)) 1 (σ z)
       | .left z =>
-          .ap (C.inr (C.inr z))
-            (fun {_} i => σ.act (Φ ⋈ _) (args i))
-termination_by e =>
-  (Δ, (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ))
+          .ap (C.inr (C.inr z)) (fun {_} i => σ.act (Φ ⋈ _) (args i))
+termination_by e => (Δ, (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ))
 decreasing_by
   all_goals
     first
@@ -132,5 +122,5 @@ expressions over `Γ ⋈ Ξ`. -/
 def Subst.comp {A : Type} {C : Carrier A} {Γ Δ Θ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Θ))
     (θ : Subst Θ (Γ ⋈ Ξ)) :
-    Subst Δ (Γ ⋈ Ξ) :=
+  Subst Δ (Γ ⋈ Ξ) :=
   (fun ⦃β⦄ x => θ.act β (σ x))

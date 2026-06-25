@@ -85,6 +85,22 @@ def inr {A : Type} (C : Carrier A) {Γ Δ α : C.Arity} (x : Δ ∋ α) :
     Γ * Δ ∋ α :=
   C.slotAt_mul Γ Δ α (Sum.inr x)
 
+def copair {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity} (X : Type)
+    (f : Γ ∋ α → X) (g : Δ ∋ α → X) (p : Γ * Δ ∋ α) : X :=
+  Sum.elim f g ((C.slotAt_mul Γ Δ α).symm p)
+
+theorem copair_inl {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity} (X : Type)
+    (f : Γ ∋ α → X) (g : Δ ∋ α → X) :
+  C.copair Γ Δ X f g ∘ C.inl = f := by
+  funext x
+  simp [copair, inl]
+
+theorem copair_inr {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity} (X : Type)
+    (f : Γ ∋ α → X) (g : Δ ∋ α → X) :
+  C.copair Γ Δ X f g ∘ C.inr = g := by
+  funext x
+  simp [copair, inr]
+
 theorem cover
     {A : Type} (C : Carrier A)
     (Γ Δ : C.Arity) {α : C.Arity} (p : Γ * Δ ∋ α) :
