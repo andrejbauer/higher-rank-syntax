@@ -10,28 +10,31 @@ private def sumLexAssocRel {α β γ : Type}
   toEquiv := Equiv.sumAssoc α β γ
   map_rel_iff' := by rintro ((_ | _) | _) ((_ | _) | _) <;> simp
 
-private theorem relIso_of_wellOrder_eq {α β : Type} {r : α → α → Prop} {s : β → β → Prop}
-    [IsWellOrder α r] [IsWellOrder β s] (e f : r ≃r s) : e = f := by
+private theorem relIso_of_wellOrder_eq
+    {α β : Type} {r : α → α → Prop} {s : β → β → Prop}
+    [IsWellOrder α r] [IsWellOrder β s] (e f : r ≃r s) :
+  e = f
+  := by
   ext x
-  refine IsWellFounded.induction (r := r) (motive := fun x => e x = f x) x ?_
-  intro x ih
-  rcases trichotomous_of s (e x) (f x) with hlt | heq | hgt
-  · let y : α := f.symm (e x)
-    have hyx : r y x := f.map_rel_iff.mp (by simpa [y] using hlt)
-    have hey : e y = f y := ih y hyx
-    have hxy : y = x := e.injective (by simpa [y] using hey)
-    exact (irrefl_of r x (hxy ▸ hyx)).elim
-  · exact heq
-  · let y : α := e.symm (f x)
-    have hyx : r y x := by
-      have herel : s (e y) (e x) ↔ r y x := e.map_rel_iff
-      exact herel.mp (by simpa [y] using hgt)
-    have hey : e y = f y := ih y hyx
-    have hxy : y = x := by
-      symm
-      apply f.injective
-      simpa [y] using hey
-    exact (irrefl_of r x (hxy ▸ hyx)).elim
+  induction x using (IsWellFounded.wf (r := r)).induction with
+  | h x ih =>
+    rcases trichotomous_of s (e x) (f x) with hlt | heq | hgt
+    · replace hlt : r (f.symm (e x)) x := by
+        apply f.map_rel_iff.mp
+        simpa using hlt
+      exfalso
+      apply irrefl_of s (e x)
+      convert (e.map_rel_iff).2 hlt
+      · symm
+        simpa using ih (f.symm (e x)) hlt
+    · exact heq
+    · replace hgt : r (e.symm (f x)) x := by
+        apply e.map_rel_iff.mp
+        simpa using hgt
+      exfalso
+      apply irrefl_of s (f x)
+      convert (f.map_rel_iff).2 hgt
+      simpa using ih (e.symm (f x)) hgt
 
 instance : CoeSort WellOrder (Type _) where coe W := W.α
 
@@ -82,36 +85,19 @@ def inr {A : Type} (C : Carrier A) {Γ Δ α : C.Arity} (x : Δ ∋ α) :
     Γ * Δ ∋ α :=
   C.slotAt_mul Γ Δ α (Sum.inr x)
 
-def copair {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity} (X : Type)
-    (f : Γ ∋ α → X) (g : Δ ∋ α → X) (p : Γ * Δ ∋ α) : X :=
-  Sum.elim f g ((C.slotAt_mul Γ Δ α).symm p)
-
-theorem copair_inl {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity} (X : Type)
-    (f : Γ ∋ α → X) (g : Δ ∋ α → X) :
-    C.copair Γ Δ X f g ∘ C.inl = f := by
-  funext x
-  simp [copair, inl]
-
-theorem copair_inr {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity} (X : Type)
-    (f : Γ ∋ α → X) (g : Δ ∋ α → X) :
-    C.copair Γ Δ X f g ∘ C.inr = g := by
-  funext x
-  simp [copair, inr]
-
-theorem cover {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity}
-    (p : Γ * Δ ∋ α) :
-    (∃ x : Γ ∋ α, p = C.inl x) ∨ (∃ y : Δ ∋ α, p = C.inr y) := by
+theorem cover
+    {A : Type} (C : Carrier A)
+    (Γ Δ : C.Arity) {α : C.Arity} (p : Γ * Δ ∋ α) :
+  (∃ x : Γ ∋ α, p = C.inl x) ∨ (∃ y : Δ ∋ α, p = C.inr y) := by
   rcases h : (C.slotAt_mul Γ Δ α).symm p with x | y
   · left
-    refine ⟨x, ?_⟩
-    have hp := (C.slotAt_mul Γ Δ α).apply_symm_apply p
-    rw [h] at hp
-    simpa [inl] using hp.symm
+    use x
+    rw [← (C.slotAt_mul Γ Δ α).apply_symm_apply p, h]
+    rfl
   · right
-    refine ⟨y, ?_⟩
-    have hp := (C.slotAt_mul Γ Δ α).apply_symm_apply p
-    rw [h] at hp
-    simpa [inr] using hp.symm
+    use y
+    rw [← (C.slotAt_mul Γ Δ α).apply_symm_apply p, h]
+    rfl
 
 /-- The monoidal unit has no slots. -/
 theorem unit_is_empty {A : Type} (C : Carrier A) {α : C.Arity} (x : 1 ∋ α) : False :=
@@ -119,30 +105,30 @@ theorem unit_is_empty {A : Type} (C : Carrier A) {α : C.Arity} (x : 1 ∋ α) :
 
 theorem inl_rel_iff {A : Type} (C : Carrier A) {Γ Δ α : C.Arity}
     {x y : Γ ∋ α} :
-    C.slotRel (Γ * Δ) α (C.inl x) (C.inl y) ↔ C.slotRel Γ α x y := by
+  C.slotRel (Γ * Δ) α (C.inl x) (C.inl y) ↔ C.slotRel Γ α x y := by
   simpa [slotRel, inl] using
     (C.slotAt_mul Γ Δ α).map_rel_iff (a := Sum.inl x) (b := Sum.inl y)
 
 theorem inr_rel_iff {A : Type} (C : Carrier A) {Γ Δ α : C.Arity}
     {x y : Δ ∋ α} :
-    C.slotRel (Γ * Δ) α (C.inr x) (C.inr y) ↔ C.slotRel Δ α x y := by
+  C.slotRel (Γ * Δ) α (C.inr x) (C.inr y) ↔ C.slotRel Δ α x y := by
   simpa [slotRel, inr] using
     (C.slotAt_mul Γ Δ α).map_rel_iff (a := Sum.inr x) (b := Sum.inr y)
 
 theorem inl_strictMono {A : Type} (C : Carrier A) {Γ Δ α : C.Arity}
     {x y : Γ ∋ α} (h : C.slotRel Γ α x y) :
-    C.slotRel (Γ * Δ) α (C.inl x) (C.inl y) :=
+  C.slotRel (Γ * Δ) α (C.inl x) (C.inl y) :=
   (C.inl_rel_iff (Γ := Γ) (Δ := Δ) (α := α)).2 h
 
 theorem inr_strictMono {A : Type} (C : Carrier A) {Γ Δ α : C.Arity}
     {x y : Δ ∋ α} (h : C.slotRel Δ α x y) :
-    C.slotRel (Γ * Δ) α (C.inr x) (C.inr y) :=
+  C.slotRel (Γ * Δ) α (C.inr x) (C.inr y) :=
   (C.inr_rel_iff (Γ := Γ) (Δ := Δ) (α := α)).2 h
 
 theorem inl_lt_inr {A : Type} (C : Carrier A) {Γ Δ α : C.Arity}
     (x : Γ ∋ α) (y : Δ ∋ α) :
-    C.slotRel (Γ * Δ) α (C.inl x) (C.inr y) := by
-  exact (C.slotAt_mul Γ Δ α).map_rel_iff.2 (Sum.Lex.sep x y)
+  C.slotRel (Γ * Δ) α (C.inl x) (C.inr y) :=
+  (C.slotAt_mul Γ Δ α).map_rel_iff.2 (Sum.Lex.sep x y)
 
 /-- A product classifier is unique once its two injections agree. -/
 theorem copair_uniq {A : Type} (C : Carrier A) (Γ Δ : C.Arity)
@@ -158,78 +144,110 @@ theorem copair_uniq {A : Type} (C : Carrier A) (Γ Δ : C.Arity)
 theorem inr_inl {A : Type} (C : Carrier A)
     (Γ Δ Ξ : C.Arity) {α : C.Arity} (x : Δ ∋ α) :
   (C.inr (C.inl x) : Γ * (Δ * Ξ) ∋ α)
-    =
-  (C.inl (C.inr x) : (Γ * Δ) * Ξ ∋ α) := by
-  let rΓ := (C.slotAt Γ α).r
-  let rΔ := (C.slotAt Δ α).r
-  let rΞ := (C.slotAt Ξ α).r
-  let L : Sum.Lex rΓ (Sum.Lex rΔ rΞ) ≃r (C.slotAt (Γ * (Δ * Ξ)) α).r :=
-    (RelIso.sumLexCongr (RelIso.refl rΓ) (C.slotAt_mul Δ Ξ α)).trans
-      (C.slotAt_mul Γ (Δ * Ξ) α)
-  let R : Sum.Lex rΓ (Sum.Lex rΔ rΞ) ≃r (C.slotAt (Γ * (Δ * Ξ)) α).r :=
-    (sumLexAssocRel rΓ rΔ rΞ).symm.trans
-      ((RelIso.sumLexCongr (C.slotAt_mul Γ Δ α) (RelIso.refl rΞ)).trans
-        (C.slotAt_mul (Γ * Δ) Ξ α))
-  have h := relIso_of_wellOrder_eq L R
-  change L (Sum.inr (Sum.inl x)) = R (Sum.inr (Sum.inl x))
-  rw [h]
+    = (C.inl (C.inr x) : (Γ * Δ) * Ξ ∋ α) := by
+  let Γr := (C.slotAt Γ α).r
+  let Δr := (C.slotAt Δ α).r
+  let Ξr := (C.slotAt Ξ α).r
+  let tripleRel := Sum.Lex Γr (Sum.Lex Δr Ξr)
+  let productRel := (C.slotAt (Γ * (Δ * Ξ)) α).r
+  let leftAssoc : tripleRel ≃r productRel := by
+    apply RelIso.trans
+    · apply RelIso.sumLexCongr
+      · apply RelIso.refl
+      · apply C.slotAt_mul
+    · apply C.slotAt_mul
+  let rightAssoc : tripleRel ≃r productRel := by
+    apply RelIso.trans
+    · apply RelIso.symm
+      apply sumLexAssocRel
+    · apply RelIso.trans
+      · apply RelIso.sumLexCongr
+        · apply C.slotAt_mul
+        · apply RelIso.refl
+      · apply C.slotAt_mul
+  have hIso : leftAssoc = rightAssoc := by
+    apply relIso_of_wellOrder_eq
+  replace hIso := congrArg (fun F => F (Sum.inr (Sum.inl x))) hIso
+  simpa only [inl, inr] using hIso
 
 theorem inr_inr {A : Type} (C : Carrier A)
     (Γ Δ Ξ : C.Arity) {α : C.Arity} (x : Ξ ∋ α) :
   (C.inr (C.inr x) : Γ * (Δ * Ξ) ∋ α)
-    =
-  (C.inr x : (Γ * Δ) * Ξ ∋ α) := by
-  let rΓ := (C.slotAt Γ α).r
-  let rΔ := (C.slotAt Δ α).r
-  let rΞ := (C.slotAt Ξ α).r
-  let L : Sum.Lex rΓ (Sum.Lex rΔ rΞ) ≃r (C.slotAt (Γ * (Δ * Ξ)) α).r :=
-    (RelIso.sumLexCongr (RelIso.refl rΓ) (C.slotAt_mul Δ Ξ α)).trans
-      (C.slotAt_mul Γ (Δ * Ξ) α)
-  let R : Sum.Lex rΓ (Sum.Lex rΔ rΞ) ≃r (C.slotAt (Γ * (Δ * Ξ)) α).r :=
-    (sumLexAssocRel rΓ rΔ rΞ).symm.trans
-      ((RelIso.sumLexCongr (C.slotAt_mul Γ Δ α) (RelIso.refl rΞ)).trans
-        (C.slotAt_mul (Γ * Δ) Ξ α))
-  have h : L = R := relIso_of_wellOrder_eq L R
-  change L (Sum.inr (Sum.inr x)) = R (Sum.inr (Sum.inr x))
-  rw [h]
+    = (C.inr x : (Γ * Δ) * Ξ ∋ α) := by
+  let Γr := (C.slotAt Γ α).r
+  let Δr := (C.slotAt Δ α).r
+  let Ξr := (C.slotAt Ξ α).r
+  let tripleRel := Sum.Lex Γr (Sum.Lex Δr Ξr)
+  let productRel := (C.slotAt (Γ * (Δ * Ξ)) α).r
+  let leftAssoc : tripleRel ≃r productRel := by
+    apply RelIso.trans
+    · apply RelIso.sumLexCongr
+      · apply RelIso.refl
+      · apply C.slotAt_mul
+    · apply C.slotAt_mul
+  let rightAssoc : tripleRel ≃r productRel := by
+    apply RelIso.trans
+    · apply RelIso.symm
+      apply sumLexAssocRel
+    · apply RelIso.trans
+      · apply RelIso.sumLexCongr
+        · apply C.slotAt_mul
+        · apply RelIso.refl
+      · apply C.slotAt_mul
+  have hIso : leftAssoc = rightAssoc := by
+    apply relIso_of_wellOrder_eq
+  replace hIso := congrArg (fun F => F (Sum.inr (Sum.inr x))) hIso
+  simpa only [inl, inr] using hIso
 
 theorem inl_inl {A : Type} (C : Carrier A)
     (Γ Δ Ξ : C.Arity) {α : C.Arity} (x : Γ ∋ α) :
   (C.inl x : Γ * (Δ * Ξ) ∋ α)
-    =
-  (C.inl (C.inl x) : (Γ * Δ) * Ξ ∋ α) := by
-  let rΓ := (C.slotAt Γ α).r
-  let rΔ := (C.slotAt Δ α).r
-  let rΞ := (C.slotAt Ξ α).r
-  let L : Sum.Lex rΓ (Sum.Lex rΔ rΞ) ≃r (C.slotAt (Γ * (Δ * Ξ)) α).r :=
-    (RelIso.sumLexCongr (RelIso.refl rΓ) (C.slotAt_mul Δ Ξ α)).trans
-      (C.slotAt_mul Γ (Δ * Ξ) α)
-  let R : Sum.Lex rΓ (Sum.Lex rΔ rΞ) ≃r (C.slotAt (Γ * (Δ * Ξ)) α).r :=
-    (sumLexAssocRel rΓ rΔ rΞ).symm.trans
-      ((RelIso.sumLexCongr (C.slotAt_mul Γ Δ α) (RelIso.refl rΞ)).trans
-        (C.slotAt_mul (Γ * Δ) Ξ α))
-  have h : L = R := relIso_of_wellOrder_eq L R
-  change L (Sum.inl x) = R (Sum.inl x)
-  rw [h]
+    = (C.inl (C.inl x) : (Γ * Δ) * Ξ ∋ α) := by
+  let Γr := (C.slotAt Γ α).r
+  let Δr := (C.slotAt Δ α).r
+  let Ξr := (C.slotAt Ξ α).r
+  let tripleRel := Sum.Lex Γr (Sum.Lex Δr Ξr)
+  let productRel := (C.slotAt (Γ * (Δ * Ξ)) α).r
+  let leftAssoc : tripleRel ≃r productRel := by
+    apply RelIso.trans
+    · apply RelIso.sumLexCongr
+      · apply RelIso.refl
+      · apply C.slotAt_mul
+    · apply C.slotAt_mul
+  let rightAssoc : tripleRel ≃r productRel := by
+    apply RelIso.trans
+    · apply RelIso.symm
+      apply sumLexAssocRel
+    · apply RelIso.trans
+      · apply RelIso.sumLexCongr
+        · apply C.slotAt_mul
+        · apply RelIso.refl
+      · apply C.slotAt_mul
+  have hIso : leftAssoc = rightAssoc := by
+    apply relIso_of_wellOrder_eq
+  replace hIso := congrArg (fun F => F (Sum.inl x)) hIso
+  simpa only [inl, inr] using hIso
 
 theorem unit_right {A : Type} (C : Carrier A) (Γ : C.Arity)
     {α : C.Arity} (x : Γ ∋ α) :
   (C.inl x : Γ * 1 ∋ α) = x := by
-  change C.slotAt_mul Γ 1 α (Sum.inl x) = x
   letI := C.unit_empty α
-  have hIso : C.slotAt_mul Γ 1 α = RelIso.sumLexEmpty (C.slotAt Γ α).r (C.slotAt 1 α).r :=
-    relIso_of_wellOrder_eq _ _
-  rw [hIso]
-  rfl
+  let hSame :
+      C.slotAt_mul Γ 1 α
+        = RelIso.sumLexEmpty (C.slotAt Γ α).r (C.slotAt 1 α).r := by
+    apply relIso_of_wellOrder_eq
+  replace hSame := congrArg (fun F => F (Sum.inl x)) hSame
+  simpa only [inl] using hSame
 
 theorem unit_left {A : Type} (C : Carrier A) (Γ : C.Arity)
     {α : C.Arity} (x : Γ ∋ α) :
   (C.inr x : 1 * Γ ∋ α) = x := by
-  change C.slotAt_mul 1 Γ α (Sum.inr x) = x
   letI := C.unit_empty α
-  have hIso : C.slotAt_mul 1 Γ α = RelIso.emptySumLex (C.slotAt 1 α).r (C.slotAt Γ α).r :=
-    relIso_of_wellOrder_eq _ _
-  rw [hIso]
-  rfl
+  let hSame :
+      C.slotAt_mul 1 Γ α
+        = RelIso.emptySumLex (C.slotAt 1 α).r (C.slotAt Γ α).r := by
+    apply relIso_of_wellOrder_eq
+  replace hSame := congrArg (fun F => F (Sum.inr x)) hSame
+  simpa only [inr] using hSame
 
 end Carrier
