@@ -5,8 +5,8 @@ import Batteries.Tactic.Trans
 # Instantiation lemmas
 
 η-substitutions and one-position instantiation: `act_η_right` (acting on a
-current-depth η reproduces it), `act_idOfη` (an η-substitution acts as the
-identity), and the mutual `act_inst_η` (β-for-η) / `act_inst_id` (the identity
+current-depth η reproduces it), and the mutual `act_idOfη` (an η-substitution
+acts as the identity) / `act_inst_η` (β-for-η) / `act_inst_id` (the identity
 instantiation acts as the identity).
 -/
 
@@ -31,15 +31,12 @@ theorem act_η_right
 termination_by α
 decreasing_by exact ⟨i⟩
 
-/-- An η-substitution acts as the identity, given β-for-η at every domain-slot
-arity (`hη`). -/
+mutual
+
+/-- An η-substitution acts as the identity. -/
 theorem act_idOfη {Γ Δ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Δ))
     (hσ : ∀ {β} (z : Δ ∋ β), σ z = Expr.η (C.inl z))
-    (hη : ∀ {β} (_ : Δ ∋ β) {Θ Ξ : C.Arity}
-              (ι : Subst β (Θ ⋈ Ξ)) (x : Θ ∋ β),
-            ⟦ ι ⟧ˢ ((Expr.η x : Expr (Θ ⋈ β)))
-              = (.ap (C.inr x) (fun ⦃_⦄ i => ι i) : Expr (Θ ⋈ Ξ)))
     (Φ : C.Arity) (e : Expr (Γ ⋈ Δ ⋈ Φ)) :
   Subst.act σ Φ e = e
   := by
@@ -50,23 +47,25 @@ theorem act_idOfη {Γ Δ : C.Arity}
       rw [act_right]
       congr 1
       funext Ω i
-      apply act_idOfη σ hσ hη
+      apply act_idOfη σ hσ
     case middle =>
       rw [act_left_right, hσ]
       trans
-      · exact hη z _ (C.inl z)
+      · apply act_inst_η
       · congr 1
         funext Ω i
-        apply act_idOfη σ hσ hη
+        apply act_idOfη σ hσ
     case left =>
       rw [act_left]
       congr 1
       funext Ω i
-      apply act_idOfη σ hσ hη
-termination_by (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
-decreasing_by all_goals exact Expr.Subterm.of_arg x args _
-
-mutual
+      apply act_idOfη σ hσ
+termination_by (Δ, (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ))
+decreasing_by
+  all_goals
+    first
+    | exact Prod.Lex.left _ _ ⟨z⟩
+    | exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
 
 /-- β-for-η: instantiating the η-expansion of a non-substituted variable exposes
 the kit's positions. -/
@@ -88,20 +87,39 @@ theorem act_inst_η {Γ Ξ : C.Arity}
       congr 1
       funext Ω k
       apply act_η_right
-termination_by α
-decreasing_by exact ⟨j⟩
+termination_by (α, (⟨Γ ⋈ α, Expr.η x⟩ : Σ Γ : C.Arity, Expr Γ))
+decreasing_by exact Prod.Lex.left _ _ ⟨j⟩
 
 /-- The identity instantiation acts as the identity. -/
 theorem act_inst_id (α : C.Arity) (Γ : C.Arity)
     (Φ : C.Arity) (e : Expr (Γ ⋈ α ⋈ Φ)) :
   Subst.act (Subst.instId Γ α) Φ e = e
-  := act_idOfη (Subst.instId Γ α)
-       (fun _ => rfl)
-       (fun {β} z {Θ Ξ} ι x => by
-          have _ : Nonempty (α ∋ β) := ⟨z⟩
-          exact act_inst_η ι x)
-       Φ e
-termination_by α
-decreasing_by exact ‹Nonempty (_ ∋ _)›
+  := by
+  match e with
+  | .ap (α := β) x args =>
+    head_cases x with z
+    case right =>
+      rw [act_right]
+      congr 1
+      funext Ω i
+      apply act_inst_id
+    case middle =>
+      rw [act_left_right, Subst.instId]
+      trans
+      · apply act_inst_η
+      · congr 1
+        funext Ω i
+        apply act_inst_id
+    case left =>
+      rw [act_left]
+      congr 1
+      funext Ω i
+      apply act_inst_id
+termination_by (α, (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ))
+decreasing_by
+  all_goals
+    first
+    | exact Prod.Lex.left _ _ ⟨z⟩
+    | exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
 
 end

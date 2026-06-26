@@ -16,8 +16,7 @@ variable {A : Type} {C : Carrier A}
 theorem act_id (Γ Φ : C.Arity) (e : Expr (Γ ⋈ Φ)) :
   Subst.act (Subst.id Γ) (Γ := 1) Φ e = e
   := act_idOfη (Γ := 1) (Subst.id Γ)
-       (fun z => by rw [C.unit_right Γ z]; rfl)
-       (fun _ => act_inst_η) Φ e
+       (fun z => by rw [C.unit_right Γ z]; rfl) Φ e
 
 /-- **`act_η`** — acting on an η-expansion reduces to applying `σ` (unit_left). -/
 theorem act_η

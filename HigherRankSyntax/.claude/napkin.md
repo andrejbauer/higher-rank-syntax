@@ -9,6 +9,8 @@
 ## Execution & Validation (Highest Priority)
 1. **[2026-06-23] Verify Lean snippets locally**
    Do instead: use the project toolchain or Lean LSP on minimal snippets before giving Lean/mathlib API advice.
+2. **[2026-06-26] Rebuild changed Lean interfaces**
+   Do instead: after changing exported theorem signatures, use `lake build Target` for downstream checks; `lake env lean File.lean` may read stale imported `.olean`s.
 
 ## Shell & Command Reliability
 1. **[2026-06-23] Prefer focused shell reads**
