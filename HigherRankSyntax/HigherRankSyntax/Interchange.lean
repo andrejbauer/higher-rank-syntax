@@ -28,9 +28,8 @@ abbrev pushforward
 rebuilt over the new codomain and the action descends into the arguments. Generalizes
 `act_right` (`Λ = Ρ = 1`). -/
 theorem act_ap_depth
-    {Γ Δ Ξ : C.Arity}
-    (σ : Subst Δ (Γ ⋈ Ξ)) (Λ Φ Ρ : C.Arity) {α} (z : Φ ∋ α)
-    (args : Expr.Args (Γ ⋈ Δ ⋈ Λ ⋈ Φ ⋈ Ρ) α) :
+    {Γ Δ Ξ : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ)) (Λ Φ Ρ : C.Arity)
+    {α} (z : Φ ∋ α) (args : Expr.Args (Γ ⋈ Δ ⋈ Λ ⋈ Φ ⋈ Ρ) α) :
   σ.act (Λ ⋈ Φ ⋈ Ρ) (Expr.ap (C.inr (Γ := Ρ) (C.inl (Δ := Λ * (Δ * Γ)) z)) args)
     = Expr.ap (C.inr (C.inl (Δ := Λ * (Ξ * Γ)) z))
         (fun {Ω} j => σ.act (Λ ⋈ Φ ⋈ Ρ ⋈ Ω) (args j))
@@ -46,10 +45,8 @@ theorem act_ap_depth
 /-- `σ.act` preserves application heads from the passive context
 `Γ ⋈ Θ ⋈ Ρ ⋈ Φ`; only the arguments are acted on. -/
 theorem act_passive_head
-    {Γ Δ Ξ Θ Ρ Φ : C.Arity}
-    (σ : Subst Δ (Γ ⋈ Ξ)) {β}
-    (p : Γ ⋈ Θ ⋈ Ρ ⋈ Φ ∋ β)
-    (args : Expr.Args (Γ ⋈ Δ ⋈ Θ ⋈ Ρ ⋈ Φ) β) :
+    {Γ Δ Ξ Θ Ρ Φ : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ)) {β}
+    (p : Γ ⋈ Θ ⋈ Ρ ⋈ Φ ∋ β) (args : Expr.Args (Γ ⋈ Δ ⋈ Θ ⋈ Ρ ⋈ Φ) β) :
   σ.act (Θ ⋈ Ρ ⋈ Φ)
       (.ap (((((fun {_} x => C.inr x : Γ →ʳ Γ ⋈ Δ) ⇑ʳ Θ) ⇑ʳ Ρ) ⇑ʳ Φ) p) args)
     = .ap (((((fun {_} x => C.inr x : Γ →ʳ Γ ⋈ Ξ) ⇑ʳ Θ) ⇑ʳ Ρ) ⇑ʳ Φ) p)
@@ -92,8 +89,8 @@ mutual
 /-- Acting by `θ` commutes with applying `κ` when `θ` acts on variables that may
 occur in the fillers of `κ`. -/
 theorem act_interchange.subst
-    {Γ Λ Θ Ψ Ω Φ Χ : C.Arity}
-    (θ : Subst Ψ (Γ ⋈ Θ ⋈ Ω)) (κ : Subst Λ (Γ ⋈ Θ ⋈ Ψ ⋈ Φ)) (e : Expr (Γ ⋈ Λ ⋈ Χ)) :
+    {Γ Λ Θ Ψ Ω Φ Χ : C.Arity} (θ : Subst Ψ (Γ ⋈ Θ ⋈ Ω))
+    (κ : Subst Λ (Γ ⋈ Θ ⋈ Ψ ⋈ Φ)) (e : Expr (Γ ⋈ Λ ⋈ Χ)) :
   θ.act (Φ ⋈ Χ) (Subst.act (Ξ := Θ ⋈ Ψ ⋈ Φ) κ Χ e)
     = Subst.act (Ξ := Θ ⋈ Ω ⋈ Φ) (pushforward (Ω := Φ) θ κ) Χ e
   := by
@@ -152,9 +149,9 @@ decreasing_by
 
 /-- Acting by `σ` commutes with instantiating `κ` (pushed forward along `σ`). -/
 theorem act_interchange.aux
-    {Γ Δ Ξ Θ Ψ Ω : C.Arity}
-    (σ : Subst Δ (Γ ⋈ Ξ)) (κ : Subst Ψ (Γ ⋈ Δ ⋈ Θ ⋈ Ω))
-    (Φ : C.Arity) (e : Expr (Γ ⋈ Δ ⋈ Θ ⋈ Ψ ⋈ Φ)) :
+    {Γ Δ Ξ Θ Ψ Ω : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ))
+    (κ : Subst Ψ (Γ ⋈ Δ ⋈ Θ ⋈ Ω)) (Φ : C.Arity)
+    (e : Expr (Γ ⋈ Δ ⋈ Θ ⋈ Ψ ⋈ Φ)) :
   σ.act (Θ ⋈ Ω ⋈ Φ) (κ.act Φ e)
     = Subst.act (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω)
         (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (σ.act (Θ ⋈ Ψ ⋈ Φ) e)
@@ -283,8 +280,8 @@ end
 /-- Acting by `θ` commutes with instantiating `κ`: substituting `κ` then acting
 by `θ` equals acting by `θ` then substituting the pushed-forward `κ`. -/
 theorem act_interchange
-    {Γ Θ Ξ Ψ Ω : C.Arity}
-    (θ : Subst Θ (Γ ⋈ Ξ)) (κ : Subst Ψ (Γ ⋈ Θ ⋈ Ω)) (e : Expr (Γ ⋈ Θ ⋈ Ψ)) :
+    {Γ Θ Ξ Ψ Ω : C.Arity} (θ : Subst Θ (Γ ⋈ Ξ))
+    (κ : Subst Ψ (Γ ⋈ Θ ⋈ Ω)) (e : Expr (Γ ⋈ Θ ⋈ Ψ)) :
   θ.act Ω (κ.act 1 e) = Subst.act (pushforward θ κ) 1 (θ.act Ψ e)
   := by
   apply act_interchange.aux (Θ := 1) _ _ 1
