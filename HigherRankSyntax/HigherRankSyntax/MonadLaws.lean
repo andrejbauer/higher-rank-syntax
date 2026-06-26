@@ -36,26 +36,29 @@ theorem act_η
       _ = σ x := by apply act_inst_id
 
 /-- **`act_comp`** — action by a composite factors (comp_lift). -/
-theorem act_comp {C : Carrier} {Γ Δ Θ Ξ : Shape C} [Proper Δ] [Proper Θ] [Proper Ξ]
-    (σ : Subst Δ (Γ ⋈ Θ)) (θ : Subst Θ (Γ ⋈ Ξ)) (Φ : Shape C) [Proper Φ]
-    (e : Expr (Γ ⋈ Δ ⋈ Φ)) :
+theorem act_comp
+    {A : Type} {C : Carrier A} {Γ Δ Θ Ξ : C.Arity}
+    (σ : Subst Δ (Γ ⋈ Θ)) (θ : Subst Θ (Γ ⋈ Ξ))
+    (Φ : C.Arity) (e : Expr (Γ ⋈ Δ ⋈ Φ)) :
   Subst.act (Subst.comp σ θ) Φ e = θ.act Φ (σ.act Φ e)
   := by
   match e with
   | .ap (α := β) x args =>
     head_cases x with z
     case right =>
-      simp only [act_right]
-      congr 1; funext i; exact act_comp σ θ (Φ ∷ i.arity) (args i)
+      rw [act_right, act_right, act_right]
+      congr 1
+      funext Ω i
+      apply act_comp σ θ (Φ ⋈ Ω) (args i)
     case middle =>
       rw [act_left_right, act_left_right, act_interchange]
       congr 1
-      funext _ q
-      cases q with
-      | here i => exact act_comp σ θ (Φ ∷ i.arity) (args i)
-      | there w => nomatch w
+      funext Ω i
+      apply act_comp σ θ (Φ ⋈ Ω) (args i)
     case left =>
-      simp only [act_left]
-      congr 1; funext i; exact act_comp σ θ (Φ ∷ i.arity) (args i)
-termination_by (⟨_, e⟩ : Σ Γ : Shape C, Expr Γ)
+      rw [act_left, act_left, act_left]
+      congr 1
+      funext Ω i
+      apply act_comp σ θ (Φ ⋈ Ω) (args i)
+termination_by (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg x args _
