@@ -10,9 +10,11 @@ identity), and the mutual `act_inst_η` (β-for-η) / `act_inst_id` (the identit
 instantiation acts as the identity).
 -/
 
+variable {A : Type} {C : Carrier A}
+
 /-- Acting on the η-expansion of a current-depth slot reproduces the η. -/
 theorem act_η_right
-    {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    {Γ Δ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity) {α} (x : Φ ∋ α) :
   σ.act (Φ ⋈ α) ((Expr.η (C.inl x) : Expr ((Γ ⋈ Δ ⋈ Φ) ⋈ α)))
     = ((Expr.η (C.inl x) : Expr ((Γ ⋈ Ξ ⋈ Φ) ⋈ α)))
@@ -31,7 +33,7 @@ decreasing_by exact ⟨i⟩
 
 /-- An η-substitution acts as the identity, given β-for-η at every domain-slot
 arity (`hη`). -/
-theorem act_idOfη {A : Type} {C : Carrier A} {Γ Δ : C.Arity}
+theorem act_idOfη {Γ Δ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Δ))
     (hσ : ∀ {β} (z : Δ ∋ β), σ z = Expr.η (C.inl z))
     (hη : ∀ {β} (_ : Δ ∋ β) {Θ Ξ : C.Arity}
@@ -68,7 +70,7 @@ mutual
 
 /-- β-for-η: instantiating the η-expansion of a non-substituted variable exposes
 the kit's positions. -/
-theorem act_inst_η {A : Type} {C : Carrier A} {Γ Ξ : C.Arity}
+theorem act_inst_η {Γ Ξ : C.Arity}
     {α} (ι : Subst α (Γ ⋈ Ξ)) (x : Γ ∋ α) :
   ⟦ ι ⟧ˢ ((Expr.η x : Expr (Γ ⋈ α)))
     = ((.ap (C.inr x) (fun ⦃_⦄ i => ι i) : Expr (Γ ⋈ Ξ)))
@@ -90,7 +92,7 @@ termination_by α
 decreasing_by exact ⟨j⟩
 
 /-- The identity instantiation acts as the identity. -/
-theorem act_inst_id {A : Type} {C : Carrier A} (α : C.Arity) (Γ : C.Arity)
+theorem act_inst_id (α : C.Arity) (Γ : C.Arity)
     (Φ : C.Arity) (e : Expr (Γ ⋈ α ⋈ Φ)) :
   Subst.act (Subst.instId Γ α) Φ e = e
   := act_idOfη (Subst.instId Γ α)

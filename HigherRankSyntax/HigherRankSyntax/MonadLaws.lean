@@ -10,8 +10,10 @@ import Batteries.Tactic.Trans
 * `act_comp` — action by a composite factors (comp_lift).
 -/
 
+variable {A : Type} {C : Carrier A}
+
 /-- **`act_id`** — the identity substitution acts as the identity (unit_right). -/
-theorem act_id {A : Type} {C : Carrier A} (Γ Φ : C.Arity) (e : Expr (Γ ⋈ Φ)) :
+theorem act_id (Γ Φ : C.Arity) (e : Expr (Γ ⋈ Φ)) :
   Subst.act (Subst.id Γ) (Γ := 1) Φ e = e
   := act_idOfη (Γ := 1) (Subst.id Γ)
        (fun z => by rw [C.unit_right Γ z]; rfl)
@@ -19,7 +21,7 @@ theorem act_id {A : Type} {C : Carrier A} (Γ Φ : C.Arity) (e : Expr (Γ ⋈ Φ
 
 /-- **`act_η`** — acting on an η-expansion reduces to applying `σ` (unit_left). -/
 theorem act_η
-    {A : Type} {C : Carrier A} {Δ Ξ : C.Arity}
+    {Δ Ξ : C.Arity}
     (σ : Subst Δ Ξ) (Θ : C.Arity) (x : Δ ∋ Θ) :
   σ.act (Γ := 1) Θ (.η x) = σ x
   := by
@@ -37,7 +39,7 @@ theorem act_η
 
 /-- **`act_comp`** — action by a composite factors (comp_lift). -/
 theorem act_comp
-    {A : Type} {C : Carrier A} {Γ Δ Θ Ξ : C.Arity}
+    {Γ Δ Θ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Θ)) (θ : Subst Θ (Γ ⋈ Ξ))
     (Φ : C.Arity) (e : Expr (Γ ⋈ Δ ⋈ Φ)) :
   Subst.act (Subst.comp σ θ) Φ e = θ.act Φ (σ.act Φ e)

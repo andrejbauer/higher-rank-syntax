@@ -13,10 +13,12 @@ instantiating `κ` (pushed forward along `σ`).  `act_interchange` is its
 `Θ = 1`, `Φ = 1` instance, used by `act_comp`.
 -/
 
+variable {A : Type} {C : Carrier A}
+
 /-- Push `κ` forward along `σ`: `(pushforward σ κ) x = σ.act (κ x)` at the
 passive depth determined by the filler. -/
 abbrev pushforward
-    {A : Type} {C : Carrier A} {Γ Δ Ξ Θ Ω : C.Arity}
+    {Γ Δ Ξ Θ Ω : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (κ : Subst Θ (Γ ⋈ Δ ⋈ Ω)) :
   Subst Θ (Γ ⋈ Ξ ⋈ Ω) :=
     fun {β} x => σ.act (Ω ⋈ β) (κ x)
@@ -26,7 +28,7 @@ abbrev pushforward
 rebuilt over the new codomain and the action descends into the arguments. Generalizes
 `act_right` (`Λ = Ρ = 1`). -/
 theorem act_ap_depth
-    {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    {Γ Δ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (Λ Φ Ρ : C.Arity) {α} (z : Φ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Λ ⋈ Φ ⋈ Ρ) α) :
   σ.act (Λ ⋈ Φ ⋈ Ρ) (Expr.ap (C.inr (Γ := Ρ) (C.inl (Δ := Λ * (Δ * Γ)) z)) args)
@@ -44,7 +46,7 @@ theorem act_ap_depth
 /-- `σ.act` preserves application heads from the passive context
 `Γ ⋈ Θ ⋈ Ρ ⋈ Φ`; only the arguments are acted on. -/
 theorem act_passive_head
-    {A : Type} {C : Carrier A} {Γ Δ Ξ Θ Ρ Φ : C.Arity}
+    {Γ Δ Ξ Θ Ρ Φ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) {β}
     (p : Γ ⋈ Θ ⋈ Ρ ⋈ Φ ∋ β)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Θ ⋈ Ρ ⋈ Φ) β) :
@@ -80,8 +82,6 @@ theorem act_passive_head
         rfl
 
 section
-
-variable {A : Type} {C : Carrier A}
 
 local instance : WellFoundedRelation (Sym2 C.Arity) where
   rel := Sym2.GameAdd (@WellFoundedRelation.rel C.Arity inferInstance)
@@ -283,7 +283,7 @@ end
 /-- Acting by `θ` commutes with instantiating `κ`: substituting `κ` then acting
 by `θ` equals acting by `θ` then substituting the pushed-forward `κ`. -/
 theorem act_interchange
-    {A : Type} {C : Carrier A} {Γ Θ Ξ Ψ Ω : C.Arity}
+    {Γ Θ Ξ Ψ Ω : C.Arity}
     (θ : Subst Θ (Γ ⋈ Ξ)) (κ : Subst Ψ (Γ ⋈ Θ ⋈ Ω)) (e : Expr (Γ ⋈ Θ ⋈ Ψ)) :
   θ.act Ω (κ.act 1 e) = Subst.act (pushforward θ κ) 1 (θ.act Ψ e)
   := by

@@ -16,21 +16,22 @@ right/current-depth heads are preserved, middle/domain heads fire `σ`, and
 left/prefix heads are preserved by direct reinjection.
 -/
 
+variable {A : Type} {C : Carrier A}
 
 /-- A substitution record from a domain shape into a full target shape.
 The `sub` field is the only data; prefix preservation is not part of the
 record and is instead selected by `Subst.act` when the target is decomposed
 as `Γ ⋈ Ξ`. -/
-abbrev Subst {A : Type} {C : Carrier A} (Δ Γ : C.Arity) :=
+abbrev Subst (Δ Γ : C.Arity) :=
   ∀ ⦃ α : C.Arity ⦄, Δ ∋ α → Expr (Γ ⋈ α)
 
 /-- The identity substitution at shape `Γ`. -/
-def Subst.id {A : Type} {C : Carrier A} (Γ : C.Arity) : Subst Γ Γ :=
+def Subst.id (Γ : C.Arity) : Subst Γ Γ :=
   (fun ⦃β⦄ (p : Γ ∋ β) => Expr.η p)
 
 /-- Three-way dispatch of a slot of `Γ ⋈ Δ ⋈ Ξ`, used by `Subst.act`: the
 prefix `Γ`, the substitution domain `Δ`, or the current depth `Ξ`. -/
-inductive LeftMiddleRight {A : Type} {C : Carrier A} (Γ Δ Ξ α : C.Arity) : Type where
+inductive LeftMiddleRight (Γ Δ Ξ α : C.Arity) : Type where
   /-- The slot belongs to the prefix `Γ`. -/
   | left (q : Γ ∋ α)
   /-- The slot belongs to the substitution domain `Δ`. -/
@@ -40,14 +41,14 @@ inductive LeftMiddleRight {A : Type} {C : Carrier A} (Γ Δ Ξ α : C.Arity) : T
 
 /-- Dispatching a `Γ ⋈ Δ ⋈ Ξ`-slot into its source: prefix `Γ`, substitution
 domain `Δ`, or current depth `Ξ`. -/
-def Subst.threeway {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+def Subst.threeway {Γ Δ Ξ : C.Arity}
     {α} (p : (Γ ⋈ Δ ⋈ Ξ) ∋ α) : LeftMiddleRight Γ Δ Ξ α :=
   C.copair Ξ (Γ ⋈ Δ) _
     (fun q => .right q)
     (fun q => C.copair Δ Γ _ (fun y => .middle y) (fun x => .left x) q) p
 
 /-- Embed a classified site back into `Γ ⋈ Δ ⋈ Ξ`. -/
-def Subst.reinject {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity} {α} :
+def Subst.reinject {Γ Δ Ξ : C.Arity} {α} :
   LeftMiddleRight Γ Δ Ξ α → (Γ ⋈ Δ ⋈ Ξ) ∋ α
   | .left x => C.inr (C.inr x)
   | .middle x => C.inr (C.inl x)
@@ -56,7 +57,7 @@ def Subst.reinject {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity} {α} :
 /-- Every source slot is the embedding of a unique-looking `SubstSite`.
 This is the proof-facing inverse of `Subst.threeway`; use it to replace
 nested `Proper.cover` splits. -/
-theorem Subst.isReinject {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity} {α}
+theorem Subst.isReinject {Γ Δ Ξ : C.Arity} {α}
     (x : (Γ ⋈ Δ ⋈ Ξ) ∋ α) :
   ∃ y : LeftMiddleRight Γ Δ Ξ α, x = reinject y
   := by
@@ -67,35 +68,35 @@ theorem Subst.isReinject {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity} {α}
     · exact ⟨.left w, rfl⟩
 
 /-- Classifying a concrete right-injected `Ξ` head returns the right site. -/
-@[simp] theorem Subst.threeway_inr {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+@[simp] theorem Subst.threeway_inr {Γ Δ Ξ : C.Arity}
     {α : C.Arity} (x : Ξ ∋ α) :
   threeway (Γ := Γ) (Δ := Δ) (C.inl x) = .right x
   := by
   simp [threeway, Carrier.copair, Carrier.inl]
 
 /-- Classifying a concrete middle-domain head returns the middle site. -/
-@[simp] theorem Subst.threeway_inl_dom {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+@[simp] theorem Subst.threeway_inl_dom {Γ Δ Ξ : C.Arity}
     {α : C.Arity} (x : Δ ∋ α) :
   threeway (Γ := Γ) (Ξ := Ξ) (C.inr (C.inl x)) = .middle x
   := by
   simp [threeway, Carrier.copair, Carrier.inl, Carrier.inr]
 
 /-- Classifying a concrete left-prefix head returns the left site. -/
-@[simp] theorem Subst.threeway_inl_pre {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+@[simp] theorem Subst.threeway_inl_pre {Γ Δ Ξ : C.Arity}
     {α : C.Arity} (x : Γ ∋ α) :
   threeway (Δ := Δ) (Ξ := Ξ) (C.inr (C.inr x)) = .left x
   := by
   simp [threeway, Carrier.copair, Carrier.inr]
 
 /-- The identity instantiation for the one-position telescope `⌊α⌋`, with an arbitrary fixed prefix `Δ`. -/
-def Subst.instId {A : Type} {C : Carrier A} (Δ α : C.Arity) : Subst α (Δ ⋈ α) :=
+def Subst.instId (Δ α : C.Arity) : Subst α (Δ ⋈ α) :=
   fun ⦃β⦄ (i : α ∋ β) => Expr.η (C.inl i)
 
 
 /-! ### The substitution action -/
 
 /-- Apply the substitution `σ` to an expression at depth `Φ`. -/
-def Subst.act {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+def Subst.act {Γ Δ Ξ : C.Arity}
       (σ : Subst Δ (Γ ⋈ Ξ))(Φ : C.Arity) :
     Expr (Γ ⋈ Δ ⋈ Φ) → Expr (Γ ⋈ Ξ ⋈ Φ)
   | .ap (α := α) x args =>
@@ -119,7 +120,7 @@ notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ 1 e
 /-- Substitution-level composition.  First substitute with `σ`, producing
 expressions over `Γ ⋈ Θ`; then act on each filler with `θ`, producing
 expressions over `Γ ⋈ Ξ`. -/
-def Subst.comp {A : Type} {C : Carrier A} {Γ Δ Θ Ξ : C.Arity}
+def Subst.comp {Γ Δ Θ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Θ))
     (θ : Subst Θ (Γ ⋈ Ξ)) :
   Subst Δ (Γ ⋈ Ξ) :=

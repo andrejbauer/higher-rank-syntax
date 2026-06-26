@@ -8,10 +8,12 @@ drives a proof through that split; the `act_ap_*` lemmas are the one-step
 computation rules each branch uses to fire `Subst.act`.
 -/
 
+variable {A : Type} {C : Carrier A}
+
 /-- Slot eliminator for `Γ ⋈ Δ ⋈ Ξ`: split a head slot by its origin — current
 depth `Ξ` (`right`), substitution domain `Δ` (`middle`), or prefix `Γ` (`left`). -/
 @[elab_as_elim]
-theorem threewayOn {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+theorem threewayOn {Γ Δ Ξ : C.Arity}
     {α : C.Arity} {motive : Γ ⋈ Δ ⋈ Ξ ∋ α → Prop}
     (right : (z : Ξ ∋ α) → motive (C.inl z))
     (middle : (z : Δ ∋ α) → motive (C.inr (C.inl z)))
@@ -33,7 +35,7 @@ macro "head_cases " x:term " with " z:ident : tactic =>
 /-! ## Computation rules for `Subst.act` on a classified head -/
 
 /-- `σ.act` on a current-depth head. -/
-theorem act_right {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+theorem act_right {Γ Δ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity)
     {α} (x : Φ ∋ α) (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
   σ.act Φ (.ap (C.inl x) args)
@@ -43,7 +45,7 @@ theorem act_right {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
   simp
 
 /-- `σ.act` on a substitution-domain head fires the instantiation. -/
-theorem act_left_right {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+theorem act_left_right {Γ Δ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity) {α} (y : Δ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
   σ.act Φ (.ap (C.inr (C.inl y)) args)
@@ -53,7 +55,7 @@ theorem act_left_right {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
   simp
 
 /-- `σ.act` on a prefix head rebuilds the head. -/
-theorem act_left {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+theorem act_left {Γ Δ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity)
     {α} (z : Γ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :

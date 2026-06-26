@@ -14,15 +14,17 @@ A *renaming* `Γ →ʳ Δ` is an arity-preserving slot map.
   - `ρ ⇑ʳ α` extends a renaming through a fresh position.
 -/
 
+variable {A : Type} {C : Carrier A}
+
 /-- A renaming of shapes from `Γ` to `Δ`: an arity-preserving slot map. -/
-abbrev Renaming {A : Type} {C : Carrier A} (Γ Δ : C.Arity) :=
+abbrev Renaming (Γ Δ : C.Arity) :=
   ∀ ⦃ α ⦄, Γ ∋ α → Δ ∋ α
 
 @[inherit_doc Renaming]
 infixr:25 " →ʳ " => Renaming
 
 /-- The identity renaming on `Γ`. -/
-def Renaming.id {A : Type} {C : Carrier A} (Γ : C.Arity) : Γ →ʳ Γ :=
+def Renaming.id (Γ : C.Arity) : Γ →ʳ Γ :=
   fun ⦃_⦄ x => x
 
 @[inherit_doc Renaming.id]
@@ -30,7 +32,7 @@ notation "𝟙ʳ" => Renaming.id
 
 /-- Composition of renamings: `comp f g` sends a slot through `f`, then through `g`. -/
 def Renaming.comp
-    {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    {Γ Δ Ξ : C.Arity}
     (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ)
   : Γ →ʳ Ξ :=
   fun ⦃_⦄ x => g (f x)
@@ -41,7 +43,7 @@ notation:90 g:90 " ∘ʳ " f:91 => Renaming.comp f g
 /-- Extend a renaming through a fresh position of arity `β`. -/
 @[reducible]
 def Renaming.extend
-    {A : Type} {C : Carrier A} {Γ Δ : C.Arity}
+    {Γ Δ : C.Arity}
     (f : Γ →ʳ Δ) (Ξ : C.Arity) :
   Γ ⋈ Ξ →ʳ Δ ⋈ Ξ :=
   fun ⦃ α ⦄ x => C.copair Ξ Γ (Δ ⋈ Ξ ∋ α)
@@ -53,7 +55,7 @@ infixl:95 " ⇑ʳ " => Renaming.extend
 
 @[simp]
 theorem Renaming.extend_inl
-    {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    {Γ Δ Ξ : C.Arity}
     (f : Γ →ʳ Δ) {α : C.Arity} (i : Ξ ∋ α) :
   (f ⇑ʳ Ξ) (C.inl i) = C.inl i
   := by
@@ -63,7 +65,7 @@ theorem Renaming.extend_inl
 
 @[simp]
 theorem Renaming.extend_inr
-    {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    {Γ Δ Ξ : C.Arity}
     (f : Γ →ʳ Δ) {α : C.Arity} (i : Γ ∋ α) :
   (f ⇑ʳ Ξ) (C.inr i) = C.inr (f i)
   := by
@@ -74,7 +76,7 @@ theorem Renaming.extend_inr
 
 @[simp]
 theorem Renaming.extend_id
-    {A : Type} {C : Carrier A} (Γ Δ : C.Arity) :
+    (Γ Δ : C.Arity) :
   𝟙ʳ Γ ⇑ʳ Δ = 𝟙ʳ (Γ ⋈ Δ)
   := by
   funext α x
@@ -83,7 +85,7 @@ theorem Renaming.extend_id
 
 @[simp]
 theorem Renaming.extend_comp
-    {A : Type} {C : Carrier A} {Γ Δ Ξ : C.Arity}
+    {Γ Δ Ξ : C.Arity}
     (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ) (Ω : C.Arity) :
   (g ∘ʳ f) ⇑ʳ Ω = (g ⇑ʳ Ω) ∘ʳ (f ⇑ʳ Ω)
   := by
