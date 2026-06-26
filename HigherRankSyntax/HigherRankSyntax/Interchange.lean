@@ -156,7 +156,7 @@ theorem act_interchange.aux
     (σ : Subst Δ (Γ ⋈ Ξ)) (κ : Subst Ψ (Γ ⋈ Δ ⋈ Θ ⋈ Ω))
     (Φ : C.Arity) (e : Expr (Γ ⋈ Δ ⋈ Θ ⋈ Ψ ⋈ Φ)) :
   σ.act (Θ ⋈ Ω ⋈ Φ) (κ.act Φ e)
-    = Subst.act (Γ := Γ ⋈ Ξ ⋈ Θ) (Δ := Ψ) (Ξ := Ω)
+    = Subst.act (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω)
         (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (σ.act (Θ ⋈ Ψ ⋈ Φ) e)
   := by
   match e with
@@ -214,8 +214,7 @@ theorem act_interchange.aux
           have passiveΨ := act_passive_head σ (C.inr (C.inr (C.inl w))) args
           simp only [Renaming.extend_inl, Renaming.extend_inr] at passiveΨ
           apply passiveΨ
-        · rw [act_left (Ξ := Ω)
-            (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (C.inl w)]
+        · rw [act_left (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (C.inl w)]
           congr 1
           funext Λ i
           simpa using (act_interchange.aux σ κ (Φ ⋈ Λ) (args i)).symm
@@ -238,8 +237,7 @@ theorem act_interchange.aux
               rw [C.inr_inr]
               apply C.inr_inr
             · apply act_left_right
-          · convert act_interchange.subst
-              (Γ := Γ ⋈ Ξ) (Λ := β) (Θ := Θ) (Ψ := Ψ) (Ω := Ω) (Φ := Φ) (Χ := 1)
+          · convert act_interchange.subst (Ω := Ω) (Χ := 1)
               (pushforward (Ω := Θ ⋈ Ω) σ κ) shiftedArgs (σ w) using 2
             · congr 1
               funext Λ i
