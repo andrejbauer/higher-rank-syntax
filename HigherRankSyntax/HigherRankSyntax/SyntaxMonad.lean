@@ -5,26 +5,19 @@ import HigherRankSyntax.RelativeMonad.Basic
 # Syntax as a relative monad
 
 `SyntaxMonad C` packages `Expr` over a carrier `C` as a relative monad
-over the "slots" functor `J : PShape C ⥤ ArityFunc C`, with
-`T Γ α = Expr (Γ.tele ∷ α)`.
+over the slots functor `J : C.Arity ⥤ ArityFunc C`, with
+`T Γ α = Expr (Γ ⋈ α)`.
 
-The category objects are `PShape C`: a `Tele C.Arity` bundled with a
-`Proper` instance.  This makes `[Proper Γ.tele]` auto-synthesized
-whenever `Γ : PShape C` is in scope, so `lift`, `unit_right`,
-`unit_left`, and `comp_lift` can call `Subst.act` and the monad-law
-lemmas without manually threading instance args.
-
-With cons-style telescopes, the Kleisli ↔ Subst bridge is cast-free:
-`Shape.nil ⋈ X = X` definitionally, so `lift f` is just
-`(Subst.mk f).act (Γ := Shape.nil) ⌊α⌋`.
+The base category has arities as objects and renamings as morphisms.  A Kleisli
+map `J Γ ⟶ T Δ` is exactly a substitution from `Γ` to `Δ`: it sends each
+`Γ`-slot of arity `α` to an expression in `Δ ⋈ α`.
 -/
 
 
 open CategoryTheory
 
-/-- Category structure on `PShape C` with renamings between underlying
-telescopes as morphisms. -/
-instance ShapeCat {A : Type} (C : Carrier A) : Category C.Arity where
+/-- Category structure on arities with renamings as morphisms. -/
+instance arityCategory {A : Type} (C : Carrier A) : Category C.Arity where
   Hom Γ Δ := Γ →ʳ Δ
   id Γ := Renaming.id Γ
   comp f g := g ∘ʳ f
@@ -42,12 +35,12 @@ instance {A : Type} (C : Carrier A) : Category (ArityFunc C) where
   id _ := fun _ x => x
   comp f g := fun α x => g α (f α x)
 
-/-- The "slots" functor: shape `Γ ↦ α ↦ Γ.tele ∋ α`. -/
+/-- The slots functor: arity `Γ ↦ α ↦ Γ ∋ α`. -/
 def J {A : Type} (C : Carrier A) : C.Arity ⥤ ArityFunc C where
   obj Γ := ⟨fun α => Γ ∋ α⟩
   map {Γ Δ} (ρ : Γ →ʳ Δ) := fun _ p => ρ p
 
-/-- The "expressions" functor: shape `Γ ↦ α ↦ Expr (Γ.tele ∷ α)`. -/
+/-- The expressions functor: arity `Γ ↦ α ↦ Expr (Γ ⋈ α)`. -/
 def T {A : Type} (C : Carrier A) : C.Arity ⥤ ArityFunc C where
 
   obj Γ := ⟨fun α => Expr (Γ ⋈ α)⟩
@@ -67,7 +60,7 @@ def T {A : Type} (C : Carrier A) : C.Arity ⥤ ArityFunc C where
     apply Renaming.act_comp
 
 /-- The relative monad of the syntax. -/
-def SyntaxMonad {A :Type} (C : Carrier A) : RelativeMonad (J C) where
+def SyntaxMonad {A : Type} (C : Carrier A) : RelativeMonad (J C) where
 
   map := (T C).obj
 

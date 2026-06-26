@@ -1,4 +1,3 @@
-
 import Mathlib.Algebra.Group.End
 import Mathlib.Algebra.Group.Submonoid.Basic
 import Mathlib.Data.Sum.Order
@@ -41,7 +40,7 @@ instance : CoeSort WellOrder (Type _) where coe W := W.α
 /-- A carrier of a higher-rank binding syntax: the base data from which the framework
 builds expressions, renamings, and substitutions. -/
 structure Carrier (A : Type) where
-  /-- Arities: the binding shape carried by each position. -/
+  /-- Arities: the binding arities carried by positions. -/
   Arity : Submonoid (Function.End A)
   /-- The positions of an arity. -/
   slotAt : Arity → Arity → WellOrder

@@ -23,7 +23,7 @@ abbrev pushforward
   Subst Θ (Γ ⋈ Ξ ⋈ Ω) :=
     fun {β} x => σ.act (Ω ⋈ β) (κ x)
 
-/-- `σ.act` on a head whose slot lies in a telescope `Φ` sitting in the depth
+/-- `σ.act` on a head whose slot lies in an arity `Φ` sitting in the depth
 `Λ ⋈ Φ ⋈ Ρ` (injected past the prefix `Γ ⋈ Δ ⋈ Λ` and weakened past `Ρ`): the head is
 rebuilt over the new codomain and the action descends into the arguments. Generalizes
 `act_right` (`Λ = Ρ = 1`). -/

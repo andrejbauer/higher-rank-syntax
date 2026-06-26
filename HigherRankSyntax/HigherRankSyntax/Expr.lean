@@ -4,14 +4,14 @@ import HigherRankSyntax.Renaming
 /-!
 # Expressions of a higher-rank binding signature
 
-`Expr Γ` is the type of expressions in shape `Γ` over a carrier `C`.  The constructor
+`Expr Γ` is the type of expressions in arity `Γ` over a carrier `C`.  The constructor
 `ap` takes an arity-typed head slot `p : Γ ∋ α` and a dependent family of children
 indexed by the slots of `α`, each child living in `Γ` extended by that slot's arity.
 -/
 
 variable {A : Type} {C : Carrier A}
 
-/-- Expressions in shape `Γ` over a carrier `C`. -/
+/-- Expressions in arity `Γ` over a carrier `C`. -/
 inductive Expr : C.Arity → Type where
   /-- An application of a head slot `x : Γ ∋ α` to a dependent family of children, one per position of `α`. -/
   | ap : {Γ α : C.Arity} → (x : Γ ∋ α) → (∀ ⦃Δ⦄ (_i : α ∋ Δ) , Expr (Γ ⋈ Δ)) → Expr Γ

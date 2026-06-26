@@ -1,5 +1,4 @@
 import HigherRankSyntax.Carrier
-import HigherRankSyntax.Shape
 import HigherRankSyntax.Renaming
 import HigherRankSyntax.Expr
 import HigherRankSyntax.Subst

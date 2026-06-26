@@ -1,8 +1,7 @@
 import HigherRankSyntax.Carrier
--- import HigherRankSyntax.ProperTele
 
 /-!
-# Renamings of shapes
+# Renamings of arities
 
 A *renaming* `Γ →ʳ Δ` is an arity-preserving slot map.
 
@@ -16,7 +15,7 @@ A *renaming* `Γ →ʳ Δ` is an arity-preserving slot map.
 
 variable {A : Type} {C : Carrier A}
 
-/-- A renaming of shapes from `Γ` to `Δ`: an arity-preserving slot map. -/
+/-- A renaming of arities from `Γ` to `Δ`: an arity-preserving slot map. -/
 abbrev Renaming (Γ Δ : C.Arity) :=
   ∀ ⦃ α ⦄, Γ ∋ α → Δ ∋ α
 

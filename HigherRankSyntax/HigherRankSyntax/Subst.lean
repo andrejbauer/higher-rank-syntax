@@ -3,10 +3,10 @@ import HigherRankSyntax.Expr
 /-!
 # Substitution
 
-`Subst Δ Γ` maps each `Δ`-slot `i` to an expression over `Γ ∷ i.arity`.
+`Subst Δ Γ` maps each `Δ`-slot of arity `α` to an expression over `Γ ⋈ α`.
 
 `Subst.act σ Φ` applies the substitution `σ` to an expression at depth
-`Φ : Shape C` (with `[Proper Φ]`).  The action is still prefix-aware: if
+`Φ : C.Arity`.  The action is prefix-aware: if
 `σ : Subst Δ (Γ ⋈ Ξ)`, then it transforms
 `Expr (Γ ⋈ Δ ⋈ Φ)` into `Expr (Γ ⋈ Ξ ⋈ Φ)`.  The data no longer stores the
 prefix separately; the operation chooses that decomposition when acting.
@@ -18,14 +18,14 @@ left/prefix heads are preserved by direct reinjection.
 
 variable {A : Type} {C : Carrier A}
 
-/-- A substitution record from a domain shape into a full target shape.
+/-- A substitution record from a domain arity into a full target arity.
 The `sub` field is the only data; prefix preservation is not part of the
 record and is instead selected by `Subst.act` when the target is decomposed
 as `Γ ⋈ Ξ`. -/
 abbrev Subst (Δ Γ : C.Arity) :=
   ∀ ⦃ α : C.Arity ⦄, Δ ∋ α → Expr (Γ ⋈ α)
 
-/-- The identity substitution at shape `Γ`. -/
+/-- The identity substitution at arity `Γ`. -/
 def Subst.id (Γ : C.Arity) : Subst Γ Γ :=
   (fun ⦃β⦄ (p : Γ ∋ β) => Expr.η p)
 
@@ -56,7 +56,7 @@ def Subst.reinject {Γ Δ Ξ : C.Arity} {α} :
 
 /-- Every source slot is the embedding of a unique-looking `SubstSite`.
 This is the proof-facing inverse of `Subst.threeway`; use it to replace
-nested `Proper.cover` splits. -/
+nested `Carrier.cover` splits. -/
 theorem Subst.isReinject {Γ Δ Ξ : C.Arity} {α}
     (x : (Γ ⋈ Δ ⋈ Ξ) ∋ α) :
   ∃ y : LeftMiddleRight Γ Δ Ξ α, x = reinject y
@@ -88,7 +88,7 @@ theorem Subst.isReinject {Γ Δ Ξ : C.Arity} {α}
   := by
   simp [threeway, Carrier.copair, Carrier.inr]
 
-/-- The identity instantiation for the one-position telescope `⌊α⌋`, with an arbitrary fixed prefix `Δ`. -/
+/-- The identity instantiation at arity `α`, with an arbitrary fixed prefix `Δ`. -/
 def Subst.instId (Δ α : C.Arity) : Subst α (Δ ⋈ α) :=
   fun ⦃β⦄ (i : α ∋ β) => Expr.η (C.inl i)
 
