@@ -26,7 +26,7 @@ theorem act_η
   := by
   rw [Expr.η.eq_1]
   trans
-  · convert act_left_right (Γ := 1) σ Θ x (fun {_} i => Expr.η (C.inl i)) using 2
+  · convert act_middle (Γ := 1) σ Θ x (fun {_} i => Expr.η (C.inl i)) using 2
     · congr 1
       rw [C.unit_right Δ x]
   · calc
@@ -52,7 +52,7 @@ theorem act_comp
       funext Ω i
       apply act_comp σ θ (Φ ⋈ Ω) (args i)
     case middle =>
-      rw [act_left_right, act_left_right, act_interchange]
+      rw [act_middle, act_middle, act_interchange]
       congr 1
       funext Ω i
       apply act_comp σ θ (Φ ⋈ Ω) (args i)

@@ -15,18 +15,14 @@ instantiating `κ` (pushed forward along `σ`).  `act_interchange` is its
 
 variable {A : Type} {C : Carrier A}
 
-/-- Push `κ` forward along `σ`: `(pushforward σ κ) x = σ.act (κ x)` at the
-passive depth determined by the filler. -/
+/-- Push `κ` forward along `σ`. -/
 abbrev pushforward
     {Γ Δ Ξ Θ Ω : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (κ : Subst Θ (Γ ⋈ Δ ⋈ Ω)) :
   Subst Θ (Γ ⋈ Ξ ⋈ Ω) :=
     fun {β} x => σ.act (Ω ⋈ β) (κ x)
 
-/-- `σ.act` on a head whose slot lies in an arity `Φ` sitting in the depth
-`Λ ⋈ Φ ⋈ Ρ` (injected past the prefix `Γ ⋈ Δ ⋈ Λ` and weakened past `Ρ`): the head is
-rebuilt over the new codomain and the action descends into the arguments. Generalizes
-`act_right` (`Λ = Ρ = 1`). -/
+/-- `σ.act` preserves a head from the `Φ` component of depth `Λ ⋈ Φ ⋈ Ρ`. -/
 theorem act_ap_depth
     {Γ Δ Ξ : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ)) (Λ Φ Ρ : C.Arity)
     {α} (z : Φ ∋ α) (args : Expr.Args (Γ ⋈ Δ ⋈ Λ ⋈ Φ ⋈ Ρ) α) :
@@ -42,9 +38,8 @@ theorem act_ap_depth
     · rw [C.inl_inl]
       apply C.inr_inl
 
-/-- `σ.act` preserves application heads from the passive context
-`Γ ⋈ Θ ⋈ Ρ ⋈ Φ`; only the arguments are acted on. -/
-theorem act_passive_head
+/-- `σ.act` preserves heads obtained by extending a renaming from `Γ`. -/
+theorem act_renamed_head
     {Γ Δ Ξ Θ Ρ Φ : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ)) {β}
     (p : Γ ⋈ Θ ⋈ Ρ ⋈ Φ ∋ β) (args : Expr.Args (Γ ⋈ Δ ⋈ Θ ⋈ Ρ ⋈ Φ) β) :
   σ.act (Θ ⋈ Ρ ⋈ Φ)
@@ -113,9 +108,9 @@ theorem act_interchange.subst
           dsimp [actedArgs]
           convert act_interchange.subst (Χ := Χ ⋈ Λ) θ κ (args i) using 2
     case middle =>
-      rw [act_left_right]
+      rw [act_middle]
       convert act_interchange.aux θ actedArgs 1 (κ z) using 2
-      · rw [act_left_right]
+      · rw [act_middle]
         congr 1
         funext Λ i
         symm
@@ -163,24 +158,24 @@ theorem act_interchange.aux
     head_cases x with z
     case right =>
       rw [act_right]
-      have passiveΩ := act_passive_head σ (C.inl z)
+      have headΩ := act_renamed_head σ (C.inl z)
         (fun {Λ} i => κ.act (Φ ⋈ Λ) (args i))
-      simp only [Renaming.extend_inl] at passiveΩ
-      apply Eq.trans passiveΩ
+      simp only [Renaming.extend_inl] at headΩ
+      apply Eq.trans headΩ
       symm
       trans Subst.act (Ξ := Ω)
           (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
           (.ap (C.inl z) (fun {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
       · congr 1
-        have passiveΨ := act_passive_head σ (C.inl z) args
-        simp only [Renaming.extend_inl] at passiveΨ
-        apply passiveΨ
+        have headΨ := act_renamed_head σ (C.inl z) args
+        simp only [Renaming.extend_inl] at headΨ
+        apply headΨ
       · rw [act_right]
         congr 1
         funext Λ i
         simpa using (act_interchange.aux σ κ (Φ ⋈ Λ) (args i)).symm
     case middle =>
-      rw [act_left_right]
+      rw [act_middle]
       convert act_interchange.aux (Θ := Θ ⋈ Ω) σ instantiatedArgs 1 (κ z) using 2
       · let shiftedArgs : Expr.Args (Γ ⋈ Ξ ⋈ Θ ⋈ Ψ ⋈ Φ) β :=
           fun {Λ} i => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ Λ) (args i)
@@ -189,7 +184,7 @@ theorem act_interchange.aux
           (.ap (C.inr (C.inl z)) shiftedArgs)
         · apply congrArg
           convert act_ap_depth σ Θ Ψ Φ z args using 2
-        · rw [act_left_right]
+        · rw [act_middle]
           congr 1
           funext Λ i
           dsimp [shiftedArgs, instantiatedArgs, pushforward]
@@ -198,19 +193,19 @@ theorem act_interchange.aux
       head_cases z with w
       case right =>
         rw [act_left]
-        have passiveΩ := act_passive_head σ (C.inr (C.inr (C.inl w)))
+        have headΩ := act_renamed_head σ (C.inr (C.inr (C.inl w)))
           (fun {Λ} i => κ.act (Φ ⋈ Λ) (args i))
-        simp only [Renaming.extend_inl, Renaming.extend_inr] at passiveΩ
-        apply Eq.trans passiveΩ
+        simp only [Renaming.extend_inl, Renaming.extend_inr] at headΩ
+        apply Eq.trans headΩ
         symm
         trans Subst.act (Ξ := Ω)
             (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
             (.ap (C.inr (C.inr (C.inl w)))
               (fun {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
         · congr 1
-          have passiveΨ := act_passive_head σ (C.inr (C.inr (C.inl w))) args
-          simp only [Renaming.extend_inl, Renaming.extend_inr] at passiveΨ
-          apply passiveΨ
+          have headΨ := act_renamed_head σ (C.inr (C.inr (C.inl w))) args
+          simp only [Renaming.extend_inl, Renaming.extend_inr] at headΨ
+          apply headΨ
         · rw [act_left (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (C.inl w)]
           congr 1
           funext Λ i
@@ -223,7 +218,7 @@ theorem act_interchange.aux
         · congr 2
           rw [C.inr_inr]
           apply C.inr_inr
-        · rw [act_left_right]
+        · rw [act_middle]
           symm
           trans Subst.act (Ξ := Ω)
               (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
@@ -233,7 +228,7 @@ theorem act_interchange.aux
             · congr 2
               rw [C.inr_inr]
               apply C.inr_inr
-            · apply act_left_right
+            · apply act_middle
           · convert act_interchange.subst (Ω := Ω) (Χ := 1)
               (pushforward (Ω := Θ ⋈ Ω) σ κ) shiftedArgs (σ w) using 2
             · congr 1
@@ -242,19 +237,19 @@ theorem act_interchange.aux
               simpa using act_interchange.aux σ κ (Φ ⋈ Λ) (args i)
       case left =>
         rw [act_left]
-        have passiveΩ := act_passive_head σ (C.inr (C.inr (C.inr w)))
+        have headΩ := act_renamed_head σ (C.inr (C.inr (C.inr w)))
           (fun {Λ} i => κ.act (Φ ⋈ Λ) (args i))
-        simp only [Renaming.extend_inr] at passiveΩ
-        apply Eq.trans passiveΩ
+        simp only [Renaming.extend_inr] at headΩ
+        apply Eq.trans headΩ
         symm
         trans Subst.act (Ξ := Ω)
             (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
             (.ap (C.inr (C.inr (C.inr (C.inr w))))
               (fun {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
         · congr 1
-          have passiveΨ := act_passive_head σ (C.inr (C.inr (C.inr w))) args
-          simp only [Renaming.extend_inr] at passiveΨ
-          apply passiveΨ
+          have headΨ := act_renamed_head σ (C.inr (C.inr (C.inr w))) args
+          simp only [Renaming.extend_inr] at headΨ
+          apply headΨ
         · rw [act_left (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (C.inr (C.inr w))]
           congr 1
           funext Λ i

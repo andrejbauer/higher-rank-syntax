@@ -156,92 +156,57 @@ theorem copair_uniq {A : Type} (C : Carrier A) (Γ Δ : C.Arity)
   · exact congrFun hinl x
   · exact congrFun hinr y
 
+private def slotAt_mul_leftAssoc {A : Type} (C : Carrier A)
+    (Γ Δ Ξ α : C.Arity) :
+  Sum.Lex (C.slotAt Γ α).r (Sum.Lex (C.slotAt Δ α).r (C.slotAt Ξ α).r)
+    ≃r (C.slotAt (Γ * (Δ * Ξ)) α).r := by
+  apply RelIso.trans
+  · apply RelIso.sumLexCongr
+    · apply RelIso.refl
+    · apply C.slotAt_mul
+  · apply C.slotAt_mul
+
+private def slotAt_mul_rightAssoc {A : Type} (C : Carrier A)
+    (Γ Δ Ξ α : C.Arity) :
+  Sum.Lex (C.slotAt Γ α).r (Sum.Lex (C.slotAt Δ α).r (C.slotAt Ξ α).r)
+    ≃r (C.slotAt (Γ * (Δ * Ξ)) α).r := by
+  apply RelIso.trans
+  · apply RelIso.symm
+    apply sumLexAssocRel
+  · apply RelIso.trans
+    · apply RelIso.sumLexCongr
+      · apply C.slotAt_mul
+      · apply RelIso.refl
+    · apply C.slotAt_mul
+
+private theorem slotAt_mul_assoc_apply {A : Type} (C : Carrier A)
+    (Γ Δ Ξ α : C.Arity)
+    (p : Sum (C.slotAt Γ α) (Sum (C.slotAt Δ α) (C.slotAt Ξ α))) :
+  slotAt_mul_leftAssoc C Γ Δ Ξ α p = slotAt_mul_rightAssoc C Γ Δ Ξ α p := by
+  have hSame : slotAt_mul_leftAssoc C Γ Δ Ξ α = slotAt_mul_rightAssoc C Γ Δ Ξ α := by
+    apply relIso_of_wellOrder_eq
+  exact congrArg (fun F => F p) hSame
+
 theorem inr_inl {A : Type} (C : Carrier A)
     (Γ Δ Ξ : C.Arity) {α : C.Arity} (x : Δ ∋ α) :
   (C.inr (C.inl x) : Γ * (Δ * Ξ) ∋ α)
     = (C.inl (C.inr x) : (Γ * Δ) * Ξ ∋ α) := by
-  let Γr := (C.slotAt Γ α).r
-  let Δr := (C.slotAt Δ α).r
-  let Ξr := (C.slotAt Ξ α).r
-  let tripleRel := Sum.Lex Γr (Sum.Lex Δr Ξr)
-  let productRel := (C.slotAt (Γ * (Δ * Ξ)) α).r
-  let leftAssoc : tripleRel ≃r productRel := by
-    apply RelIso.trans
-    · apply RelIso.sumLexCongr
-      · apply RelIso.refl
-      · apply C.slotAt_mul
-    · apply C.slotAt_mul
-  let rightAssoc : tripleRel ≃r productRel := by
-    apply RelIso.trans
-    · apply RelIso.symm
-      apply sumLexAssocRel
-    · apply RelIso.trans
-      · apply RelIso.sumLexCongr
-        · apply C.slotAt_mul
-        · apply RelIso.refl
-      · apply C.slotAt_mul
-  have hIso : leftAssoc = rightAssoc := by
-    apply relIso_of_wellOrder_eq
-  replace hIso := congrArg (fun F => F (Sum.inr (Sum.inl x))) hIso
-  simpa only [inl, inr] using hIso
+  simpa only [slotAt_mul_leftAssoc, slotAt_mul_rightAssoc, inl, inr]
+    using slotAt_mul_assoc_apply C Γ Δ Ξ α (Sum.inr (Sum.inl x))
 
 theorem inr_inr {A : Type} (C : Carrier A)
     (Γ Δ Ξ : C.Arity) {α : C.Arity} (x : Ξ ∋ α) :
   (C.inr (C.inr x) : Γ * (Δ * Ξ) ∋ α)
     = (C.inr x : (Γ * Δ) * Ξ ∋ α) := by
-  let Γr := (C.slotAt Γ α).r
-  let Δr := (C.slotAt Δ α).r
-  let Ξr := (C.slotAt Ξ α).r
-  let tripleRel := Sum.Lex Γr (Sum.Lex Δr Ξr)
-  let productRel := (C.slotAt (Γ * (Δ * Ξ)) α).r
-  let leftAssoc : tripleRel ≃r productRel := by
-    apply RelIso.trans
-    · apply RelIso.sumLexCongr
-      · apply RelIso.refl
-      · apply C.slotAt_mul
-    · apply C.slotAt_mul
-  let rightAssoc : tripleRel ≃r productRel := by
-    apply RelIso.trans
-    · apply RelIso.symm
-      apply sumLexAssocRel
-    · apply RelIso.trans
-      · apply RelIso.sumLexCongr
-        · apply C.slotAt_mul
-        · apply RelIso.refl
-      · apply C.slotAt_mul
-  have hIso : leftAssoc = rightAssoc := by
-    apply relIso_of_wellOrder_eq
-  replace hIso := congrArg (fun F => F (Sum.inr (Sum.inr x))) hIso
-  simpa only [inl, inr] using hIso
+  simpa only [slotAt_mul_leftAssoc, slotAt_mul_rightAssoc, inl, inr]
+    using slotAt_mul_assoc_apply C Γ Δ Ξ α (Sum.inr (Sum.inr x))
 
 theorem inl_inl {A : Type} (C : Carrier A)
     (Γ Δ Ξ : C.Arity) {α : C.Arity} (x : Γ ∋ α) :
   (C.inl x : Γ * (Δ * Ξ) ∋ α)
     = (C.inl (C.inl x) : (Γ * Δ) * Ξ ∋ α) := by
-  let Γr := (C.slotAt Γ α).r
-  let Δr := (C.slotAt Δ α).r
-  let Ξr := (C.slotAt Ξ α).r
-  let tripleRel := Sum.Lex Γr (Sum.Lex Δr Ξr)
-  let productRel := (C.slotAt (Γ * (Δ * Ξ)) α).r
-  let leftAssoc : tripleRel ≃r productRel := by
-    apply RelIso.trans
-    · apply RelIso.sumLexCongr
-      · apply RelIso.refl
-      · apply C.slotAt_mul
-    · apply C.slotAt_mul
-  let rightAssoc : tripleRel ≃r productRel := by
-    apply RelIso.trans
-    · apply RelIso.symm
-      apply sumLexAssocRel
-    · apply RelIso.trans
-      · apply RelIso.sumLexCongr
-        · apply C.slotAt_mul
-        · apply RelIso.refl
-      · apply C.slotAt_mul
-  have hIso : leftAssoc = rightAssoc := by
-    apply relIso_of_wellOrder_eq
-  replace hIso := congrArg (fun F => F (Sum.inl x)) hIso
-  simpa only [inl, inr] using hIso
+  simpa only [slotAt_mul_leftAssoc, slotAt_mul_rightAssoc, inl, inr]
+    using slotAt_mul_assoc_apply C Γ Δ Ξ α (Sum.inl x)
 
 theorem unit_right {A : Type} (C : Carrier A) (Γ : C.Arity)
     {α : C.Arity} (x : Γ ∋ α) :

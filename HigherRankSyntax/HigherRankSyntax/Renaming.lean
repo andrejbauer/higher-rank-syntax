@@ -70,8 +70,7 @@ theorem Renaming.extend_inr
   := by
   let eq := C.copair_inr Ξ Γ (Δ ⋈ Ξ ∋ α)
     (fun z => C.inl z) (fun y => C.inr (f y))
-  simpa [Renaming.extend] using congrFun (C.copair_inr Ξ Γ (Δ ⋈ Ξ ∋ α)
-    (fun z => C.inl z) (fun y => C.inr (f y))) i
+  simpa [Renaming.extend] using congrFun eq i
 
 @[simp]
 theorem Renaming.extend_id

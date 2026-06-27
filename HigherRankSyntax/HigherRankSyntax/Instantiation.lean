@@ -49,7 +49,7 @@ theorem act_idOfη
       funext Ω i
       apply act_idOfη σ hσ
     case middle =>
-      rw [act_left_right, hσ]
+      rw [act_middle, hσ]
       trans
       · apply act_inst_η
       · congr 1
@@ -67,8 +67,7 @@ decreasing_by
     | exact Prod.Lex.left _ _ ⟨z⟩
     | exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
 
-/-- β-for-η: instantiating the η-expansion of a non-substituted variable exposes
-the kit's positions. -/
+/-- β-for-η: instantiating an η-expansion exposes the substitution arguments. -/
 theorem act_inst_η
     {Γ Ξ : C.Arity} {α} (ι : Subst α (Γ ⋈ Ξ)) (x : Γ ∋ α) :
   ⟦ ι ⟧ˢ ((Expr.η x : Expr (Γ ⋈ α)))
@@ -82,7 +81,7 @@ theorem act_inst_η
     funext β j
     rw [Expr.η.eq_1]
     trans
-    · apply act_left_right
+    · apply act_middle
     · nth_rewrite 2 [← act_inst_id β (Γ ⋈ Ξ) 1 (ι j)]
       congr 1
       funext Ω k
@@ -105,7 +104,7 @@ theorem act_inst_id
       funext Ω i
       apply act_inst_id
     case middle =>
-      rw [act_left_right, Subst.instId]
+      rw [act_middle, Subst.instId]
       trans
       · apply act_inst_η
       · congr 1

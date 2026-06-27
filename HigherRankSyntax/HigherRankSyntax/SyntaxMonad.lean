@@ -49,15 +49,16 @@ def T {A : Type} (C : Carrier A) : C.Arity ⥤ ArityFunc C where
 
   map_id Γ := by
     funext α e
-    show ⟦ 𝟙ʳ _ ⇑ʳ α ⟧ʳ e = e
-    rw [Renaming.extend_id]
+    have hId : (𝟙 Γ : Γ →ʳ Γ) = 𝟙ʳ Γ := rfl
+    rw [hId, Renaming.extend_id]
     apply Renaming.act_id
 
   map_comp {Γ Δ Ξ} (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ξ) := by
     funext α e
-    show ⟦ (σ ∘ʳ ρ) ⇑ʳ α ⟧ʳ e = ⟦ σ ⇑ʳ α ⟧ʳ (⟦ ρ ⇑ʳ α ⟧ʳ e)
-    rw [Renaming.extend_comp]
-    apply Renaming.act_comp
+    trans ⟦ (σ ∘ʳ ρ) ⇑ʳ α ⟧ʳ e
+    · congr 2
+    · rw [Renaming.extend_comp]
+      apply Renaming.act_comp
 
 /-- The relative monad of the syntax. -/
 def SyntaxMonad {A : Type} (C : Carrier A) : RelativeMonad (J C) where

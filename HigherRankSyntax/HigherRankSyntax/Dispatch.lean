@@ -3,9 +3,8 @@ import HigherRankSyntax.Subst
 /-!
 # Head dispatch and computation rules for `Subst.act`
 
-`threewayOn` classifies an application head by its origin; the `head_cases` macro
-drives a proof through that split; the `act_ap_*` lemmas are the one-step
-computation rules each branch uses to fire `Subst.act`.
+`threewayOn` classifies an application head by its origin; the `head_cases`
+macro drives a proof through that split.
 -/
 
 variable {A : Type} {C : Carrier A}
@@ -27,8 +26,7 @@ theorem threewayOn {Γ Δ Ξ : C.Arity}
   | left z => exact left z
 
 /-- Split a head `x` into its three origin cases `right`/`middle`/`left`, binding
-the classified slot as `z`.  The decomposition is read off the goal; `using Γ`
-pins the prefix when it would collapse (e.g. an empty prefix). -/
+the classified slot as `z`. -/
 macro "head_cases " x:term " with " z:ident : tactic =>
   `(tactic| refine threewayOn (fun $z => ?right) (fun $z => ?middle) (fun $z => ?left) $x)
 
@@ -44,8 +42,8 @@ theorem act_right {Γ Δ Ξ : C.Arity}
   conv_lhs => unfold Subst.act
   simp
 
-/-- `σ.act` on a substitution-domain head fires the instantiation. -/
-theorem act_left_right {Γ Δ Ξ : C.Arity}
+/-- `σ.act` on a substitution-domain head. -/
+theorem act_middle {Γ Δ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity) {α} (y : Δ ∋ α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Φ) α) :
   σ.act Φ (.ap (C.inr (C.inl y)) args)

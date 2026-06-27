@@ -5,23 +5,16 @@ import HigherRankSyntax.Expr
 
 `Subst Δ Γ` maps each `Δ`-slot of arity `α` to an expression over `Γ ⋈ α`.
 
-`Subst.act σ Φ` applies the substitution `σ` to an expression at depth
-`Φ : C.Arity`.  The action is prefix-aware: if
-`σ : Subst Δ (Γ ⋈ Ξ)`, then it transforms
-`Expr (Γ ⋈ Δ ⋈ Φ)` into `Expr (Γ ⋈ Ξ ⋈ Φ)`.  The data no longer stores the
-prefix separately; the operation chooses that decomposition when acting.
+`Subst.act σ Φ` applies `σ : Subst Δ (Γ ⋈ Ξ)` to an expression in
+`Expr (Γ ⋈ Δ ⋈ Φ)`, producing an expression in `Expr (Γ ⋈ Ξ ⋈ Φ)`.
 
-`Subst.threeway` is the proof-facing head classifier for this action:
-right/current-depth heads are preserved, middle/domain heads fire `σ`, and
-left/prefix heads are preserved by direct reinjection.
+`Subst.threeway` classifies a head slot of `Γ ⋈ Δ ⋈ Ξ` as coming from
+`Γ`, `Δ`, or `Ξ`.
 -/
 
 variable {A : Type} {C : Carrier A}
 
-/-- A substitution record from a domain arity into a full target arity.
-The `sub` field is the only data; prefix preservation is not part of the
-record and is instead selected by `Subst.act` when the target is decomposed
-as `Γ ⋈ Ξ`. -/
+/-- A substitution from a domain arity into a target arity. -/
 abbrev Subst (Δ Γ : C.Arity) :=
   ∀ ⦃ α : C.Arity ⦄, Δ ∋ α → Expr (Γ ⋈ α)
 
@@ -54,9 +47,7 @@ def Subst.reinject {Γ Δ Ξ : C.Arity} {α} :
   | .middle x => C.inr (C.inl x)
   | .right x => C.inl x
 
-/-- Every source slot is the embedding of a unique-looking `SubstSite`.
-This is the proof-facing inverse of `Subst.threeway`; use it to replace
-nested `Carrier.cover` splits. -/
+/-- Every `Γ ⋈ Δ ⋈ Ξ` slot is the reinjection of its three-way classification. -/
 theorem Subst.isReinject {Γ Δ Ξ : C.Arity} {α}
     (x : (Γ ⋈ Δ ⋈ Ξ) ∋ α) :
   ∃ y : LeftMiddleRight Γ Δ Ξ α, x = reinject y

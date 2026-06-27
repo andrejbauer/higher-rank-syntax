@@ -13,8 +13,9 @@ variable {A : Type} {C : Carrier A}
 
 /-- Expressions in arity `Γ` over a carrier `C`. -/
 inductive Expr : C.Arity → Type where
-  /-- An application of a head slot `x : Γ ∋ α` to a dependent family of children, one per position of `α`. -/
-  | ap : {Γ α : C.Arity} → (x : Γ ∋ α) → (∀ ⦃Δ⦄ (_i : α ∋ Δ) , Expr (Γ ⋈ Δ)) → Expr Γ
+  /-- An application with a head slot and one child for each position of the head arity. -/
+  | ap : {Γ α : C.Arity} →
+      (x : Γ ∋ α) → (∀ ⦃Δ⦄ (_i : α ∋ Δ) , Expr (Γ ⋈ Δ)) → Expr Γ
 
 /-- The argument family of an application headed by an `α`-slot in context `Γ`. -/
 abbrev Expr.Args (Γ α : C.Arity) :=
@@ -44,7 +45,7 @@ instance Expr.Subterm.wellFoundedRelation :
   wf := Expr.Subterm.wf
 
 /-- η-expansion: a variable `p : Γ ∋ α` becomes the fully-applied tree
-`ap (C.inl p) (fun i => η (C.inr i))`. -/
+`ap (C.inr p) (fun i => η (C.inl i))`. -/
 def Expr.η {Γ α : C.Arity} : Γ ∋ α → Expr (Γ ⋈ α)
   | x => .ap (C.inr x) (fun {_} i => η (C.inl i))
 termination_by _ => α
