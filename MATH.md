@@ -10,17 +10,18 @@ results.
 
 ### Carriers
 
-A **carrier** over a type `A` consists of:
+A **carrier** consists of:
 
-- a submonoid `M ⊆ End(A)` of arities — the Cayley representation makes the
-  monoid strictly associative and strictly unital, so no coherence data is
-  carried (this abstracts the earlier telescopes-as-`List → List` trick, with
-  `A` generalizing `List Arity`);
+- a monoid `M` of arities;
 - for each pair `Γ α ∈ M` a well-order `Γ ∋ α` of **slots** (positions of
   arity `α` in `Γ`), such that the unit has no slots and slots of a product
   are the lexicographic sum: `(Γ * Δ) ∋ α ≅ (Γ ∋ α) ⊕ₗ (Δ ∋ α)`;
 - well-foundedness of the relation "α has a slot in Γ", which drives all
   recursion under binders.
+
+(The formalization realizes `M` as a submonoid of an endomorphism monoid
+`End(A)` so that associativity and unit hold definitionally — a Cayley-style
+strictness trick with no mathematical content.)
 
 Equivalently: each `(− ∋ α) : M → WellOrd` is a monoid morphism into
 well-orders under lexicographic sum.  A carrier is a monoid equipped with an
