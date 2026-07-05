@@ -27,16 +27,18 @@ theorem act_ap_depth
     {Γ Δ Ξ : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ)) (Λ Φ Ρ : C.Arity)
     {α : C.Arity} {τ : C.Ty} (z : Φ ∋[τ] α)
     (args : Expr.Args (Γ ⋈ Δ ⋈ Λ ⋈ Φ ⋈ Ρ) α) :
-  σ.act (Λ ⋈ Φ ⋈ Ρ) (Expr.ap (C.inr (Γ := Ρ) (C.inl (Δ := Λ * (Δ * Γ)) z)) args)
-    = Expr.ap (C.inr (C.inl (Δ := Λ * (Ξ * Γ)) z))
+  σ.act (Λ ⋈ Φ ⋈ Ρ) (Expr.ap (C.inl (Δ := Ρ) (C.inr (Γ := Γ ⋈ Δ ⋈ Λ) z)) args)
+    = Expr.ap (C.inl (C.inr (Γ := Γ ⋈ Ξ ⋈ Λ) z))
         (fun {Ω} {_} j => σ.act (Λ ⋈ Φ ⋈ Ρ ⋈ Ω) (args j))
   := by
-  convert act_right σ (Λ ⋈ Φ ⋈ Ρ) (C.inr (Γ := Ρ) (Δ := Φ * Λ) (C.inl z)) args using 2
+  convert act_right σ (Λ ⋈ Φ ⋈ Ρ) (C.inl (Γ := Λ ⋈ Φ) (Δ := Ρ) (C.inr z)) args using 2
   · congr 1
-    rw [C.inl_inl]
+    rw [← C.inr_inr]
+    symm
     apply C.inr_inl
   · congr 1
-    · rw [C.inl_inl]
+    · rw [← C.inr_inr]
+      symm
       apply C.inr_inl
 
 /-- `σ.act` preserves heads obtained by extending a renaming from `Γ`. -/
@@ -44,35 +46,39 @@ theorem act_renamed_head
     {Γ Δ Ξ Θ Ρ Φ : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ)) {β : C.Arity} {τ : C.Ty}
     (p : Γ ⋈ Θ ⋈ Ρ ⋈ Φ ∋[τ] β) (args : Expr.Args (Γ ⋈ Δ ⋈ Θ ⋈ Ρ ⋈ Φ) β) :
   σ.act (Θ ⋈ Ρ ⋈ Φ)
-      (.ap (((((fun {_} {_} x => C.inr x : Γ →ʳ Γ ⋈ Δ) ⇑ʳ Θ) ⇑ʳ Ρ) ⇑ʳ Φ) p) args)
-    = .ap (((((fun {_} {_} x => C.inr x : Γ →ʳ Γ ⋈ Ξ) ⇑ʳ Θ) ⇑ʳ Ρ) ⇑ʳ Φ) p)
+      (.ap (((((fun {_} {_} x => C.inl x : Γ →ʳ Γ ⋈ Δ) ⇑ʳ Θ) ⇑ʳ Ρ) ⇑ʳ Φ) p) args)
+    = .ap (((((fun {_} {_} x => C.inl x : Γ →ʳ Γ ⋈ Ξ) ⇑ʳ Θ) ⇑ʳ Ρ) ⇑ʳ Φ) p)
         (fun {_} {_} j => σ.act (Θ ⋈ Ρ ⋈ Φ ⋈ _) (args j))
   := by
   head_cases p with z
   case right =>
-    simp only [Renaming.extend_inl]
-    convert act_right σ (Θ ⋈ Ρ ⋈ Φ) (C.inl z) args using 2
+    simp only [Renaming.extend_inr]
+    convert act_right σ (Θ ⋈ Ρ ⋈ Φ) (C.inr z) args using 2
     · congr 1
-      apply C.inl_inl Φ (Θ ⋈ Ρ) (Δ * Γ) z
-    · apply C.inl_inl Φ (Θ ⋈ Ρ) (Ξ * Γ) z
+      symm
+      apply C.inr_inr (Γ ⋈ Δ) (Θ ⋈ Ρ) Φ z
+    · symm
+      apply C.inr_inr (Γ ⋈ Ξ) (Θ ⋈ Ρ) Φ z
   case middle =>
     simp only [Renaming.extend_inl, Renaming.extend_inr]
     apply act_ap_depth
   case left =>
-    rcases C.cover Θ Γ z with ⟨w, rfl⟩ | ⟨w, rfl⟩
+    rcases C.cover Γ Θ z with ⟨w, rfl⟩ | ⟨w, rfl⟩
+    · simp only [Renaming.extend_inl]
+      convert act_left σ (Θ ⋈ Ρ ⋈ Φ) w args using 2
+      · congr 1
+        rw [C.inl_inl, C.inl_inl]
+        rfl
+      · rw [C.inl_inl, C.inl_inl]
+        rfl
     · simp only [Renaming.extend_inl, Renaming.extend_inr]
       convert act_ap_depth σ 1 Θ (Ρ ⋈ Φ) w args using 2
       · congr 1
-        apply C.inr_inr Φ Ρ (Θ * (Δ * Γ))
+        symm
+        apply C.inl_inl (Γ ⋈ Δ ⋈ Θ) Ρ Φ
       · congr 1
-        apply C.inr_inr Φ Ρ (Θ * (Ξ * Γ))
-    · simp only [Renaming.extend_inr]
-      convert act_left σ (Θ ⋈ Ρ ⋈ Φ) w args using 2
-      · congr 1
-        rw [C.inr_inr, C.inr_inr]
-        rfl
-      · rw [C.inr_inr, C.inr_inr]
-        rfl
+        symm
+        apply C.inl_inl (Γ ⋈ Ξ ⋈ Θ) Ρ Φ
 
 section
 
@@ -98,13 +104,13 @@ theorem act_interchange.subst
     case right =>
       rw [act_right]
       trans
-      · convert act_right θ (Φ ⋈ Χ) (C.inl z) actedArgs using 2
+      · convert act_right θ (Φ ⋈ Χ) (C.inr z) actedArgs using 2
         · congr 1
-          apply C.inl_inl Χ Φ (Ψ * (Θ * Γ))
+          symm
+          apply C.inr_inr (Γ ⋈ Θ ⋈ Ψ) Φ Χ
       · rw [act_right]
         congr 1
-        · symm
-          apply C.inl_inl Χ Φ (Ω * (Θ * Γ))
+        · apply C.inr_inr (Γ ⋈ Θ ⋈ Ω) Φ Χ
         · funext Λ υ i
           dsimp [actedArgs]
           convert act_interchange.subst (Χ := Χ ⋈ Λ) θ κ (args i) using 2
@@ -119,16 +125,18 @@ theorem act_interchange.subst
         convert act_interchange.subst (Χ := Χ ⋈ Λ) θ κ (args i) using 2
     case left =>
       rw [act_left]
-      convert act_left θ (Φ ⋈ Χ) (C.inr z) actedArgs using 2
+      convert act_left θ (Φ ⋈ Χ) (C.inl z) actedArgs using 2
       · congr 1
-        rw [← C.inr_inr Φ (Ψ * Θ) Γ z]
-        rw [← C.inr_inr Ψ Θ Γ z]
-        apply C.inr_inr
+        rw [C.inl_inl Γ (Θ ⋈ Ψ) Φ z]
+        rw [C.inl_inl Γ Θ Ψ z]
+        symm
+        apply C.inl_inl
       · rw [act_left]
         congr 1
-        · rw [← C.inr_inr Φ (Ω * Θ) Γ z]
-          rw [← C.inr_inr Ω Θ Γ z]
-          apply C.inr_inr
+        · rw [C.inl_inl Γ (Θ ⋈ Ω) Φ z]
+          rw [C.inl_inl Γ Θ Ω z]
+          symm
+          apply C.inl_inl
         · funext Ω' υ i
           symm
           dsimp [actedArgs]
@@ -159,17 +167,17 @@ theorem act_interchange.aux
     head_cases x with z
     case right =>
       rw [act_right]
-      have headΩ := act_renamed_head σ (C.inl z)
+      have headΩ := act_renamed_head σ (C.inr z)
         (fun {Λ} {_} i => κ.act (Φ ⋈ Λ) (args i))
-      simp only [Renaming.extend_inl] at headΩ
+      simp only [Renaming.extend_inr] at headΩ
       apply Eq.trans headΩ
       symm
       trans Subst.act (Ξ := Ω)
           (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
-          (.ap (C.inl z) (fun {_} {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
+          (.ap (C.inr z) (fun {_} {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
       · congr 1
-        have headΨ := act_renamed_head σ (C.inl z) args
-        simp only [Renaming.extend_inl] at headΨ
+        have headΨ := act_renamed_head σ (C.inr z) args
+        simp only [Renaming.extend_inr] at headΨ
         apply headΨ
       · rw [act_right]
         congr 1
@@ -182,7 +190,7 @@ theorem act_interchange.aux
           fun {Λ} {_} i => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ Λ) (args i)
         trans Subst.act (Ξ := Ω)
           (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
-          (.ap (C.inr (C.inl z)) shiftedArgs)
+          (.ap (C.inl (C.inr z)) shiftedArgs)
         · apply congrArg
           convert act_ap_depth σ Θ Ψ Φ z args using 2
         · rw [act_middle]
@@ -194,20 +202,21 @@ theorem act_interchange.aux
       head_cases z with w
       case right =>
         rw [act_left]
-        have headΩ := act_renamed_head σ (C.inr (C.inr (C.inl w)))
+        have headΩ := act_renamed_head σ (C.inl (C.inl (C.inr w)))
           (fun {Λ} {_} i => κ.act (Φ ⋈ Λ) (args i))
         simp only [Renaming.extend_inl, Renaming.extend_inr] at headΩ
         apply Eq.trans headΩ
         symm
         trans Subst.act (Ξ := Ω)
             (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
-            (.ap (C.inr (C.inr (C.inl w)))
+            (.ap (C.inl (C.inl (C.inr w)))
               (fun {_} {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
         · congr 1
-          have headΨ := act_renamed_head σ (C.inr (C.inr (C.inl w))) args
+          have headΨ := act_renamed_head σ (C.inl (C.inl (C.inr w))) args
           simp only [Renaming.extend_inl, Renaming.extend_inr] at headΨ
           apply headΨ
-        · rw [act_left (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (C.inl w)]
+        · rw [act_left (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω)
+              (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (C.inr w)]
           congr 1
           funext Λ υ i
           simpa using (act_interchange.aux σ κ (Φ ⋈ Λ) (args i)).symm
@@ -215,22 +224,23 @@ theorem act_interchange.aux
         rw [act_left]
         let shiftedArgs : Subst β ((Γ ⋈ Ξ) ⋈ (Θ ⋈ Ψ ⋈ Φ)) :=
           fun {Λ} {_} i => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ Λ) (args i)
-        trans σ.act (Θ ⋈ Ω ⋈ Φ) (.ap (C.inr (C.inl w)) instantiatedArgs)
+        trans σ.act (Θ ⋈ Ω ⋈ Φ) (.ap (C.inl (C.inr w)) instantiatedArgs)
         · congr 2
-          rw [C.inr_inr]
-          apply C.inr_inr
+          simp only [← C.inl_inl]
+          exact (C.inl_inl (Γ ⋈ Δ) (Θ ⋈ Ω) Φ (C.inr w)).symm
         · rw [act_middle]
           symm
           trans Subst.act (Ξ := Ω)
               (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
               (⟦ shiftedArgs ⟧ˢ (σ w))
           · apply congrArg
-            trans σ.act (Θ ⋈ Ψ ⋈ Φ) (.ap (C.inr (C.inl w)) args)
+            trans σ.act (Θ ⋈ Ψ ⋈ Φ) (.ap (C.inl (C.inr w)) args)
             · congr 2
-              rw [C.inr_inr]
-              apply C.inr_inr
+              simp only [← C.inl_inl]
+              exact (C.inl_inl (Γ ⋈ Δ) (Θ ⋈ Ψ) Φ (C.inr w)).symm
             · apply act_middle
-          · convert act_interchange.subst (Ω := Ω) (Χ := 1)
+          · convert act_interchange.subst (Γ := Γ ⋈ Ξ) (Λ := β)
+              (Θ := Θ) (Ψ := Ψ) (Ω := Ω) (Φ := Φ) (Χ := 1)
               (pushforward (Ω := Θ ⋈ Ω) σ κ) shiftedArgs (σ w) using 2
             · congr 1
               funext Λ υ i
@@ -238,20 +248,20 @@ theorem act_interchange.aux
               simpa using act_interchange.aux σ κ (Φ ⋈ Λ) (args i)
       case left =>
         rw [act_left]
-        have headΩ := act_renamed_head σ (C.inr (C.inr (C.inr w)))
+        have headΩ := act_renamed_head σ (C.inl (C.inl (C.inl w)))
           (fun {Λ} {_} i => κ.act (Φ ⋈ Λ) (args i))
-        simp only [Renaming.extend_inr] at headΩ
+        simp only [Renaming.extend_inl] at headΩ
         apply Eq.trans headΩ
         symm
         trans Subst.act (Ξ := Ω)
             (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
-            (.ap (C.inr (C.inr (C.inr (C.inr w))))
+            (.ap (C.inl (C.inl (C.inl (C.inl w))))
               (fun {_} {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
         · congr 1
-          have headΨ := act_renamed_head σ (C.inr (C.inr (C.inr w))) args
-          simp only [Renaming.extend_inr] at headΨ
+          have headΨ := act_renamed_head σ (C.inl (C.inl (C.inl w))) args
+          simp only [Renaming.extend_inl] at headΨ
           apply headΨ
-        · rw [act_left (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (C.inr (C.inr w))]
+        · rw [act_left (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (C.inl (C.inl w))]
           congr 1
           funext Λ υ i
           simpa using (act_interchange.aux σ κ (Φ ⋈ Λ) (args i)).symm

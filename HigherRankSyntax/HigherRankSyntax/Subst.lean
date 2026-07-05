@@ -38,52 +38,52 @@ domain `Δ`, or current depth `Ξ`. -/
 def Subst.threeway {Γ Δ Ξ : C.Arity}
     {α : C.Arity} {τ : C.Ty} (p : Γ ⋈ Δ ⋈ Ξ ∋[τ] α) :
     LeftMiddleRight Γ Δ Ξ α τ :=
-  C.copair Ξ (Γ ⋈ Δ) _
-    (fun q => .right q)
-    (fun q => C.copair Δ Γ _ (fun y => .middle y) (fun x => .left x) q) p
+  C.copair (Γ ⋈ Δ) Ξ _
+    (fun q => C.copair Γ Δ _ (fun x => .left x) (fun y => .middle y) q)
+    (fun q => .right q) p
 
 /-- Embed a classified site back into `Γ ⋈ Δ ⋈ Ξ`. -/
 def Subst.reinject {Γ Δ Ξ : C.Arity} {α : C.Arity} {τ : C.Ty} :
   LeftMiddleRight Γ Δ Ξ α τ → Γ ⋈ Δ ⋈ Ξ ∋[τ] α
-  | .left x => C.inr (C.inr x)
-  | .middle x => C.inr (C.inl x)
-  | .right x => C.inl x
+  | .left x => C.inl (C.inl x)
+  | .middle x => C.inl (C.inr x)
+  | .right x => C.inr x
 
 /-- Every `Γ ⋈ Δ ⋈ Ξ` slot is the reinjection of its three-way classification. -/
 theorem Subst.isReinject {Γ Δ Ξ : C.Arity} {α : C.Arity} {τ : C.Ty}
     (x : Γ ⋈ Δ ⋈ Ξ ∋[τ] α) :
   ∃ y : LeftMiddleRight Γ Δ Ξ α τ, x = reinject y
   := by
-  rcases C.cover Ξ (Γ ⋈ Δ) x with ⟨x, rfl⟩ | ⟨y, rfl⟩
-  · exact ⟨.right x, rfl⟩
-  · rcases C.cover Δ Γ y with ⟨z, rfl⟩ | ⟨w, rfl⟩
-    · exact ⟨.middle z, rfl⟩
+  rcases C.cover (Γ ⋈ Δ) Ξ x with ⟨y, rfl⟩ | ⟨x, rfl⟩
+  · rcases C.cover Γ Δ y with ⟨w, rfl⟩ | ⟨z, rfl⟩
     · exact ⟨.left w, rfl⟩
+    · exact ⟨.middle z, rfl⟩
+  · exact ⟨.right x, rfl⟩
 
-/-- Classifying a concrete right-injected `Ξ` head returns the right site. -/
-@[simp] theorem Subst.threeway_inr {Γ Δ Ξ : C.Arity}
+/-- Classifying a concrete current-depth `Ξ` head returns the right site. -/
+@[simp] theorem Subst.threeway_right {Γ Δ Ξ : C.Arity}
     {α : C.Arity} {τ : C.Ty} (x : Ξ ∋[τ] α) :
-  threeway (Γ := Γ) (Δ := Δ) (C.inl x) = .right x
-  := by
-  simp [threeway, Carrier.copair, Carrier.inl]
-
-/-- Classifying a concrete middle-domain head returns the middle site. -/
-@[simp] theorem Subst.threeway_inl_dom {Γ Δ Ξ : C.Arity}
-    {α : C.Arity} {τ : C.Ty} (x : Δ ∋[τ] α) :
-  threeway (Γ := Γ) (Ξ := Ξ) (C.inr (C.inl x)) = .middle x
-  := by
-  simp [threeway, Carrier.copair, Carrier.inl, Carrier.inr]
-
-/-- Classifying a concrete left-prefix head returns the left site. -/
-@[simp] theorem Subst.threeway_inl_pre {Γ Δ Ξ : C.Arity}
-    {α : C.Arity} {τ : C.Ty} (x : Γ ∋[τ] α) :
-  threeway (Δ := Δ) (Ξ := Ξ) (C.inr (C.inr x)) = .left x
+  threeway (Γ := Γ) (Δ := Δ) (C.inr x) = .right x
   := by
   simp [threeway, Carrier.copair, Carrier.inr]
 
+/-- Classifying a concrete domain `Δ` head returns the middle site. -/
+@[simp] theorem Subst.threeway_middle {Γ Δ Ξ : C.Arity}
+    {α : C.Arity} {τ : C.Ty} (x : Δ ∋[τ] α) :
+  threeway (Γ := Γ) (Ξ := Ξ) (C.inl (C.inr x)) = .middle x
+  := by
+  simp [threeway, Carrier.copair, Carrier.inl, Carrier.inr]
+
+/-- Classifying a concrete prefix `Γ` head returns the left site. -/
+@[simp] theorem Subst.threeway_left {Γ Δ Ξ : C.Arity}
+    {α : C.Arity} {τ : C.Ty} (x : Γ ∋[τ] α) :
+  threeway (Δ := Δ) (Ξ := Ξ) (C.inl (C.inl x)) = .left x
+  := by
+  simp [threeway, Carrier.copair, Carrier.inl]
+
 /-- The identity instantiation at arity `α`, with an arbitrary fixed prefix `Δ`. -/
 def Subst.instId (Δ α : C.Arity) : Subst α (Δ ⋈ α) :=
-  fun ⦃_⦄ ⦃_⦄ i => Expr.η (C.inl i)
+  fun ⦃_⦄ ⦃_⦄ i => Expr.η (C.inr i)
 
 
 /-! ### The substitution action -/
@@ -95,11 +95,12 @@ def Subst.act {Γ Δ Ξ : C.Arity}
   | .ap (α := α) x args =>
       match threeway x with
       | .right x =>
-          .ap (C.inl x) (fun {_} {_} i => σ.act (Φ ⋈ _) (args i))
+          .ap (C.inr x) (fun {_} {_} i => σ.act (Φ ⋈ _) (args i))
       | .middle z =>
-          act (fun {_} {_} i => σ.act (Φ ⋈ _) (args i)) 1 (σ z)
+          act (Γ := Γ ⋈ Ξ)
+            (fun {_} {_} i => σ.act (Φ ⋈ _) (args i)) 1 (σ z)
       | .left z =>
-          .ap (C.inr (C.inr z)) (fun {_} {_} i => σ.act (Φ ⋈ _) (args i))
+          .ap (C.inl (C.inl z)) (fun {_} {_} i => σ.act (Φ ⋈ _) (args i))
 termination_by e => (Δ, (⟨_, _, e⟩ : Σ Γ : C.Arity, Σ τ : C.Ty, Expr Γ τ))
 decreasing_by
   all_goals

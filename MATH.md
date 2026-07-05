@@ -65,8 +65,8 @@ decoration-preimages.  Ordering that set globally is the same strengthening
 as repair candidate 2 in §3 (the telescope skeleton) — the dependency
 question and the container reading pull in the same direction.
 
-Contexts and arities are the same sort; context extension is reversed
-multiplication `Γ ⋈ Δ = Δ * Γ`.
+Contexts and arities are the same sort; context extension is monoid
+multiplication `Γ ⋈ Δ = Γ * Δ`.
 
 ### Syntax
 

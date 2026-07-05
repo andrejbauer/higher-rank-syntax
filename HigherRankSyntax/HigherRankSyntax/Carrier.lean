@@ -70,7 +70,7 @@ abbrev SlotAt {A : Type} {C : Carrier A} (Γ Δ : C.Arity) (τ : C.Ty) : Type :=
 
 notation:35 Γ:36 " ∋[" τ:36 "] " Δ:36 => SlotAt Γ Δ τ
 
-abbrev Ext {A : Type} {C : Carrier A} (Γ Δ : C.Arity) : C.Arity := Δ * Γ
+abbrev Ext {A : Type} {C : Carrier A} (Γ Δ : C.Arity) : C.Arity := Γ * Δ
 
 infixl:65 " ⋈ " => Ext
 

@@ -49,9 +49,9 @@ instance Expr.Subterm.wellFoundedRelation :
   wf := Expr.Subterm.wf
 
 /-- η-expansion: a variable `p : Γ ∋[τ] α` becomes the fully-applied tree
-`ap (C.inr p) (fun i => η (C.inl i))`. -/
+`ap (C.inl p) (fun i => η (C.inr i))`. -/
 def Expr.η {Γ α : C.Arity} {τ : C.Ty} : Γ ∋[τ] α → Expr (Γ ⋈ α) τ
-  | x => .ap (C.inr x) (fun {_} {_} i => η (C.inl i))
+  | x => .ap (C.inl x) (fun {_} {_} i => η (C.inr i))
 termination_by _ => α
 decreasing_by exact ⟨_, ⟨i⟩⟩
 
