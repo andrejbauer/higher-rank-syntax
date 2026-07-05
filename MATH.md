@@ -149,10 +149,31 @@ behave like abstract, intensional operation-carriers.
 **Assessment.**  The algebras will be "big": Voevodsky's algebras live in
 `Set`, ours in arity-and-type-indexed families, so an EM-algebra is a whole
 family of operation-carriers rather than a set with structure.  Recovering
-an ordinary model (a set with group structure, say) requires a
-representability or nerve argument identifying the "standard" algebras.
-The same gap affects the Fiore–Plotkin–Turi comparison.  Expect
-"algebras = models" to hold only up to such an argument, not verbatim.
+an ordinary model (a set with group structure, say) requires identifying
+the "standard" algebras among them.
+
+**Finding: the codomain is a third doctrine dial, and it dissolves the
+"big algebras" problem.**  The setup has not two but three independent
+restriction parameters:
+
+1. the *prefix* `S` (which theory — see the signature-as-prefix idea);
+2. the *base category* of contexts (which variables a valuation values);
+3. the *codomain family index* — which classifiers `(α, τ)` the algebra
+   carries fibres at, equivalently at which interfaces expressions must be
+   evaluated.
+
+Dial 3 was missing from earlier drafts.  The atomic-index restriction is
+self-contained: expressions at atomic interfaces are closed under
+substitution by atomic-indexed fillers, so `J` and `T` restrict to a
+relative monad landing in `Fam(Ty)` = `Set^Ty`.  An EM-algebra there
+carries *only* the fibres `X(1, τ)` — no operation-carriers for
+metavariables — and the substitution law then forces evaluation to be
+determined by ordinary operations (see the group example below).  The
+choice of dial 3 is the choice between *first-order models* (atomic
+indices: carriers are sets, symbols become operations) and *higher-order
+models* (full family: metavariable-carriers are semantic data, cf. the
+worked `{a, p}` example).  The nerve/representability question survives
+only as the comparison between the two — not as an obstacle to either.
 
 ### Idea: the empty theory as a test case — are its algebras just sets?
 
@@ -219,6 +240,50 @@ algebras is the representability/nerve problem in its smallest instance.
 Together with the group example this gives two concrete computations, one
 with an empty theory and one with a nontrivial one; both should be done —
 the `{a, p}` carrier above is small enough to compute EM(T) completely.
+The next subsection carries that computation to its (conjectured) end.
+
+### Prediction: EM of the `{a, p}` carrier is monoid actions with constants
+
+Continuing the analysis of the `{a, p}` carrier, the expressions can be
+enumerated: at index `a` over `Γ`, an expression is a *spine*
+`f₁(f₂(⋯ fₙ(x)⋯))` — a list of `p`-slots ending in an `a`-slot; at index
+`p`, a spine ending in an `a`-slot or in the interface slot `y`.  Playing
+the substitution law over all one-layer patterns yields, besides `app`,
+`c`, `K` above, one more primitive
+
+- `comp : X_p × X_p → X_p`, `comp(F, G) := eval_{f↦F, g↦G}(f(g(y)))`,
+
+and then *forces* the following laws (each by a filler-substitution
+computation; duplication of slots in a substitution handles repeated
+occurrences):
+
+- `(X_p, comp, c)` is a **monoid** — associativity from the two ways of
+  splitting `f(g(h(y)))`; unitality from substituting the interface filler
+  `y` for `f` or `g` in `f(g(y))`, which uses that the filler `y` *does*
+  consume its interface;
+- `app` is a **monoid action** of `X_p` on `X_a` —
+  `app(comp(F,G), b) = app(F, app(G, b))` and `app(c, b) = b`;
+- `K` provides **constants**: `app(K(b), b′) = b` and left absorption
+  `comp(K(b), G) = K(b)`.
+
+Every evaluation reduces to these: spines evaluate by iterated `app`/`comp`.
+So the conjecture, precise enough to prove or refute:
+
+> EM(T) for the `{a, p}` carrier is equivalent to the category of triples
+> (a monoid `P`, a `P`-set `A`, a map `K : A → P`) satisfying
+> `K(b)·b′ = b` and `K(b)G = K(b)`, with morphisms the monoid homs +
+> equivariant maps commuting with `K`.
+
+Checks: the free algebra on `A₀` has `P = 1 + A₀` (normal forms: `c` and
+`K(b)` — products collapse by unitality and absorption), matching the pure
+unary terms with parameters.  The full model has `P = A^A`; it satisfies an
+*extra* law not forced in general, `comp(F, K(b)) = K(app(F, b))` — an
+extensionality equation separating standard models from generic algebras.
+Note the example contains **no binding** (the argument of `p` has arity
+`1`): `f` is a unary metavariable, and the moral is that models of
+second-order (metavariable) syntax carry operation-carriers.  That EM(T)
+lands on *monoid actions* is the correct higher-rank echo of "unary
+algebraic theories = monoid actions".
 
 ### Idea: monoid view via `Lan_J`
 
@@ -232,6 +297,17 @@ on relative monads and relative algebraic theories is the modern toolkit.
 (non-)density of `J`, not from associativity of the context monoid, so the
 strictness supplied by rigidity does not obviously remove it.  Whether the
 skew structure is genuinely monoidal here is a question, not an expectation.
+
+One concrete piece is available immediately: the base category is *small*
+(its objects are the elements of the monoid `M`), and the codomain
+`Fam(M × Ty)` is cocomplete, so `Lan_J T` exists and `T` extends to an
+honest monad `T^#` on families.  The coend formula gives
+`T^# X = ∫^Γ E(J Γ, X) · T Γ` — an element is an expression over some `Γ`
+together with an `X`-valuation of `Γ`, modulo renaming — i.e. `T^# X` is
+**syntax with parameters from `X`**: trees whose heads are either interface
+slots or `X`-elements.  So the extended monad is the familiar
+"free algebra on generators" construction, and the comparison
+`EM(T) ≟ EM(T^#)` is a concrete question rather than an abstract one.
 
 ### Idea: polynomial structure
 
@@ -302,18 +378,39 @@ never interferes with context extension.
   the context (direction 2), a `Δ` extending `S ⋈ Γ` genuinely refers to
   `S`-slots and the separation "prefix ⋈ variable part" disappears.  The
   device must be re-derived, not transported, in the dependent setting.
-- For the Lawvere comparison one more restriction is needed: with the full
+- For the Lawvere comparison further restrictions are needed: with the full
   base category the "variables" include higher-rank slots, so the
   construction gives group theory *with metavariables*.  Recovering the
-  Lawvere theory requires also restricting the base to rank-1, `ι`-typed
-  contexts.  This is a feature — the choice of base subcategory is the
-  choice of doctrine — but the example involves two independent
-  restrictions: prefixing by `S` and bounding the rank.
+  Lawvere theory requires restricting the base to rank-1, `ι`-typed
+  contexts *and* restricting the codomain family to the atomic index (dial
+  3 under the EM-unfolding idea).  This is a feature — the dials are the
+  choice of doctrine — but the example involves three independent
+  restrictions: prefix, base, codomain index.
 - The remaining open question: do the algebras of the prefix-fixing monad,
   after imposing the group equations as a quotient, recover groups — the
-  models of the Lawvere theory, matching Voevodsky's rank-0 picture?  This
-  one example, fully worked out, would validate both the signature-as-prefix
-  idea and the notion of algebra.
+  models of the Lawvere theory, matching Voevodsky's rank-0 picture?  The
+  next subsection reduces this to a fully specified computation.
+
+### Prediction: algebras of a prefix monad are pointed algebras
+
+For the prefix-fixing monad `T'_S Γ = Expr (S ⋈ Γ ⋈ −)`, an EM-algebra
+must additionally evaluate `S`-headed expressions, with no valuation entry
+for the `S`-slots.  Unfolding as before, this amounts to an EM-algebra of
+the plain monad *equipped with a chosen valuation of `S`* — an
+interpretation of the symbols.  Conjecture:
+
+> EM(T'_S) ≃ the category of `S`-pointed EM(T)-algebras.
+
+Combined with dial 3 (atomic codomain), the group example should come out
+exactly right, with no nerve step: over the group signature `S`, with base
+restricted to rank-1 `ι`-contexts and codomain restricted to the atomic
+index `(1, ι)`, an algebra is a set `X` with an evaluation of group terms;
+the substitution law forces `eval(m(e₁, e₂)) = m̂(eval e₁, eval e₂)` (the
+filler-substitution computation again), so an algebra is precisely a set
+with interpretations `m̂, û, î` — a raw-signature algebra.  Quotienting the
+monad by the group equations then yields EM ≃ **groups** on the nose.  This
+is now a concrete, fully specified computation whose every step looks
+checkable; it should be the first thing actually proved in direction 1.
 
 ## 3. Direction 2: dependency and general judgement forms
 
@@ -326,6 +423,18 @@ judgement is a boundary filled with a head.  There are several judgement
 forms (`is-type`, `is-term`, and their equalities), and the general setup
 should not fix them: judgement forms should be data ("is a type", "is a
 fibered type", boundaries in general).
+
+A grounding observation before the candidates: **FTT's raw syntax is
+already an instance of the present framework.**  Take `Ty` = the syntactic
+classes (`Ty`, `Tm`, and the equality classes if desired) and let the
+carrier's arities be the metavariable/symbol arities of FTT; then raw
+expressions, raw substitution and instantiation are exactly `Expr` and
+`Subst.act`.  Dependency in FTT does *not* live in the raw syntax — it
+lives in the judgements (well-formedness) over it.  This splits direction 2
+into two genuinely different projects: generalize the *carrier* so that
+classifiers are syntax (intrinsic), or keep the carrier simply typed and
+build the judgement structure *on top of the monad* (extrinsic, FTT-style).
+The candidates below are ordered accordingly.
 
 ### Observation: a hole is a slot
 
@@ -404,6 +513,28 @@ arbitrary pair — `Δ` is an arity *over* `Γ` (mentions `Γ`-slots in its
 classifiers).  The monoid must become a structure with dependent
 multiplication.  Candidates:
 
+0. **Extrinsic: judgements as a layer over the monad (FTT's architecture).**
+   Keep the carrier simply typed (`Ty` = syntactic classes) and the monad
+   as it is.  A type theory is then given by *rules* (boundary-shaped data)
+   generating *judgements*: substitution-closed predicates on the fibres of
+   `T`.  The right mathematical home for "substitution-closed predicate on
+   `T`" is a **module over the (relative) monad** — subfunctors of `T`
+   closed under the Kleisli extension — in the sense used by
+   Hirschowitz–Maggesi for syntax with binding.  Boundaries and their
+   filling are then plain expressions and substitution (the metavariable
+   observation applies without circularity, because classifiers at the raw
+   level remain `(α, τ)`-pairs).  Equational judgement forms land in the
+   same layer, connecting to the equations problem of direction 1.
+
+   **Assessment.**  Highest probability of success — it is the proven FTT
+   architecture transposed onto the monad — and it requires no change to
+   the carrier.  Costs: well-typedness is not intrinsic (the carrier
+   over-generates, judgements carve out the good part); and the comparison
+   with Uemura requires *constructing* a representable-map category from a
+   judgement layer, rather than reading it off.  The concrete first step is
+   crisp: develop modules over the syntax monad and inductively generated
+   submodules-from-rules.
+
 1. **Comprehension-style.**  Contexts form a category with a
    display/comprehension structure (CwF/natural-model flavor); the carrier
    becomes a base for a fibration of classifiers, and the slot structure
@@ -433,7 +564,13 @@ multiplication.  Candidates:
    **Assessment.**  The most direct match to the goal, and the most
    speculative: existence of the fixed point is itself a theorem to be
    proved, and the well-foundedness bookkeeping (which recursion is doing
-   what) is delicate.  Likely the honest core of the problem.
+   what) is delicate.  Likely the honest core of the *intrinsic* problem.
+
+A sensible order of attack: do candidate 0 first (it yields FTT-style
+theories and their models with the machinery already at hand), and let the
+intrinsic candidates 1/3 be informed by what the judgement layer actually
+uses.  If the intrinsic route succeeds later, candidate 0's judgement
+layer should be recoverable as its image, giving a completeness check.
 
 ### Target specializations
 
@@ -499,6 +636,11 @@ low-rank instances; higher rank is new territory.
 - Bauer–Haselwarter–Lumsdaine, *Finitary type theories* (the
   `finitary-type-theories` repository) — boundaries, judgement forms,
   metavariable contexts, context-free judgements.
+- Hirschowitz–Maggesi, *Modules over monads and linearity* (and the
+  follow-up work on modules over monads for syntax with binding) — the
+  notion needed for the judgement-layer candidate in §3.
+- Mitchell–Moggi, *Kripke-style models of the λ-calculus* — intensional
+  applicative structures, the flavor of the non-standard EM algebras.
 - Abbott–Altenkirch–Ghani, *Containers: constructing strictly positive
   types*; Altenkirch–Ghani–Hancock–McBride–Morris, *Indexed containers* —
   the decorated-container reading of carriers (§1).
