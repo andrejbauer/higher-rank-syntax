@@ -17,14 +17,14 @@ variable {A : Type} {C : Carrier A}
 
 /-- A renaming of arities from `Γ` to `Δ`: an arity-preserving slot map. -/
 abbrev Renaming (Γ Δ : C.Arity) :=
-  ∀ ⦃ α ⦄, Γ ∋ α → Δ ∋ α
+  ∀ ⦃α : C.Arity⦄ ⦃τ : C.Ty⦄, Γ ∋[τ] α → Δ ∋[τ] α
 
 @[inherit_doc Renaming]
 infixr:25 " →ʳ " => Renaming
 
 /-- The identity renaming on `Γ`. -/
 def Renaming.id (Γ : C.Arity) : Γ →ʳ Γ :=
-  fun ⦃_⦄ x => x
+  fun ⦃_⦄ ⦃_⦄ x => x
 
 @[inherit_doc Renaming.id]
 notation "𝟙ʳ" => Renaming.id
@@ -34,7 +34,7 @@ def Renaming.comp
     {Γ Δ Ξ : C.Arity}
     (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ)
   : Γ →ʳ Ξ :=
-  fun ⦃_⦄ x => g (f x)
+  fun ⦃_⦄ ⦃_⦄ x => g (f x)
 
 @[inherit_doc Renaming.comp]
 notation:90 g:90 " ∘ʳ " f:91 => Renaming.comp f g
@@ -45,7 +45,7 @@ def Renaming.extend
     {Γ Δ : C.Arity}
     (f : Γ →ʳ Δ) (Ξ : C.Arity) :
   Γ ⋈ Ξ →ʳ Δ ⋈ Ξ :=
-  fun ⦃ α ⦄ x => C.copair Ξ Γ (Δ ⋈ Ξ ∋ α)
+  fun ⦃α⦄ ⦃τ⦄ x => C.copair Ξ Γ ((Δ ⋈ Ξ) ∋[τ] α)
     (fun z => C.inl z) (fun y => C.inr (f y))
       x
 
@@ -55,20 +55,20 @@ infixl:95 " ⇑ʳ " => Renaming.extend
 @[simp]
 theorem Renaming.extend_inl
     {Γ Δ Ξ : C.Arity}
-    (f : Γ →ʳ Δ) {α : C.Arity} (i : Ξ ∋ α) :
+    (f : Γ →ʳ Δ) {α : C.Arity} {τ : C.Ty} (i : Ξ ∋[τ] α) :
   (f ⇑ʳ Ξ) (C.inl i) = C.inl i
   := by
-  let eq := C.copair_inl Ξ Γ (Δ ⋈ Ξ ∋ α)
+  let eq := C.copair_inl Ξ Γ ((Δ ⋈ Ξ) ∋[τ] α)
     (fun z => C.inl z) (fun y => C.inr (f y))
   simpa [Renaming.extend] using congrFun eq i
 
 @[simp]
 theorem Renaming.extend_inr
     {Γ Δ Ξ : C.Arity}
-    (f : Γ →ʳ Δ) {α : C.Arity} (i : Γ ∋ α) :
+    (f : Γ →ʳ Δ) {α : C.Arity} {τ : C.Ty} (i : Γ ∋[τ] α) :
   (f ⇑ʳ Ξ) (C.inr i) = C.inr (f i)
   := by
-  let eq := C.copair_inr Ξ Γ (Δ ⋈ Ξ ∋ α)
+  let eq := C.copair_inr Ξ Γ ((Δ ⋈ Ξ) ∋[τ] α)
     (fun z => C.inl z) (fun y => C.inr (f y))
   simpa [Renaming.extend] using congrFun eq i
 
@@ -77,7 +77,7 @@ theorem Renaming.extend_id
     (Γ Δ : C.Arity) :
   𝟙ʳ Γ ⇑ʳ Δ = 𝟙ʳ (Γ ⋈ Δ)
   := by
-  funext α x
+  funext α τ x
   rcases C.cover Δ Γ x with ⟨y, rfl⟩ | ⟨y, rfl⟩
     <;> simp [Renaming.id]
 
@@ -87,6 +87,6 @@ theorem Renaming.extend_comp
     (f : Γ →ʳ Δ) (g : Δ →ʳ Ξ) (Ω : C.Arity) :
   (g ∘ʳ f) ⇑ʳ Ω = (g ⇑ʳ Ω) ∘ʳ (f ⇑ʳ Ω)
   := by
-  funext α x
+  funext α τ x
   rcases C.cover Ω Γ x with ⟨y, rfl⟩ | ⟨y, rfl⟩
     <;> simp [Renaming.comp]
