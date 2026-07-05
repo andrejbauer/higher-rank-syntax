@@ -108,9 +108,6 @@ decreasing_by
     | exact Prod.Lex.right _ (Expr.Subterm.of_arg x args i)
     | exact Prod.Lex.left _ _ ⟨_, ⟨z⟩⟩
 
-/-- The ground substitution action `σ.act 1 e`, mirroring `⟦ρ⟧ʳ e`. -/
-notation:60 "⟦" σ "⟧ˢ " e:61 => Subst.act σ 1 e
-
 /-- Substitution-level composition.  First substitute with `σ`, producing
 expressions over `Γ ⋈ Θ`; then act on each filler with `θ`, producing
 expressions over `Γ ⋈ Ξ`. -/

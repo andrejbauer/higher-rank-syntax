@@ -232,7 +232,7 @@ theorem act_interchange.aux
           symm
           trans Subst.act (Ξ := Ω)
               (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
-              (⟦ shiftedArgs ⟧ˢ (σ w))
+              (shiftedArgs.act 1 (σ w))
           · apply congrArg
             trans σ.act (Θ ⋈ Ψ ⋈ Φ) (.ap (C.inl (C.inr w)) args)
             · congr 2

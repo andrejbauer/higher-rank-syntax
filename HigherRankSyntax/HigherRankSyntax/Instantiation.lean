@@ -71,7 +71,7 @@ decreasing_by
 theorem act_inst_η
     {Γ Ξ : C.Arity} {α : C.Arity} {τ : C.Ty}
     (ι : Subst α (Γ ⋈ Ξ)) (x : Γ ∋[τ] α) :
-  ⟦ ι ⟧ˢ ((Expr.η x : Expr (Γ ⋈ α) τ))
+  ι.act 1 ((Expr.η x : Expr (Γ ⋈ α) τ))
     = ((.ap (C.inl x) (fun ⦃_⦄ ⦃_⦄ i => ι i) : Expr (Γ ⋈ Ξ) τ))
   := by
   rw [Expr.η.eq_1, ← C.unit_right (Γ ⋈ α) (C.inl x)]
