@@ -87,8 +87,9 @@ positions; a position of `Γ * Δ` is a position of `Γ` or a position of
 entry of `Γ`" is well-founded because arities are inductively generated.
 
 Define the **rank** of an arity by `rank(Γ) = 0` for empty `Γ` and
-otherwise `1 + max` of the ranks of the arities of its entries.  The rank
-of an entry determines its syntactic role.  In the examples below,
+otherwise `1 + max` of the ranks of the arities of its entries; the
+**rank of an entry** `(α, τ)` is the rank of `α`.  The rank of an entry
+determines its syntactic role.  In the examples below,
 `ι ∈ Ty` is any type, `⟨e₁, …, eₙ⟩` denotes the arity with entries
 `e₁, …, eₙ`, and `1` is the empty arity:
 
@@ -213,22 +214,24 @@ syntax monad is polynomial.
 ## 5. Algebras of the relative monad
 
 This section concerns the semantics of the syntax: algebras of the
-relative monad of §3.  It contains the definition of an algebra unfolded
-at this monad, two computations carried out by hand (not formalized), one
-general existence fact, and the open problems these point to.
+relative monad of §3.  It unfolds the definition of an algebra at this
+monad (§5.1), carries out two computations by hand — the rank-0 case
+(§5.2) and one example above rank 0 (§5.3) — records the available
+restrictions of the monad (§5.4) and an existence fact (§5.5), and lists
+the open problems (§5.6).  Nothing in this section is formalized.
 
-CLAUDE: are you actually going to test it? You said "The notion of algebra is tested against known doctrines"
-which means you're claiming this document carries out such a test.
-
-The notion of algebra is tested against known doctrines: at rank 0 (no
-binding) it must recover models of Lawvere theories, per Voevodsky's
-equivalence between Lawvere theories and relative monads on
-`J_f : F → Set` (docs/1601.02158); at rank 1, the Σ-monoids of
+Three checks pin down whether a proposed notion of algebra is the right
+one: at rank 0 (no binding) it must recover models of Lawvere theories,
+per Voevodsky's equivalence between Lawvere theories and relative monads
+on `J_f : F → Set` (docs/1601.02158); at rank 1, the Σ-monoids of
 Fiore–Plotkin–Turi; at rank 2, models of Fiore–Mahmoud second-order
-theories.
+theories.  Of these, only the rank-0 check is carried out here (§5.2);
+ranks 1 and 2 are open.
 
-**EM-algebras unfolded.**  Instantiating the Altenkirch–Chapman–Uustalu
-definition at the `J` of §3, an EM-algebra is:
+### 5.1 EM-algebras unfolded
+
+Instantiating the Altenkirch–Chapman–Uustalu definition at the `J` of §3,
+an EM-algebra is:
 
 - a family `X(α, τ)` of sets;
 - for every context `Γ` and every **valuation** `v` — an assignment, to
@@ -250,21 +253,34 @@ function.  The monad never instantiates the interface of the expression
 being acted on (only the interfaces of fillers, inside a substitution), so
 the higher fibres behave as abstract operation-carriers.
 
-**Rank 0.**  With all context slots of arity `1`, a pure expression is a
-single variable, `eval` is forced by the unit law, and EM ≃ `Set^Ty` —
-matching the Lawvere fact that models of the initial Lawvere theory are
-sets.
+### 5.2 Rank 0
 
-CLAUDE: what is the next thing about? A claim? An investigation? A comprehensive study? It's not clear.
-Furthermore, you should introduce spines more expicitly, not just as a mid-sentence explanation. NEW TERMS MUST BE PROPERLY INTRODUCED.
+With all context slots of arity `1`, a pure expression is a single
+variable, `eval` is forced by the unit law, and EM ≃ `Set^Ty` — matching
+the Lawvere fact that models of the initial Lawvere theory are sets.
 
-**Above rank 0 the higher fibres carry forced structure.**  Computed
-example: `Ty = {ι}`; entries `a` (arity `1`, type `ι`) and `p` (arity
-`⟨a⟩`, type `ι`, where `⟨a⟩` is the singleton context with entry `a`);
-`M` = finite lists of entries, slots = list positions.  An algebra has two
-nontrivial carriers `X_a = X(1, ι)` and `X_p = X(⟨a⟩, ι)`.  Expressions
-are *spines* — lists of `p`-slots ending in an `a`-slot or, at index `p`,
-possibly in the interface slot.  Evaluating one-layer spines defines
+### 5.3 A computation above rank 0
+
+We work out the smallest example above rank 0.  It establishes the
+following claim: above rank 0, EM(T) is not equivalent to `Set^Ty` — the
+substitution law forces algebraic structure on the higher fibres of every
+algebra.
+
+Take `Ty = {ι}`; let the entries be `a := (1, ι)` and `p := (⟨a⟩, ι)`,
+and let `M` consist of the finite lists of these two entries, with slots
+the list positions, as in the example of §2.  An algebra has two
+nontrivial carriers, `X_a = X(1, ι)` and `X_p = X(⟨a⟩, ι)`.
+
+Expressions of this carrier have a simple shape.  Call an expression a
+**spine** if it is a chain of `p`-headed applications ending in a
+childless head.  Every expression is a spine, because a head with entry
+`a` has no children and a head with entry `p` has exactly one.  At index
+`a` the terminal head is an `a`-slot of the context; at index `p`, where
+expressions live over `Γ ⋈ ⟨a⟩`, the terminal head may also be the fresh
+slot contributed by `⟨a⟩`, which we call the **interface slot** and
+denote `y`.  We write spines as chains `f(g(x))`, where `f, g` stand for
+`p`-slots and the innermost item is the terminal head.  Evaluating
+one-layer spines defines
 
 - `app : X_p × X_a → X_a` (evaluate `f(x)` under `f ↦ F, x ↦ b`),
 - `c ∈ X_p` (evaluate the bare interface slot in the empty context),
@@ -277,9 +293,9 @@ monoid action of `X_p` on `X_a`, and `K` gives constants —
 computation: `app(c, b) = b` and `app(K(b), b') = b` give, when
 `|X_a| ≥ 2`, that `c` and the `K(b)` are pairwise distinct, so
 `|X_p| ≥ |X_a| + 1`; in particular no algebra has `X_p = 1`, so EM(T) is
-not equivalent to `Set^Ty` above rank 0.  The free algebra on a set `S`
-(`X_p ≅ 1 + S`) and the full function-space model (`X_p = S^S`) are
-non-isomorphic algebras with the same `X_a = S`; the full model satisfies
+not equivalent to `Set^Ty` above rank 0.  The free algebra on a set `A₀`
+(`X_p ≅ 1 + A₀`) and the full function-space model (`X_p = A₀^{A₀}`) are
+non-isomorphic algebras with the same `X_a = A₀`; the full model satisfies
 an extensionality law `comp(F, K(b)) = K(app(F, b))` that is not forced in
 general.  The higher fibres are intensional applicative structures — the
 map `X_p → X_a^{X_a}` induced by `app` is in general neither injective nor
@@ -290,10 +306,9 @@ operation-carriers.  That the forced structure is monoid actions parallels
 the classical fact that unary algebraic theories are the same as monoid
 actions.
 
-CLAUDE: this should be a section.
+### 5.4 Restrictions
 
-**Restrictions.**  Three independent restrictions of the setup are
-available, each established:
+Three independent restrictions of the setup are available:
 
 1. the prefix `S` (§3) — which theory;
 2. restriction of the base category of contexts — which variables a
@@ -309,41 +324,48 @@ Choice 3 separates first-order models (atomic indices: carriers are sets,
 symbols become operations) from higher-order models (full family:
 metavariable-carriers are semantic data, as in the computed example).
 
-**Left Kan extension.**  The base category is small (its objects are the
+### 5.5 Left Kan extension
+
+The base category is small (its objects are the
 elements of `M`) and the codomain `Fam(M × Ty)` is cocomplete, so `Lan_J T`
 exists and `T` extends to a monad `T^#` on families, with
 `T^# X = ∫^Γ Fam(J Γ, X) · T Γ`: an element is an expression over some `Γ`
 with an `X`-valuation of `Γ`, modulo renaming — syntax with parameters
 from `X`, the free algebra on generators `X`.
 
-**Open problems.**
-CLAUDE: this should be a section, with paragraphs rather than bullet lists.
+### 5.6 Open problems
 
+The first problem is to identify EM(T) for the carrier of §5.3.  The
+computation there suggests the answer: the category of triples of a
+monoid `X_p`, an `X_p`-action `app` on a set `X_a`, and a map
+`K : X_a → X_p` satisfying `app(K(b), b') = b` and
+`comp(K(b), G) = K(b)`.
 
-- Identify EM(T) for the `⟨a, p⟩` carrier; the computation above makes
-  "monoid actions with constants `K` satisfying the two laws" the
-  candidate answer.
-- Show EM(T'_S) ≃ `S`-pointed EM(T)-algebras; over the group signature,
-  with restrictions 2 and 3 imposed and the group equations quotiented,
-  derive EM ≃ groups.  Every step of this computation is specified; it
-  should be the first of these problems to be settled.
-- The equations layer: quotients of the monad by substitution-stable
-  congruences (in the style of Fiore–Hur), with the monad laws descending.
-  Without it only the equation-free half of any theory ↔ monad
-  correspondence exists.
+The second problem is to show that EM(T'_S) is equivalent to the
+category of `S`-pointed EM(T)-algebras, meaning algebras equipped with a
+chosen valuation of the prefix `S`.  Over the group signature of §3,
+with restrictions 2 and 3 of §5.4 imposed and the group equations
+quotiented, this should yield EM ≃ groups.  Every step of this
+computation is specified, so it should be the first of these problems to
+be settled.
+
+The third problem is the equations layer: quotients of the monad by
+substitution-stable congruences, in the style of Fiore–Hur, with the
+monad laws descending to the quotient.  Without this layer only the
+equation-free half of any theory ↔ monad correspondence exists.
 
 ## 6. Dependency: from a monoid to a category of shapes
 
 This section concerns a generalization that is not formalized: carriers
 in which a telescope extends one specific context rather than every
 context, as required for dependent type theories.  Two facts about the
-simply-typed framework delimit the problem; the replacement for the
-monoid of shapes is then identified as a known structure; what remains
-open is listed at the end.
+simply-typed framework delimit the problem (§§6.1–6.2); the replacement
+for the monoid of shapes is identified as a known structure (§§6.3–6.4);
+what remains open is listed in §6.5.
 
-CLAUDE: stop making paragraphs with bold titles and use sections instead, and number them.
+### 6.1 Finitary type theories are an instance
 
-**Raw syntax of finitary type theories is already an instance.**  Take
+Take
 `Ty` = the syntactic classes of FTT (`Ty`, `Tm`, and the equality classes
 if desired) and let the carrier's arities be FTT's metavariable and symbol
 arities; then raw expressions, raw substitution and instantiation are
@@ -355,14 +377,18 @@ typed and build a judgement layer over the monad (extrinsic, FTT's
 architecture).  What follows concerns the intrinsic carrier structure;
 the judgement layer is untouched work.
 
-**The carrier provides no dependency order.**  In a dependent telescope,
-each slot's classifier refers to earlier slots.  The fibre well-orders of
-§1 cannot serve as "earlier": they are strictification artifacts, and they
-are fibrewise — each `Γ ∋[τ] α` separately, with no relation between slots
-in different fibres.  A global precedence on `P Γ = Σ_{α,τ} (Γ ∋[τ] α)` is
-genuinely new structure.
+### 6.2 The carrier provides no dependency order
 
-**The shape structure.**  In the simply-typed carrier any `Δ` extends any
+In a dependent telescope, each slot's classifier refers to earlier
+slots.  The fibre well-orders of §1 cannot serve as "earlier": they exist
+only for the coherence of the coproduct isomorphisms, and they are
+fibrewise — each `Γ ∋[τ] α` is ordered separately, with no relation
+between slots in different fibres.  A global precedence on
+`P Γ = Σ_{α,τ} (Γ ∋[τ] α)` is genuinely new structure.
+
+### 6.3 The category of shapes
+
+In the simply-typed carrier any `Δ` extends any
 `Γ`; with dependency, the telescopes that can extend `Γ` form a collection
 varying with `Γ`.  The replacement for the monoid is the following data:
 
@@ -411,7 +437,9 @@ whose positions are the telescopes.**  Two specializations:
 Neither extreme is part of the definition, just as §1 takes `M` to be an
 arbitrary monoid, not a free one.
 
-**Two container layers.**  The carrier thus acquires two layers with
+### 6.4 Two container layers
+
+The carrier thus acquires two layers with
 different tensors:
 
 - the *shape layer* `O ◁ Tele` — a comonoid in `(Cont, ∘)`, i.e. the
@@ -428,26 +456,32 @@ different tensors:
   `(Cont, ×)`-monoid structure of §4).  Note the
   second summand is indexed by the base `Γ ⋈ Δ`.
 
-**Status and open problems.**  The shape layer and the slot
-layer above are established as definitions with the correct
-specializations.  Not yet designed:
+### 6.5 Open problems
 
-- *Decorations.*  A slot's arity must be a telescope over that slot's
-  prefix, so the prefix assignment — the global precedence discussed at
-  the start of this section — becomes structure the definitions consume,
-  in contrast with §1, where the fibre orders serve only coherence.  The
-  exact data and its compatibility with the slot-layer decomposition are
-  open.
-- *Renamings.*  Renamings must act on decorations
-  (`arity(ρ x) = ρ⋆(arity x)`), whereas in the carrier of §1 decorations
-  are renaming-invariant.  This action, and after it the re-derivation of `J`,
-  `T` and the interchange proof over the category of shapes, are open.
-- *The judgement layer* (extrinsic route) over the existing monad is
-  untouched.
+The shape layer (§6.3) and the slot layer (§6.4) are definitions with
+the correct specializations; the remaining structure is not yet
+designed.
 
-Target specializations that define success: CwFs / natural models at two
-judgement forms (`Ty`, `Tm`); Uemura's representable-map framework as the
-second-order fragment; Cartmell's GATs as the rank-1 dependent case.
+The first missing piece is the decorations.  A slot's arity must be a
+telescope over that slot's prefix, so the prefix assignment — the global
+precedence of §6.2 — becomes structure that the definitions consume, in
+contrast with §1, where the well-orders serve only coherence.  The exact
+data, and its compatibility with the slot-layer decomposition, are open.
+
+The second is the action of renamings.  Renamings must act on
+decorations (`arity(ρ x) = ρ⋆(arity x)`), whereas in the carrier of §1
+decorations are renaming-invariant.  This action, and after it the
+re-derivation of `J`, `T` and the interchange proof over the category of
+shapes, are open.
+
+The third is the judgement layer of §6.1 — judgements as
+substitution-closed structure over the existing monad — which has not
+been started.
+
+The target specializations are CwFs / natural models (two judgement
+forms, `Ty` and `Tm`), Uemura's representable-map framework as the
+second-order fragment, and Cartmell's GATs as the rank-1 dependent case;
+an adequate generalization must specialize to these.
 
 ## 7. Reading
 
