@@ -260,7 +260,11 @@ Throughout, fix `C₀`, `S`, `bd` as above.  Write:
 ```
 
 ("well-formed contexts", "well-formed telescopes", "well-formed
-expressions at interface `Δ` and class `c`"), subject to the closure
+expressions at interface `Δ` and class `c`"; when `bd c` is defined,
+the third predicate is additionally indexed by a *classifier*
+`A ∈ Expr₀ (S ⋈ |Γ| ⋈ |Δ|) (bd c)` — read `𝒯exp(Γ; Δ, c, A)` as
+"`Γ, Δ ⊢ e : A`" — and it is this index that the boundary-matching
+clauses of (L1), (L2) and (L4) refer to), subject to the closure
 laws (L0)–(L5):
 
 - **(L0) root and extension.**  The empty context is in `𝒯cxt`;
@@ -630,6 +634,47 @@ places classifiers over `base * prefix * arity` rather than
 4. **The carrier note** stands as the specification of Theorem A's
    output and as the compressed story of §1–§2 (delooping,
    decompression, concreteness over `Sq`).
+
+## 8. A graded catalogue of examples
+
+Two conventions for reading the tables.  Every instance has a rank
+*profile* with two independent dials: the **signature rank** (maximal
+rank of the slots of `S` — the symbols) and the **context rank**
+(maximal rank of entries admitted in contexts — what can be
+hypothesized).  And higher rank must not be confused with
+higher-order *type*: a variable `h : ∀n. P n → P(n+1)` is a rank-0
+entry whose classifier happens to be a `Π`-expression; an entry is
+higher-rank only when its own syntactic interface is nontrivial
+(metavariables, schemata).
+
+### 8.1 Simply typed (layer 0 suffices; classifiers absent or constant)
+
+| rank | theory | profile | remarks |
+|---|---|---|---|
+| 1 | groups: `u : (1,∗)`, `m : (⟨(1,∗),(1,∗)⟩,∗)`, `i : (⟨(1,∗)⟩,∗)` | sig 1, ctx 0 | Lawvere theories; adequacy = the `R_Σ` isomorphism of `Syntax-algebras-and-Lawvere.md` |
+| 2 | untyped λ-calculus: `app : (⟨(1,∗),(1,∗)⟩,∗)`, `lam : (⟨(⟨(1,∗)⟩,∗)⟩,∗)` | sig 2, ctx 0 | binders; adequacy against well-scoped de Bruijn terms; `Subst.act` = capture-avoiding substitution |
+| 2 | raw MLTT (`Π, λ, app, Σ, Id, J, ℕ, U, El, …`) | sig 2, ctx 0, classes `{ty,tm}` | the substrate of §6.2; all standard formers stay at rank 2 (`J` binds three variables in its motive) |
+| 2 | second-order algebraic theories (Fiore–Mahmoud) | sig ≤2, **ctx 1** | metavariables `M : (⟨(1,∗)ⁿ⟩,∗)` as context entries; substitution for `M` = metasubstitution, for free |
+| 3 | equational logic of `ℕ` (`0, s, +`) with the induction schema | **sig 3**, ctx 0, classes `{∗, eq}` | derivations = expressions of class `eq`; Birkhoff's rules (`refl, sym, trans`, congruences) and the defining equations of `+` are entries of rank ≤ 2; the **induction rule** is the rank-3 entry: its motive is a term-child `(⟨(1,∗)⟩,∗)` and its step premise is the child `(⟨(⟨(1,∗)⟩,∗), (1,∗), (1,eq)⟩, eq)` — a derivation living in a context extended by a *fresh unary metavariable* `P̂` (plus induction variable and hypothesis), which is what makes the premise honestly schematic and puts `ind` at rank 3.  `Subst.act` at `P̂` performs schema instantiation; the typing layer later identifies the `P̂`-copies with the motive child.  (Raw children cannot see their siblings, which is exactly why the metavariable must be re-bound inside each premise — and why plain Birkhoff rules, whose premises share only *terms*, stay at rank ≤ 2.) |
+
+### 8.2 Dependently typed (a typing layer is required; the derived carrier is genuinely dependent)
+
+| rank | theory | profile | remarks |
+|---|---|---|---|
+| 1 | the walking family: `ι : (1,ty)`, `P : (⟨(1,tm)⟩,ty)` with `cl(t̂) = ι` | sig 1, ctx 0, dependent classifiers | the minimal dependent example: no binders, no equations, terms = variables only (there are no closed `tm`-expressions, even raw); yet `Tele` varies — no `P`-entry extends the empty context — so no simply-typed carrier expresses its contexts |
+| 1 | the GAT of categories: `Obj : (1,ty)`, `Hom : (⟨(1,tm),(1,tm)⟩,ty)`, `id : (⟨(1,tm)⟩,tm)`, `comp : (⟨(1,tm)⁵⟩,tm)` (fully annotated) | sig 1, ctx 0, dependent classifiers | the representative Cartmell example; decorations carry `Hom(x,y)` etc. as classifiers |
+| 2 | typed MLTT | sig 2, ctx 0 | §6.2 + §6.4: the flagship; typing = the rule-generated layer, `Ty(Γ)` manufactured as `𝒯exp(Γ; ∅, ty)` |
+| 2 | metavariable contexts over MLTT (elaboration states): entries `?M : (x:A)(y:B x) ⊢ C` | sig 2, **ctx 1–2, dependent boundaries** | the genuinely new territory: dependent entries of rank ≥ 1, beyond natural models/CwFs; the intrinsic form of FTT's metavariable contexts, and the state space of a verified elaborator |
+| 3 | **the theory of GATs** | presentations: sig 2; derivations: **sig 3**; dependent boundaries throughout | expressions at the presentation level = GAT presentations (a sort/operation/equation declaration binds its dependent argument telescope of rank-0 entries — rank 2); adding Cartmell's structural rules (substitution rule, equality rules) as rank-3 entries makes expressions = *derivations over a presentation*; the typing layer's predicates = Cartmell's well-formedness, and adequacy would identify well-typed expressions with well-formed GAT presentations and derivations |
+| 3 | **the theory of SOGATs** (Uemura; Kaposi–Xie) | presentations: **sig 3**; dependent boundaries | a SOGAT declaration binds a telescope of *second-order* metavariables with dependent boundaries — e.g. Π-formation `(A : Ty)(B : (x : Tm A) ⊢ Ty) ⊢ Ty`, whose entry `B` is a rank-1 entry mentioning the earlier entry `A` — so a declaration former sits exactly one rank above its GAT counterpart; expressions = SOGAT presentations, the typing layer = well-formedness of signatures.  (A *single* SOGAT as an object theory is the rank-2 row: MLTT is the paradigm.  Derivation calculi over a SOGAT presentation would push to sig 4 — each meta-level costs one rank.) |
+
+Reading the two tables columnwise: rank 1 is dependency without
+binding, rank 2 adds object-level binding, rank 3 adds
+schemata/rules — and in each row the dependent version differs from
+the simply-typed one only in the decorations and the layer, never in
+the raw machinery.  The last two rows are the framework describing
+its own input formats: typing layers for the theories *of* theories,
+with the GAT/SOGAT distinction visible as exactly one unit of rank.
 
 ## References
 
