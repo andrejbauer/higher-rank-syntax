@@ -69,6 +69,13 @@ theorem underlyingList_mul (Γ Δ : aritySubmonoid Ty) :
     underlyingList (Γ * Δ) = underlyingList Γ ++ underlyingList Δ :=
   val_apply Γ (underlyingList Δ)
 
+/-- An arity is determined by its underlying list. -/
+theorem arity_ext {Γ Δ : aritySubmonoid Ty}
+    (h : underlyingList Γ = underlyingList Δ) : Γ = Δ := by
+  apply Subtype.ext
+  funext Θ
+  rw [val_apply Γ, val_apply Δ, h]
+
 /-- Positions of a list whose entry satisfies a predicate. -/
 def Position (P : Entry Ty → Prop) (ℓ : List (Entry Ty)) : Type :=
   { i : Fin ℓ.length // P (ℓ.get i) }
@@ -93,6 +100,13 @@ def positionCongr (P : Entry Ty → Prop) {ℓ ℓ' : List (Entry Ty)} (h : ℓ 
     (positionWellOrder P ℓ).r ≃r (positionWellOrder P ℓ').r := by
   subst h
   exact RelIso.refl _
+
+/-- Transporting a position along a list equality preserves its index. -/
+theorem positionCongr_val (P : Entry Ty → Prop) {ℓ ℓ' : List (Entry Ty)}
+    (h : ℓ = ℓ') (x : Position P ℓ) :
+    ((positionCongr P h x).val.val : ℕ) = x.val.val := by
+  subst h
+  rfl
 
 private theorem split_index_lt {ℓ₁ ℓ₂ : List (Entry Ty)} (k : Fin (ℓ₁ ++ ℓ₂).length)
     (h : ¬ k.val < ℓ₁.length) : k.val - ℓ₁.length < ℓ₂.length := by

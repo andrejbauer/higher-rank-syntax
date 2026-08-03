@@ -32,15 +32,6 @@ by deriving.
 - Breadth-first: when a proof splits into branches, explore each briefly to see
   the structure before deep-diving any one.
 
-## Declare-and-halt
-
-Before each tactic, write one line stating the single expected proof-state
-outcome. Run only that tactic, then compare. On ANY deviation (error,
-"no progress", "pattern not found", a goal other than predicted) the turn ENDS:
-quote the verbatim outcome and wait. No second attempt, no switching tactic
-family, no changing lemmas/args, no "let me try one thing". Carve-out: fix a
-genuine typo and rerun the SAME intended tactic.
-
 ## Naming
 
 - Shapes / telescopes: UPPER-CASE Greek only — `Γ Δ Ξ Θ Ψ Ω Φ Π Σ Λ`. Never

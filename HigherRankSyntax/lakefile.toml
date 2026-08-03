@@ -17,5 +17,13 @@ name = "ListCarrier"
 srcDir = "examples"
 
 [[lean_lib]]
-name = "GroupSignature"
-srcDir = "examples"
+name = "MagmaSignature"
+srcDir = "examples/magma"
+
+[[lean_lib]]
+name = "MagmaTerm"
+srcDir = "examples/magma"
+
+[[lean_lib]]
+name = "MagmaAdequacy"
+srcDir = "examples/magma"

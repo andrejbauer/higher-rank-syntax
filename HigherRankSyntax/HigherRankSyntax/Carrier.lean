@@ -76,6 +76,8 @@ infixl:65 " ⋈ " => Ext
 
 namespace Carrier
 
+universe u
+
 abbrev slotRel {A : Type} (C : Carrier A) (Γ α : C.Arity) (τ : C.Ty) :
     Γ ∋[τ] α → Γ ∋[τ] α → Prop :=
   (C.slotAt Γ α τ).r
@@ -87,6 +89,11 @@ def inl {A : Type} (C : Carrier A) {Γ Δ α : C.Arity} {τ : C.Ty} (x : Γ ∋[
 def inr {A : Type} (C : Carrier A) {Γ Δ α : C.Arity} {τ : C.Ty} (x : Δ ∋[τ] α) :
     Γ * Δ ∋[τ] α :=
   C.slotAt_mul Γ Δ α τ (Sum.inr x)
+
+@[simp] theorem slotAt_mul_symm_inr {A : Type} (C : Carrier A)
+    {Γ Δ α : C.Arity} {τ : C.Ty} (x : Δ ∋[τ] α) :
+    (C.slotAt_mul Γ Δ α τ).symm (C.inr x) = Sum.inr x := by
+  exact (C.slotAt_mul Γ Δ α τ).symm_apply_apply (Sum.inr x)
 
 def copair {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity} {τ : C.Ty}
     (X : Type) (f : Γ ∋[τ] α → X) (g : Δ ∋[τ] α → X) (p : Γ * Δ ∋[τ] α) :
@@ -116,6 +123,22 @@ theorem cover
     rfl
   · right
     use y
+    rw [← (C.slotAt_mul Γ Δ α τ).apply_symm_apply p, h]
+    rfl
+
+/-- Eliminate a product slot, retaining its equality with the chosen injection. -/
+def coverCasesEq
+    {A : Type} (C : Carrier A)
+    (Γ Δ : C.Arity) {α : C.Arity} {τ : C.Ty}
+    {motive : (p : Γ * Δ ∋[τ] α) → Sort u}
+    (p : Γ * Δ ∋[τ] α)
+    (left : (x : Γ ∋[τ] α) → (p = C.inl x) → motive p)
+    (right : (y : Δ ∋[τ] α) → (p = C.inr y) → motive p) : motive p := by
+  rcases h : (C.slotAt_mul Γ Δ α τ).symm p with x | y
+  · apply left x
+    rw [← (C.slotAt_mul Γ Δ α τ).apply_symm_apply p, h]
+    rfl
+  · apply right y
     rw [← (C.slotAt_mul Γ Δ α τ).apply_symm_apply p, h]
     rfl
 
