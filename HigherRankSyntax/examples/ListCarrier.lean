@@ -228,6 +228,33 @@ def carrier (Ty : Type) : Carrier (List (Entry Ty)) where
         exact sub_sizeOf x)
       (InvImage.wf (fun Γ => sizeOf (underlyingList Γ)) Nat.lt_wfRel.wf)
 
+/-- A slot injected into the left list retains its position. -/
+theorem carrier_inl_val {Γ Δ α : (carrier Ty).Arity} {τ : Ty}
+    (x : Γ ∋[τ] α) :
+    ((carrier Ty).inl x : Γ ⋈ Δ ∋[τ] α).val.val = x.val.val := by
+  unfold Carrier.inl
+  dsimp [carrier]
+  let f := positionAppend (slotPredicate α τ) (underlyingList Γ) (underlyingList Δ)
+  let g := positionCongr (slotPredicate α τ) (underlyingList_mul Γ Δ).symm
+  have htrans := congrArg (fun y => y.val.val) (RelIso.trans_apply f g (Sum.inl x))
+  have hcongr := positionCongr_val (slotPredicate α τ)
+    (underlyingList_mul Γ Δ).symm (f (Sum.inl x))
+  exact htrans.trans (hcongr.trans (positionAppendEquiv_val_inl (slotPredicate α τ) x))
+
+/-- A slot injected into the right list is shifted by the left list's length. -/
+theorem carrier_inr_val {Γ Δ α : (carrier Ty).Arity} {τ : Ty}
+    (x : Δ ∋[τ] α) :
+    ((carrier Ty).inr x : Γ ⋈ Δ ∋[τ] α).val.val =
+      (underlyingList Γ).length + x.val.val := by
+  unfold Carrier.inr
+  dsimp [carrier]
+  let f := positionAppend (slotPredicate α τ) (underlyingList Γ) (underlyingList Δ)
+  let g := positionCongr (slotPredicate α τ) (underlyingList_mul Γ Δ).symm
+  have htrans := congrArg (fun y => y.val.val) (RelIso.trans_apply f g (Sum.inr x))
+  have hcongr := positionCongr_val (slotPredicate α τ)
+    (underlyingList_mul Γ Δ).symm (f (Sum.inr x))
+  exact htrans.trans (hcongr.trans (positionAppendEquiv_val_inr (slotPredicate α τ) x))
+
 end ListCarrier
 
 /-- The free simply-typed carrier on the class set `Ty`. -/

@@ -58,9 +58,7 @@ theorem Renaming.extend_inl
     (f : Γ →ʳ Δ) {α : C.Arity} {τ : C.Ty} (i : Γ ∋[τ] α) :
   (f ⇑ʳ Ξ) (C.inl i) = C.inl (f i)
   := by
-  let eq := C.copair_inl Γ Ξ ((Δ ⋈ Ξ) ∋[τ] α)
-    (fun y => C.inl (f y)) (fun z => C.inr z)
-  simpa [Renaming.extend] using congrFun eq i
+  simp [Renaming.extend]
 
 @[simp]
 theorem Renaming.extend_inr
@@ -68,9 +66,7 @@ theorem Renaming.extend_inr
     (f : Γ →ʳ Δ) {α : C.Arity} {τ : C.Ty} (i : Ξ ∋[τ] α) :
   (f ⇑ʳ Ξ) (C.inr i) = C.inr i
   := by
-  let eq := C.copair_inr Γ Ξ ((Δ ⋈ Ξ) ∋[τ] α)
-    (fun y => C.inl (f y)) (fun z => C.inr z)
-  simpa [Renaming.extend] using congrFun eq i
+  simp [Renaming.extend]
 
 @[simp]
 theorem Renaming.extend_id
@@ -90,3 +86,35 @@ theorem Renaming.extend_comp
   funext α τ x
   rcases C.cover Γ Ω x with ⟨y, rfl⟩ | ⟨y, rfl⟩
     <;> simp [Renaming.comp]
+
+@[simp]
+theorem Renaming.extend_assoc
+    {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) (Ξ Ω : C.Arity) :
+    ρ ⇑ʳ (Ξ ⋈ Ω) = (ρ ⇑ʳ Ξ) ⇑ʳ Ω := by
+  funext α τ x
+  rcases C.cover (Γ ⋈ Ξ) Ω x with ⟨y, rfl⟩ | ⟨z, rfl⟩
+  · rcases C.cover Γ Ξ y with ⟨z, rfl⟩ | ⟨z, rfl⟩
+    · calc
+        _ = (ρ ⇑ʳ (Ξ ⋈ Ω)) (C.inl z) :=
+          by
+            apply congrArg (fun w : Γ ⋈ (Ξ ⋈ Ω) ∋[τ] α => (ρ ⇑ʳ (Ξ ⋈ Ω)) w)
+            exact (C.inl_inl Γ Ξ Ω z).symm
+        _ = C.inl (ρ z) := Renaming.extend_inl ρ z
+        _ = C.inl (C.inl (ρ z)) := C.inl_inl Δ Ξ Ω (ρ z)
+        _ = _ := by simp
+    · calc
+        _ = (ρ ⇑ʳ (Ξ ⋈ Ω)) (C.inr (C.inl z)) :=
+          by
+            apply congrArg (fun w : Γ ⋈ (Ξ ⋈ Ω) ∋[τ] α => (ρ ⇑ʳ (Ξ ⋈ Ω)) w)
+            exact (C.inr_inl Γ Ξ Ω z).symm
+        _ = C.inr (C.inl z) := Renaming.extend_inr ρ (C.inl z)
+        _ = C.inl (C.inr z) := C.inr_inl Δ Ξ Ω z
+        _ = _ := by simp
+  · calc
+      _ = (ρ ⇑ʳ (Ξ ⋈ Ω)) (C.inr (C.inr z)) :=
+        by
+          apply congrArg (fun w : Γ ⋈ (Ξ ⋈ Ω) ∋[τ] α => (ρ ⇑ʳ (Ξ ⋈ Ω)) w)
+          exact (C.inr_inr Γ Ξ Ω z).symm
+      _ = C.inr (C.inr z) := Renaming.extend_inr ρ (C.inr z)
+      _ = (C.inr z : (Δ ⋈ Ξ) ⋈ Ω ∋[τ] α) := C.inr_inr Δ Ξ Ω z
+      _ = _ := by simp

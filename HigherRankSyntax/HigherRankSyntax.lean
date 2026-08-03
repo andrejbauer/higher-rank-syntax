@@ -5,3 +5,4 @@ import HigherRankSyntax.Subst
 import HigherRankSyntax.RelativeMonad.Basic
 import HigherRankSyntax.SyntaxMonad
 import HigherRankSyntax.PrefixedSyntaxMonad
+import HigherRankSyntax.Typing.Decoration

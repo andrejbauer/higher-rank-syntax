@@ -19,9 +19,11 @@
 ## Domain Behavior Guardrails
 1. **[2026-06-23] Carrier product slots need cover**
    Do instead: use `Carrier.cover` to split arbitrary `Γ ⋈ Δ` slots; `classify_inl`/`classify_inr` only handle injected slots.
-2. **[2026-06-24] Reassociate nested product slots with Carrier coherences**
+2. **[2026-08-03] Eliminate dependent product-slot data through a sigma**
+   Do instead: use `Carrier.copair` into `Σ Λ, F Λ`, then transport along the precedence equality; `Carrier.cover` is Prop-valued and cannot itself eliminate into classifier data.
+3. **[2026-06-24] Reassociate nested product slots with Carrier coherences**
    Do instead: use `C.inr_inl`, `C.inr_inr`, and `C.inl_inl` before recursive η/substitution calls whose slot lives across `Γ * (Δ * Ξ)` versus `(Γ * Δ) * Ξ`.
-3. **[2026-06-23] Match project mathlib version**
+4. **[2026-06-23] Match project mathlib version**
    Do instead: inspect `lean-toolchain`/`lakefile.toml` or run local Lean checks when API names may vary by version.
 
 ## User Directives

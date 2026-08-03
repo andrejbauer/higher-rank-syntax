@@ -112,6 +112,20 @@ theorem copair_inr {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity}
   funext x
   simp [copair, inr]
 
+@[simp] theorem copair_apply_inl {A : Type} (C : Carrier A)
+    (Γ Δ : C.Arity) {α : C.Arity} {τ : C.Ty}
+    (X : Type) (f : Γ ∋[τ] α → X) (g : Δ ∋[τ] α → X)
+    (x : Γ ∋[τ] α) :
+    C.copair Γ Δ X f g (C.inl x) = f x :=
+  congrFun (C.copair_inl Γ Δ X f g) x
+
+@[simp] theorem copair_apply_inr {A : Type} (C : Carrier A)
+    (Γ Δ : C.Arity) {α : C.Arity} {τ : C.Ty}
+    (X : Type) (f : Γ ∋[τ] α → X) (g : Δ ∋[τ] α → X)
+    (x : Δ ∋[τ] α) :
+    C.copair Γ Δ X f g (C.inr x) = g x :=
+  congrFun (C.copair_inr Γ Δ X f g) x
+
 theorem cover
     {A : Type} (C : Carrier A)
     (Γ Δ : C.Arity) {α : C.Arity} {τ : C.Ty} (p : Γ * Δ ∋[τ] α) :

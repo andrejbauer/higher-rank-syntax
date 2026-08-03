@@ -17,6 +17,10 @@ name = "ListCarrier"
 srcDir = "examples"
 
 [[lean_lib]]
+name = "ListPrecedence"
+srcDir = "examples"
+
+[[lean_lib]]
 name = "MagmaSignature"
 srcDir = "examples/magma"
 
@@ -27,3 +31,15 @@ srcDir = "examples/magma"
 [[lean_lib]]
 name = "MagmaAdequacy"
 srcDir = "examples/magma"
+
+[[lean_lib]]
+name = "DependentClassification"
+srcDir = "examples/dependent"
+
+[[lean_lib]]
+name = "NatSignature"
+srcDir = "examples/nat"
+
+[[lean_lib]]
+name = "NatEquationalLogic"
+srcDir = "examples/nat"
