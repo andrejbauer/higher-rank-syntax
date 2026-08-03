@@ -3,6 +3,14 @@ import HigherRankSyntax.Renaming
 import HigherRankSyntax.Expr
 import HigherRankSyntax.Subst
 import HigherRankSyntax.RelativeMonad.Basic
+import HigherRankSyntax.RelativeMonad.Kleisli
+import HigherRankSyntax.RelativeMonad.Module
 import HigherRankSyntax.SyntaxMonad
 import HigherRankSyntax.PrefixedSyntaxMonad
 import HigherRankSyntax.Typing.Decoration
+import HigherRankSyntax.Typing.DecorationModule
+import HigherRankSyntax.Typing.BaseExtension
+import HigherRankSyntax.Typing.ArityModule
+import HigherRankSyntax.Typing.TelescopeTensor
+import HigherRankSyntax.Typing.DecoratedTelescope
+import HigherRankSyntax.Typing.DTelMonoid

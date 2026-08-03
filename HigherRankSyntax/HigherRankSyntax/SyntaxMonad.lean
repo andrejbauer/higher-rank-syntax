@@ -1,5 +1,5 @@
 import HigherRankSyntax.MonadLaws
-import HigherRankSyntax.RelativeMonad.Basic
+import HigherRankSyntax.RelativeMonad.Kleisli
 
 /-!
 # Syntax as a relative monad
@@ -86,3 +86,9 @@ def SyntaxMonad {A : Type} (C : Carrier A) : RelativeMonad (J C) where
     intro Γ Δ Ξ f g
     funext α τ e
     apply act_comp
+
+/-- Kleisli morphisms for raw syntax are raw substitutions. -/
+def syntaxKleisliHomEquiv {A : Type} (C : Carrier A) (Γ Δ : C.Arity) :
+    (RelativeMonad.Kleisli.of (SyntaxMonad C) Γ ⟶
+      RelativeMonad.Kleisli.of (SyntaxMonad C) Δ) ≃ Subst Γ Δ :=
+  Equiv.refl _

@@ -23,6 +23,10 @@ abbrev Subst (Δ Γ : C.Arity) :=
 def Subst.id (Γ : C.Arity) : Subst Γ Γ :=
   (fun ⦃_⦄ ⦃_⦄ p => Expr.η p)
 
+/-- The substitution obtained by eta-expanding the image of each renamed slot. -/
+def Subst.ofRenaming {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) : Subst Γ Δ :=
+  fun ⦃_⦄ ⦃_⦄ x => Expr.η (ρ x)
+
 /-- Three-way dispatch of a slot of `Γ ⋈ Δ ⋈ Ξ`, used by `Subst.act`: the
 prefix `Γ`, the substitution domain `Δ`, or the current depth `Ξ`. -/
 inductive LeftMiddleRight (Γ Δ Ξ α : C.Arity) (τ : C.Ty) : Type where

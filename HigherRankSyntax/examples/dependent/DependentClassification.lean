@@ -1,15 +1,17 @@
 import ListPrecedence
+import HigherRankSyntax.Typing.DTelMonoid
 
 /-!
 # Dependent classification data
 
-The examples decorate `A : Type, x : A` and a term boundary classified by a
-binary type expression using an external type and a preceding type slot.
+The examples decorate `A : Type, x : A` and a term slot classified by a binary
+type expression using an external type and a preceding type slot.
 -/
 
 namespace T1
 
 open ListCarrier
+open CategoryTheory
 
 universe u
 
@@ -225,7 +227,71 @@ def extSubst :
         Expr (binSig ⋈ oneCtx .ty ⋈ Δ) υ)
       replacementTy x
 
+def termTel : DecoratedTelescope (C := depCarrier) bd (oneCtx .ty) :=
+  ⟨oneCtx .tm, tmDec⟩
+
+def typeTel : DecoratedTelescope (C := depCarrier) bd 1 :=
+  ⟨oneCtx .ty, tyDec 1⟩
+
+def tailTy :
+    DecoratedTelescope (C := depCarrier) bd (oneCtx .ty ⋈ oneCtx .tm) :=
+  ⟨oneCtx .ty, tyDec (oneCtx .ty ⋈ oneCtx .tm)⟩
+
+def extPriorTel : DecoratedTelescope (C := depCarrier) bd extPrior :=
+  ⟨oneCtx .tm, extPriorDec⟩
+
+def actedTermTel :
+    DecoratedTelescope (C := depCarrier) bd (binSig ⋈ oneCtx .ty) :=
+  DecoratedTelescope.act extSubst termTel
+
 example : ctx.arity = oneCtx .ty ⋈ oneCtx .tm := rfl
+
+/-- The generic T1 construction is literally a Mathlib internal monoid. -/
+example : CategoryTheory.Mon (ArityMod depCarrier) :=
+  ArityMod.DTelMon bd
+
+example :
+    MonObj.one (X := (ArityMod.DTelMon (C := depCarrier) bd).X) =
+      ArityMod.DTelOne (C := depCarrier) bd :=
+  ArityMod.DTelMon_one (C := depCarrier) bd
+
+example :
+    MonObj.mul (X := (ArityMod.DTelMon (C := depCarrier) bd).X) =
+      ArityMod.DTelMul (C := depCarrier) bd :=
+  ArityMod.DTelMon_mul (C := depCarrier) bd
+
+example :
+    (ArityMod.DTelOne bd).left.app
+      (RelativeMonad.Kleisli.of (SyntaxMonad depCarrier) 1) PUnit.unit =
+      DecoratedTelescope.empty (C := depCarrier) bd 1 := rfl
+
+example :
+    (ArityMod.DTelMul bd).left.app
+        (RelativeMonad.Kleisli.of (SyntaxMonad depCarrier) 1)
+        ⟨typeTel, termTel⟩ =
+      DecoratedTelescope.concatenate (C := depCarrier) typeTel termTel := rfl
+
+example :
+    DecoratedTelescope.concatenate ctx
+        (DecoratedTelescope.empty bd (1 ⋈ ctx.arity)) = ctx :=
+  DecoratedTelescope.concatenate_empty_right ctx
+
+example :
+    DecoratedTelescope.concatenate
+        (DecoratedTelescope.concatenate typeTel termTel)
+        (DecoratedTelescope.castBase
+          (mul_assoc 1 typeTel.arity termTel.arity) tailTy) =
+      DecoratedTelescope.concatenate typeTel
+        (DecoratedTelescope.concatenate termTel tailTy) :=
+  DecoratedTelescope.concatenate_assoc typeTel termTel tailTy
+
+example :
+    DecoratedTelescope.act extSubst
+        (DecoratedTelescope.concatenate termTel tailTy) =
+      DecoratedTelescope.concatenate
+        (DecoratedTelescope.act extSubst termTel)
+        (DecoratedTelescope.act (Subst.lift extSubst termTel.arity) tailTy) :=
+  DecoratedTelescope.act_concatenate extSubst termTel tailTy
 
 example : toySig.arity = oneCtx .ty ⋈ oneCtx .tm := rfl
 
@@ -281,5 +347,42 @@ example :
       Precedence.before (oneSlot .tm) ⋈ 1)
       (C := depCarrier) (bd := bd) (τ := .tm)
       extSubst binTy := rfl
+
+example :
+    termTel =
+      (⟨oneCtx .tm, tmDec⟩ :
+        (DTel (C := depCarrier) bd).obj
+          (RelativeMonad.Kleisli.of (SyntaxMonad depCarrier) (oneCtx .ty))) :=
+  rfl
+
+example :
+    (RelativeMonad.LeftModule.act (DTel (C := depCarrier) bd) extSubst)
+        termTel = actedTermTel :=
+  rfl
+
+example :
+    Decoration.classifier actedTermTel.decoration (oneSlot .tm) =
+      replacementTy := by
+  unfold actedTermTel DecoratedTelescope.act Decoration.act
+  unfold Decoration.classifier Decoration.substitute ClassifierAt.substitute
+  simp only [bd]
+  apply act_η
+
+example :
+    (RelativeMonad.LeftModule.act (DTel (C := depCarrier) bd)
+        (Subst.ofRenaming weakenExtPrior)) extPriorTel =
+      DecoratedTelescope.rename weakenExtPrior extPriorTel :=
+  DecoratedTelescope.act_ofRenaming weakenExtPrior extPriorTel
+
+example :
+    Decoration.classifier
+      (Decoration.act (Subst.ofRenaming weakenExtPrior) extPriorDec)
+      (oneSlot .tm) =
+    ClassifierAt.rename
+      (C := depCarrier) (bd := bd) (τ := .tm)
+      ((weakenExtPrior ⇑ʳ Precedence.before (oneSlot .tm)) ⇑ʳ 1)
+      binTy := by
+  rw [Decoration.act_ofRenaming]
+  rfl
 
 end T1
