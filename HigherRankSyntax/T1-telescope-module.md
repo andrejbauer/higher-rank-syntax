@@ -159,29 +159,28 @@ substitution, the same equation is
 Thus concatenation is expressed entirely using the ordinary module action,
 together with the raw operation of lifting a substitution under a suffix.
 
-## 4. The arity-module category and its tensor
+## 4. The generic arity-module category and its tensor
 
-Let
-
-\[
-  K=\operatorname{Kl}(\mathsf{SyntaxMonad}\ C)
-\]
-
-and let \(\underline{C.\mathsf{Arity}}:K\to\mathbf{Type}\) be the constant
-functor whose value is the type of raw arities and whose action is the
-identity.  Define
+Let `T` be any relative monad on `J C`, put `K = Kl(T)`, and let
+\(\underline{C.\mathsf{Arity}}:K\to\mathbf{Type}\) be the constant functor
+whose value is the type of raw arities and whose action is the identity.
+Define
 
 \[
-  \mathsf{ArityMod}_C
+  \mathsf{ArityMod}_T
   =
   [K,\mathbf{Type}]/\underline{C.\mathsf{Arity}}.
 \]
 
-Thus an object is exactly a raw-syntax module \(M\), together with a
+Thus an object is exactly a `T`-module \(M\), together with a
 substitution-invariant shape map \(|-|:M(\Omega)\to C.\mathsf{Arity}\).
 A morphism is a module natural transformation that preserves shape.
 
-This slice has the context-extension tensor
+To construct the context-extension tensor, `Kl(T)` must itself support
+coherent extension by raw suffixes.  The interface `KleisliArityAction T`
+supplies a functor `extendBy Φ`, with object action `Ω ↦ Ω ⋈ Φ`, as well
+as coherent comparisons for the empty suffix and for two successive suffixes.
+Under this assumption the slice has the tensor
 
 \[
   (M\otimes_{\rm tel}N)(\Omega)
@@ -190,22 +189,25 @@ This slice has the context-extension tensor
     N(\Omega\bowtie|\Gamma|).
 \]
 
-Its unit has one element of empty shape.  Substitution acts on the first
-component by the original Kleisli map and on the second component by that map
-lifted under \(|\Gamma|\).  The natural isomorphisms
-`SyntaxKleisli.extendByOne` and `SyntaxKleisli.extendByAssoc` supply the
-base-extension coherence for the unitors and associator.
+Its unit has one element of empty shape.  A Kleisli arrow acts on the first
+component directly and on the second component after extension under
+\(|\Gamma|\).  The natural isomorphisms
+`KleisliArityAction.extendByOne` and
+`KleisliArityAction.extendByAssoc` supply the base-extension coherence for
+the unitors and associator.
 
 `Typing/TelescopeTensor.lean` installs this as a literal Mathlib
-`MonoidalCategory (ArityMod C)`.  Tensor functoriality, associator and unitor
+`MonoidalCategory (ArityMod T)`.  Tensor functoriality, associator and unitor
 naturality, the pentagon, and the triangle are proved, not postulated.
+For raw syntax, `Subst.lift` supplies the instance
+`KleisliArityAction (SyntaxMonad C)`.
 
 ## 5. Decorated telescopes as an internal monoid
 
 The generic module `DTel bd`, together with its erasure map
 `DecoratedTelescope.arity`, defines
 
-`DTelArityMod bd : ArityMod C`.
+`DTelArityMod bd : ArityMod (SyntaxMonad C)`.
 
 Its internal-monoid operations are:
 
@@ -224,13 +226,13 @@ concatenation, including their carrier transports.
 The final result is the literal categorical package
 
 ```lean
-DTelMon (C := C) bd : CategoryTheory.Mon (ArityMod C)
+DTelMon (C := C) bd : CategoryTheory.Mon (ArityMod (SyntaxMonad C))
 ```
 
 No custom `TelescopeModule` structure or compatibility adapter remains.
-Concrete algebra lives in `Typing/DecoratedTelescope.lean`; the monoidal
-slice structure lives in `Typing/TelescopeTensor.lean`; and the internal
-monoid is packaged in `Typing/DTelMonoid.lean`.
+The concrete algebra and internal-monoid packaging live together in
+`Typing/DecoratedTelescopeMonoid.lean`, while the generic monoidal slice
+structure lives in `Typing/TelescopeTensor.lean`.
 
 ### Pass C: base extension and the monoidal slice
 
@@ -238,11 +240,12 @@ Completed:
 
 - `Subst.lift` has the raw unit, composition, and two-suffix associativity
   laws required by context extension.
-- `SyntaxKleisli.extendBy` is equipped with unit and associativity natural
-  isomorphisms.
-- `ArityMod C` is the Mathlib slice over the constant arity functor.
+- `KleisliArityAction T` packages context extension and its coherent unit and
+  associativity comparisons.
+- `Subst.lift` instantiates this interface for `SyntaxMonad C`.
+- `ArityMod T` is the Mathlib slice over the constant arity functor.
 - the context-extension tensor, its unit, associator, and unitors install a
-  `MonoidalCategory (ArityMod C)`.
+  `MonoidalCategory (ArityMod T)` whenever the action is available.
 - all monoidal coherence laws are proved without `sorry` or axioms.
 
 ### Pass D: the internal monoid of decorated telescopes
@@ -250,13 +253,14 @@ Completed:
 Completed:
 
 - the concrete empty and concatenation algebra was moved out of the obsolete
-  interface into `Typing/DecoratedTelescope.lean`;
+  interface into `Typing/DecoratedTelescopeMonoid.lean`;
 - `DTelArityMod bd` packages `DTel bd` with its raw shape;
 - `DTelOne bd` and `DTelMul bd` are shape-preserving natural
   transformations;
 - the existing decorated-telescope unit, associativity, and substitution laws
   prove the Mathlib `MonObj` axioms;
-- `DTelMon bd` is a `CategoryTheory.Mon (ArityMod C)`;
+- `DTelMon bd` is a
+  `CategoryTheory.Mon (ArityMod (SyntaxMonad C))`;
 - the dependent example checks the internal monoid, its components, unit and
   associativity equations, and nontrivial substitution naturality.
 

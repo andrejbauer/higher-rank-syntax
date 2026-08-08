@@ -1,5 +1,5 @@
 import ListPrecedence
-import HigherRankSyntax.Typing.DTelMonoid
+import HigherRankSyntax.Typing.DecoratedTelescopeMonoid
 
 /-!
 # Dependent classification data
@@ -247,7 +247,7 @@ def actedTermTel :
 example : ctx.arity = oneCtx .ty ⋈ oneCtx .tm := rfl
 
 /-- The generic T1 construction is literally a Mathlib internal monoid. -/
-example : CategoryTheory.Mon (ArityMod depCarrier) :=
+example : CategoryTheory.Mon (ArityMod (SyntaxMonad depCarrier)) :=
   ArityMod.DTelMon bd
 
 example :

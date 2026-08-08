@@ -6,6 +6,9 @@ the core and existing example builds, no `sorry`s, and an update to this file.
 
 ## Status
 
+The equations-and-quotients roadmap now comes before this deferred T2 work.
+No T2 judgment layer has begun.
+
 - **Pass 1 — T1 boundary extraction:** complete; archived outside the T1 import path
 - **Pass 2 — T1 algebraic closure:** replaced by the completed categorical
   `ArityMod` development
@@ -47,9 +50,10 @@ Completed:
 ## Pass 2 — T1 algebraic closure (superseded)
 
 The generic algebraic work moved to `T1-telescope-module.md`.  Passes A--D are
-complete: `ArityMod C` has its context-extension monoidal structure and
-`DTelMon bd : CategoryTheory.Mon (ArityMod C)` packages decorated telescopes
-as its internal monoid.  No T2 judgment layer has begun.
+complete: `ArityMod T` has its context-extension monoidal structure whenever
+`T` has a `KleisliArityAction`, and
+`DTelMon bd : CategoryTheory.Mon (ArityMod (SyntaxMonad C))` packages decorated
+telescopes as its internal monoid.  No T2 judgment layer has begun.
 
 The rooted aliases are no longer part of T1.  Fixed signatures arise by
 pulling the generic module back along prefixing, while T2 will select the

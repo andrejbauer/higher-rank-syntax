@@ -9,8 +9,6 @@ import HigherRankSyntax.SyntaxMonad
 import HigherRankSyntax.PrefixedSyntaxMonad
 import HigherRankSyntax.Typing.Decoration
 import HigherRankSyntax.Typing.DecorationModule
-import HigherRankSyntax.Typing.BaseExtension
 import HigherRankSyntax.Typing.ArityModule
 import HigherRankSyntax.Typing.TelescopeTensor
-import HigherRankSyntax.Typing.DecoratedTelescope
-import HigherRankSyntax.Typing.DTelMonoid
+import HigherRankSyntax.Typing.DecoratedTelescopeMonoid

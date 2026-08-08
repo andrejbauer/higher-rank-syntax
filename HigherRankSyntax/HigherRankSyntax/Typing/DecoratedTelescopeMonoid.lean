@@ -1,10 +1,27 @@
 import HigherRankSyntax.Typing.DecorationModule
+import HigherRankSyntax.Typing.TelescopeTensor
 
 /-!
-# Decorated telescope algebra
+# Decorated telescopes as an internal monoid
 
-Empty and dependent concatenation operations on decorated telescopes, together
-with their substitution, unit, and associativity laws.
+The functor `DTel bd` remembers how raw classifier expressions change under
+substitution.  This file adds the algebra of telescope formation.  There is an
+empty decorated telescope, and two consecutive decorated telescopes concatenate
+dependently: the second is already decorated over the base extended by the raw
+shape of the first.
+
+These operations are precisely a unit and multiplication for the
+context-extension tensor on `ArityMod (SyntaxMonad C)`.  Their unit and
+associativity laws therefore package decorated telescopes as the internal monoid
+`DTelMon bd`.  For the running telescope `A : Type, x : A`, multiplication joins
+the segment `A : Type` to the segment `x : A`; the tensor has already placed the
+second segment over the base containing `A`, so its classifier may refer to that
+earlier slot.  Rebracketing three segments changes only where we place the cuts,
+not the resulting decorated telescope.
+
+All classifiers here are still raw expressions.  The monoid records stable
+dependent telescope structure, but contains no evidence that `A` is a type,
+that `x` has type `A`, or that either expression is well formed.
 -/
 
 variable {A : Type} {C : Carrier A}
@@ -457,3 +474,143 @@ theorem concatenate_assoc (Γ : DecoratedTelescope bd Ω)
 
 end DecoratedTelescope
 
+open MonoidalCategory
+
+namespace ArityMod
+
+variable [Precedence C] (bd : C.Ty → Option C.Ty)
+
+private def dtelShape :
+    DTel (C := C) bd ⟶ arityConst (SyntaxMonad C) where
+  app _ := ↾DecoratedTelescope.arity
+  naturality := by
+    intros
+    rfl
+
+/-- Decorated telescopes, equipped with their substitution-invariant raw
+shape, as an arity-shaped module over raw syntax. -/
+def DTelArityMod : ArityMod (SyntaxMonad C) := Over.mk (dtelShape bd)
+
+@[simp]
+theorem DTelArityMod_module : module (DTelArityMod bd) = DTel bd := rfl
+
+@[simp]
+theorem DTelArityMod_shape {Ω : C.Arity}
+    (Γ : DecoratedTelescope bd Ω) :
+    shape (DTelArityMod bd) Γ = Γ.arity := rfl
+
+private def dtelUnitNat :
+    module (tensorUnit (C := C) (T := SyntaxMonad C)) ⟶
+      module (DTelArityMod bd) where
+  app Ω := ↾fun _ => DecoratedTelescope.empty bd Ω
+  naturality {Ω Ξ} σ := by
+    apply ConcreteCategory.hom_ext
+    intro x
+    cases x
+    simp only [ConcreteCategory.comp_apply]
+    change DecoratedTelescope.empty bd Ξ =
+      DecoratedTelescope.act σ (DecoratedTelescope.empty bd Ω)
+    exact (DecoratedTelescope.act_empty σ).symm
+
+/-- The empty decorated telescope as a shape-preserving morphism. -/
+def DTelOne :
+    tensorUnit (C := C) (T := SyntaxMonad C) ⟶ DTelArityMod bd :=
+  Over.homMk (dtelUnitNat bd) (by
+    apply NatTrans.ext
+    funext Ω
+    apply ConcreteCategory.hom_ext
+    intro x
+    cases x
+    rfl)
+
+private def dtelMulNat :
+    module (tensorObj (DTelArityMod bd) (DTelArityMod bd)) ⟶
+      module (DTelArityMod bd) where
+  app _ := ↾fun ⟨Γ, Δ⟩ => DecoratedTelescope.concatenate Γ Δ
+  naturality {Ω Ξ} σ := by
+    apply ConcreteCategory.hom_ext
+    intro x
+    rcases x with ⟨Γ, Δ⟩
+    simp only [ConcreteCategory.comp_apply]
+    change
+      DecoratedTelescope.concatenate
+          (DecoratedTelescope.act σ Γ)
+          (DecoratedTelescope.act (Subst.lift σ Γ.arity) Δ) =
+        DecoratedTelescope.act σ
+          (DecoratedTelescope.concatenate Γ Δ)
+    exact (DecoratedTelescope.act_concatenate σ Γ Δ).symm
+
+/-- Dependent concatenation as a shape-preserving morphism. -/
+def DTelMul :
+    tensorObj (DTelArityMod bd) (DTelArityMod bd) ⟶ DTelArityMod bd :=
+  Over.homMk (dtelMulNat bd) (by
+    apply NatTrans.ext
+    funext Ω
+    apply ConcreteCategory.hom_ext
+    intro x
+    rcases x with ⟨Γ, Δ⟩
+    rfl)
+
+private theorem dtel_one_mul :
+    tensorMap (DTelOne bd) (𝟙 (DTelArityMod bd)) ≫ DTelMul bd =
+      (tensorLeftUnitor (DTelArityMod bd)).hom := by
+  apply Over.OverMorphism.ext
+  apply NatTrans.ext
+  funext Ω
+  apply ConcreteCategory.hom_ext
+  intro x
+  rcases x with ⟨u, Γ⟩
+  cases u
+  simp [DTelOne, DTelMul, dtelUnitNat, dtelMulNat, tensorMap,
+    tensorLeftUnitor]
+  exact DecoratedTelescope.concatenate_empty_left _
+
+private theorem dtel_mul_one :
+    tensorMap (𝟙 (DTelArityMod bd)) (DTelOne bd) ≫ DTelMul bd =
+      (tensorRightUnitor (DTelArityMod bd)).hom := by
+  apply Over.OverMorphism.ext
+  apply NatTrans.ext
+  funext Ω
+  apply ConcreteCategory.hom_ext
+  intro x
+  rcases x with ⟨Γ, u⟩
+  cases u
+  simp [DTelOne, DTelMul, dtelUnitNat, dtelMulNat, tensorMap,
+    tensorRightUnitor]
+  apply DecoratedTelescope.concatenate_empty_right
+
+private theorem dtel_mul_assoc :
+    tensorMap (DTelMul bd) (𝟙 (DTelArityMod bd)) ≫ DTelMul bd =
+      (tensorAssociator (DTelArityMod bd) (DTelArityMod bd)
+          (DTelArityMod bd)).hom ≫
+        tensorMap (𝟙 (DTelArityMod bd)) (DTelMul bd) ≫ DTelMul bd := by
+  apply Over.OverMorphism.ext
+  apply NatTrans.ext
+  funext Ω
+  apply ConcreteCategory.hom_ext
+  intro x
+  rcases x with ⟨⟨Γ, Δ⟩, Ξ⟩
+  simp [DTelMul, dtelMulNat, tensorMap, tensorAssociator]
+  apply DecoratedTelescope.concatenate_assoc
+
+instance : MonObj (DTelArityMod bd) where
+  one := DTelOne bd
+  mul := DTelMul bd
+  one_mul := dtel_one_mul bd
+  mul_one := dtel_mul_one bd
+  mul_assoc := dtel_mul_assoc bd
+
+/-- Decorated telescopes form a monoid object in the monoidal category of
+arity-shaped raw-syntax modules. -/
+def DTelMon : CategoryTheory.Mon (ArityMod (SyntaxMonad C)) :=
+  CategoryTheory.Mon.mk (DTelArityMod bd)
+
+@[simp]
+theorem DTelMon_one :
+    MonObj.one (X := (DTelMon bd).X) = DTelOne bd := rfl
+
+@[simp]
+theorem DTelMon_mul :
+    MonObj.mul (X := (DTelMon bd).X) = DTelMul bd := rfl
+
+end ArityMod

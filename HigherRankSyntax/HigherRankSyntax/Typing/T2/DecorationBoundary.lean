@@ -1,10 +1,21 @@
 import HigherRankSyntax.Typing.Decoration
 
 /-!
-# Boundaries of decorated slots
+# Archived T2 boundary extraction
 
-A slot boundary consists of its decorated preceding telescope, decorated
-binding arity, and classifier.
+This file records the first boundary operation anticipated by the future T2
+judgment layer.  Given a slot in a decorated telescope, its boundary consists
+of the decorated prefix before that slot, its decorated binding arity, and its
+raw classifier.  In `A : Type, x : A`, the boundary of `x` therefore contains
+the prefix `A : Type`, an empty binding telescope, and the classifier expression
+that names `A`.
+
+The construction extracts data already present in a T1 decoration.  It does not
+say that the prefix is a well-formed context, that the classifier is a
+well-formed type, or that the slot inhabits it.  Those judgments are precisely
+what T2 must add later.  The file is archived outside the root import graph so
+the completed decoration-module-monoid story remains conceptually independent
+of that future layer.
 -/
 
 variable {A : Type} {C : Carrier A}

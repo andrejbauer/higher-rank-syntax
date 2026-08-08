@@ -3,8 +3,24 @@ import HigherRankSyntax.Expr
 /-!
 # Decorations of raw telescopes
 
-A decoration assigns raw expression classifiers to the recursively nested
-slots of an arity, in the context determined by their precedence.
+This file contains the foundational data of the T1 layer.  A classifier policy
+`bd` says, for each coarse class, whether its slots need a classifier and in
+which coarse class that classifier is written.  A precedence structure splits
+the ambient arity at each slot, so a classifier may use the external base, all
+earlier sibling slots, and the variables bound locally by that slot, but not any
+later sibling.
+
+A decoration assigns such a raw classifier expression to every immediate and
+recursively nested slot of an arity.  A decorated telescope packages the raw
+arity with this assignment over an external base; a decorated signature is the
+special case over the empty base.  For `bd ty = none` and `bd tm = some ty`, the
+telescope `A : Type, x : A` has a trivial decoration at `A` and decorates `x`
+with the raw expression naming the preceding slot `A`.
+
+These are classification annotations only.  A decoration does not assert that
+the classifier is well formed, that the classified slot inhabits it, or that
+the surrounding context is valid.  Those proof-irrelevant judgments belong to
+the deferred T2 layer.
 -/
 
 variable {A : Type} {C : Carrier A}

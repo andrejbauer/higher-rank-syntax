@@ -6,8 +6,21 @@ import HigherRankSyntax.Typing.Decoration
 /-!
 # Decorated telescopes as a module over raw syntax
 
-Raw substitutions reindex the external base of a decorated telescope while
-leaving its arity unchanged.
+The classifier expressions stored in a decoration are raw syntax, so raw
+renamings and substitutions act on them.  Reindexing changes only the external
+base and transports every classifier in the context determined by its local
+prefix and binding arity; the undecorated telescope shape stays fixed.
+
+For example, in the tail `x : A`, substituting a type expression `B` for the
+external variable `A` produces the tail `x : B`.  It is still a one-slot raw
+telescope.  The laws proved below say that identity and composite substitutions
+act as expected and that eta-expanded renamings recover ordinary renaming.
+
+Consequently decorated telescopes assemble into the module
+`DTel bd : Kl(SyntaxMonad C) ⥤ Type`.  This file supplies only that functorial
+action.  Shape, dependent sequencing, and the monoid structure are added by the
+next three files.  As in `Decoration`, classifiers remain raw expressions: the
+module carries no well-formedness or typing evidence.
 -/
 
 open CategoryTheory
@@ -241,7 +254,7 @@ end DecoratedTelescope
 
 /-- Decorated telescopes form a module over the raw syntax relative monad. -/
 def DTel [Precedence C] (bd : C.Ty → Option C.Ty) :
-    RelativeMonad.LeftModule (SyntaxMonad C) (Type) where
+    RelativeMonad.LeftModule (SyntaxMonad C) Type where
   obj Γ := DecoratedTelescope bd Γ
   map σ := ↾(DecoratedTelescope.act σ)
   map_id Γ := by
