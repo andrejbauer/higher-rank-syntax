@@ -272,42 +272,76 @@ parallel pair. So an equation cannot be a slot: a slot at an "equality sort"
 would produce proof-relevant equality expressions and would still leave the two
 sides distinct.
 
-**3.2 Definition (equality boundary).** An **equality boundary over `Ω`** is a
-triple
+**3.2 Definition (equation).** An **equation over `Ω`** is a parallel pair of
+expressions together with the boundary they share:
 
 ```
-(S, e, e')   with   S, e, e' ∈ Expr Ω,
+Equation Ω  :=  (boundary : Bd(Ω)) × (left right : Expr Ω)
 ```
 
-read *`e` and `e'` are equal at sort `S`*. Equivalently, by 0.5, a sort
-expression together with a **parallel pair** `e, e' : ∗̂ ⇉ Ω` in `𝕊`.
+read *`left` and `right` are the same, as things of that boundary*.
 
-There is one equality form, parameterized by a sort *expression*. It is not a
-sort and not a member of any signature; it may appear only as the boundary of a
-declaration, never as the boundary of a slot, and therefore never becomes a head
-of `Expr`. Both MLTT equality judgments are instances: `S := Ty` gives
-`A = B type`, and `S := Tm A` gives `u = v : A`.
+No new apparatus. An earlier draft derived an equality *form* `Eq_s` per sort,
+with its own argument telescope; that construction was built on the sort arities
+`∂s` and dissolves with them. `Bd(Ω)` already says what a thing is, so an
+equation is two things that are the same kind of thing, and the two cases of
+`Bd` give the two equality judgements:
 
-**3.3 Definition (equation declaration).** An *equation declaration* over `Ω` is
+| `boundary` | reads | MLTT |
+|---|---|---|
+| `of S` | `left ≡ right : S` | `u = v : A` at `S = Tm A`; `A = B type` at `S = Ty` |
+| `sort` | `left ≡ right sort` | Cartmell's sort equality, e.g. `Tm A ≡ Tm B` |
+
+An equation is *not* a boundary and never decorates a slot, so it never becomes
+a head of `Expr` — 3.1's point/path distinction, now a consequence of where
+`Equation` may appear rather than a stipulation about which sorts are which.
+
+**3.3 Definition (equation entry).** An **equation entry** over `Ω` is a
+decorated telescope `Θ` over `Ω` — its metavariables — together with an
+`Equation (Ω ⋈ |Θ|)`. It is exactly a declaration (2.7) minus the slot: same
+metavariable telescope, same "boundary written over it", but contributing
+nothing to `|Ω|`.
+
+**3.4 Definition (presentation).** A **presentation** over a base `Ω` is built
+by two formers, and its erasure is an *index* rather than a computed field:
 
 ```
-q : [Θ] (e ≡ e' : S)
+nil                                                     : Presentation Ω 1
+
+declare (P : Presentation Ω Γ)
+        (Δ : DecoratedTelescope (Ω ⋈ Γ))                : Presentation Ω (Γ ⋈ |Δ|)
+
+assume  (P : Presentation Ω Γ) (M : 𝔸)
+        (e : Equation (Ω ⋈ Γ ⋈ M))                      : Presentation Ω Γ
 ```
 
-where `Θ` is a decorated telescope over `Ω` and `(S, e, e')` is an equality
-boundary over `Ω ⋈ |Θ|`. The **content** of the declaration is the parallel pair
-`e, e' : ∗̂ ⇉ Ω ⋈ |Θ|`, schematic in the slots of `Θ`, which are its
-metavariables. The component `S` is annotation, and carries no further content.
+`declare` extends by a whole decorated telescope, not by a single entry; one
+declaration is the case where `Δ` has one slot, and no singleton arity is
+required of the carrier. `assume` leaves the index alone — it adds a relation
+and no inhabitant, which is 3.1 made structural.
 
-**3.4 Definition (equational presentation).** An *equational presentation* over
-`Ω` is a set `E` of equation declarations over `Ω`, each **positioned** at a
-slot of `Ω`: the slot after which it was declared. For a slot `x` of `Ω`, write
-`E_{<x}` for those positioned strictly before `x`.
+Everything else is ordinary recursion on this family:
 
-Positions are inert for everything in this section. They exist for T2, where
-the well-formedness of the entry at `x` is checked against `E_{<x}` and not
-against `E`. That single restriction is the whole of "equations interleave with
-declarations".
+```
+decoration : Presentation Ω Γ → Decoration Ω Γ
+axioms     : Presentation Ω Γ → AxiomFamily (Ω ⋈ Γ)
+```
+
+`decoration` is `empty` at `nil`, dependent concatenation (2.6) at `declare`,
+unchanged at `assume`. `axioms` is empty at `nil`, weakened at `declare`, and
+extended by the schema of `e` at `assume`.
+
+**Positions need no separate apparatus, and they are not optional.** An earlier
+draft attached to each axiom the slot after which it was declared, so that
+`E_{<x}` could be formed; a later one dropped positions altogether and stated all
+axioms over the final arity. The first is bookkeeping and the second is unsound
+(4.5). Here an equation's position *is* where it sits, and the equations
+available at any point are `P.axioms` for the sub-presentation — which is what
+makes 4.5 go through.
+
+Erasure to a decorated telescope is `⟨Γ, P.decoration⟩`; the equation entries
+contribute nothing to it, so a presentation and the theory it presents have the
+same arity.
 
 **3.5 Definition (the generated congruence).** `~_E` is the least family of
 relations on `Expr Ξ`, for all `Ξ` simultaneously, which
@@ -335,6 +369,14 @@ functor `𝕊 ⟶ 𝕊_E`.
 **3.7 Definition (boundaries and decorations modulo `E`).** Repeat 1.2 and 2.2
 in `𝕊_E`: `Bd_E(Ω) := Option (Expr Ω / ~_E)`, and a decoration modulo `E`
 assigns `Bd_E`-valued boundaries. Propositions 2.5 and 2.6 hold verbatim.
+
+They should hold verbatim in the strict sense of being *the same theorems*, not
+re-proved ones. Nothing in §§1–2 uses more of `Expr` than that it is a relative
+monad over `J` carrying an arity action: 1.2 needs its elements, 1.4 its Kleisli
+composition, 2.5 its monad laws, 2.6 the action of 3.6's `KleisliArityAction`.
+Stating §§1–2 over an arbitrary such monad therefore gives 3.7 by instantiation
+at `T_E`, where the earlier class-indexed development duplicated the whole
+decoration-module-monoid tower.
 *Two decorated telescopes differing only by derivably equal boundaries are
 equal* — including two differing only by derivably equal sort expressions, which
 is what conversion will need.
@@ -397,6 +439,40 @@ a `~_{E_Δ}`-equality — is what T2 admits, and it is a proper subset: from
 not preserve the equation. So the category of contexts is a non-full subcategory
 of `𝕊_E`, and in particular is not the Kleisli category of any relative monad on
 the slot functor `J`, which sees only free objects.
+
+**4.5 Well-formedness, and why it is not circular.** The judgements of T2 are
+predicates on raw expressions indexed by boundaries *modulo the declared
+equations* (3.7), so they are stated in a quotient. A presentation is well
+formed when it is built well formed, which is an ordinary inductive predicate on
+3.4's family:
+
+```
+Wf nil
+
+Wf P    Δ well formed against P.axioms
+────────────────────────────────────────
+        Wf (declare P Δ)
+
+Wf P    e.left and e.right both have boundary e.boundary, against P.axioms
+──────────────────────────────────────────────────────────────────────────
+        Wf (assume P M e)
+```
+
+Two things follow, and they are the reason 3.4 has the shape it does.
+
+*Each check happens in a quotient certified by the checks before it.* The
+premises of a step mention `P.axioms`, never the axioms the step itself
+contributes. So by induction on `Wf`, every judgement is stated in `Bd_{E'}` for
+an `E'` whose own well-formedness has already been established. Checking inside
+a quotient is therefore not circular.
+
+*An ill-formed equation cannot justify itself.* Nothing constrains an
+`Equation` to have its two sides at its stated boundary (3.2), and nothing
+should: "has boundary `S`" is exactly a T2 judgement, so constraining it would
+index `Equation` by a derivation and reintroduce the mutual dependency the raw
+layer exists to break. The permissiveness is caught at the `assume` step — and
+caught soundly, because at that moment the equation is not yet in `P.axioms`.
+Had the axioms been flattened over the final arity, it would have been.
 
 ---
 
@@ -834,3 +910,66 @@ Then stop. §3 (equations) and T2 are separate roadmaps.
 - Whether `examples/magma` and the other simply-typed examples are worth
   porting. They are adequacy tests for the raw layer, which this refactor does
   not touch, so they can stay on `general-types` until wanted.
+
+## 7.6 Equations: passes 12–17
+
+Passes 0–11 built §§0–2 and closed 2.7. What follows builds §3. The order is
+again the stratification of 4.3, and again the risky part goes first.
+
+**Pass 12 — make §§1–2 monad-parametric. The risk gate.**
+*Files:* `Typing/Boundary.lean`, `Typing/Decoration.lean`,
+`Typing/DecorationModule.lean`, `Typing/DecoratedTelescopeMonoid.lean`.
+*Do:* replace `Expr` by an arbitrary `T : RelativeMonad (J C)` with a
+`KleisliArityAction`, so that `Boundary T`, `Decoration T`, `DTel T` and
+`DTelMon T` are stated once. Recover the present development as the
+instantiation at `SyntaxMonad C`.
+*Gate:* `examples/dependent/ML-Sigma.lean` builds **unchanged**.
+*Why first:* 3.7 is then an instantiation at `T_E`, not a second copy. The
+class-indexed development duplicated the whole tower (`QDecoration`, `QDTel`,
+`QDTelMon`, some 1200 lines) precisely because `ClassifierAt` could not be
+abstracted; `Boundary` can.
+*Fallback:* if the abstraction does not carry the monoid laws, duplicate at
+Pass 16 as the old development did. Nothing else in 13–17 depends on this.
+
+**Pass 13 — equations as data.** `Typing/Equation.lean`: 3.2, with the
+renaming and substitution action inherited from `Boundary` and `Expr`.
+*Gate:* `beta_fst` and `beta_snd` for `Σ` are writable as `Equation` values at
+their metavariable telescopes.
+
+**Pass 14 — presentations.** 3.3 and 3.4: the inductive family
+`Presentation Ω Γ` with `nil`, `declare`, `assume`, and the two recursions
+`decoration` and `axioms`.  Stated for an arbitrary carrier: `declare` extends by
+a `DecoratedTelescope`, so no singleton arity is required.
+*The one piece of real work* is weakening an axiom family along a base
+extension, needed by `declare`: a renaming that inserts the extension between
+the base and the metavariables, built from `Renaming.prefixed` and `copair`.
+*Gate:* the Σ theory as a `Presentation`, extended by `beta_fst` and `beta_snd`
+through `assume`; its erasure still yields `theoryList`, since `assume` does not
+touch the index.
+*Not a monoid.* Presentations are sequential — position is load-bearing (4.5) —
+so `snoc` is the right shape and dependent concatenation would be the wrong one.
+`DTelMon` is untouched; it is about telescopes. Binary concatenation of
+presentations is derivable by induction if it is ever wanted.
+
+**Pass 15 — the generated congruence.** 3.5: `DerivEq`, its `least` property.
+Ported de-indexed from the class-indexed development, where it is complete.
+*Gate:* congruence holds at every head, sorts included: `A ~ A'` implies
+`Tm A ~ Tm A'` with nothing declared.
+
+**Pass 16 — the quotient monad and quotient decorations.** 3.6 and 3.7:
+`QExpr`, `T_E`, and — by Pass 12 — `Boundary T_E`, `DTel T_E`, `DTelMon T_E`
+for free.
+*Gate:* `DTelMon T_E` is a monoid object; the Σ theory's decoration descends.
+
+**Pass 17 — conversion, before T2.** The test the whole design is for: in
+`Bd_{E}` with `E` containing `beta_fst`, the two boundaries
+
+```
+Tm (B (fst A B (pair A B a b)))        Tm (B a)
+```
+
+are the **same element**, by `DerivEq.of_axiom` then the `application` clause at
+head `B` and again at `tm`.
+*Gate:* proved as a `rfl`-or-one-lemma equality of `Bd_E` elements. This is
+conversion exhibited without any typing layer, and it is what §4 of the response
+note claimed. Reordering `beta_snd` before `beta_fst` must break it.
