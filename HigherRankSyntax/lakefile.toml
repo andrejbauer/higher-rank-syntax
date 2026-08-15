@@ -15,3 +15,7 @@ name = "HigherRankSyntax"
 [[lean_lib]]
 name = "ListCarrier"
 srcDir = "examples"
+
+[[lean_lib]]
+name = "MartinLof"
+srcDir = "examples/dependent"
