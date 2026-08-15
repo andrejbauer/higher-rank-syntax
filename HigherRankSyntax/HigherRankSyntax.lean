@@ -9,3 +9,4 @@ import HigherRankSyntax.SlotPath
 import HigherRankSyntax.SyntaxMonad
 import HigherRankSyntax.Typing.Boundary
 import HigherRankSyntax.Typing.Decoration
+import HigherRankSyntax.Typing.DecorationModule
