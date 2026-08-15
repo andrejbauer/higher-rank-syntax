@@ -5,5 +5,7 @@ import HigherRankSyntax.Subst
 import HigherRankSyntax.RelativeMonad.Basic
 import HigherRankSyntax.RelativeMonad.Kleisli
 import HigherRankSyntax.RelativeMonad.Module
+import HigherRankSyntax.SlotPath
 import HigherRankSyntax.SyntaxMonad
 import HigherRankSyntax.Typing.Boundary
+import HigherRankSyntax.Typing.Decoration
