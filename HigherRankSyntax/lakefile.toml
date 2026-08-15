@@ -17,5 +17,5 @@ name = "ListCarrier"
 srcDir = "examples"
 
 [[lean_lib]]
-name = "MartinLof"
+name = "ML-Sigma"
 srcDir = "examples/dependent"
