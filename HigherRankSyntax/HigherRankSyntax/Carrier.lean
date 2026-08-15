@@ -51,6 +51,33 @@ structure Carrier (A : Type) where
     ∀ Γ Δ α, Sum.Lex (slotAt Γ α).r (slotAt Δ α).r
       ≃r (slotAt (Γ * Δ) α).r
   subWf : WellFounded (fun Δ Γ => Nonempty (slotAt Γ Δ))
+  /-- The part of an arity preceding a slot. -/
+  before : {Δ α : Arity} → slotAt Δ α → Arity
+  /-- The part of an arity from a slot onwards. -/
+  after : {Δ α : Arity} → slotAt Δ α → Arity
+  /-- A slot splits its arity. -/
+  factor : {Δ α : Arity} → (x : slotAt Δ α) → before x * after x = Δ
+  /-- A slot occurs in the second factor of its own splitting. -/
+  localized : {Δ α : Arity} → (x : slotAt Δ α) → slotAt (after x) α
+  /-- The localized slot is the slot. -/
+  reinject : {Δ α : Arity} → (x : slotAt Δ α) →
+    factor x ▸ slotAt_mul (before x) (after x) α (Sum.inr (localized x)) = x
+  /-- Precedence of a left-injected slot ignores the extension. -/
+  before_inl : {Γ Δ α : Arity} → (x : slotAt Γ α) →
+    before (slotAt_mul Γ Δ α (Sum.inl x)) = before x
+  /-- The remainder of a left-injected slot absorbs the extension. -/
+  after_inl : {Γ Δ α : Arity} → (x : slotAt Γ α) →
+    after (slotAt_mul Γ Δ α (Sum.inl x)) = after x * Δ
+  /-- Precedence of a right-injected slot absorbs the base. -/
+  before_inr : {Γ Δ α : Arity} → (x : slotAt Δ α) →
+    before (slotAt_mul Γ Δ α (Sum.inr x)) = Γ * before x
+  /-- The remainder of a right-injected slot ignores the base. -/
+  after_inr : {Γ Δ α : Arity} → (x : slotAt Δ α) →
+    after (slotAt_mul Γ Δ α (Sum.inr x)) = after x
+  /-- A slot below `y` in its fibre lies in the part preceding `y`. -/
+  before_of_lt : {Δ α : Arity} → {x y : slotAt Δ α} → (slotAt Δ α).r x y →
+    ∃ x' : slotAt (before y) α,
+      factor y ▸ slotAt_mul (before y) (after y) α (Sum.inl x') = x
 
 /-- One-step sub-arity relation: `α' ≺ α` when `α'` is the sub-arity of some
 position of `α`.  Well-founded by `subWf`. -/
@@ -92,6 +119,22 @@ def inr {A : Type} (C : Carrier A) {Γ Δ α : C.Arity} (x : Δ ∋ α) :
     {Γ Δ α : C.Arity} (x : Δ ∋ α) :
     (C.slotAt_mul Γ Δ α).symm (C.inr x) = Sum.inr x := by
   exact (C.slotAt_mul Γ Δ α).symm_apply_apply (Sum.inr x)
+
+/-- The inclusion of the part of an arity preceding a slot. -/
+def inclusion {A : Type} (C : Carrier A) {Δ α : C.Arity} (x : Δ ∋ α) :
+    ∀ ⦃β : C.Arity⦄, C.before x ∋ β → Δ ∋ β :=
+  fun ⦃_⦄ y => C.factor x ▸ C.inl y
+
+/-- The localized slot is the slot. -/
+theorem reinject_inr {A : Type} (C : Carrier A) {Δ α : C.Arity} (x : Δ ∋ α) :
+  C.factor x ▸ (C.inr (C.localized x) : C.before x ⋈ C.after x ∋ α) = x :=
+  C.reinject x
+
+/-- A slot below `y` in its fibre is the inclusion of a slot of `before y`. -/
+theorem before_of_slotRel {A : Type} (C : Carrier A) {Δ α : C.Arity}
+    {x y : Δ ∋ α} (h : C.slotRel Δ α x y) :
+  ∃ x' : C.before y ∋ α, C.inclusion y x' = x :=
+  C.before_of_lt h
 
 def copair {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity}
     (X : Type) (f : Γ ∋ α → X) (g : Δ ∋ α → X) (p : Γ * Δ ∋ α) :
@@ -185,6 +228,21 @@ theorem inl_lt_inr {A : Type} (C : Carrier A) {Γ Δ α : C.Arity}
     (x : Γ ∋ α) (y : Δ ∋ α) :
   C.slotRel (Γ * Δ) α (C.inl x) (C.inr y) :=
   (C.slotAt_mul Γ Δ α).map_rel_iff.2 (Sum.Lex.sep x y)
+
+private theorem slotRel_cast {A : Type} (C : Carrier A) {Λ Δ α : C.Arity}
+    (h : Λ = Δ) (u v : Λ ∋ α) :
+  C.slotRel Δ α (h ▸ u) (h ▸ v) ↔ C.slotRel Λ α u v := by
+  cases h
+  rfl
+
+/-- Everything preceding a slot is below it in the slot's fibre. -/
+theorem inclusion_lt {A : Type} (C : Carrier A) {Δ α : C.Arity}
+    (y : Δ ∋ α) (x : C.before y ∋ α) :
+  C.slotRel Δ α (C.inclusion y x) y := by
+  have key := (slotRel_cast C (C.factor y) (C.inl x)
+      (C.slotAt_mul (C.before y) (C.after y) α (Sum.inr (C.localized y)))).2
+    (C.inl_lt_inr x (C.localized y))
+  rwa [C.reinject y] at key
 
 /-- A product classifier is unique once its two injections agree. -/
 theorem copair_uniq {A : Type} (C : Carrier A) (Γ Δ : C.Arity)

@@ -165,8 +165,34 @@ the boundary of a term entry is `some (ap tm (A))`.
 
 **2.1 Definition (precedence).** A *precedence* on `C` assigns to each slot
 `x : Δ ∋ Λ` a factorization `Δ = before(x) ⋈ after(x)` with `x` located in the
-right factor, coherently with the injections. `before(x)` is the part of `Δ`
-declared strictly before `x`.
+right factor, coherently with the injections and with the fibrewise order.
+`before(x)` is the part of `Δ` declared strictly before `x`.
+
+**Remark 2.1a (why a factorization and not a dependency relation).** The finer
+and more honest notion is a relation `depends(x, y)` — "`x` may mention `y`" — a
+dependency order rather than a linear one, as in Andromeda 2. In
+`(A : Ty, B : Ty, x : Tm A)` it records that `x` depends on `A` alone, whereas
+`before(x) = (A, B)` over-approximates.
+
+It cannot be used here. By 2.2 the boundary of `x` lives over
+`Ω ⋈ before(x) ⋈ Λ_x`, and that is the index of an `Expr`, so whatever encodes
+"what `x` may mention" must *be an arity*. A set of slots is not one, and `𝔸`
+has no comprehension turning a downward-closed set of slots into an arity —
+adding one would be a far heavier axiom than a factorization. `before(x)` is
+`depends(x)` coarsened into the arity language, and the coarsening is exactly
+what makes it usable as an index. For the same reason the fibrewise well-order
+on `slotAt Δ α` cannot replace it: that order lives inside a single fibre, there
+is none on `Σ α, Δ ∋ α`, and even given one, comprehension would still be
+missing.
+
+What 2.1 really axiomatizes is that *an arity behaves like a list*:
+`before x ⋈ after x = Δ` with `x` in the right factor is the directed-container
+shape that 2.6's dependent concatenation needs anyway.
+
+`depends` is not lost, only relocated: `x` depends on `y` exactly when `y` occurs
+in `bnd(x)`, which is a fact about a particular theory's decoration rather than
+about the shape language. That is its proper home, and it is where a
+strengthening metatheorem would read it off.
 
 **2.2 Definition (decorated telescope).** Let `Ω` be a base and `Δ` an arity. A
 **decoration of `Δ` over `Ω`** assigns to every slot `x` of `Δ`, and recursively
@@ -525,10 +551,23 @@ reason worth recording: `slotAt : Arity → Arity → WellOrder` orders slots
 has; it supplies a *global* order the carrier otherwise lacks. That is carrier
 structure by any reasonable reading.
 
-Consequence for 7.4: what can be stated as a coherence between `before` and
-`slotAt` is only the fibrewise fragment — for `x, y : Δ ∋ α` with `x < y` in
-`slotAt Δ α`, that `x` is in the image of the inclusion `before y ↪ Δ`. Whether
-to impose it is open (7.5).
+Consequence for 7.4: the coherence between `before` and `slotAt` can only be
+stated fibrewise, and **it is imposed**. The natural statement is an
+equivalence — for `x y : Δ ∋ α`,
+
+> `x` factors through `inclusion y : before y →ʳ Δ`  ⟺  `x < y` in `slotAt Δ α`
+
+— of which only one direction is new. The **←** direction is already a theorem:
+given `x' : before y ∋ α`, `inl_lt_inr` gives `inl x' < inr (localized y)` in
+`before y ⋈ after y`, and transporting along `factor y`, using `reinject y` on
+the right, yields `inclusion y x' < y`. So the field is exactly the missing
+**→**. Together with the four injection coherences this covers both dimensions:
+`before` respects concatenation, and `before` respects the fibrewise order.
+
+Note that `inl`, `inr` and `inclusion` are *defined from* `slotAt_mul` and
+`factor`, hence are unavailable inside `structure Carrier` itself. The
+precedence fields are therefore spelled out with `slotAt_mul … (Sum.inl …)`,
+and restated in the readable form immediately after `inl`/`inr` exist.
 
 **(3) File split.** Given (2), the old bundled `Decoration.lean` splits into
 *two* new files, plus a core change:
@@ -631,20 +670,23 @@ class-free `J C`, and Kleisli homs are `Subst`.
 `general-types`:
 
 ```lean
-  before    : {Δ α : Arity} → Δ ∋ α → Arity
-  after     : {Δ α : Arity} → Δ ∋ α → Arity
-  factor    : (x : Δ ∋ α) → before x ⋈ after x = Δ
-  localized : (x : Δ ∋ α) → after x ∋ α
-  reinject  : (x : Δ ∋ α) → factor x ▸ inr (localized x) = x
+  before    : {Δ α : Arity} → slotAt Δ α → Arity
+  after     : {Δ α : Arity} → slotAt Δ α → Arity
+  factor    : (x : slotAt Δ α) → before x * after x = Δ
+  localized : (x : slotAt Δ α) → slotAt (after x) α
+  reinject  : (x : slotAt Δ α) → factor x ▸ (… Sum.inr (localized x)) = x
   before_inl / after_inl / before_inr / after_inr
+  before_of_lt : (slotAt Δ α).r x y → ∃ x', factor y ▸ (… Sum.inl x') = x
 ```
 
-plus the derived `inclusion x : before x →ʳ Δ` (the old `Precedence.inclusion`,
-via `factor x ▸ inl`).
-*Gate:* the whole rolled-back core still builds. Every existing `Carrier`
-construction now owes the new fields — at this point there are none in-tree,
-which is exactly why this pass goes first.
-*Risk:* low, but it is the only pass that edits a file the rollback recovered.
+written with `slotAt_mul … (Sum.inl …)` in place of `inl`/`inr`, which do not
+yet exist (7.3(2)). Then, after `inl`/`inr` are defined: the derived
+`inclusion x : before x →ʳ Δ` as `factor x ▸ inl`, the readable restatements of
+`reinject` and `before_of_lt`, and the converse `inclusion_lt` of 7.3(2).
+*Gate:* the core still builds.
+*Risk:* low, but it is the only pass so far that edits a file the raw layer
+depends on, and `inclusion_lt` transports across `factor`, so expect the
+dependent-cast handling the napkin warns about.
 
 ---
 
@@ -762,11 +804,6 @@ Then stop. §3 (equations) and T2 are separate roadmaps.
 
 ## 7.5 Still open, but not blocking
 
-- Whether to impose the fibrewise coherence of (2) — that `x < y` in
-  `slotAt Δ α` implies `x` factors through `before y ↪ Δ`. It is not needed by
-  §1–2, but without it `before` and the fibrewise well-order are unrelated data
-  and a carrier could supply an incoherent pair. Decide by Pass 3, when the list
-  carrier makes the cost concrete.
 - Whether `Boundary` should carry the erasure-to-`Expr` as a partial function or
   whether `.sort` should be handled by matching everywhere. Matching is fine at
   the scale of §1–2; revisit if T2 accumulates boilerplate.
