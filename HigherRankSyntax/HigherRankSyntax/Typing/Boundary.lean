@@ -53,6 +53,76 @@ def instantiate {Γ Δ : C.Arity} (σ : Subst Δ Γ) :
     Boundary (Γ ⋈ Δ) → Boundary Γ :=
   act (Ξ := 1) σ 1
 
+/-- Transport a boundary along an equality of arities. -/
+def cast {Γ Δ : C.Arity} (h : Γ = Δ) : Boundary Γ → Boundary Δ :=
+  h ▸ fun β => β
+
+@[simp] theorem cast_sort {Γ Δ : C.Arity} (h : Γ = Δ) :
+  cast h (.sort : Boundary Γ) = .sort := by
+  subst h; rfl
+
+@[simp] theorem cast_of {Γ Δ : C.Arity} (h : Γ = Δ) (S : Expr Γ) :
+  cast h (.of S) = .of (_root_.cast (congrArg Expr h) S) := by
+  subst h; rfl
+
+theorem cast_injective {Γ Δ : C.Arity} (h : Γ = Δ) :
+  Function.Injective (cast (C := C) h) := by
+  subst h
+  intro a b hab
+  exact hab
+
+theorem cast_proof_irrel {Γ Δ : C.Arity} (h k : Γ = Δ) (β : Boundary Γ) :
+  cast h β = cast k β := by
+  have hk : h = k := Subsingleton.elim _ _
+  subst k
+  rfl
+
+/-- A transport is heterogeneously the boundary it transports. -/
+theorem cast_heq {Γ Δ : C.Arity} (h : Γ = Δ) (β : Boundary Γ) :
+  HEq (cast h β) β := by
+  subst h
+  rfl
+
+/-- Transports of heterogeneously equal boundaries are heterogeneously equal,
+whatever their sources and targets. -/
+theorem cast_congr_heq {Γ Δ Γ' Δ' : C.Arity} (h : Γ = Δ) (k : Γ' = Δ')
+    {β : Boundary Γ} {β' : Boundary Γ'} (hβ : HEq β β') :
+  HEq (cast h β) (cast k β') := by
+  subst h
+  subst k
+  exact hβ
+
+theorem cast_comp {Γ Δ Ξ : C.Arity} (h : Γ = Δ) (k : Δ = Ξ) (β : Boundary Γ) :
+  cast k (cast h β) = cast (h.trans k) β := by
+  subst Δ
+  subst Ξ
+  rfl
+
+theorem cast_eq_cast_comp {Γ Δ Ξ : C.Arity} (h : Γ = Ξ) (k : Γ = Δ) (l : Δ = Ξ)
+    (β : Boundary Γ) :
+  cast h β = cast l (cast k β) := by
+  subst Δ
+  subst Ξ
+  rfl
+
+/-- Action commutes with transport of a local segment. -/
+theorem act_cast_local {S Γ Δ Φ Λ Ξ α : C.Arity}
+    (σ : Subst Γ (S ⋈ Δ)) (h : Λ = Ξ)
+    (β : Boundary (S ⋈ Γ ⋈ Φ ⋈ Λ ⋈ α)) :
+  act σ (Φ ⋈ Ξ ⋈ α) (cast (congrArg (fun Ω => S ⋈ Γ ⋈ Φ ⋈ Ω ⋈ α) h) β)
+    = cast (congrArg (fun Ω => S ⋈ Δ ⋈ Φ ⋈ Ω ⋈ α) h) (act σ (Φ ⋈ Λ ⋈ α) β) := by
+  subst Ξ
+  rfl
+
+/-- Action by a lifted substitution is action below its fixed suffix. -/
+theorem act_lift {Γ Δ Φ Ψ : C.Arity} (σ : Subst Γ Δ)
+    (β : Boundary (Γ ⋈ Φ ⋈ Ψ)) :
+  cast (mul_assoc Δ Φ Ψ) (act (Γ := 1) (Ξ := Δ ⋈ Φ) (Subst.lift σ Φ) Ψ β)
+    = act (Γ := 1) σ (Φ ⋈ Ψ) β := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Boundary.of (Subst.act_lift σ Φ Ψ S)
+
 /-! ### Functoriality -/
 
 theorem rename_id {Γ : C.Arity} (β : Boundary Γ) :

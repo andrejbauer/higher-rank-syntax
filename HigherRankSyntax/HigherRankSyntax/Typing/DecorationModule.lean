@@ -83,6 +83,14 @@ theorem act_comp {Γ Δ Ξ Ω : C.Arity}
   act (Subst.comp (Γ := 1) σ θ) D = act θ (act σ D) :=
   substitute_comp (S := 1) (Φ := 1) σ θ D
 
+/-- Decoration action by a lift agrees with substitution below the suffix. -/
+theorem act_lift {Γ Δ Φ Ξ : C.Arity} (σ : Subst Γ Δ)
+    (D : Decoration (Γ ⋈ Φ) Ξ) :
+  act (Subst.lift σ Φ) D = substitute (S := 1) (Φ := Φ) σ D := by
+  funext Ψ Λ p
+  apply Boundary.cast_injective (mul_assoc Δ Φ (Ψ ⋈ Λ))
+  apply Boundary.act_lift
+
 end Decoration
 
 namespace DecoratedTelescope
