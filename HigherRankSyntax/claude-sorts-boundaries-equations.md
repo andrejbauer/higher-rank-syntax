@@ -457,41 +457,47 @@ Pass 5, not Pass 12.
 
 ## 7.2 Repository organisation
 
-`8c8cbd9 "cleanup of comments"`, the parent of `1967f65 "added simple types"`,
-carries *exactly* Definitions 0.1–0.3 already:
+The obvious move is to branch at `8c8cbd9 "cleanup of comments"`, the parent of
+`1967f65 "added simple types"`, whose `Carrier` and `Expr` are class-free and
+whose `SyntaxMonad.lean` already builds `J`, `T` and `SyntaxMonad` over a
+class-free `ArityFunc C`. **This does not work**, for a reason found only on
+inspection: at `8c8cbd9` the context extension is *reversed*,
 
 ```lean
-structure Carrier (A : Type) where
-  Arity : Submonoid (Function.End A)
-  slotAt : Arity → Arity → WellOrder
-  unit_empty, slotAt_mul, subWf
-
-inductive Expr : C.Arity → Type where
-  | ap : {Γ α : C.Arity} → (x : Γ ∋ α) → (∀ ⦃Δ⦄ (_i : α ∋ Δ), Expr (Γ ⋈ Δ)) → Expr Γ
+abbrev Ext (Γ Δ : C.Arity) : C.Arity := Δ * Γ     -- 8c8cbd9
+abbrev Ext (Γ Δ : C.Arity) : C.Arity := Γ * Δ     -- general-types
 ```
 
-and `SyntaxMonad.lean` there already builds `J`, `T` and `SyntaxMonad` over a
-class-free `ArityFunc C`. So this is not a rollback that loses work; it is the
-recovery of the correct foundation, and it removes the mechanical de-indexing of
-the core entirely. `lean-toolchain` is byte-identical to `HEAD`, so no Mathlib
-recompile is involved.
+and since `C.inl : Γ ∋ α → Γ * Δ ∋ α` injects into the left factor of `*`,
+under the reversed `Ext` it is `C.inl` that reaches the *extension* and `C.inr`
+the *base* — backwards from every statement in §§1–2. `factor x : before x ⋈
+after x = Δ`, the boundary context `Ω ⋈ before(x) ⋈ Λ_x`, and every injection
+coherence of 7.3(2) are written against the un-reversed convention.
+`ef29b85 "Un-reverse context extension"` fixed this, but it lands *after*
+`1967f65`, so **no commit has both an un-reversed `Ext` and no `Ty`.**
 
-Proposal: branch `boundaries` at `8c8cbd9`; leave `general-types` untouched as
-the reference.
+The choice is therefore: un-reverse an old class-free core, or de-index a
+current core. De-indexing wins.
 
-```
-git switch -c boundaries 8c8cbd9
-git checkout general-types -- HigherRankSyntax/claude-sorts-boundaries-equations.md
-```
+- It is purely deletive and **fully compiler-checked**: remove `Ty` from
+  `Carrier`, then repair every error Lean reports. No semantic decisions.
+- Un-reversing is only ~131 lines, but 120 of them are in `Interchange.lean`,
+  the most delicate file in the development, and orientation errors there
+  typecheck locally and fail far away.
+- De-indexing keeps five commits of genuine work that the rollback discards:
+  the un-reversal, `c60381e` (removal of the `⟦·⟧ˢ` notation), `c3b5087`, and
+  `RelativeMonad/Kleisli.lean` and `Module.lean`.
+- The rollback would not have avoided de-indexing anyway — `Kleisli` and
+  `Module` are needed by 2.5 and exist only in class-indexed form.
 
-`CLAUDE.md`, `.claude/napkin.md`, `STYLE-GUIDELINES.md`, `lean-toolchain`,
-`lakefile.toml` and `lake-manifest.json` are all already present at `8c8cbd9`;
-`lakefile.toml` differs from `HEAD` only by the example-library stanzas, which
-get re-added per pass as the examples are ported.
-
-The reference material stays on `general-types` and is consulted, never copied:
+So: branch `boundaries` at `general-types`, delete the layers being deferred,
+then de-index. `general-types` is left untouched as the reference; its
 `Typing/*.lean` (1327 lines) is the previous notion of decoration, structurally
-close to what is wanted and differing in the class index and the codomain.
+close to what is wanted and differing in the class index and the codomain. It is
+consulted, never copied.
+
+`lean-toolchain` and `lake-manifest.json` are unchanged throughout, so no
+Mathlib recompile is involved at any point.
 
 ## 7.3 Settled decisions
 
@@ -538,19 +544,88 @@ Typing/Decoration.lean  Definition 2.2 and accessors          (new)
 One pass per turn: update this section, build, report, state the next pass,
 stop.
 
-Decision (2) reorders the plan — extending `Carrier` touches the core, so it
-lands first, with nothing built on top to break.
+Two reorderings against the first draft. Decision (2) puts a core edit early,
+since extending `Carrier` should happen with nothing built on top to break; and
+7.2's finding inserts a de-indexing pass, split from the pruning pass so that
+each is separately verifiable.
 
 ---
 
-**Pass 0 — branch and build.**
+**Pass 0 — branch and build. `done`**
 *Files:* none.
-*Do:* create `boundaries` at `8c8cbd9`, restore this document, `lake build`.
-*Gate:* the rolled-back core builds unchanged, no Mathlib recompile.
+*Do:* create `boundaries`, restore this document, `lake build`.
+*Outcome:* built green at `8c8cbd9`, but see 7.2 — the reversed `Ext` was found
+during Pass 1 and the branch was re-based onto `general-types`.
 
 ---
 
-**Pass 1 — precedence into the carrier.**
+**Pass 1 — prune. `done`**
+*Files:* `HigherRankSyntax.lean`, `lakefile.toml`; deletions.
+*Do:* re-base `boundaries` at `general-types`; delete `Typing/`, `Equations/`,
+`examples/` and `PrefixedSyntaxMonad.lean`; prune the root imports and the
+example-library stanzas.
+*Outcome:* thirteen core files, `lake build` green, still class-indexed.
+
+---
+
+**Pass 2 — de-index.**
+*Files:* nine. `RelativeMonad/{Basic,Kleisli,Module}.lean` are generic category
+theory and mention no class at all.
+
+*Mechanical part:*
+
+```
+Carrier:   drop  Ty : Type
+           slotAt : Arity → Arity → Ty → WellOrder   →   Arity → Arity → WellOrder
+           unit_empty : ∀ α τ, …                     →   ∀ α, …
+           slotAt_mul : ∀ Γ Δ α τ, …                 →   ∀ Γ Δ α, …
+notation   Γ ∋[τ] Δ  →  Γ ∋ Δ        (infix:35 " ∋ ")
+binders    {τ : C.Ty}, ⦃τ⦄, (τ : C.Ty)   →   removed
+Expr       Expr Γ τ  →  Expr Γ
+measures   Σ Γ : C.Arity, Σ τ : C.Ty, Expr Γ τ   →   Σ Γ : C.Arity, Expr Γ
+```
+
+*The four sites that are not pure deletion:*
+
+1. `Carrier.Sub` — `∃ τ, Nonempty (slotAt Γ Δ τ)` becomes
+   `Nonempty (slotAt Γ Δ)`, so `subWf`'s relation changes and every
+   `decreasing_by exact ⟨_, ⟨i⟩⟩` loses its existential witness.
+2. `Expr.Subterm`, its `wf` proof and its `WellFoundedRelation` instance each
+   drop a Σ-component.
+3. Seven `termination_by` measures carry `Σ τ : C.Ty`.
+4. `SyntaxMonad`: `ArityTyFunc → ArityFunc`, `toFun : C.Arity → C.Ty → Type`
+   becomes `C.Arity → Type`, `Hom f g := ∀ α τ, f α τ → g α τ` becomes
+   `∀ α, f α → g α`, and the `obj`/`map` of `J` and `T` follow.
+
+*Method:* transform the **current** files. Do not lift text from `8c8cbd9` — its
+proof bodies carry the reversed `inl`/`inr` orientation, and importing that
+silently is the failure mode 7.2 exists to avoid.
+
+*Sub-passes, bottom-up, with a build target after each* (`lake build <Module>`,
+not `lake env lean`, which reads stale `.olean`s):
+
+```
+2a  Carrier                       lake build HigherRankSyntax.Carrier
+2b  Renaming, Expr                lake build HigherRankSyntax.Expr
+2c  Subst, Dispatch               lake build HigherRankSyntax.Dispatch
+2d  Instantiation, Interchange    lake build HigherRankSyntax.Interchange
+2e  MonadLaws, SyntaxMonad        lake build
+```
+
+*A free correctness check.* `Expr.lean` and `Dispatch.lean` were touched only by
+`1967f65` (add `Ty`) and `ef29b85` (flip `Ext`) since `8c8cbd9`. So after
+de-indexing either, its diff against the `8c8cbd9` version must be *exactly* the
+`ef29b85` hunks for that file. Any unattributable residue is a de-indexing
+error. The other seven admit the same check against a longer list of attributable
+commits.
+
+*Gate:* `lake build` green; `SyntaxMonad C` is a relative monad over the
+class-free `J C`, and Kleisli homs are `Subst`.
+*Risk:* low but broad — every error is surfaced by the compiler.
+
+---
+
+**Pass 3 — precedence into the carrier.**
 *Files:* `HigherRankSyntax/Carrier.lean`.
 *Do:* add to `structure Carrier`, de-indexed from the `Precedence` class on
 `general-types`:
@@ -596,7 +671,7 @@ wrong, and it is cheap to revise here.
 
 ---
 
-**Pass 4 — boundaries.**
+**Pass 5 — boundaries.**
 *Files:* `Typing/Boundary.lean`.
 *Do:* Definition 1.2 as the named type of (1), plus
 
@@ -615,7 +690,7 @@ simplification claimed in 1.4 is not real and §1 needs revisiting.
 
 ---
 
-**Pass 5 — decorations.**
+**Pass 6 — decorations.**
 *Files:* `Typing/Decoration.lean`.
 *Do:* `DecorationPath` (`here` / `nested`, de-indexed), Definition 2.2
 
@@ -630,7 +705,7 @@ elaborates, with `tm`'s argument slot decorated by a boundary naming `ty`.
 
 ---
 
-**Pass 6 — Martin-Löf `Σ`. The risk gate.**
+**Pass 7 — Martin-Löf `Σ`. The risk gate.**
 *Files:* `examples/dependent/MartinLof.lean`, `lakefile.toml`.
 *Do:* Example 2.8 as raw decorated data — `ty, tm, Σ, pair, fst, snd`, every
 boundary and every nested decoration, over the list carrier.
@@ -647,7 +722,7 @@ known to carry MLTT.
 
 ---
 
-**Pass 7 — the module.**
+**Pass 8 — the module.**
 *Files:* `Typing/DecorationModule.lean`.
 *Do:* Proposition 2.5 — `DTel : 𝕊 ⥤ Type`, the action postcomposing every
 `bnd(x)` and fixing `|Δ|`; functor laws from the monad laws of `T`.
@@ -655,7 +730,7 @@ known to carry MLTT.
 
 ---
 
-**Pass 8 — the tensor.**
+**Pass 9 — the tensor.**
 *Files:* `Typing/ArityModule.lean`, `Typing/TelescopeTensor.lean`.
 *Do:* the context-extension tensor on arity-shaped `T`-modules — largest port
 (806 lines on `general-types`) and the most mechanical. `KleisliArityAction`,
@@ -666,14 +741,14 @@ projections, applies verbatim.
 
 ---
 
-**Pass 9 — the monoid.**
+**Pass 10 — the monoid.**
 *Files:* `Typing/DecoratedTelescopeMonoid.lean`.
 *Do:* Proposition 2.6 — empty decoration, dependent concatenation, unit and
 associativity, `DTelMon`.
 
 ---
 
-**Pass 10 — closing the example.**
+**Pass 11 — closing the example.**
 *Files:* `examples/dependent/MartinLof.lean`.
 *Do:* re-express the Σ theory through the monoid: build it as a concatenation
 of segments (`ty, tm` then `Σ` then `pair, fst, snd`) and check the two readings
