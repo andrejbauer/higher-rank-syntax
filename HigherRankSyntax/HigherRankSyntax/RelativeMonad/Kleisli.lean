@@ -67,4 +67,34 @@ theorem comp_eq {X Y Z : A}
 
 end Kleisli
 
+namespace Hom
+
+variable {T T' : RelativeMonad J}
+
+/-- The map on Kleisli arrows induced by a relative-monad morphism. -/
+private def kleisliMap (F : RelativeMonad.Hom T T')
+    {X Y : A} (f : J.obj X ⟶ T.map Y) : J.obj X ⟶ T'.map Y :=
+  f ≫ F.map_hom
+
+private theorem kleisliMap_id (F : RelativeMonad.Hom T T') (X : A) :
+    kleisliMap F (T.η X) = T'.η X :=
+  F.hom_unit
+
+private theorem kleisliMap_comp (F : RelativeMonad.Hom T T')
+    {X Y Z : A} (f : J.obj X ⟶ T.map Y) (g : J.obj Y ⟶ T.map Z) :
+    kleisliMap F (f ≫ T.lift g) =
+      kleisliMap F f ≫ T'.lift (kleisliMap F g) := by
+  unfold kleisliMap
+  rw [Category.assoc, F.hom_lift, ← Category.assoc]
+
+/-- A relative-monad morphism induces the identity-on-objects functor between
+the corresponding Kleisli categories. -/
+def kleisliFunctor (F : RelativeMonad.Hom T T') : Kleisli T ⥤ Kleisli T' where
+  obj X := Kleisli.of T' (Kleisli.toBase T X)
+  map f := kleisliMap F f
+  map_id X := kleisliMap_id F (Kleisli.toBase T X)
+  map_comp f g := kleisliMap_comp F f g
+
+end Hom
+
 end RelativeMonad

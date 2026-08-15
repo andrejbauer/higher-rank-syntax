@@ -73,6 +73,42 @@ termination_by e =>
   (⟨_, _, e⟩ : Σ Γ : C.Arity, Σ τ : C.Ty, Expr Γ τ)
 decreasing_by all_goals exact Expr.Subterm.of_arg x args i
 
+/-- Eta-substitution below a fixed prefix is the corresponding prefixed
+renaming action. -/
+theorem act_ofRenaming_prefixed
+    {S Γ Δ Φ : C.Arity} (ρ : Γ →ʳ Δ) {τ : C.Ty} :
+    ∀ e : Expr (S ⋈ Γ ⋈ Φ) τ,
+      Subst.act (Γ := S)
+          (fun ⦃_⦄ ⦃_⦄ x => Expr.η (C.inr (ρ x))) Φ e =
+        Renaming.act ((Renaming.prefixed S ρ) ⇑ʳ Φ) e
+  | .ap x args => by
+      head_cases x with z
+      case right =>
+        rw [act_right, Renaming.act_ap]
+        congr 1
+        · exact (Renaming.extend_inr (Renaming.prefixed S ρ) z).symm
+        · funext Ω υ i
+          rw [← Renaming.extend_assoc]
+          exact act_ofRenaming_prefixed (S := S) (Φ := Φ ⋈ Ω) ρ (args i)
+      case middle =>
+        rw [act_middle, Renaming.act_ap]
+        rw [Renaming.extend_inl, Renaming.prefixed_inr]
+        rw [act_inst_η]
+        congr 1
+        funext Ω υ i
+        rw [← Renaming.extend_assoc]
+        exact act_ofRenaming_prefixed (S := S) (Φ := Φ ⋈ Ω) ρ (args i)
+      case left =>
+        rw [act_left, Renaming.act_ap]
+        rw [Renaming.extend_inl, Renaming.prefixed_inl]
+        congr 1
+        funext Ω υ i
+        rw [← Renaming.extend_assoc]
+        exact act_ofRenaming_prefixed (S := S) (Φ := Φ ⋈ Ω) ρ (args i)
+termination_by e =>
+  (⟨_, _, e⟩ : Σ Γ : C.Arity, Σ τ : C.Ty, Expr Γ τ)
+decreasing_by all_goals exact Expr.Subterm.of_arg x args i
+
 /-- **`act_comp`** — action by a composite factors (comp_lift). -/
 theorem act_comp
     {Γ Δ Θ Ξ : C.Arity}
@@ -127,6 +163,48 @@ special case of `pushforward` used by dependent telescope concatenation. -/
 def lift {Γ Δ : C.Arity} (σ : Subst Γ Δ) (Φ : C.Arity) :
     Subst (Γ ⋈ Φ) (Δ ⋈ Φ) :=
   pushforward (Γ := 1) (Ω := Φ) σ (Subst.id (Γ ⋈ Φ))
+
+/-- Extend a substitution below a fixed prefix by identity fillers for a fixed
+suffix. -/
+def liftPrefixed {S Γ Δ : C.Arity} (σ : Subst Γ (S ⋈ Δ))
+    (Φ : C.Arity) : Subst (Γ ⋈ Φ) (S ⋈ (Δ ⋈ Φ)) :=
+  pushforward (Γ := S) (Ω := Φ) σ
+    (fun ⦃Λ⦄ ⦃τ⦄ x => Expr.η
+      (cast (congrArg (fun Ω => Ω ∋[τ] Λ) (mul_assoc S Γ Φ).symm)
+        (C.inr x)))
+
+/-- Acting by a fixed-prefix lift is action below its fixed suffix. -/
+theorem act_liftPrefixed {S Γ Δ Φ Ψ : C.Arity}
+    (σ : Subst Γ (S ⋈ Δ)) {τ : C.Ty}
+    (e : Expr (S ⋈ (Γ ⋈ Φ) ⋈ Ψ) τ) :
+    Subst.act (Γ := S) (liftPrefixed σ Φ) Ψ e =
+      Subst.act (Γ := S) σ (Φ ⋈ Ψ) e := by
+  let κ : Subst (Γ ⋈ Φ) (S ⋈ Γ ⋈ Φ) :=
+    fun ⦃Λ⦄ ⦃υ⦄ x => Expr.η
+      (cast (congrArg (fun Ω => Ω ∋[υ] Λ) (mul_assoc S Γ Φ).symm)
+        (C.inr x))
+  have h := act_interchange.subst (Γ := S) (Θ := 1) (Ω := Δ)
+    (Φ := Φ) (Χ := Ψ) σ κ e
+  have hκ : ∀ {Λ : C.Arity} {υ : C.Ty} (x : Γ ⋈ Φ ∋[υ] Λ),
+      κ x = Expr.η (C.inr x) := by
+    intro Λ υ x
+    rcases C.cover Γ Φ x with ⟨x, rfl⟩ | ⟨x, rfl⟩
+    · unfold κ
+      have hProof :
+          congrArg (fun Ω => Ω ∋[υ] Λ) (mul_assoc S Γ Φ).symm =
+            Eq.refl _ := Subsingleton.elim _ _
+      rw [hProof]
+      congr 1
+    · unfold κ
+      have hProof :
+          congrArg (fun Ω => Ω ∋[υ] Λ) (mul_assoc S Γ Φ).symm =
+            Eq.refl _ := Subsingleton.elim _ _
+      rw [hProof]
+      congr 1
+  have hIdentity := act_idOfη (Γ := S) κ hκ Ψ e
+  unfold liftPrefixed
+  unfold κ at h
+  exact h.symm.trans (congrArg (Subst.act σ (Φ ⋈ Ψ)) hIdentity)
 
 /-- Acting by a lifted substitution is action below its fixed suffix. -/
 theorem act_lift {Γ Δ : C.Arity} (σ : Subst Γ Δ) (Φ Ψ : C.Arity)

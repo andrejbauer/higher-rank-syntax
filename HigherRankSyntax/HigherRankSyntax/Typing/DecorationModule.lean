@@ -55,7 +55,8 @@ theorem rename_id {Γ : C.Arity} {τ : C.Ty} (a : ClassifierAt bd Γ τ) :
     rename (𝟙ʳ Γ) a = a :=
   renameAux_id (bd τ) a
 
-private def substituteAux {S Γ Δ Φ : C.Arity} (σ : Subst Γ (S ⋈ Δ)) :
+/-- Substitute in a value selected by an optional classifier policy. -/
+def substituteAt {S Γ Δ Φ : C.Arity} (σ : Subst Γ (S ⋈ Δ)) :
     (o : Option C.Ty) →
       (match o with | none => PUnit | some τ => Expr (S ⋈ Γ ⋈ Φ) τ) →
       (match o with | none => PUnit | some τ => Expr (S ⋈ Δ ⋈ Φ) τ)
@@ -66,14 +67,28 @@ private def substituteAux {S Γ Δ Φ : C.Arity} (σ : Subst Γ (S ⋈ Δ)) :
 def substitute {S Γ Δ Φ : C.Arity} (σ : Subst Γ (S ⋈ Δ)) {τ : C.Ty}
     (a : ClassifierAt bd (S ⋈ Γ ⋈ Φ) τ) :
     ClassifierAt bd (S ⋈ Δ ⋈ Φ) τ :=
-  substituteAux σ (bd τ) a
+  substituteAt σ (bd τ) a
 
-private theorem substituteAux_comp {S Γ Δ Ξ Φ : C.Arity}
+/-- Eta-expanded domain slots act trivially on a classifier below a prefix. -/
+theorem substitute_idOfη {S Γ Φ : C.Arity} {τ : C.Ty}
+    (a : ClassifierAt bd (S ⋈ Γ ⋈ Φ) τ) :
+    substitute (fun ⦃_⦄ ⦃_⦄ x => Expr.η (C.inr x)) a = a := by
+  unfold substitute substituteAt
+  unfold ClassifierAt at a ⊢
+  generalize bd τ = o at a ⊢
+  cases o with
+  | none => exact Subsingleton.elim _ _
+  | some υ =>
+      apply act_idOfη
+      intro Ψ ν x
+      rfl
+
+private theorem substituteAt_comp {S Γ Δ Ξ Φ : C.Arity}
     (σ : Subst Γ (S ⋈ Δ)) (θ : Subst Δ (S ⋈ Ξ))
     (o : Option C.Ty)
     (a : match o with | none => PUnit | some τ => Expr (S ⋈ Γ ⋈ Φ) τ) :
-    substituteAux (Subst.comp σ θ) o a =
-      substituteAux θ o (substituteAux σ o a) := by
+    substituteAt (Subst.comp σ θ) o a =
+      substituteAt θ o (substituteAt σ o a) := by
   cases o with
   | none => exact Subsingleton.elim _ _
   | some τ => apply act_comp
@@ -82,12 +97,12 @@ theorem substitute_comp {S Γ Δ Ξ Φ : C.Arity}
     (σ : Subst Γ (S ⋈ Δ)) (θ : Subst Δ (S ⋈ Ξ))
     {τ : C.Ty} (a : ClassifierAt bd (S ⋈ Γ ⋈ Φ) τ) :
     substitute (Subst.comp σ θ) a = substitute θ (substitute σ a) :=
-  substituteAux_comp σ θ (bd τ) a
+  substituteAt_comp σ θ (bd τ) a
 
-private theorem substituteAux_ofRenaming {Γ Δ Φ : C.Arity}
+private theorem substituteAt_ofRenaming {Γ Δ Φ : C.Arity}
     (ρ : Γ →ʳ Δ) (o : Option C.Ty)
     (a : match o with | none => PUnit | some τ => Expr (Γ ⋈ Φ) τ) :
-    substituteAux (S := 1) (Φ := Φ) (Subst.ofRenaming ρ) o a =
+    substituteAt (S := 1) (Φ := Φ) (Subst.ofRenaming ρ) o a =
       renameAux (ρ ⇑ʳ Φ) o a := by
   cases o with
   | none => rfl
@@ -98,7 +113,7 @@ theorem substitute_ofRenaming {Γ Δ Φ : C.Arity} (ρ : Γ →ʳ Δ)
     {τ : C.Ty} (a : ClassifierAt bd (Γ ⋈ Φ) τ) :
     substitute (S := 1) (Φ := Φ) (Subst.ofRenaming ρ) a =
       rename (ρ ⇑ʳ Φ) a :=
-  substituteAux_ofRenaming ρ (bd τ) a
+  substituteAt_ofRenaming ρ (bd τ) a
 
 /-- Classifier action by a lift agrees with substitution below the suffix. -/
 theorem substitute_lift {Γ Δ Φ Ψ : C.Arity} (σ : Subst Γ Δ)
@@ -114,8 +129,22 @@ theorem substitute_lift {Γ Δ Φ Ψ : C.Arity} (σ : Subst Γ Δ)
   cases o with
   | none => rfl
   | some υ =>
-      simpa only [ClassifierAt, substitute, substituteAux,
+      simpa only [ClassifierAt, substitute, substituteAt,
         ClassifierAt.cast, one_mul] using Subst.act_lift σ Φ Ψ a
+
+/-- Classifier action by a lift below a fixed prefix is action below the
+suffix. -/
+theorem substitute_liftPrefixed {S Γ Δ Φ Ψ : C.Arity}
+    (σ : Subst Γ (S ⋈ Δ)) {τ : C.Ty}
+    (a : ClassifierAt bd (S ⋈ (Γ ⋈ Φ) ⋈ Ψ) τ) :
+    substitute (Φ := Ψ) (Subst.liftPrefixed σ Φ) a =
+      substitute (Φ := Φ ⋈ Ψ) σ a := by
+  unfold substitute substituteAt
+  unfold ClassifierAt at a ⊢
+  generalize bd τ = o at a ⊢
+  cases o with
+  | none => rfl
+  | some υ => exact Subst.act_liftPrefixed σ a
 
 theorem substitute_cast_local {S Γ Δ Φ Λ Ξ α : C.Arity}
     (σ : Subst Γ (S ⋈ Δ)) (h : Λ = Ξ) {τ : C.Ty}

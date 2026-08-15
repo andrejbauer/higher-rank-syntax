@@ -1,10 +1,15 @@
 # Equations over raw higher-rank syntax
 
-This note proposes an equation layer for the existing raw syntax.  The basic
+This note describes the equation layer for the existing raw syntax.  The basic
 idea is to keep raw expressions unchanged, declare equation schemas between
 them, and generate the least structural and substitution-stable congruence
 containing those schemas.  Ordinary set quotients are then a derived
 construction.
+
+The presentation, derivable equality, quotient relative monad, quotient map,
+monoid-equations example, and quotient decorated-telescope monoid described in
+Sections 1--6 are formalized. T2 typing and conversion judgments remain
+deferred.
 
 This avoids making the whole syntax development setoid-valued.  Raw
 expressions remain available for recursion and induction, while the quotient
@@ -248,19 +253,66 @@ q : T'_S → T_E,
 q(e) = [e],
 ```
 
-should be a morphism of relative monads.  Its universal property says that any
-substitution-compatible interpretation of raw syntax that makes every axiom of
-`E` true factors uniquely through `T_E`.  This is the categorical content of
-imposing the equations.
+is a morphism of relative monads. The expected semantic universal property
+would say that any substitution-compatible interpretation of raw syntax that
+makes every axiom of `E` true factors uniquely through `T_E`. This is the
+categorical content of imposing the equations, but that general semantic
+factorization theorem is not part of the present development.
 
-## 6. Decorations, typed equality, and conversion
+## 6. Quotient decorated telescopes
 
-The raw equation layer does not replace decorations.  A decoration still
-stores a raw classifier expression: in the declaration `x : A`, it stores the
-expression `A` as the boundary of `x`.
+The equation layer does not replace decorations. A raw decoration still stores
+a raw classifier expression: in the declaration `x : A`, it stores the
+expression `A` as the boundary of `x`. Equations instead induce an equality on
+decorations.
 
-Later, two classifiers can be related by applying `DerivEq` to their expression
-components.  At the judgmental layer, conversion would have the form
+Two unclassified classifier values are automatically equal. Two
+expression-valued classifiers are equal when their raw expressions are related
+by `DerivEq` in the exact external-prefix-and-binding context of that
+decoration site. Decorations of one fixed raw telescope shape are equal when
+this holds at every immediate and recursively nested site.
+
+Only decorations are quotiented; raw shape is retained literally:
+
+```text
+QDTel E bd Γ
+  = Σ Δ : Arity,
+      Decoration(bd, S ⋈ Γ, Δ) / DecorationEq(E).
+```
+
+The quotient relative monad acts on these telescopes by choosing raw
+representatives of quotient-valued fillers, substituting them in every
+classifier, and taking the resulting decoration class. Two-sided congruence
+proves independence from all choices. This gives a module
+
+```text
+QDTelModule E bd : Kl(E.quotientMonad) → Set,
+```
+
+together with its literal, substitution-invariant raw shape. Quotient
+substitutions also lift coherently under a raw suffix. Hence the generic
+context-extension tensor applies to arity-shaped modules over the quotient
+monad.
+
+Empty decoration and dependent concatenation respect decoration equality and
+therefore descend. Their naturality, unit laws, and associativity package the
+result as
+
+```text
+QDTelMon E bd : Mon(ArityMod(E.quotientMonad)).
+```
+
+The natural raw quotient map commutes with telescope substitution and preserves
+shape. Thus quotienting classifier expressions is compatible with the entire
+T1 module-and-monoid structure, not just with individual decorations.
+
+For example, if the presentation derives `A ≈ B`, the one-slot decorations
+`x : A` and `x : B` determine the same quotient decorated telescope. The same
+equation may be instantiated by substitution, and structural congruence gives
+equal larger classifiers such as `P(A) ≈ P(B)`.
+
+This is still not a typing or conversion rule. At the later judgmental layer,
+conversion would have the form
 
 ```text
 HasType Γ t A    A ≈ B
@@ -268,7 +320,7 @@ HasType Γ t A    A ≈ B
      HasType Γ t B.
 ```
 
-The raw term in the conclusion is exactly the same `t`.  Alternatively, after
+The raw term in the conclusion is exactly the same `t`. Alternatively, after
 quotienting type expressions, typing can be indexed by the class `[A]`.
 Because `A ≈ B` gives `[A] = [B]`, conversion is then ordinary transport along
 equality of quotient types.

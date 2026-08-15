@@ -230,6 +230,22 @@ DTelMon (C := C) bd : CategoryTheory.Mon (ArityMod (SyntaxMonad C))
 ```
 
 No custom `TelescopeModule` structure or compatibility adapter remains.
+
+## 6. Equation quotients
+
+For a fixed equation presentation `E`, compare expression-valued classifiers
+by `DerivEq E` at every decoration site and quotient only within each fixed raw
+shape. The resulting functor `QDTelModule E bd` is a module over the quotient
+relative monad. Its shape remains literal, quotient substitutions admit the
+same coherent suffix extension, and empty telescope plus dependent
+concatenation descend to an internal monoid
+
+```lean
+QDTelMon E bd : CategoryTheory.Mon (ArityMod E.quotientMonad)
+```
+
+Thus the full T1 categorical picture survives imposing equations. This does
+not add T2 well-formedness, typing, or conversion judgments.
 The concrete algebra and internal-monoid packaging live together in
 `Typing/DecoratedTelescopeMonoid.lean`, while the generic monoidal slice
 structure lives in `Typing/TelescopeTensor.lean`.

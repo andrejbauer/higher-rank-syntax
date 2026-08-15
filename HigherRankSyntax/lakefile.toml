@@ -33,7 +33,15 @@ name = "MagmaAdequacy"
 srcDir = "examples/magma"
 
 [[lean_lib]]
+name = "MonoidEquations"
+srcDir = "examples/monoid"
+
+[[lean_lib]]
 name = "DependentClassification"
+srcDir = "examples/dependent"
+
+[[lean_lib]]
+name = "QuotientDependentClassification"
 srcDir = "examples/dependent"
 
 [[lean_lib]]

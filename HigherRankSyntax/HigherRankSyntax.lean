@@ -7,8 +7,13 @@ import HigherRankSyntax.RelativeMonad.Kleisli
 import HigherRankSyntax.RelativeMonad.Module
 import HigherRankSyntax.SyntaxMonad
 import HigherRankSyntax.PrefixedSyntaxMonad
+import HigherRankSyntax.Equations.Presentation
+import HigherRankSyntax.Equations.Derivation
+import HigherRankSyntax.Equations.QuotientMonad
 import HigherRankSyntax.Typing.Decoration
 import HigherRankSyntax.Typing.DecorationModule
 import HigherRankSyntax.Typing.ArityModule
 import HigherRankSyntax.Typing.TelescopeTensor
 import HigherRankSyntax.Typing.DecoratedTelescopeMonoid
+import HigherRankSyntax.Equations.DecorationQuotient
+import HigherRankSyntax.Equations.QuotientTelescopeMonoid

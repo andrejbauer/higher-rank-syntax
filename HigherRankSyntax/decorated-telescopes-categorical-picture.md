@@ -740,6 +740,64 @@ comprehension category, C-system, fibred relative monad, or freeness theorem.
 Those would be additional constructions or results.
 
 
+## 8. Adding equations without losing the categorical structure
+
+Suppose a fixed raw signature is equipped with equation schemas, and let T_E
+be the relative monad obtained by quotienting raw expressions by the generated
+structural, substitution-stable congruence. The source slots remain ordinary
+sets. Only expression fibres are quotiented.
+
+Equations compare decorations pointwise. An unclassified slot has no equation
+data to check. For an expression-classified slot, its two classifiers are
+compared by the generated expression congruence in that site's full context:
+external base, preceding siblings, and bound variables. The same comparison is
+made recursively inside every binding arity. Raw telescope shapes are never
+identified.
+
+Consequently the quotient telescope family has the form
+
+    D_E(Γ)
+      =
+    Σ Δ : Arity,  Dec_bd(S ⋈ Γ, Δ) / equations.
+
+A quotient substitution acts on D_E by substituting in classifier
+representatives and then forgetting the representatives. Two-sided
+substitution congruence makes the result independent of every choice. Thus
+
+    D_E : Kl(T_E) → Set
+
+is again a syntax module, and its literal raw-shape projection is again
+natural.
+
+The quotient Kleisli category inherits coherent extension by raw suffixes.
+Therefore the same context-extension tensor applies to
+
+    ArMod_(T_E) = [Kl(T_E), Set] / Const(Arity).
+
+Empty telescope and dependent concatenation respect pointwise decoration
+equality, so they descend to D_E. Their equations are inherited from the raw
+operations. The quotient result is therefore another internal monoid:
+
+    D_E ∈ Mon(ArMod_(T_E)).
+
+For the running example, suppose the equation presentation proves
+
+    A ≈ B.
+
+The raw decorations x : A and x : B are different data, but their classifier
+expressions represent the same quotient class. They therefore determine the
+same element of D_E. Substitution can instantiate A ≈ B, and structural
+congruence carries it into larger classifiers such as P(A) ≈ P(B). Throughout,
+the telescope still has exactly one raw term slot: equations alter classifier
+annotations, not shape.
+
+This quotient theorem is still T1. It says that boundary annotations may be
+compared and quotienting is compatible with substitution and telescope
+concatenation. It does not say that A or B is a well-formed type, that x has
+either type, or that a conversion judgment is admissible. Those assertions
+require the later T2 judgment layer.
+
+
 
 ## 9. Extended example at the T1/T2 boundary: a type family
 

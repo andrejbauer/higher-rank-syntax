@@ -52,6 +52,24 @@ def Renaming.extend
 @[inherit_doc Renaming.extend]
 infixl:95 " ⇑ʳ " => Renaming.extend
 
+/-- Keep a prefix fixed and apply a renaming after it. -/
+def Renaming.prefixed (S : C.Arity) {Γ Δ : C.Arity}
+    (ρ : Γ →ʳ Δ) : S ⋈ Γ →ʳ S ⋈ Δ :=
+  fun ⦃Λ⦄ ⦃τ⦄ x => C.copair S Γ (S ⋈ Δ ∋[τ] Λ)
+    (fun y => C.inl y) (fun y => C.inr (ρ y)) x
+
+@[simp]
+theorem Renaming.prefixed_inl (S : C.Arity) {Γ Δ Λ : C.Arity}
+    {τ : C.Ty} (ρ : Γ →ʳ Δ) (x : S ∋[τ] Λ) :
+    prefixed S ρ (C.inl x) = C.inl x := by
+  apply C.copair_apply_inl
+
+@[simp]
+theorem Renaming.prefixed_inr (S : C.Arity) {Γ Δ Λ : C.Arity}
+    {τ : C.Ty} (ρ : Γ →ʳ Δ) (x : Γ ∋[τ] Λ) :
+    prefixed S ρ (C.inr x) = C.inr (ρ x) := by
+  apply C.copair_apply_inr
+
 @[simp]
 theorem Renaming.extend_inl
     {Γ Δ Ξ : C.Arity}
