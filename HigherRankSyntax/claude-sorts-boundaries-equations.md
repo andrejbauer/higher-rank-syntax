@@ -416,9 +416,285 @@ as a predicate on `Expr` rather than baked into the carrier.
   more uniform; the first keeps `Expr` free of a spurious head.
 - Whether `Bd(Ω) = Option (Expr Ω)` should instead be `Expr Ω` with a
   distinguished sort entry `sort` declared first, making *every* entry an object
-  of some sort and removing the `Option`. This is the Tarski-vs-Russell choice
-  one level up, and it interacts with universes; worth deciding before 1.2 is
-  implemented.
+  of some sort and removing the `Option`. Provisionally settled in favour of
+  keeping the `Option`: dropping it forces a boundary on `sort` itself, which is
+  `sort : sort` unless a hierarchy is introduced. The `Option` is the
+  `Type`/`Kind` stratification of a logical framework.
 - Whether the erasure `|Γ|` should retain the *positions* of equation
   declarations. It need not for §§0–4, but T2's `E_{<x}` needs them, so they
   must survive somewhere.
+
+---
+
+# 7. Implementation
+
+## 7.1 Order, and why
+
+The stratification of 4.3 is also the dependency order, so it is also the
+implementation order:
+
+```
+Expr |Γ|      §0        already built at the rollback point
+Bd, DTel      §1, §2    ← this refactor
+~_E, T_E      §3        deferred
+T2            —         deferred
+```
+
+Boundaries and decorations first is right, and for a stronger reason than
+convenience: §1 and §2 depend on the carrier and `Expr` **and on nothing else**.
+Equations depend only on `Expr` too, so they could in principle go first — but
+they are the low-risk part (`DerivEq`, `QExpr`, `quotientMonad` are about `Expr`
+and `Subst`, and de-indexing them is mechanical), whereas §1–2 carry the whole
+design risk. Do the risky part while there is least to un-build.
+
+One correction to the previous development's order. There, the full T1
+module-and-monoid apparatus was built before any dependent example, and the
+dependent examples arrived last. **Invert this.** The single question that
+decides whether the design works is whether `Option (Expr Ω)` over the
+three-part context `Ω ⋈ before(x) ⋈ Λ_x` really carries Martin-Löf `Σ`. That is
+pure Definition 2.2 data — it needs no module, no tensor, no monoid — so it is
+Pass 5, not Pass 12.
+
+## 7.2 Repository organisation
+
+`8c8cbd9 "cleanup of comments"`, the parent of `1967f65 "added simple types"`,
+carries *exactly* Definitions 0.1–0.3 already:
+
+```lean
+structure Carrier (A : Type) where
+  Arity : Submonoid (Function.End A)
+  slotAt : Arity → Arity → WellOrder
+  unit_empty, slotAt_mul, subWf
+
+inductive Expr : C.Arity → Type where
+  | ap : {Γ α : C.Arity} → (x : Γ ∋ α) → (∀ ⦃Δ⦄ (_i : α ∋ Δ), Expr (Γ ⋈ Δ)) → Expr Γ
+```
+
+and `SyntaxMonad.lean` there already builds `J`, `T` and `SyntaxMonad` over a
+class-free `ArityFunc C`. So this is not a rollback that loses work; it is the
+recovery of the correct foundation, and it removes the mechanical de-indexing of
+the core entirely. `lean-toolchain` is byte-identical to `HEAD`, so no Mathlib
+recompile is involved.
+
+Proposal: branch `boundaries` at `8c8cbd9`; leave `general-types` untouched as
+the reference.
+
+```
+git switch -c boundaries 8c8cbd9
+git checkout general-types -- HigherRankSyntax/claude-sorts-boundaries-equations.md
+```
+
+`CLAUDE.md`, `.claude/napkin.md`, `STYLE-GUIDELINES.md`, `lean-toolchain`,
+`lakefile.toml` and `lake-manifest.json` are all already present at `8c8cbd9`;
+`lakefile.toml` differs from `HEAD` only by the example-library stanzas, which
+get re-added per pass as the examples are ported.
+
+The reference material stays on `general-types` and is consulted, never copied:
+`Typing/*.lean` (1327 lines) is the previous notion of decoration, structurally
+close to what is wanted and differing in the class index and the codomain.
+
+## 7.3 Settled decisions
+
+**(1) `Boundary` is a named two-constructor type, not `Option`.**
+
+```lean
+inductive Boundary {A : Type} {C : Carrier A} (Ω : C.Arity) : Type where
+  | sort : Boundary Ω
+  | of   : Expr Ω → Boundary Ω
+```
+
+`Option (Expr Ω)` would inherit Mathlib's API, but every use site that matters
+is an example, and `.sort` / `.of (Tm A)` is what a reader of a theory
+declaration needs to see. Definition 1.2 is stated with `Option` for brevity;
+the implementation names the constructors. If the `Option` API is missed later,
+add the equivalence rather than change the definition.
+
+**(2) Precedence becomes carrier structure, not a separate class.**
+
+The fields `before`, `after`, `factor`, `localized`, `reinject` and the
+injection coherences move into `Carrier`. This is the right call, and for a
+reason worth recording: `slotAt : Arity → Arity → WellOrder` orders slots
+**fibrewise** — separately for each arity `α` — and there is no order on
+`Σ α, Γ ∋ α`. So `before` is not a repackaging of an order the carrier already
+has; it supplies a *global* order the carrier otherwise lacks. That is carrier
+structure by any reasonable reading.
+
+Consequence for 7.4: what can be stated as a coherence between `before` and
+`slotAt` is only the fibrewise fragment — for `x, y : Δ ∋ α` with `x < y` in
+`slotAt Δ α`, that `x` is in the image of the inclusion `before y ↪ Δ`. Whether
+to impose it is open (7.5).
+
+**(3) File split.** Given (2), the old bundled `Decoration.lean` splits into
+*two* new files, plus a core change:
+
+```
+Carrier.lean          + precedence fields and their lemmas   (core, modified)
+Typing/Boundary.lean    Definition 1.2 and Proposition 1.4    (new)
+Typing/Decoration.lean  Definition 2.2 and accessors          (new)
+```
+
+## 7.4 Passes
+
+One pass per turn: update this section, build, report, state the next pass,
+stop.
+
+Decision (2) reorders the plan — extending `Carrier` touches the core, so it
+lands first, with nothing built on top to break.
+
+---
+
+**Pass 0 — branch and build.**
+*Files:* none.
+*Do:* create `boundaries` at `8c8cbd9`, restore this document, `lake build`.
+*Gate:* the rolled-back core builds unchanged, no Mathlib recompile.
+
+---
+
+**Pass 1 — precedence into the carrier.**
+*Files:* `HigherRankSyntax/Carrier.lean`.
+*Do:* add to `structure Carrier`, de-indexed from the `Precedence` class on
+`general-types`:
+
+```lean
+  before    : {Δ α : Arity} → Δ ∋ α → Arity
+  after     : {Δ α : Arity} → Δ ∋ α → Arity
+  factor    : (x : Δ ∋ α) → before x ⋈ after x = Δ
+  localized : (x : Δ ∋ α) → after x ∋ α
+  reinject  : (x : Δ ∋ α) → factor x ▸ inr (localized x) = x
+  before_inl / after_inl / before_inr / after_inr
+```
+
+plus the derived `inclusion x : before x →ʳ Δ` (the old `Precedence.inclusion`,
+via `factor x ▸ inl`).
+*Gate:* the whole rolled-back core still builds. Every existing `Carrier`
+construction now owes the new fields — at this point there are none in-tree,
+which is exactly why this pass goes first.
+*Risk:* low, but it is the only pass that edits a file the rollback recovered.
+
+---
+
+**Pass 2 — relative-monad infrastructure.**
+*Files:* `RelativeMonad/Kleisli.lean`, `RelativeMonad/Module.lean`.
+*Do:* port de-indexed from `general-types`. Gives §0.3's `𝕊` as a category and
+the notion of module that 2.5 needs.
+*Not ported:* `PrefixedSyntaxMonad.lean` — it exists for the protected prefix
+of §3.
+*Gate:* `syntaxKleisliHomEquiv`-analogue: Kleisli homs of `SyntaxMonad C` are
+`Subst`.
+
+---
+
+**Pass 3 — a concrete carrier.**
+*Files:* `examples/ListCarrier.lean`, `lakefile.toml`.
+*Do:* port `ListCarrier` de-indexed, and fold `ListPrecedence.lean` into it —
+the precedence data is now carrier fields, so it is no longer a separate
+instance file.
+*Gate:* the list carrier elaborates with all fields discharged.
+*Risk:* moderate. This is where Pass 1's field choices are first paid for; if
+`before`/`after` are awkward to define for lists, the field signatures are
+wrong, and it is cheap to revise here.
+
+---
+
+**Pass 4 — boundaries.**
+*Files:* `Typing/Boundary.lean`.
+*Do:* Definition 1.2 as the named type of (1), plus
+
+- `Boundary.rename : (Γ →ʳ Δ) → Boundary Γ → Boundary Δ`;
+- `Boundary.act : Subst Γ Δ → Boundary Γ → Boundary Δ`, by `.sort ↦ .sort` and
+  `.of e ↦ .of (act σ e)`;
+- Propositions 1.4.1 and 1.4.2: `act` of the identity is the identity, `act` of
+  a composite is the composite — i.e. `Boundary` is a `𝕊`-module — and
+  instantiation by arguments is `Subst.comp`.
+
+*Gate — first risk gate:* does `act` typecheck at the three-part context
+`Ω ⋈ before(x) ⋈ Λ_x` **without a depth parameter**? The old
+`ClassifierAt.substituteAt` carried one. Here the boundary is a plain `Expr` and
+the action should be plain substitution. If a depth parameter reappears, the
+simplification claimed in 1.4 is not real and §1 needs revisiting.
+
+---
+
+**Pass 5 — decorations.**
+*Files:* `Typing/Decoration.lean`.
+*Do:* `DecorationPath` (`here` / `nested`, de-indexed), Definition 2.2
+
+```lean
+abbrev Decoration (Ω Δ : C.Arity) : Type :=
+  ∀ ⦃Φ α : C.Arity⦄, DecorationPath Δ Φ α → Boundary (Ω ⋈ Φ ⋈ α)
+```
+
+`DecoratedTelescope`, and the `classifier` / `nested` accessors.
+*Gate:* the two-entry smoke theory `(ty : sort, tm : [A : .of Ty] sort)`
+elaborates, with `tm`'s argument slot decorated by a boundary naming `ty`.
+
+---
+
+**Pass 6 — Martin-Löf `Σ`. The risk gate.**
+*Files:* `examples/dependent/MartinLof.lean`, `lakefile.toml`.
+*Do:* Example 2.8 as raw decorated data — `ty, tm, Σ, pair, fst, snd`, every
+boundary and every nested decoration, over the list carrier.
+*Gate:* each of the three parts of 2.3 is exercised and elaborates:
+
+| clause | exercised by |
+|---|---|
+| `Ω` — ambient theory | `Ty` and `Tm` naming the entries `ty`, `tm` |
+| `before(x)` — earlier siblings | `p : Tm (Σ A B)`; and one level down, `x : Tm A` inside `B`'s arity |
+| `Λ_x` — own binders | `snd`'s boundary `Tm (B (fst A B p))` |
+
+*If this pass fails, stop.* Nothing after it is worth building until §1–2 are
+known to carry MLTT.
+
+---
+
+**Pass 7 — the module.**
+*Files:* `Typing/DecorationModule.lean`.
+*Do:* Proposition 2.5 — `DTel : 𝕊 ⥤ Type`, the action postcomposing every
+`bnd(x)` and fixing `|Δ|`; functor laws from the monad laws of `T`.
+*Gate:* `DTel_act` computes on the Σ theory of Pass 6.
+
+---
+
+**Pass 8 — the tensor.**
+*Files:* `Typing/ArityModule.lean`, `Typing/TelescopeTensor.lean`.
+*Do:* the context-extension tensor on arity-shaped `T`-modules — largest port
+(806 lines on `general-types`) and the most mechanical. `KleisliArityAction`,
+`tensorObj`, associator, unitors, `MonoidalCategory`.
+*Risk:* long but low. The napkin's guidance on `Subst.lift_one` / `lift_assoc`
+as `extendByOne` / `extendByAssoc`, and on `HEq` at dependent tensor
+projections, applies verbatim.
+
+---
+
+**Pass 9 — the monoid.**
+*Files:* `Typing/DecoratedTelescopeMonoid.lean`.
+*Do:* Proposition 2.6 — empty decoration, dependent concatenation, unit and
+associativity, `DTelMon`.
+
+---
+
+**Pass 10 — closing the example.**
+*Files:* `examples/dependent/MartinLof.lean`.
+*Do:* re-express the Σ theory through the monoid: build it as a concatenation
+of segments (`ty, tm` then `Σ` then `pair, fst, snd`) and check the two readings
+agree definitionally.
+*Gate:* 2.6 is usable, not merely provable — the previous development proved the
+monoid laws but never built a dependent theory through them.
+
+---
+
+Then stop. §3 (equations) and T2 are separate roadmaps.
+
+## 7.5 Still open, but not blocking
+
+- Whether to impose the fibrewise coherence of (2) — that `x < y` in
+  `slotAt Δ α` implies `x` factors through `before y ↪ Δ`. It is not needed by
+  §1–2, but without it `before` and the fibrewise well-order are unrelated data
+  and a carrier could supply an incoherent pair. Decide by Pass 3, when the list
+  carrier makes the cost concrete.
+- Whether `Boundary` should carry the erasure-to-`Expr` as a partial function or
+  whether `.sort` should be handled by matching everywhere. Matching is fine at
+  the scale of §1–2; revisit if T2 accumulates boilerplate.
+- Whether `examples/magma` and the other simply-typed examples are worth
+  porting. They are adequacy tests for the raw layer, which this refactor does
+  not touch, so they can stay on `general-types` until wanted.
