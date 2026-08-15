@@ -6,3 +6,4 @@ import HigherRankSyntax.RelativeMonad.Basic
 import HigherRankSyntax.RelativeMonad.Kleisli
 import HigherRankSyntax.RelativeMonad.Module
 import HigherRankSyntax.SyntaxMonad
+import HigherRankSyntax.Typing.Boundary

@@ -713,22 +713,46 @@ wrong, and it is cheap to revise here.
 
 ---
 
-**Pass 5 — boundaries.**
+**Pass 5 — boundaries. `done`**
 *Files:* `Typing/Boundary.lean`.
-*Do:* Definition 1.2 as the named type of (1), plus
+*Do:* Definition 1.2 as the named type of (1), with the actions and the laws of
+1.4:
 
-- `Boundary.rename : (Γ →ʳ Δ) → Boundary Γ → Boundary Δ`;
-- `Boundary.act : Subst Γ Δ → Boundary Γ → Boundary Δ`, by `.sort ↦ .sort` and
-  `.of e ↦ .of (act σ e)`;
-- Propositions 1.4.1 and 1.4.2: `act` of the identity is the identity, `act` of
-  a composite is the composite — i.e. `Boundary` is a `𝕊`-module — and
-  instantiation by arguments is `Subst.comp`.
+```lean
+inductive Boundary (Ω : C.Arity) : Type where
+  | sort : Boundary Ω
+  | of   : Expr Ω → Boundary Ω
 
-*Gate — first risk gate:* does `act` typecheck at the three-part context
-`Ω ⋈ before(x) ⋈ Λ_x` **without a depth parameter**? The old
-`ClassifierAt.substituteAt` carried one. Here the boundary is a plain `Expr` and
-the action should be plain substitution. If a depth parameter reappears, the
-simplification claimed in 1.4 is not real and §1 needs revisiting.
+def rename (ρ : Γ →ʳ Δ) : Boundary Γ → Boundary Δ
+def act (σ : Subst Δ (Γ ⋈ Ξ)) (Φ) : Boundary (Γ ⋈ Δ ⋈ Φ) → Boundary (Γ ⋈ Ξ ⋈ Φ)
+def instantiate (σ : Subst Δ Γ) : Boundary (Γ ⋈ Δ) → Boundary Γ := act (Ξ := 1) σ 1
+```
+
+*Gate — first risk gate:* **is the action plain substitution, with the laws of
+1.4 inherited rather than reproved?**
+
+An earlier draft of this gate asked instead whether `act` typechecks *without a
+depth parameter*. That was the wrong test and it fails: `Φ` is present. But `Φ`
+is inherited from `Subst.act`, which carries it for every expression, boundary
+or not; demanding its absence was never what 1.4 claims.
+
+*Outcome:* the gate as corrected is met. The comparison that matters is against
+the classifier it replaces,
+
+```lean
+-- ClassifierAt.substituteAt: codomain a type-level match, so every lemma
+-- reasons through Option.rec
+(o : Option C.Ty) → (match o with | none => PUnit | some τ => Expr (S ⋈ Γ ⋈ Φ) τ) → …
+
+-- Boundary.act: an ordinary match on constructors
+| .sort => .sort
+| .of S => .of (σ.act Φ S)
+```
+
+so `rename_id`, `rename_comp`, `act_id` and `act_comp` are each `cases β` followed
+by `congrArg Boundary.of` applied to the corresponding raw law — the raw monad
+laws with a constructor wrapped around them. 1.4.2 needed no definition at all:
+instantiation is `act` at `Ξ = 1`, `Φ = 1`, using `Γ ⋈ 1 = Γ` definitionally.
 
 ---
 
