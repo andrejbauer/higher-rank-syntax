@@ -95,6 +95,26 @@ theorem Renaming.extend_id
   rcases C.cover Γ Δ x with ⟨y, rfl⟩ | ⟨y, rfl⟩
     <;> simp [Renaming.id]
 
+/-- The left injection as a renaming. -/
+def Renaming.inl (Γ Δ : C.Arity) : Γ →ʳ Γ ⋈ Δ := fun ⦃_⦄ x => C.inl x
+
+/-- The right injection as a renaming. -/
+def Renaming.inr (Γ Δ : C.Arity) : Δ →ʳ Γ ⋈ Δ := fun ⦃_⦄ x => C.inr x
+
+/-- The unique renaming out of the unit arity. -/
+def Renaming.fromUnit (Γ : C.Arity) : (1 : C.Arity) →ʳ Γ :=
+  fun ⦃_⦄ x => (C.unit_is_empty x).elim
+
+/-- Extending a renaming by the unit arity changes nothing. -/
+theorem Renaming.extend_unit
+    {Γ Δ : C.Arity} (f : Γ →ʳ Δ) :
+  f ⇑ʳ 1 = f
+  := by
+  funext α x
+  rcases C.cover Γ 1 x with ⟨y, rfl⟩ | ⟨y, rfl⟩
+  · rw [Renaming.extend_inl, C.unit_right Δ (f y), C.unit_right Γ y]
+  · exact (C.unit_is_empty y).elim
+
 @[simp]
 theorem Renaming.extend_comp
     {Γ Δ Ξ : C.Arity}

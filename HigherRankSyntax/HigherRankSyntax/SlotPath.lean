@@ -23,6 +23,12 @@ inductive SlotPath : C.Arity → C.Arity → C.Arity → Type where
   | nested {Δ α β Φ : C.Arity} (x : Δ ∋ β) (p : SlotPath β Φ α) :
       SlotPath Δ (C.before x ⋈ Φ) α
 
+/-- Read a path into `Γ` as a path into `Γ ⋈ Δ`. -/
+def SlotPath.inl {Γ Δ Φ α : C.Arity} :
+    SlotPath (C := C) Γ Φ α → SlotPath (C := C) (Γ ⋈ Δ) Φ α
+  | .here x => C.before_inl x ▸ .here (C.inl x)
+  | .nested x p => C.before_inl x ▸ .nested (C.inl x) p
+
 /-- The unit arity has no nested slots. -/
 theorem SlotPath.unit_elim {Φ α : C.Arity}
     (p : SlotPath (C := C) 1 Φ α) : False := by

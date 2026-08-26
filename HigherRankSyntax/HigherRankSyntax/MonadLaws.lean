@@ -36,6 +36,52 @@ theorem act_η
             apply act_η_right
       _ = σ x := by apply act_inst_id
 
+/-- An application is the substitution instance of an η-expansion by its own
+arguments. -/
+theorem ap_eq_act_η {Γ α : C.Arity} (x : Γ ∋ α) (args : Subst α Γ) :
+  Expr.ap x args
+    = Subst.act (Γ := Γ) (Δ := α) (Ξ := 1) args 1 ((Expr.η x : Expr (Γ ⋈ α)))
+  := by
+  rw [act_inst_η]
+  congr 1
+  exact (C.unit_right Γ x).symm
+
+/-- Acting by `Subst.copair (Subst.id Γ) args` on an expression weakened by a
+`Γ`-prefix is acting by `args`. -/
+theorem act_copair_id {Γ α : C.Arity} (args : Subst α Γ) (Φ : C.Arity) :
+    ∀ e : Expr (Γ ⋈ α ⋈ Φ),
+      Subst.act (Γ := Γ) (Δ := Γ ⋈ α) (Ξ := 1)
+          (Subst.copair (Subst.id Γ) args) Φ
+          (⟦ (fun ⦃_⦄ y => C.inr y : (Γ ⋈ α) →ʳ Γ ⋈ (Γ ⋈ α)) ⇑ʳ Φ ⟧ʳ e)
+        = Subst.act (Γ := Γ) (Δ := α) (Ξ := 1) args Φ e
+  | .ap (α := β) x args' => by
+    head_cases x with z
+    case right =>
+      rw [Renaming.act_ap, Renaming.extend_inr, act_right, act_right]
+      congr 1
+      funext Ω i
+      rw [← Renaming.extend_assoc]
+      exact act_copair_id args (Φ ⋈ Ω) (args' i)
+    case middle =>
+      rw [Renaming.act_ap, Renaming.extend_inl, act_middle, act_middle,
+        Subst.copair_inr]
+      congr 1
+      funext Ω i
+      rw [← Renaming.extend_assoc]
+      exact act_copair_id args (Φ ⋈ Ω) (args' i)
+    case left =>
+      rw [Renaming.act_ap, Renaming.extend_inl, act_middle, act_left,
+        Subst.copair_inl, Subst.id]
+      trans
+      · apply act_inst_η
+      · congr 1
+        · rw [C.unit_right]
+        · funext Ω i
+          rw [← Renaming.extend_assoc]
+          exact act_copair_id args (Φ ⋈ Ω) (args' i)
+termination_by e => (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
+decreasing_by all_goals exact Expr.Subterm.of_arg x args' i
+
 /-- Acting by the eta-substitution of a renaming is the renaming action. -/
 theorem act_ofRenaming
     {Γ Δ Φ : C.Arity} (ρ : Γ →ʳ Δ) :

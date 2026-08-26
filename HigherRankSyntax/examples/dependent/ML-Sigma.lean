@@ -85,19 +85,19 @@ def varAt (ℓ : List Entry) (k : Fin ℓ.length)
 
 /-- The decoration of a one-entry arity. -/
 def singleDecoration {Ω : aritySubmonoid} (e : Entry)
-    (bnd : Boundary (C := listCarrier) (Ω ⋈ 1 ⋈ ofList e.arity))
+    (bnd : Bd (C := listCarrier) (Ω ⋈ 1 ⋈ ofList e.arity))
     (nest : Decoration (C := listCarrier) (Ω ⋈ 1) (ofList e.arity)) :
     Decoration (C := listCarrier) Ω (ofList [e])
   | _, α, .here x => by
       have hα : ofList e.arity = α :=
         arity_ext (by simpa [slotPredicate] using x.property)
-      exact Boundary.cast (arity_ext (by
+      exact Bd.cast (arity_ext (by
         simp [ListCarrier.before, ← hα]
         rfl)) bnd
   | _, α, .nested x q => by
       have hβ : ofList e.arity = _ :=
         arity_ext (by simpa [slotPredicate] using x.property)
-      exact Boundary.cast (arity_ext (by
+      exact Bd.cast (arity_ext (by
         simp [ListCarrier.before]
         rfl)) (nest (hβ ▸ q))
 
@@ -120,12 +120,12 @@ namespace ListTelescope
 /-- A declaration: a decorated binding arity together with a boundary written
 over it.  Its arguments are themselves declarations. -/
 @[reducible] def decl {base : List Entry} (args : ListTelescope base)
-    (bnd : Boundary (C := listCarrier) (ofList (base ++ args.list))) :
+    (bnd : Bd (C := listCarrier) (ofList (base ++ args.list))) :
     ListTelescope base where
   list := [.mk args.list]
   decoration :=
     singleDecoration (.mk args.list)
-      (Boundary.cast (ofList_append base args.list).symm bnd) args.decoration
+      (Bd.cast (ofList_append base args.list).symm bnd) args.decoration
 
 /-- Two consecutive segments, the second written over the base extended by the
 first. -/
@@ -141,7 +141,7 @@ first. -/
 
 /-- The decorated telescope it presents. -/
 def toTelescope {base : List Entry} (T : ListTelescope base) :
-    DecoratedTelescope (C := listCarrier) (ofList base) where
+    dTel (C := listCarrier) (ofList base) where
   arity := ofList T.list
   decoration := T.decoration
 
@@ -321,7 +321,7 @@ def sndDecl : ListTelescope [tyEntry, tmEntry, sigmaEntry, pairEntry, fstEntry] 
         (.of (Tm (B (Fst A₃ Bxx p))))
 
 /-- The theory of dependent sums, assembled by dependent concatenation. -/
-def sigmaTheory : Theory listCarrier :=
+def sigmaTheory : Ambient listCarrier :=
   (ListTelescope.concat tyDecl
     (.concat tmDecl
       (.concat sigmaDecl

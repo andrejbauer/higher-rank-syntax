@@ -84,6 +84,16 @@ user, leave it in IN PLACE at the stuck point. Do NOT revert to a bare `sorry` a
 explain in words what went wrong — that hides the work. Show the stuck place in
 the file.
 
+## Reporting each pass
+
+Every pass ends with one of two reports, never a bare "done":
+
+- **it went wrong** — the exact symptom, left in place in the file (see
+  *Experimenting with sorries*); or
+- **it went through** — every `def`, `theorem`, `lemma`, `instance`,
+  `abbrev`, `inductive` and `notation` added or changed, by name, with any
+  `sorry` still standing named too.
+
 ## When stuck
 
 Report at the FIRST failure or first sign of thrashing: surface the exact

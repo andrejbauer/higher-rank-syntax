@@ -130,6 +130,30 @@ theorem reinject_inr {A : Type} (C : Carrier A) {Δ α : C.Arity} (x : Δ ∋ α
   C.factor x ▸ (C.inr (C.localized x) : C.before x ⋈ C.after x ∋ α) = x :=
   C.reinject x
 
+/-- Transporting a slot along an equality of arities leaves its precedence. -/
+theorem before_cast {A : Type} (C : Carrier A) {Γ Δ α : C.Arity} (h : Γ = Δ)
+    (x : Γ ∋ α) :
+  C.before (h ▸ x) = C.before x := by
+  subst h
+  rfl
+
+/-- Precedence inside the part preceding a slot agrees with precedence in the
+whole. -/
+theorem before_inclusion {A : Type} (C : Carrier A) {Δ α β : C.Arity}
+    (y : Δ ∋ α) (x : C.before y ∋ β) :
+  C.before (C.inclusion y x) = C.before x := by
+  rw [Carrier.inclusion, C.before_cast, Carrier.inl]
+  exact C.before_inl x
+
+/-- Including from the part preceding `x`'s slot into the part preceding `y`, and
+then into the whole, is including directly. -/
+theorem inclusion_inclusion {A : Type} (C : Carrier A) {Δ α β γ : C.Arity}
+    (y : Δ ∋ α) (w : C.before y ∋ β) (x : C.before w ∋ γ) :
+  C.inclusion y (C.inclusion w x)
+    = C.inclusion (C.inclusion y w) ((C.before_inclusion y w).symm ▸ x) := by
+  unfold Carrier.inclusion
+  sorry
+
 /-- A slot below `y` in its fibre is the inclusion of a slot of `before y`. -/
 theorem before_of_slotRel {A : Type} (C : Carrier A) {Δ α : C.Arity}
     {x y : Δ ∋ α} (h : C.slotRel Δ α x y) :

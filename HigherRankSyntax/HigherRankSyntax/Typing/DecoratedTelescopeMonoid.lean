@@ -4,7 +4,7 @@ import HigherRankSyntax.RelativeMonad.ArityModuleTensor
 /-!
 # Decorated telescopes as an internal monoid
 
-The functor `DTel C` remembers how raw classifier expressions change under
+The functor `dTelModule C` remembers how raw classifier expressions change under
 substitution.  This file adds the algebra of telescope formation.  There is an
 empty decorated telescope, and two consecutive decorated telescopes concatenate
 dependently: the second is already decorated over the base extended by the raw
@@ -13,7 +13,7 @@ shape of the first.
 These operations are precisely a unit and multiplication for the
 context-extension tensor on `ArityMod (SyntaxMonad C)`.  Their unit and
 associativity laws therefore package decorated telescopes as the internal monoid
-`DTelMon C`.  For the running telescope `A : Type, x : A`, multiplication joins
+`dTelMon C`.  For the running telescope `A : Type, x : A`, multiplication joins
 the segment `A : Type` to the segment `x : A`; the tensor has already placed the
 second segment over the base containing `A`, so its classifier may refer to that
 earlier slot.  Rebracketing three segments changes only where we place the cuts,
@@ -35,9 +35,9 @@ transports need not agree in number, and their intermediate arities need only be
 definitionally equal, so `cast_comp` does not apply. -/
 macro "transport_ext" : tactic =>
   `(tactic| (apply eq_of_heq
-             repeat apply HEq.trans (Boundary.cast_heq _ _)
+             repeat apply HEq.trans (Bd.cast_heq _ _)
              apply HEq.symm
-             repeat apply HEq.trans (Boundary.cast_heq _ _)
+             repeat apply HEq.trans (Bd.cast_heq _ _)
              exact HEq.rfl))
 
 namespace Decoration
@@ -49,7 +49,7 @@ private abbrev PackedPath (Δ Λ : C.Arity) :=
 
 private def boundarySite {Ω Δ Λ : C.Arity}
     (D : Decoration Ω Δ) (p : PackedPath Δ Λ) :
-    Σ Φ, Boundary (Ω ⋈ Φ ⋈ Λ) :=
+    Σ Φ, Bd (Ω ⋈ Φ ⋈ Λ) :=
   ⟨p.1, D p.2⟩
 
 /-- The unique decoration of the empty arity. -/
@@ -63,12 +63,12 @@ theorem substitute_empty {S Γ Δ Φ : C.Arity} (σ : Subst Γ (S ⋈ Δ)) :
   exact False.elim (SlotPath.unit_elim p)
 
 private def boundaryFromSite (F : C.Arity → C.Arity)
-    (site : Σ Λ, Boundary (F Λ)) (target : C.Arity)
-    (h : site.1 = target) : Boundary (F target) :=
-  Boundary.cast (congrArg F h) site.2
+    (site : Σ Λ, Bd (F Λ)) (target : C.Arity)
+    (h : site.1 = target) : Bd (F target) :=
+  Bd.cast (congrArg F h) site.2
 
 private theorem boundaryFromSite_congr (F : C.Arity → C.Arity)
-    {site targetSite : Σ Λ, Boundary (F Λ)} {target : C.Arity}
+    {site targetSite : Σ Λ, Bd (F Λ)} {target : C.Arity}
     (hsite : site = targetSite) (h : site.1 = target)
     (k : targetSite.1 = target) :
       boundaryFromSite F site target h =
@@ -84,7 +84,7 @@ def concatenate {Ω Γ Δ : C.Arity}
     Decoration Ω (Γ ⋈ Δ)
   | _, α, .here x => by
       let site := C.copair Γ Δ
-        (Σ Λ : C.Arity, Boundary (Ω ⋈ Λ ⋈ α))
+        (Σ Λ : C.Arity, Bd (Ω ⋈ Λ ⋈ α))
         (fun y => ⟨C.before y, D (.here y)⟩)
         (fun y => ⟨Γ ⋈ C.before y, E (.here y)⟩) x
       have hsite : site.1 = C.before x := by
@@ -96,7 +96,7 @@ def concatenate {Ω Γ Δ : C.Arity}
       exact boundaryFromSite (fun Λ => Ω ⋈ Λ ⋈ α) site (C.before x) hsite
   | _, α, .nested x p => by
       let site := C.copair Γ Δ
-        (Σ Λ : C.Arity, Boundary (Ω ⋈ (Λ ⋈ _) ⋈ α))
+        (Σ Λ : C.Arity, Bd (Ω ⋈ (Λ ⋈ _) ⋈ α))
         (fun y => ⟨C.before y, D (.nested y p)⟩)
         (fun y => ⟨Γ ⋈ C.before y, E (.nested y p)⟩) x
       have hsite : site.1 = C.before x := by
@@ -112,12 +112,12 @@ theorem concatenate_here_inl {Ω Γ Δ α : C.Arity}
     (D : Decoration Ω Γ) (E : Decoration (Ω ⋈ Γ) Δ)
     (x : Γ ∋ α) :
     concatenate D E (.here (C.inl x : Γ ⋈ Δ ∋ α)) =
-      Boundary.cast
+      Bd.cast
         (congrArg (fun Λ => Ω ⋈ Λ ⋈ α) (C.before_inl x).symm)
         (D (.here x)) := by
   simp only [concatenate]
   let site := C.copair Γ Δ
-    (Σ Λ : C.Arity, Boundary (Ω ⋈ Λ ⋈ α))
+    (Σ Λ : C.Arity, Bd (Ω ⋈ Λ ⋈ α))
     (fun y => ⟨C.before y, D (.here y)⟩)
     (fun y => ⟨Γ ⋈ C.before y, E (.here y)⟩) (C.inl x)
   have hsite : site = ⟨C.before x, D (.here x)⟩ :=
@@ -129,12 +129,12 @@ theorem concatenate_here_inr {Ω Γ Δ α : C.Arity}
     (D : Decoration Ω Γ) (E : Decoration (Ω ⋈ Γ) Δ)
     (x : Δ ∋ α) :
     concatenate D E (.here (C.inr x : Γ ⋈ Δ ∋ α)) =
-      Boundary.cast
+      Bd.cast
         (congrArg (fun Λ => Ω ⋈ Λ ⋈ α) (C.before_inr x).symm)
         (E (.here x)) := by
   simp only [concatenate]
   let site := C.copair Γ Δ
-    (Σ Λ : C.Arity, Boundary (Ω ⋈ Λ ⋈ α))
+    (Σ Λ : C.Arity, Bd (Ω ⋈ Λ ⋈ α))
     (fun y => ⟨C.before y, D (.here y)⟩)
     (fun y => ⟨Γ ⋈ C.before y, E (.here y)⟩) (C.inr x)
   have hsite : site = ⟨Γ ⋈ C.before x, E (.here x)⟩ :=
@@ -146,12 +146,12 @@ theorem concatenate_nested_inl {Ω Γ Δ α β Φ : C.Arity}
     (D : Decoration Ω Γ) (E : Decoration (Ω ⋈ Γ) Δ)
     (x : Γ ∋ β) (p : SlotPath β Φ α) :
     concatenate D E (.nested (C.inl x : Γ ⋈ Δ ∋ β) p) =
-      Boundary.cast
+      Bd.cast
         (congrArg (fun Λ => Ω ⋈ (Λ ⋈ Φ) ⋈ α) (C.before_inl x).symm)
         (D (.nested x p)) := by
   simp only [concatenate]
   let site := C.copair Γ Δ
-    (Σ Λ : C.Arity, Boundary (Ω ⋈ (Λ ⋈ Φ) ⋈ α))
+    (Σ Λ : C.Arity, Bd (Ω ⋈ (Λ ⋈ Φ) ⋈ α))
     (fun y => ⟨C.before y, D (.nested y p)⟩)
     (fun y => ⟨Γ ⋈ C.before y, E (.nested y p)⟩) (C.inl x)
   have hsite : site = ⟨C.before x, D (.nested x p)⟩ :=
@@ -163,12 +163,12 @@ theorem concatenate_nested_inr {Ω Γ Δ α β Φ : C.Arity}
     (D : Decoration Ω Γ) (E : Decoration (Ω ⋈ Γ) Δ)
     (x : Δ ∋ β) (p : SlotPath β Φ α) :
     concatenate D E (.nested (C.inr x : Γ ⋈ Δ ∋ β) p) =
-      Boundary.cast
+      Bd.cast
         (congrArg (fun Λ => Ω ⋈ (Λ ⋈ Φ) ⋈ α) (C.before_inr x).symm)
         (E (.nested x p)) := by
   simp only [concatenate]
   let site := C.copair Γ Δ
-    (Σ Λ : C.Arity, Boundary (Ω ⋈ (Λ ⋈ Φ) ⋈ α))
+    (Σ Λ : C.Arity, Bd (Ω ⋈ (Λ ⋈ Φ) ⋈ α))
     (fun y => ⟨C.before y, D (.nested y p)⟩)
     (fun y => ⟨Γ ⋈ C.before y, E (.nested y p)⟩) (C.inr x)
   have hsite : site = ⟨Γ ⋈ C.before x, E (.nested x p)⟩ :=
@@ -188,20 +188,20 @@ theorem substitute_concatenate {S Γ Δ Φ Ω Ξ : C.Arity}
       simp only [substitute]
       rcases C.cover Ω Ξ x with ⟨y, rfl⟩ | ⟨y, rfl⟩
       · rw [concatenate_here_inl, concatenate_here_inl]
-        exact Boundary.act_cast_local σ
+        exact Bd.act_cast_local σ
           (C.before_inl (Δ := Ξ) y).symm (D (.here y))
       · rw [concatenate_here_inr, concatenate_here_inr]
-        exact Boundary.act_cast_local σ
+        exact Bd.act_cast_local σ
           (C.before_inr (Γ := Ω) y).symm (E (.here y))
   | nested x p =>
       simp only [substitute]
       rcases C.cover Ω Ξ x with ⟨y, rfl⟩ | ⟨y, rfl⟩
       · rw [concatenate_nested_inl, concatenate_nested_inl]
-        exact Boundary.act_cast_local σ
+        exact Bd.act_cast_local σ
           (congrArg (fun Θ => Θ ⋈ _) (C.before_inl (Δ := Ξ) y).symm)
           (D (.nested y p))
       · rw [concatenate_nested_inr, concatenate_nested_inr]
-        exact Boundary.act_cast_local σ
+        exact Bd.act_cast_local σ
           (congrArg (fun Θ => Θ ⋈ _) (C.before_inr (Γ := Ω) y).symm)
           (E (.nested y p))
 
@@ -215,18 +215,18 @@ theorem act_concatenate {Γ Δ Ω Ξ : C.Arity} (σ : Subst Γ Δ)
 
 end Decoration
 
-namespace DecoratedTelescope
+namespace dTel
 
 variable {Ω : C.Arity}
 
 /-- Transport a decorated telescope along an equality of external bases. -/
 def castBase {Γ Δ : C.Arity} (h : Γ = Δ) :
-    DecoratedTelescope Γ → DecoratedTelescope Δ :=
+    dTel Γ → dTel Δ :=
   h ▸ fun Ξ => Ξ
 
 /-- The empty decorated telescope. -/
 def empty (Ω : C.Arity) :
-    DecoratedTelescope Ω where
+    dTel Ω where
   arity := 1
   decoration := Decoration.empty Ω
 
@@ -240,16 +240,23 @@ theorem act_empty {Γ Δ : C.Arity} (σ : Subst Γ Δ) :
   apply substitute_empty
 
 /-- Concatenation of decorated telescopes. -/
-def concatenate (Γ : DecoratedTelescope Ω)
-    (Δ : DecoratedTelescope (Ω ⋈ Γ.arity)) :
-    DecoratedTelescope Ω where
+def concatenate (Γ : dTel Ω)
+    (Δ : dTel (Ω ⋈ Γ.arity)) :
+    dTel Ω where
   arity := Γ.arity ⋈ Δ.arity
   decoration := Decoration.concatenate Γ.decoration Δ.decoration
 
+/-- Extend an ambient by a telescope over it. -/
+def _root_.Ambient.extend (Ξ : Ambient C) (Θ : dTel Ξ.arity) : Ambient C :=
+  concatenate Ξ Θ
+
+@[simp] theorem _root_.Ambient.arity_extend (Ξ : Ambient C) (Θ : dTel Ξ.arity) :
+  (Ξ.extend Θ).arity = Ξ.arity ⋈ Θ.arity := rfl
+
 theorem substitute_concatenate {S Γ Δ Φ : C.Arity}
     (σ : Subst Γ (S ⋈ Δ))
-    (Ξ : DecoratedTelescope (S ⋈ Γ ⋈ Φ))
-    (Ω : DecoratedTelescope (S ⋈ Γ ⋈ Φ ⋈ Ξ.arity)) :
+    (Ξ : dTel (S ⋈ Γ ⋈ Φ))
+    (Ω : dTel (S ⋈ Γ ⋈ Φ ⋈ Ξ.arity)) :
     substitute σ (concatenate Ξ Ω) =
       concatenate (substitute σ Ξ)
         (substitute (Φ := Φ ⋈ Ξ.arity) σ Ω) := by
@@ -258,20 +265,20 @@ theorem substitute_concatenate {S Γ Δ Φ : C.Arity}
   simp [substitute, concatenate, Decoration.substitute_concatenate]
 
 theorem act_concatenate {Γ Δ : C.Arity} (σ : Subst Γ Δ)
-    (Ξ : DecoratedTelescope Γ)
-    (Ω : DecoratedTelescope (Γ ⋈ Ξ.arity)) :
+    (Ξ : dTel Γ)
+    (Ω : dTel (Γ ⋈ Ξ.arity)) :
     act σ (concatenate Ξ Ω) =
       concatenate (act σ Ξ) (act (Subst.lift σ Ξ.arity) Ω) := by
   rcases Ξ with ⟨Λ, D⟩
   rcases Ω with ⟨Θ, E⟩
   unfold act concatenate
-  rw [DecoratedTelescope.mk.injEq]
+  rw [dTel.mk.injEq]
   constructor
   · rfl
   · apply heq_of_eq
     apply Decoration.act_concatenate
 
-theorem concatenate_empty_left (Δ : DecoratedTelescope Ω) :
+theorem concatenate_empty_left (Δ : dTel Ω) :
     concatenate (empty Ω) (castBase (mul_one Ω).symm Δ) = Δ := by
   rcases Δ with ⟨Γ, D⟩
   simp [concatenate, empty, castBase]
@@ -306,7 +313,7 @@ theorem concatenate_empty_left (Δ : DecoratedTelescope Ω) :
           (congrArg (fun Φ => Φ ⋈ _)
             (C.before_inr (Γ := 1) y).symm) rfl
 
-theorem concatenate_empty_right (Γ : DecoratedTelescope Ω) :
+theorem concatenate_empty_right (Γ : dTel Ω) :
     concatenate Γ (empty (Ω ⋈ Γ.arity)) = Γ := by
   rcases Γ with ⟨Δ, D⟩
   simp [concatenate, empty]
@@ -341,9 +348,9 @@ theorem concatenate_empty_right (Γ : DecoratedTelescope Ω) :
             (C.before_inl (Δ := 1) y).symm) rfl
       · exact False.elim (C.unit_is_empty y)
 
-theorem concatenate_assoc (Γ : DecoratedTelescope Ω)
-    (Δ : DecoratedTelescope (Ω ⋈ Γ.arity))
-    (Ξ : DecoratedTelescope ((Ω ⋈ Γ.arity) ⋈ Δ.arity)) :
+theorem concatenate_assoc (Γ : dTel Ω)
+    (Δ : dTel (Ω ⋈ Γ.arity))
+    (Ξ : dTel ((Ω ⋈ Γ.arity) ⋈ Δ.arity)) :
     concatenate (concatenate Γ Δ)
         (castBase (mul_assoc Ω Γ.arity Δ.arity) Ξ) =
       concatenate Γ (concatenate Δ Ξ) := by
@@ -375,8 +382,8 @@ theorem concatenate_assoc (Γ : DecoratedTelescope Ω)
             simp only [Decoration.boundaryFromSite,
               Decoration.boundarySite, G]
             rw [Decoration.concatenate_here_inl]
-            exact eq_of_heq (Boundary.cast_congr_heq _ _
-              (Boundary.cast_congr_heq _ _ HEq.rfl))
+            exact eq_of_heq (Bd.cast_congr_heq _ _
+              (Bd.cast_congr_heq _ _ HEq.rfl))
           · rw [hx, hz, Decoration.concatenate_here_inl,
               Decoration.concatenate_here_inr]
             let G := Decoration.concatenate D (Decoration.concatenate E F)
@@ -471,48 +478,48 @@ theorem concatenate_assoc (Γ : DecoratedTelescope Ω)
             Decoration.concatenate_nested_inr]
           transport_ext
 
-end DecoratedTelescope
+end dTel
 
 open MonoidalCategory
 
 namespace ArityMod
 
-private def dtelShape (C : Carrier A) :
-    DTel C ⟶ arityConst (SyntaxMonad C) where
-  app _ := ↾DecoratedTelescope.arity
+private def dTelShape (C : Carrier A) :
+    dTelModule C ⟶ arityConst (SyntaxMonad C) where
+  app _ := ↾dTel.arity
   naturality := by
     intros
     rfl
 
 /-- Decorated telescopes, equipped with their substitution-invariant raw
 shape, as an arity-shaped module over raw syntax. -/
-def DTelArityMod (C : Carrier A) : ArityMod (SyntaxMonad C) := Over.mk (dtelShape C)
+def dTelArityMod (C : Carrier A) : ArityMod (SyntaxMonad C) := Over.mk (dTelShape C)
 
 @[simp]
-theorem DTelArityMod_module : module (DTelArityMod C) = DTel C := rfl
+theorem DTelArityMod_module : module (dTelArityMod C) = dTelModule C := rfl
 
 @[simp]
 theorem DTelArityMod_shape {Ω : C.Arity}
-    (Γ : DecoratedTelescope Ω) :
-    shape (DTelArityMod C) Γ = Γ.arity := rfl
+    (Γ : dTel Ω) :
+    shape (dTelArityMod C) Γ = Γ.arity := rfl
 
-private def dtelUnitNat (C : Carrier A) :
+private def dTelUnitNat (C : Carrier A) :
     module (tensorUnit (C := C) (T := SyntaxMonad C)) ⟶
-      module (DTelArityMod C) where
-  app Ω := ↾fun _ => DecoratedTelescope.empty Ω
+      module (dTelArityMod C) where
+  app Ω := ↾fun _ => dTel.empty Ω
   naturality {Ω Ξ} σ := by
     apply ConcreteCategory.hom_ext
     intro x
     cases x
     simp only [ConcreteCategory.comp_apply]
-    change DecoratedTelescope.empty Ξ =
-      DecoratedTelescope.act σ (DecoratedTelescope.empty Ω)
-    exact (DecoratedTelescope.act_empty σ).symm
+    change dTel.empty Ξ =
+      dTel.act σ (dTel.empty Ω)
+    exact (dTel.act_empty σ).symm
 
 /-- The empty decorated telescope as a shape-preserving morphism. -/
-def DTelOne (C : Carrier A) :
-    tensorUnit (C := C) (T := SyntaxMonad C) ⟶ DTelArityMod C :=
-  Over.homMk (dtelUnitNat C) (by
+def dTelOne (C : Carrier A) :
+    tensorUnit (C := C) (T := SyntaxMonad C) ⟶ dTelArityMod C :=
+  Over.homMk (dTelUnitNat C) (by
     apply NatTrans.ext
     funext Ω
     apply ConcreteCategory.hom_ext
@@ -520,27 +527,27 @@ def DTelOne (C : Carrier A) :
     cases x
     rfl)
 
-private def dtelMulNat (C : Carrier A) :
-    module (tensorObj (DTelArityMod C) (DTelArityMod C)) ⟶
-      module (DTelArityMod C) where
-  app _ := ↾fun ⟨Γ, Δ⟩ => DecoratedTelescope.concatenate Γ Δ
+private def dTelMulNat (C : Carrier A) :
+    module (tensorObj (dTelArityMod C) (dTelArityMod C)) ⟶
+      module (dTelArityMod C) where
+  app _ := ↾fun ⟨Γ, Δ⟩ => dTel.concatenate Γ Δ
   naturality {Ω Ξ} σ := by
     apply ConcreteCategory.hom_ext
     intro x
     rcases x with ⟨Γ, Δ⟩
     simp only [ConcreteCategory.comp_apply]
     change
-      DecoratedTelescope.concatenate
-          (DecoratedTelescope.act σ Γ)
-          (DecoratedTelescope.act (Subst.lift σ Γ.arity) Δ) =
-        DecoratedTelescope.act σ
-          (DecoratedTelescope.concatenate Γ Δ)
-    exact (DecoratedTelescope.act_concatenate σ Γ Δ).symm
+      dTel.concatenate
+          (dTel.act σ Γ)
+          (dTel.act (Subst.lift σ Γ.arity) Δ) =
+        dTel.act σ
+          (dTel.concatenate Γ Δ)
+    exact (dTel.act_concatenate σ Γ Δ).symm
 
 /-- Dependent concatenation as a shape-preserving morphism. -/
-def DTelMul (C : Carrier A) :
-    tensorObj (DTelArityMod C) (DTelArityMod C) ⟶ DTelArityMod C :=
-  Over.homMk (dtelMulNat C) (by
+def dTelMul (C : Carrier A) :
+    tensorObj (dTelArityMod C) (dTelArityMod C) ⟶ dTelArityMod C :=
+  Over.homMk (dTelMulNat C) (by
     apply NatTrans.ext
     funext Ω
     apply ConcreteCategory.hom_ext
@@ -548,9 +555,9 @@ def DTelMul (C : Carrier A) :
     rcases x with ⟨Γ, Δ⟩
     rfl)
 
-private theorem dtel_one_mul (C : Carrier A) :
-    tensorMap (DTelOne C) (𝟙 (DTelArityMod C)) ≫ DTelMul C =
-      (tensorLeftUnitor (DTelArityMod C)).hom := by
+private theorem dTel_one_mul (C : Carrier A) :
+    tensorMap (dTelOne C) (𝟙 (dTelArityMod C)) ≫ dTelMul C =
+      (tensorLeftUnitor (dTelArityMod C)).hom := by
   apply Over.OverMorphism.ext
   apply NatTrans.ext
   funext Ω
@@ -558,13 +565,13 @@ private theorem dtel_one_mul (C : Carrier A) :
   intro x
   rcases x with ⟨u, Γ⟩
   cases u
-  simp [DTelOne, DTelMul, dtelUnitNat, dtelMulNat, tensorMap,
+  simp [dTelOne, dTelMul, dTelUnitNat, dTelMulNat, tensorMap,
     tensorLeftUnitor]
-  exact DecoratedTelescope.concatenate_empty_left _
+  exact dTel.concatenate_empty_left _
 
-private theorem dtel_mul_one (C : Carrier A) :
-    tensorMap (𝟙 (DTelArityMod C)) (DTelOne C) ≫ DTelMul C =
-      (tensorRightUnitor (DTelArityMod C)).hom := by
+private theorem dTel_mul_one (C : Carrier A) :
+    tensorMap (𝟙 (dTelArityMod C)) (dTelOne C) ≫ dTelMul C =
+      (tensorRightUnitor (dTelArityMod C)).hom := by
   apply Over.OverMorphism.ext
   apply NatTrans.ext
   funext Ω
@@ -572,42 +579,42 @@ private theorem dtel_mul_one (C : Carrier A) :
   intro x
   rcases x with ⟨Γ, u⟩
   cases u
-  simp [DTelOne, DTelMul, dtelUnitNat, dtelMulNat, tensorMap,
+  simp [dTelOne, dTelMul, dTelUnitNat, dTelMulNat, tensorMap,
     tensorRightUnitor]
-  apply DecoratedTelescope.concatenate_empty_right
+  apply dTel.concatenate_empty_right
 
-private theorem dtel_mul_assoc (C : Carrier A) :
-    tensorMap (DTelMul C) (𝟙 (DTelArityMod C)) ≫ DTelMul C =
-      (tensorAssociator (DTelArityMod C) (DTelArityMod C)
-          (DTelArityMod C)).hom ≫
-        tensorMap (𝟙 (DTelArityMod C)) (DTelMul C) ≫ DTelMul C := by
+private theorem dTel_mul_assoc (C : Carrier A) :
+    tensorMap (dTelMul C) (𝟙 (dTelArityMod C)) ≫ dTelMul C =
+      (tensorAssociator (dTelArityMod C) (dTelArityMod C)
+          (dTelArityMod C)).hom ≫
+        tensorMap (𝟙 (dTelArityMod C)) (dTelMul C) ≫ dTelMul C := by
   apply Over.OverMorphism.ext
   apply NatTrans.ext
   funext Ω
   apply ConcreteCategory.hom_ext
   intro x
   rcases x with ⟨⟨Γ, Δ⟩, Ξ⟩
-  simp [DTelMul, dtelMulNat, tensorMap, tensorAssociator]
-  apply DecoratedTelescope.concatenate_assoc
+  simp [dTelMul, dTelMulNat, tensorMap, tensorAssociator]
+  apply dTel.concatenate_assoc
 
-instance : MonObj (DTelArityMod C) where
-  one := DTelOne C
-  mul := DTelMul C
-  one_mul := dtel_one_mul C
-  mul_one := dtel_mul_one C
-  mul_assoc := dtel_mul_assoc C
+instance : MonObj (dTelArityMod C) where
+  one := dTelOne C
+  mul := dTelMul C
+  one_mul := dTel_one_mul C
+  mul_one := dTel_mul_one C
+  mul_assoc := dTel_mul_assoc C
 
 /-- Decorated telescopes form a monoid object in the monoidal category of
 arity-shaped raw-syntax modules. -/
-def DTelMon (C : Carrier A) : CategoryTheory.Mon (ArityMod (SyntaxMonad C)) :=
-  CategoryTheory.Mon.mk (DTelArityMod C)
+def dTelMon (C : Carrier A) : CategoryTheory.Mon (ArityMod (SyntaxMonad C)) :=
+  CategoryTheory.Mon.mk (dTelArityMod C)
 
 @[simp]
 theorem DTelMon_one :
-    MonObj.one (X := (DTelMon C).X) = DTelOne C := rfl
+    MonObj.one (X := (dTelMon C).X) = dTelOne C := rfl
 
 @[simp]
 theorem DTelMon_mul :
-    MonObj.mul (X := (DTelMon C).X) = DTelMul C := rfl
+    MonObj.mul (X := (dTelMon C).X) = dTelMul C := rfl
 
 end ArityMod

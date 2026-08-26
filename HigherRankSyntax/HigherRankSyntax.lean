@@ -13,3 +13,6 @@ import HigherRankSyntax.Typing.Boundary
 import HigherRankSyntax.Typing.Decoration
 import HigherRankSyntax.Typing.DecorationModule
 import HigherRankSyntax.Typing.DecoratedTelescopeMonoid
+import HigherRankSyntax.Typing.ExprBoundary
+import HigherRankSyntax.Typing.Judgement
+import HigherRankSyntax.Typing.TelescopeWf

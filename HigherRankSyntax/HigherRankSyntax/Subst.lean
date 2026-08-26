@@ -88,6 +88,30 @@ theorem Subst.isReinject {Γ Δ Ξ : C.Arity} {α : C.Arity}
 def Subst.instId (Δ α : C.Arity) : Subst α (Δ ⋈ α) :=
   fun ⦃_⦄ i => Expr.η (C.inr i)
 
+/-- The substitution on `Γ ⋈ Δ` given by `σ` on `Γ`-slots and `θ` on `Δ`-slots. -/
+def Subst.copair {Γ Δ Ω : C.Arity} (σ : Subst Γ Ω) (θ : Subst Δ Ω) :
+    Subst (Γ ⋈ Δ) Ω :=
+  fun ⦃Λ⦄ x =>
+    C.copair Γ Δ (Expr (Ω ⋈ Λ)) (fun y => σ y) (fun z => θ z) x
+
+@[simp] theorem Subst.copair_inl {Γ Δ Ω : C.Arity}
+    (σ : Subst Γ Ω) (θ : Subst Δ Ω) {Λ : C.Arity} (x : Γ ∋ Λ) :
+  Subst.copair σ θ (C.inl x) = σ x
+  := by simp [Subst.copair, Carrier.copair, Carrier.inl]
+
+@[simp] theorem Subst.copair_inr {Γ Δ Ω : C.Arity}
+    (σ : Subst Γ Ω) (θ : Subst Δ Ω) {Λ : C.Arity} (x : Δ ∋ Λ) :
+  Subst.copair σ θ (C.inr x) = θ x
+  := by simp [Subst.copair, Carrier.copair, Carrier.inr]
+
+
+/-- The components of a substitution at the slots preceding `z`. -/
+def Subst.restrict {Ω Δ Λ : C.Arity} (σ : Subst Δ Ω) (z : Δ ∋ Λ) :
+    Subst (C.before z) Ω :=
+  fun ⦃_⦄ x => σ (C.inclusion z x)
+
+@[inherit_doc Subst.restrict]
+notation:70 σ " ↾ " z => Subst.restrict σ z
 
 /-! ### The substitution action -/
 
