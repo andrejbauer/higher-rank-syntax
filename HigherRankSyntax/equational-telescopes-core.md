@@ -809,3 +809,69 @@ substitution being a map of contexts in the opposite direction; and `≫` exchan
 `⦃α⦄`, so `Subst.ofRenaming C.inl` needs `fun ⦃_⦄ x => C.inl x` as written.
 Changing those two binders would make `C.inl : Γ →ʳ Γ ⋈ Δ` hold on the nose and
 should be invisible at existing call sites, an explicit argument following.
+
+---
+
+## 15. Open questions
+
+Neither is needed to formalize §§1–13; both decide what the construction is *for*.
+
+### 15.1 Semantics
+
+Nothing above interprets the syntax. Two questions, in order.
+
+**The baby case: sets.** A model of a well-formed ambient `Ξ` should send each slot
+of `|Ξ|` to data of the shape its declaration names — a `sort` slot to a family of
+sets indexed by the interpretations of the entries it binds, an `of S` slot to an
+element of the family interpreting `S`, an `eq l r` slot to the *requirement* that
+the interpretations of `l` and `r` coincide, since an equational slot carries no
+data (13.3). Then: soundness, that `Ξ ⊢ e ≈ e'` implies equal interpretations; and
+completeness, that the syntactic model is initial.
+
+**The right generality.** The output of §13 is a natural model whose types are
+**telescopes**, so a target should carry a class of display maps closed under
+composition — a telescope is the composite of its entries, 10.4 — and under
+pullback, which is 10.4's square. That is a **clan**, equivalently a display-map
+category; Uemura's representable map categories are the same idea presented as a
+condition on a functor. Three things to settle:
+
+- whether a clan is enough, or the higher rank of §1 — a slot's binding arity being
+  a whole telescope, not a list of types — forces a target with more structure;
+- what the equational slots become. 13.3 makes `p Γ Θ` monic when every entry of
+  `Θ` is equational, so the display class must contain those monomorphisms; a clan
+  with a distinguished sub-class of *equational* displays may be the right notion;
+- whether the setoid-first construction of §9 has an ∞-analogue — `≈` becoming a
+  path rather than a quotient — and whether the general target is then an ∞-clan or
+  a representable map ∞-category.
+
+### 15.2 Named theories, and restricting the extensions
+
+How does a particular theory — Martin-Löf type theory, say — sit here?
+
+Its **signature is an ambient**: `Ξ_MLTT` declares `ty : sort`, `tm : [A : ty] sort`,
+a former for each connective, and its equations. This is where higher rank is used:
+`Π : [A : ty, B : [x : tm A] ty] ty` is a rank-2 entry. Fix `Ξ_MLTT` as a **prefix**
+and ask that the contexts of the theory be the ambients `Ξ_MLTT ⋈ Θ`.
+
+But not every `Θ : 𝒯₀ Ξ_MLTT` is an MLTT context — the telescopes here are richer.
+An MLTT context is a `Θ` every entry `z` of which is
+
+```
+rank one          |Θ.binding z| = 1          the entry binds nothing
+of-boundaried     Θ.boundary z = .of S       no sorts, no equations
+```
+
+So the question is what the sub-presheaf `𝒯₀^{of,1} ⊆ 𝒯₀` cut out by those two
+conditions carries. Both are stable under `σ ⋆ −` — 2.3 for the second, 3.2.1 for
+the first — and under `concatenate`, so it should be a sub-monoid of 11.4; whether
+`q` restricts to a **natural model** over it is the real question, since 13.2's
+pullback must land back inside the sub-presheaf.
+
+The restriction is exactly 13.4's hypothesis. A rank-one `of`-boundaried entry *is*
+extension by a single boundary, so `𝒯₀^{of,1}` is where `ℬ₀` embeds into `𝒯₀` and
+`boundaryOf : ℰ₀ ⟶ ℬ₀` becomes representable — the ordinary natural model of a
+type theory, recovered inside the telescopic one. Two further questions: whether
+the prefix must be fixed, or whether "theory = ambient, contexts = restricted
+extensions" works uniformly over `Ctx`; and which theories need which restriction —
+a rank-1 theory with sorts but no equations, a rank-2 signature with rank-1
+contexts, and so on.

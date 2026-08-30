@@ -1,235 +1,281 @@
 # Formalization plan
 
-Tracks the state of formalizing `equational-telescopes-core.md`. Section numbers
-below refer to that note. The note states the mathematics; this file states what is
-done, what is decided, and what was measured.
+The target is a **natural model** over the syntax of generalized algebraic
+theories with equations: a representable natural transformation
+`q : 𝒯̃₀ ⟶ 𝒯₀` of presheaves on the category of contexts, where a context is a
+well-formed ambient, `𝒯₀ Γ` is the telescopes over `Γ`, and `𝒯̃₀ Γ` is the
+telescopes together with a filling. Everything below is the route from the
+present code to that statement. `equational-telescopes-core.md` is the
+mathematical reference; section numbers cite it.
 
-## Decisions
+## Where the code stands
 
-| # | question | status |
-|---|---|---|
-| 1 | Lean name for the equality judgement — `Eq` is taken by core | **settled**: `Eq_e`, beside `Wf_e`, `Wf_s`, `Wf_t` |
-| 2 | rename `Boundary → Bd`, `DecoratedTelescope → dTel` | **settled**: yes, step 1, one mechanical commit |
-| 3 | `DTel` (module, `DecorationModule.lean`) vs `dTel` (type) differ only in case | **settled**: rename the module |
-| 4 | `⊢` notation: four judgements, one turnstile | **settled**: declare all four in step 5, tested on dummy types first; see *Measured* |
+*Complete, no `sorry`.* The raw layer: the list carrier (`Carrier.lean`,
+`ListCarrier.lean`), `Expr`, `Renaming`, `Subst`, `Dispatch`, `Instantiation`,
+`Interchange`, `MonadLaws`, `SyntaxMonad`, and the relative-monad wrapper
+`RelativeMonad/*`.
 
-## Steps
+*The typing layer,* 438 lines in three files:
 
-One step per commit; green before the next under **all three targets** —
-`lake build`, `lake build ListCarrier`, `lake build "ML-Sigma"` — since
-`defaultTargets` names only the first and the examples break silently otherwise. Statements first with
-`sorry`, then proofs, `sorry`s left visible. At the first mismatch between a
-statement and its use site: stop, show the goal, do not adjust the statement to fit.
-Each pass ends with a report — the symptom, or every name added — per CLAUDE.md's
-*Reporting each pass*.
+| file | contents |
+|------|----------|
+| `Typing/Boundary.lean` | `Bd` — a slot's declaration (`sort`, `of S`, `eq l r`); its renaming, substitution and instantiation; `isEq`; functoriality |
+| `Typing/Telescope.lean` | `dTel` and its five structural recursions — `rename`, `actBase`/`instantiate`, `concatenate`, `declaration`, `binding` — with their computation lemmas, `slotCases`, `declaration_concatenate_inl/inr`, `boundaryOf`, `Ambient`, `Ambient.extend` |
+| `Typing/Rules.lean` | the mutual block `Wf_e`, `Eq_e`, `Eq_bd`, `Wf_s`; the turnstile notations; `Wf_bd`, `Wf_t`, `Ambient.Wf`; `Wf_t.declaration` (the one standing `sorry`) |
 
-| # | content | file | status |
-|---|---|---|---|
-| 0 | the two raw lemmas of 8.2 | `MonadLaws.lean` | **done** — `ap_eq_act_η`, `act_copair_id`, plus `Subst.copair`, `Renaming.extend_unit` |
-| 1 | renames (decisions 2, 3) | all | **done** — `Bd`, `dTel`, `dTelModule`; file names unchanged |
-| 2 | `Bd.eq`, `Bd.isEq`, actions (2.1–2.3) | `Typing/Boundary.lean` | **done** |
-| 3 | `SlotPath.inl`, `Decoration.restrict`, projections (3.4) | `SlotPath.lean`, `Typing/Decoration.lean` | **done** |
-| 4 | `boundaryOf` (§4) | `Typing/ExprBoundary.lean` | **done** |
-| 5 | notation, `Wf_e`, `Eq_e`, `Eq_bd`, `Wf_s` (§5, §6) | `Typing/Judgement.lean` | **done** — gate 1 passed |
-| 6 | `Wf_t`, `≈` on telescopes (§7) | `Typing/TelescopeWf.lean` | **definitions done**; 7.2 and its three restriction lemmas stand as `sorry` |
-| 7 | §8's eleven items, in 8.1's order | `Typing/Substitution.lean` | todo — **gate 2** |
-| 8 | `Ctx`, `𝒯₀`, extension (§9, §10) | `Typing/Context.lean` | todo |
-| 9 | `TelFam`, tensor, monoid (§11) | `Typing/TelescopeMonoid.lean` | todo |
-| 10 | `ℰ₀`, `ℬ₀`, `q`, representability (§12, §13) | `Typing/Expressions.lean`, `Typing/NaturalModel.lean` | todo |
+*Not started:* §8 (the metatheory) and §§9–13 (the model).
 
-**Gate 1 — passed.** `(σ ↾ z) ⋆ Θ.binding z` and `(σ ↾ z) ⋆ Θ.boundary z` assemble
-from `⇑` and `⋆` with no transport, as `dTel.bindingAt` and `dTel.boundaryAt`, and
-`(Ξ.extend (Θ.bindingAt σ z)).arity` reduces to `Ξ.arity ⋈ Λ` by `rfl`, which is
-what lets `σ z` be a premise of a judgement over the extended ambient.
+## Standing decisions
 
-**Gate 2.** The substitution lemma. (3) and (4) are mutually inductive; (7) comes
-after them, its clause-3 case applying (3) to a derivation the induction hypothesis
-produced rather than to a subderivation.
+**The carrier is the list carrier**, fixed as a global `C`; the `Carrier` record
+remains as the interface. `before`, `after`, `factor`, `inclusion`, `before_inl`,
+`before_inr`, `before_inclusion`, `before_of_lt` and `subWf` are now unused by the
+library and could be dropped from the record; doing so means editing the structure
+and its instance.
 
-## Measured
-
-Facts checked against the current library, not assumed.
-
-**The monoid laws on `⋈` are definitional.** `Ω ⋈ 1 = Ω`, `1 ⋈ Ω = Ω`,
-`Γ ⋈ Δ ⋈ Φ = Γ ⋈ (Δ ⋈ Φ)` all by `rfl`, for an arbitrary carrier, and they
-transport `∋`, `Bd` and `dTel` with no cast. The
-`castBase (mul_one …)` at `DecoratedTelescopeMonoid.lean:275`, `castBase (mul_assoc …)`
-at `:348` and `Bd.cast_injective (mul_assoc …)` at `DecorationModule.lean:91`
-are therefore not needed for types to agree; removing them is optional cleanup.
-
-**Arity invariance is definitional.** `Decoration.rename`, `.act` and `.substitute`
-each set `arity := Θ.arity`.
-
-**`Eq` collides with core.** `inductive Eq` at root: "already declared". Inside a
-namespace it declares, and `=` keeps working, but `open` makes a bare `Eq`
-ambiguous — and §§7–13 use the name constantly.
-
-**`⊢` notation needs precedence work.** With `notation:50 Ξ " ⊢ " e => Wf_e Ξ e`
-declared, `Ξ ⊢ e ≈ e'` parses as `Ξ ⊢ (e ≈ e')` via core `HasEquiv`. The argument
-must be parsed at a precedence above `≈`. Two of the four judgements share the
-shape `⊢ _ : _` (expression:boundary, substitution:telescope), so that one is
-overloaded and resolved by elaboration.
-
-**4.2 assembles with no transport** — the gate-1 question, answered in advance for
-`boundaryOf`. This compiles against the current library:
+**Telescopes are inductive and declarations are stored pre-weakened.**
 
 ```lean
-def boundaryOf (Ξ : dTel (C := C) 1) : Expr Ξ.arity → Bd Ξ.arity
-  | .ap (α := α) x args =>
-      Bd.instantiate args
-        (Bd.rename (Renaming.prefixed 1 (C.inclusion x) ⇑ʳ α)
-          (Ξ.decoration.boundary x))
+inductive dTel : C.Arity → C.Arity → Type where
+  | nil  {Ω} : dTel Ω 1
+  | cons {Ω α Δ} (binding : dTel Ω α) (boundary : Bd (Ω ⋈ α))
+      (rest : dTel (Ω ⋈ C.single α) Δ) : dTel Ω (C.single α ⋈ Δ)
 ```
 
-`Bd.instantiate` is 3.6's plain `Bd` line, already in the library. Only
-`Ξ.before x` needs `Decoration.restrict`; `boundaryOf` itself needs only
-`C.before x`.
+`cons` **prepends**: the first declaration takes the arguments `binding`, asserts
+`boundary` — stated where its arguments are visible — and is followed by `rest`,
+read over the base extended by it. Prepending is what makes every recursion
+structural: each matches on `dTel Ω Δ` with both indices variables.
 
-**Why the base must be the unit.** The same definition over an arbitrary base `Ω`
-with `Θ : dTel Ω` compiles for heads in `|Θ|` and has no data for heads in `Ω`;
-at `Ω = 1` that branch is killed by `C.unit_is_empty`. Totality is what forces the
-ambient.
+`declaration` and `binding` return a slot's data already weakened into the whole
+telescope, so `C.before` appears in no type and nothing is transported. That a
+declaration mentions only earlier entries is a theorem, not a typing constraint.
 
-**`Carrier.inl`/`inr` are not renamings as written.** They bind their arity `{α}`
-where `Renaming` wants `⦃α⦄`, so bare `C.inr` is rejected at `Δ →ʳ Γ ⋈ Δ` and
-`Subst.ofRenaming C.inl` needs `fun ⦃_⦄ x => C.inl x`. Changing those two binders
-should be invisible at existing call sites, an explicit argument following.
+**Quotients, not setoids**, objects quotiented too. Enabled by 7.4 comparing
+arities strictly, so `≈`-equal telescopes share an arity and the statements carry
+no transport; 8(10) is the theorem that makes it sound.
+
+**The hypothesis rule is stated in applied form.** §6.5(2) of the note concludes at
+`Ξ ⋈ ⇑(Ξ.binding q)`, a compound ambient, so the rule can never be applied at a
+weakened target and the system is not closed under weakening. `Eq_e.hyp` therefore
+takes arguments `args` filling `Ξ.binding q` and concludes `Ξ ⊢ args ⋆ l ≈ args ⋆ r`,
+at the ambient itself — the same shape as `Wf_e.ap`. The note's form is the instance
+`args = Subst.instId`, recovered once 8(5) is available, so `≈` is unchanged.
+
+**Naming.** Shapes and telescopes take upper-case Greek only; substitutions
+`σ θ κ`; slots and indices lower-case. No abbreviations.
+
+---
+
+# Part I — the metatheory (§8)
+
+## The dependency order
+
+Derived from the rule shapes in `Typing/Rules.lean`, case by case. Write **W** for
+weakening, **D** for `Wf_t.declaration`, **S2/S3/S4** for 8(2)/8(3)/8(4).
+
+    raw lemmas → W → D → { 8(5) , fold(S2+S3+S4) } → 8(6), 8(7) → 8(9)–8(11)
+
+**There is no validity obligation.** One might expect a statement *V* — the
+components of a well-formed expression's computed boundary are well formed — because
+S2, where the head lies in the ambient, must produce `Eq_bd Ξ B B`. It must not be
+discharged by `Eq_e.refl`, which would need *V* and create the cycle
+S4 → S2 → V → S3 → S4. It is discharged instead by **`Eq_e.subst`**, a *constructor*
+— a rule of the system, not a theorem about it — from
+
+- `hσ = hθ := fill`, the `Wf_s Ξ (Ξ.binding x) args` inside S3 at the same point;
+- `agree`, by `Eq_e.refl` on `fill.filler z`;
+- `h := Eq_e.refl` of `Wf_e (Ξ.extend (Ξ.binding x)) S`, which is **D**.
+
+**8(5) does not wait for the fold.** `Wf_s.eta`'s `equation` premise is `Eq_e.hyp`,
+whose premises are literally what `Wf_t` supplies, i.e. D.
+
+## A7.1 — the raw layer for §8
+
+**Done.** `dTel.rename_comp`, `binding_concatenate_inr`, `binding_concatenate_inl`,
+`declaration_rename`, `binding_rename`, `concatenate_assoc`, `boundaryOf_weaken`
+(**8(1)**), `boundaryOf_eta`, `Eq_t`, and `Renaming.inl_comp` restored.
+
+Two things came out differently than planned. **`Eq_t` needs no injectivity lemma**:
+defined slot-wise rather than by a double match, it never has to compare two `cons`
+shapes, because a shared arity index already gives `Θ.declaration z` and
+`Θ'.declaration z` the same type. It is a well-founded recursion on the slot's binding
+arity under `C.subWf`, exactly the old `Eq_d`'s measure — the only well-founded
+definition left in the development. And **`boundaryOf_eta` lost its right-hand side**:
+it is now `(concatenate Ξ (Ξ.binding x)).boundaryOf (Expr.η x) = Ξ.declaration x`,
+where the old statement carried `Bd.rename (Ξ.inclusion x ⇑ʳ α) (Ξ.boundary x)`.
+
+The `instantiate`-versus-`rename` and `Subst.act`-versus-`rename` commutations are
+deferred to A7.2, to be read off W's actual goals rather than guessed.
+
+## A7.2 — W, weakening
+
+**Done.** `Wf_e.weaken`, `Eq_e.weaken`, `Eq_bd.weaken`, `Wf_s.weaken` — one `mutual`
+block, structural on the derivations — together with `Wf_bd.weaken`, and the
+`Ambient.Renaming` structure they are stated over.
+
+Weakening is stated for a **renaming of ambients** — a renaming of arities carrying
+each slot to one binding the same entries and declared the same way — rather than for
+a literal insertion. Only then is the source ambient a variable, which `cases` needs:
+`Eq_e.hyp` refines the ambient, and a statement over `Ξ.extend Ψ` cannot be eliminated
+against it. `Ambient.Renaming.weakenBy` and `.extend` supply the instances, and
+`.extend` is what reaches the premises of `Wf_s`, which live at extended ambients.
+
+The commutations the `Wf_s` and `Eq_e.subst` cases need all descend from one
+naturality square, `act_square`, which is **associativity of Kleisli composition**
+(`act_comp`) once both renamings are read as substitutions — no induction over
+expressions. From it: `lift_square`, `Bd.act_square`, `dTel.actBase_square`,
+`dTel.instantiate_rename`, and the two facts every `Wf_s` premise uses,
+`dTel.act_declaration_rename` and `dTel.instantiate_binding_rename`.
+
+*Notes.* Three telescopes name the three parts of the ambient — `Ξ` of arity `Δ`
+before the insertion point, `Θ` of arity `Ω` inserted, `Ψ` of arity `Φ` after — so
+the ambient goes from `Ξ, Ψ` to `Ξ, Θ, Ψ`, and the four statements are
+
+    Γ, Ψ ⊢ e        Γ, Ψ ⊢ e ≡ e'      Γ, Ψ ⊢ β ≡ β'      Γ, Ψ ⊢ σ : Χ
+    ──────────      ────────────────   ────────────────   ───────────────
+    Γ, Θ, Ψ ⊢ e     Γ, Θ, Ψ ⊢ e ≡ e'   Γ, Θ, Ψ ⊢ β ≡ β'   Γ, Θ, Ψ ⊢ σ : Χ
+
+with everything relabelled along `Renaming.inl Δ Ω ⇑ʳ Φ : (Δ ⋈ Φ) →ʳ ((Δ ⋈ Ω) ⋈ Φ)`
+— the same slot, shifted past the inserted block. `Ψ` is relabelled as well, since a
+telescope over `Ξ` must be re-read over `Ξ, Θ`; `Wf_s` relabels both the telescope
+being filled and the filling. In Lean the first of the four is
+
+```lean
+Wf_e (Ξ.extend Ψ) e →
+  Wf_e ((Ξ.extend Θ).extend (dTel.rename (Renaming.inl Δ Ω) Ψ))
+    (⟦ Renaming.inl Δ Ω ⇑ʳ Φ ⟧ʳ e)
+```
+
+**The insertion must be in the middle, not at the end.** `Wf_s`'s premises at a slot
+are stated over `Ξ.extend (dTel.instantiate σ (Θ.binding z))`, an ambient that is
+already an extension, so the induction descending into them needs its hypothesis at
+"`Ξ` extended by something" with the inserted block still before it. Taking `Ψ := nil`
+recovers weakening at the end.
+
+Each case moves `declaration` and `binding` across the insertion, which is exactly
+what A7.1's `declaration_concatenate_inl`, `binding_concatenate_inl`,
+`declaration_rename` and `binding_rename` say. The `instantiate`-versus-`rename` and
+`Subst.act`-versus-`rename` commutations are to be read off the goals of the `Wf_s`
+and `Eq_e.subst` cases, not guessed in advance.
+
+## A7.3 — D, `Wf_t.declaration`
+
+**Done.** `Wf_t.declaration`, in `Typing/Weakening.lean`; `Rules.lean` is now purely
+definitional. Head case: `Wf_bd.weaken` along `Ambient.Renaming.weakenBy`. Tail case:
+the induction hypothesis, `concatenate_assoc`, `declaration_tail`, `binding_tail`.
+
+## A7.4 — 8(5), the variable rule
+
+*Produces.* `Wf_e.eta` — a non-equational slot, fully applied, is well formed over
+the ambient extended by what it binds — and `Wf_s.eta` — the fresh slots of an
+extension fill the telescope they were added for. Mutual, structural on the
+telescope.
+
+*Needs.* D.
+
+*Notes.* `Wf_s.eta`'s three premises at a slot: `filler` is `Wf_e.eta` at that
+slot; `equation` is `Eq_e.hyp`, whose premises are D; `declared` is
+`boundaryOf_eta` together with reflexivity of `Eq_bd`, again via `Eq_e.subst`.
+
+## A7.5 — the fold: 8(2), 8(3), 8(4)
+
+*Produces.* The substitution lemma. S2 and S3 share their arguments and are one
+theorem with a conjunctive conclusion; S4 sits inside S3's ambient-head case.
+
+*Needs.* D, W.
+
+*Notes.* The statement carries a **suffix telescope**, forced by `Wf_s.mk`'s
+premises living over an extended ambient. The measure is lexicographic: the block
+arity under `C.subWf`, decreasing by `⟨y⟩` at a head in the substituted block, then
+the expression under `Expr.Subterm`, decreasing at a head in the ambient or in the
+suffix. The three-way head split is `threewayOn`. This is the gate: §§9–13 cannot
+begin without it.
+
+## A7.6 — 8(6) and 8(7)
+
+*Produces.* Congruence (the rule of 6.7), and presuppositions: `Ξ ⊢ e ≈ e'` gives
+`Ξ ⊢ e`, `Ξ ⊢ e'` and `Ξ ⊢ boundaryOf e ≈ boundaryOf e'`.
+
+*Needs.* The fold. 8(6) also needs the two raw lemmas of 8.2 —
+`ap x args = args ⋆ Expr.η x` and `⟨η, args⟩ ⋆ e = args ⋆ e` — of which the first
+is `ap_eq_act_η` in `MonadLaws.lean`.
+
+*Notes.* 8(7) must come after 8(3): at the `subst` clause its induction hypothesis
+yields a derivation to which 8(3) is applied.
+
+## A7.7 — 8(9), 8(10), 8(11)
+
+*Produces.* 8(9) `Wf_t` and `≈` under substitution, in both arguments; 8(10)
+invariance of every judgement under an `≈`-equal ambient; 8(11) that `≈` on
+telescopes, `∼` on fillings and 13.1's heterogeneous comparison are equivalences.
+
+*Needs.* The fold; `Eq_t` from A7.1.
+
+*Notes.* 8(10) is what makes the quotients sound and so must land before Part II.
+8(11) is not immediate from 8(10): symmetry of `∼` compares components in two
+different ambients, so it needs 8(9)'s second half, by induction over the slots in
+order.
+
+---
+
+# Part II — the model (§§9–13)
+
+## B1 — contexts and fillings (§9)
+
+*Produces.* `Filling Ξ Θ` as the well-formed substitutions filling `Θ`; the
+relation `∼` of 9.2, comparing components at non-equational slots only; the
+category `Ctx` with well-formed ambients as objects and fillings of the weakened
+codomain as morphisms; identity by 8(5) and composition by 8(4).
+
+*Needs.* All of Part I.
+
+*Notes.* Take the quotient here, objects included; 8(10) is what licenses it.
+Equational slots are deliberately not compared: nothing constrains them (6.3) and
+nothing depends on them.
+
+## B2 — telescopes over a context (§10)
+
+*Produces.* `𝒯₀ : Ctxᵒᵖ ⥤ Type`, the well-formed telescopes over a context modulo
+`≈`; the extension `Γ ⋈ Θ` as an object of `Ctx`; the projection and its
+universal property.
+
+*Needs.* B1, 8(9).
+
+## B3 — the monoid of telescopes (§11)
+
+*Produces.* `TelFam := Over 𝒯₀`, telescope-shaped presheaves; the tensor
+`(M ⊗ N) Γ := Σ (m : M Γ), N (Γ ⋈ shape m)` with unit `I Γ := PUnit`; the
+associator and unitors; `𝒯₀` as a monoid object.
+
+*Needs.* B2.
+
+*Notes.* This is the semantic counterpart of `ArityMod` in
+`RelativeMonad/ArityModuleTensor.lean`, with the constant module of raw arities
+replaced by `𝒯₀`. The old `dTelMon` section stated the raw analogue over the
+previous `dTel` and was deleted with its file; rebuild it here if it is wanted.
+
+## B4 — expressions and boundaries (§12)
+
+*Produces.* `ℰ₀ Γ` the well-formed expressions modulo `≈` and `ℬ₀ Γ` the
+boundaries modulo `≈`, both presheaves with `σ ⋆ −` as the action; the natural
+transformation `boundaryOf : ℰ₀ ⟶ ℬ₀`; `ℰ₀` as an object of `PSh(Ctx)/ℬ₀`.
+
+*Needs.* 8(2), 8(3), 8(7), clause 6.5(3).
+
+## B5 — the natural model (§13)
+
+*Produces.* `𝒯̃₀ Γ := Σ (Θ : 𝒯₀ Γ), Filling Γ Θ` with the dependent equivalence of
+13.1; `q := fst : 𝒯̃₀ ⟶ 𝒯₀`; the proof that `q` is representable — every pullback
+of `q` along a representable is representable, the pullback of `𝒯̃₀ ⟶ 𝒯₀` along
+`よΓ` being `よ(Γ ⋈ Θ)`.
+
+*Needs.* B1–B4, 8(11) for the equivalence, 8(10) for the pullback square.
+
+*Notes.* 13.1's relation varies the telescope as well as the filling, so it is not
+9.2's `∼`; it typechecks because 7.4 forces equal arities.
 
 ## Open questions
 
-None blocking.
-
-## Notes from the passes
-
-**Step 6.** `Wf_t` and `Eq_d` are **well-founded recursions on `Θ.arity`**, not
-inductives, decreasing by `⟨z⟩` against `C.subWf`; being plain `def`s they may use
-`match` and `∧` freely, which the mutual block of step 5 may not.
-
-`Eq_d` compares two decorations of a **common arity**, and `Eq_t` is the
-`∃ h : Θ.arity = Θ'.arity` wrapper around it. Stating 7.4 directly on two
-telescopes would need a transport at every recursive step — `Θ'.binding (h ▸ z)`
-lives over `Θ'.before (h ▸ z)`, not over `Θ.before z`. At a common arity the two
-`nested` decorations have literally the same type and no transport arises; the one
-transport left is `Decoration.castArity h.symm` at the top.
-
-**7.2 is blocked on the carrier, not on bookkeeping.** All four `sorry`s reduce to
-`Carrier.inclusion_inclusion` — that including from `before w` into `before z` and
-then into the whole is including directly. After `unfold Carrier.inclusion` the
-goal is
-
-```
-⋯ ▸ C.inl (⋯ ▸ C.inl x) = ⋯ ▸ C.inl (⋯ ▸ x)
-```
-
-four transports along `factor z`, `factor w`, `factor (C.inclusion z w)` and
-`before_inclusion z w`. `C.inl_inl` is the associativity coherence that should
-close it, but the transports cannot be discharged by `subst`: `factor z` reads
-`C.before z * C.after z = Δ`, and substituting `Δ` makes `z : Δ ∋ α`
-self-referential, so the motive is not type correct. Three ways forward, for the
-user to choose:
-
-1. add `inclusion_inclusion` as a **carrier axiom** — every intended carrier
-   satisfies it, and `before`/`after`/`factor`/`before_inl` are already axioms of
-   the same kind;
-2. derive it, which means transport surgery around `slotAt_mul` and probably more
-   coherence lemmas of the `inl_inl` family;
-3. reformulate `dTel.before` so that restriction is definitional — the routes tried
-   (recursion through `SlotPath.inclusion` instead of `restrict` + `factor`; making
-   `Wf_t` assert its own restriction) either hit the same law or fail
-   `C.subWf` termination, `C.before z` not being a binding arity of `Θ.arity`.
-
-Left standing, five `sorry`s, all one obstruction: 7.2 (`Wf_t.before`) factors
-through three restriction-compatibility facts — `before_before`, `binding_before`,
-`boundary_before` in `Decoration.lean` — saying that `Θ.before z` at `w` decorates
-as `Θ` does at `C.inclusion z w`. The note gives these one sentence; in Lean the
-last two are `HEq`, since their types differ by `before_before`. The arity
-ingredient is `Carrier.before_inclusion` (with `Carrier.before_cast`), both proved;
-the composition law above is what remains. The judgements are **four** mutual inductives, not three: §5's
-boundary equality is `Eq_bd`, a member of the block. Lifting a relation through a
-`def`, as 5.1 states it, would put `Eq_e` under an opaque application inside a
-constructor type; as a fourth inductive with three constructors it is positive by
-construction.
-
-Two encoding facts, both forced by the kernel rather than chosen:
-
-- **`∧` cannot appear in the block.** 6.2's `Ξ ⊢ e : β` is a conjunction, and using
-  it inside `Wf_s`'s constructor gives *invalid nested inductive datatype 'And',
-  nested inductive datatypes parameters cannot contain local variables*. `Wf_s.mk`
-  therefore carries `filler` and `declared` as two separate `∀` premises. The
-  notation `Ξ ⊢ e : β` still abbreviates the conjunction — outside the block.
-- **The ambient is an index, not a parameter.** 6.3's premises and 6.5(3) both
-  speak of ambients other than the one in the conclusion, so `Wf_e`, `Eq_e`,
-  `Eq_bd` and `Wf_s` are indexed by `Ξ : Ambient C`, with `Expr Ξ.arity` a
-  dependent index.
-
-The §3.6-at-a-slot wrappers live with their ingredients, not with the judgements:
-`Subst.restrict` in `Subst.lean`, `dTel.instantiate`, `Ambient.weaken` in
-`DecorationModule.lean`, `Ambient.extend` in `DecoratedTelescopeMonoid.lean`.
-`Θ.binding z` and `Θ.boundary z` under `σ ↾ z` are written out at each use site
-rather than abbreviated. Note `Ambient` is an `abbrev` for `dTel 1`, so an
-`Ambient.foo` must be declared outside `namespace dTel` or dot-notation looks for
-`dTel.foo`.
-
-`Wf_s`'s two branches are guarded implications — `Θ.boundaryAt σ z = .eq l r → …`
-and `¬ (Θ.boundaryAt σ z).isEq → …` — rather than a `match`, so 6.9's warning about
-a `Prop`-valued match in a constructor type never arises. Lemma 2.3 is what makes
-exactly one guard fire.
-
-Notation: all five declared, with arguments parsing at 51 so `Ξ ⊢ e ≈ e'` is not
-read as `Ξ ⊢ (e ≈ e')` by core `HasEquiv`. Both overloads of `⊢ _ : _`
-(substitution against telescope, expression against boundary) and both of `⊢ _ ≈ _`
-(expressions, boundaries) resolve by elaboration; five smoke tests in the file
-exercise them.
-
-**Step 4.** `boundaryOf` is `Typing/ExprBoundary.lean`, defined on `Ambient C`
-(the old `Theory`, renamed to the note's word) by one non-recursive match. 4.1 is
-recorded as a smoke test: `args : Subst α Ξ.arity` is accepted where
-`Subst ((Ξ.binding x).rename (Ξ.inclusion x)).arity Ξ.arity` is expected, which is
-the whole content of "the arguments of an application are a substitution filling
-the telescope its head binds". `dTel.inclusion` names the renaming of 3.5 once,
-since 6.4's premise needs the same one for the telescope.
-
-Pass 1's rename had silently broken `examples/dependent/ML-Sigma.lean`: it uses
-`Boundary`, `DecoratedTelescope` and `Theory`, and `lake build` does not reach it.
-Repaired here by the same rename, `Theory → Ambient` included.
-
-**Step 3.** `SlotPath.inl` compiles exactly as 3.4 writes it, both transports
-along `C.before_inl`. `Decoration.castArity` is one definition the note does not
-name: `dTel.before` restricts `Θ.decoration` along `(C.factor z).symm` first, and
-the transport is forced — `castArity`'s direction is the only one that typechecks,
-so a silent mis-transport is not possible here. The erasures of 3.4 hold by `rfl`
-(`arity_before`, `arity_binding`), which is what lets `dTel.binding` and
-`dTel.boundary` state their own types in terms of the previous projections.
-
-Gate 1 answered for 4.2: `boundaryOf` reassembles from `Ξ.boundary x` — the
-projection, not `Ξ.decoration.boundary x` — with `Bd.rename` and `Bd.instantiate`
-and no transport.
-
-**Step 2.** `Bd.isEq` is `Prop`-valued by pattern match, with `isEq_rename` and
-`isEq_act` as Lemma 2.3 — both `cases β <;> rfl`. No `Decidable` instance yet:
-nothing needs one, 6.3's branch being a premise rather than a test. `Bd.instantiate`
-inherits 2.3 only through `isEq_act (Ξ := 1) σ 1`, which is enough for 6.3, whose
-boundary carries the suffix `|Θ.binding z|` and so is an `act`, not an
-`instantiate`. Adding the constructor broke exactly one proof outside the file,
-`Bd.act_ofRenaming` in `DecorationModule.lean`.
-
-**Step 1.** Renamed by word-boundary regex, `import` lines protected: `Boundary →
-Bd` (69), `DecoratedTelescope → dTel` (54), and the module family `DTel →
-dTelModule`, `DTelArityMod → dTelArityMod`, `DTelOne/Mul/Mon` and the private
-`dtel*` lemmas to `dTel…`. **File names were not changed**, so
-`Typing/Boundary.lean` now declares `Bd` and `Typing/DecoratedTelescopeMonoid.lean`
-declares the `dTel` monoid; the one surviving `Boundary` in the source is that
-file's module path.
-
-**Step 0.** `ap_eq_act_η` is `act_inst_η` at replacement `1` plus `C.unit_right`;
-it was not new work. `act_copair_id` needed a general suffix `Φ` for its induction,
-hence `Renaming.extend_unit` (`f ⇑ʳ 1 = f`) to read it back at `Φ = 1`.
-`Subst.copair` is stated in general — `σ` on `Γ`-slots, `θ` on `Δ`-slots — because
-step 10's splitting and pairing want the same combinator.
-
-Two traps met, both worth remembering. Writing `Expr.η x` where the expected type
-is `Expr (Γ ⋈ α ⋈ 1)` makes the elaborator split at the *last* `⋈`, inferring
-`Expr.η : (Γ ⋈ α) ∋ 1 → …`; ascribe the term, as `act_inst_η` does. And `rw` needs
-a syntactic match, so a lemma stated at prefix `Γ` will not rewrite a goal whose
-prefix is the defeq `Γ ⋈ 1` — the file's `trans` / `apply` idiom is what gets
-through.
+Semantics beyond the syntactic model, and how a named theory such as MLTT sits in
+the framework, are §15 of `equational-telescopes-core.md`.

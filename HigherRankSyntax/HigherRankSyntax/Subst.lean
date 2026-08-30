@@ -12,8 +12,6 @@ import HigherRankSyntax.Expr
 `Γ`, `Δ`, or `Ξ`.
 -/
 
-variable {A : Type} {C : Carrier A}
-
 /-- A substitution from a domain arity into a target arity. -/
 abbrev Subst (Δ Γ : C.Arity) :=
   ∀ ⦃α : C.Arity⦄, Δ ∋ α → Expr (Γ ⋈ α)
@@ -104,14 +102,6 @@ def Subst.copair {Γ Δ Ω : C.Arity} (σ : Subst Γ Ω) (θ : Subst Δ Ω) :
   Subst.copair σ θ (C.inr x) = θ x
   := by simp [Subst.copair, Carrier.copair, Carrier.inr]
 
-
-/-- The components of a substitution at the slots preceding `z`. -/
-def Subst.restrict {Ω Δ Λ : C.Arity} (σ : Subst Δ Ω) (z : Δ ∋ Λ) :
-    Subst (C.before z) Ω :=
-  fun ⦃_⦄ x => σ (C.inclusion z x)
-
-@[inherit_doc Subst.restrict]
-notation:70 σ " ↾ " z => Subst.restrict σ z
 
 /-! ### The substitution action -/
 

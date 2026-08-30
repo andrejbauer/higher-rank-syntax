@@ -1,4 +1,4 @@
-import HigherRankSyntax.Expr
+import HigherRankSyntax.Carrier
 import Mathlib.Logic.Equiv.Fin.Basic
 import Mathlib.Data.Fin.SuccPred
 
@@ -266,7 +266,7 @@ def localized {Γ α : aritySubmonoid} (x : Slot Γ α) : Slot (after x) α := b
     omega
   · simpa [after, slotPredicate, List.get_eq_getElem] using x.property
 
-private theorem transport_val {Γ Δ α : aritySubmonoid}
+theorem transport_val {Γ Δ α : aritySubmonoid}
     (h : Γ = Δ) (x : Slot Γ α) :
     (h ▸ x : Slot Δ α).val.val = x.val.val := by
   subst h
@@ -365,6 +365,18 @@ theorem before_of_lt {Γ α : aritySubmonoid} {x y : Slot Γ α}
         transport_val (before_after y) _
       _ = x.val.val := slotAppend_val_inl _
 
+/-! ### Sizes -/
+
+theorem sizeOf_take_lt : ∀ (ℓ : List Entry) (i : ℕ), i < ℓ.length →
+    sizeOf (ℓ.take i) < sizeOf ℓ
+  | a :: rest, 0, _ => by
+      cases a with
+      | mk Δ => simp [Entry.mk.sizeOf_spec]; omega
+  | a :: rest, i + 1, h => by
+      have := sizeOf_take_lt rest i (by simpa using h)
+      simp only [List.take_succ_cons, List.cons.sizeOf_spec]
+      omega
+
 /-! ### The carrier -/
 
 /-- The free carrier on lists, with left-to-right precedence. -/
@@ -407,10 +419,59 @@ end ListCarrier
 abbrev listCarrier : Carrier (List ListCarrier.Entry) :=
   ListCarrier.carrier
 
-section SmokeTests
+/-- The carrier fixed for this development. -/
+abbrev C : Carrier (List ListCarrier.Entry) := ListCarrier.carrier
 
-example (Γ : listCarrier.Arity) : Ext Γ 1 = Γ := rfl
+open ListCarrier in
+/-- Including a slot into the whole keeps its position. -/
+theorem inclusion_val {Δ α β : C.Arity} (y : Δ ∋ α) (x : C.before y ∋ β) :
+    ((C.inclusion y x : Δ ∋ β) : Slot Δ β).val.val = (x : Slot _ β).val.val := by
+  rw [Carrier.inclusion]
+  exact (transport_val _ _).trans (carrier_inl_val x)
 
-#check fun (Γ : listCarrier.Arity) => Expr (C := listCarrier) Γ
+open ListCarrier
 
-end SmokeTests
+/-! ### Single-entry arities -/
+
+/-- An arity is determined by its underlying list. -/
+theorem ListCarrier.underlyingList_injective {Γ Δ : C.Arity}
+    (h : underlyingList Γ = underlyingList Δ) : Γ = Δ := by
+  apply Subtype.ext
+  funext Θ
+  rw [val_apply, val_apply, h]
+
+/-- The arity of a single entry binding `α`. -/
+def C.single (α : C.Arity) : C.Arity :=
+  ofList [Entry.mk (underlyingList α)]
+
+/-- The underlying list of a single-entry arity. -/
+@[simp] theorem C.underlyingList_single (α : C.Arity) :
+    underlyingList (C.single α) = [Entry.mk (underlyingList α)] :=
+  underlyingList_ofList _
+
+/-- The one slot of a single-entry arity. -/
+def C.singleSlot (α : C.Arity) : C.single α ∋ α :=
+  ⟨⟨0, by simp⟩, rfl⟩
+
+/-- Reading a position of a one-element list. -/
+theorem ListCarrier.get_singleton {ℓ : List Entry} {a : Entry} (hl : ℓ = [a])
+    (i : Fin ℓ.length) : ℓ.get i = a := by
+  subst hl
+  have hi : i = 0 := Fin.ext (Nat.lt_one_iff.mp i.isLt)
+  subst hi
+  rfl
+
+/-- A single-entry arity has exactly one slot. -/
+theorem C.single_slot_unique {α : C.Arity} (z : C.single α ∋ α) : z = C.singleSlot α := by
+  apply Subtype.ext
+  apply Fin.ext
+  have hlen : (underlyingList (C.single α)).length = 1 :=
+    congrArg List.length (C.underlyingList_single α)
+  exact Nat.lt_one_iff.mp (hlen ▸ z.val.isLt)
+
+/-- A single-entry arity has slots only at its own binding arity. -/
+theorem C.single_arity {α β : C.Arity} (x : C.single α ∋ β) : β = α :=
+  (underlyingList_injective
+    ((congrArg Entry.arity
+      (ListCarrier.get_singleton (C.underlyingList_single α) x.val)).symm.trans
+        x.property)).symm

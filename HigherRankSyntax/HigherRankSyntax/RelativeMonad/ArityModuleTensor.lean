@@ -28,10 +28,8 @@ monoidal category.
 
 open CategoryTheory
 
-variable {A : Type} {C : Carrier A}
-
 /-- A coherent right action of raw arities on a relative Kleisli category. -/
-class KleisliArityAction (T : RelativeMonad (J C)) where
+class KleisliArityAction (T : RelativeMonad (J)) where
   lift {Γ Δ : C.Arity}
     (σ : RelativeMonad.Kleisli.of T Γ ⟶ RelativeMonad.Kleisli.of T Δ)
     (Φ : C.Arity) :
@@ -53,7 +51,7 @@ class KleisliArityAction (T : RelativeMonad (J C)) where
 
 namespace KleisliArityAction
 
-variable {T : RelativeMonad (J C)} [KleisliArityAction T]
+variable {T : RelativeMonad (J)} [KleisliArityAction T]
 
 /-- Extend every Kleisli context and morphism by a fixed raw suffix. -/
 def extendBy (Φ : C.Arity) :
@@ -94,7 +92,7 @@ end KleisliArityAction
 
 /-- Raw substitution supplies the arity action on the syntax Kleisli category. -/
 instance syntaxMonadKleisliArityAction :
-    KleisliArityAction (SyntaxMonad C) where
+    KleisliArityAction (SyntaxMonad) where
   lift := Subst.lift
   lift_id := Subst.lift_id
   lift_comp := Subst.lift_comp
@@ -103,7 +101,7 @@ instance syntaxMonadKleisliArityAction :
 
 namespace ArityMod
 
-variable {T : RelativeMonad (J C)} [KleisliArityAction T]
+variable {T : RelativeMonad (J)} [KleisliArityAction T]
 
 private def castObj (M : RelativeMonad.Kleisli T ⥤ Type) {Ω Ξ : C.Arity}
     (h : Ω = Ξ) : M.obj Ω → M.obj Ξ :=
@@ -363,7 +361,7 @@ def tensorUnitModule : RelativeMonad.Kleisli T ⥤ Type where
   map_comp _ _ := rfl
 
 private def tensorUnitShape :
-    tensorUnitModule (C := C) ⟶ arityConst T where
+    tensorUnitModule ⟶ arityConst T where
   app _ := ↾fun (_ : PUnit) => (1 : C.Arity)
   naturality := by intros; rfl
 
@@ -374,14 +372,14 @@ def tensorUnit : ArityMod T :=
 omit [KleisliArityAction T] in
 @[simp]
 theorem tensorUnit_module :
-    module (tensorUnit (C := C) (T := T)) =
-      tensorUnitModule (C := C) (T := T) := rfl
+    module (tensorUnit (T := T)) =
+      tensorUnitModule (T := T) := rfl
 
 omit [KleisliArityAction T] in
 @[simp]
 theorem tensorUnit_shape {Ω : C.Arity}
-    (x : module (tensorUnit (C := C) (T := T)) |>.obj Ω) :
-    shape (tensorUnit (C := C) (T := T)) x = 1 := rfl
+    (x : module (tensorUnit (T := T)) |>.obj Ω) :
+    shape (tensorUnit (T := T)) x = 1 := rfl
 
 private theorem map_lift_assoc_cast (M : RelativeMonad.Kleisli T ⥤ Type)
     {Ω Ξ : C.Arity}

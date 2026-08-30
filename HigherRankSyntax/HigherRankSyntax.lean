@@ -7,12 +7,8 @@ import HigherRankSyntax.RelativeMonad.Kleisli
 import HigherRankSyntax.RelativeMonad.Module
 import HigherRankSyntax.RelativeMonad.ArityModule
 import HigherRankSyntax.RelativeMonad.ArityModuleTensor
-import HigherRankSyntax.SlotPath
 import HigherRankSyntax.SyntaxMonad
 import HigherRankSyntax.Typing.Boundary
-import HigherRankSyntax.Typing.Decoration
-import HigherRankSyntax.Typing.DecorationModule
-import HigherRankSyntax.Typing.DecoratedTelescopeMonoid
-import HigherRankSyntax.Typing.ExprBoundary
-import HigherRankSyntax.Typing.Judgement
-import HigherRankSyntax.Typing.TelescopeWf
+import HigherRankSyntax.Typing.Telescope
+import HigherRankSyntax.Typing.Rules
+import HigherRankSyntax.Typing.Weakening

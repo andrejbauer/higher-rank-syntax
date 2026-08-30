@@ -10,8 +10,6 @@ acts as the identity) / `act_inst_η` (β-for-η) / `act_inst_id` (the identity
 instantiation acts as the identity).
 -/
 
-variable {A : Type} {C : Carrier A}
-
 /-- Acting on the η-expansion of a current-depth slot reproduces the η. -/
 theorem act_η_right
     {Γ Δ Ξ : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ))

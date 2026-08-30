@@ -7,8 +7,6 @@ import HigherRankSyntax.Subst
 macro drives a proof through that split.
 -/
 
-variable {A : Type} {C : Carrier A}
-
 /-- Slot eliminator for `Γ ⋈ Δ ⋈ Ξ`: split a head slot by its origin — current
 depth `Ξ` (`right`), substitution domain `Δ` (`middle`), or prefix `Γ` (`left`). -/
 @[elab_as_elim]

@@ -1,4 +1,4 @@
-import HigherRankSyntax.Carrier
+import HigherRankSyntax.ListCarrier
 
 /-!
 # Renamings of arities
@@ -12,8 +12,6 @@ A *renaming* `Γ →ʳ Δ` is an arity-preserving slot map.
   - `g ∘ʳ f` is composition "g after f".
   - `ρ ⇑ʳ α` extends a renaming through a fresh position.
 -/
-
-variable {A : Type} {C : Carrier A}
 
 /-- A renaming of arities from `Γ` to `Δ`: an arity-preserving slot map. -/
 abbrev Renaming (Γ Δ : C.Arity) :=
@@ -105,6 +103,14 @@ def Renaming.inr (Γ Δ : C.Arity) : Δ →ʳ Γ ⋈ Δ := fun ⦃_⦄ x => C.in
 def Renaming.fromUnit (Γ : C.Arity) : (1 : C.Arity) →ʳ Γ :=
   fun ⦃_⦄ x => (C.unit_is_empty x).elim
 
+/-- Prefixing by the unit arity changes nothing. -/
+theorem Renaming.prefixed_unit {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) :
+  Renaming.prefixed 1 ρ = ρ := by
+  funext β x
+  rcases C.cover 1 Γ x with ⟨y, rfl⟩ | ⟨y, rfl⟩
+  · exact (C.unit_is_empty y).elim
+  · rw [Renaming.prefixed_inr, C.unit_left, C.unit_left]
+
 /-- Extending a renaming by the unit arity changes nothing. -/
 theorem Renaming.extend_unit
     {Γ Δ : C.Arity} (f : Γ →ʳ Δ) :
@@ -124,6 +130,26 @@ theorem Renaming.extend_comp
   funext α x
   rcases C.cover Γ Ω x with ⟨y, rfl⟩ | ⟨y, rfl⟩
     <;> simp [Renaming.comp]
+
+/-- Extension commutes with the left injection. -/
+theorem Renaming.inl_comp {Γ Δ Φ : C.Arity} (ρ : Γ →ʳ Δ) :
+  (Renaming.inl Δ Φ) ∘ʳ ρ = (ρ ⇑ʳ Φ) ∘ʳ (Renaming.inl Γ Φ)
+  := by
+  funext α x
+  exact (Renaming.extend_inl ρ x).symm
+
+/-- Weakening on the right commutes with weakening past a suffix. -/
+theorem Renaming.inl_inl_extend (Δ Ω Φ : C.Arity) :
+    (Renaming.inl (Δ ⋈ Ω) Φ) ∘ʳ (Renaming.inl Δ Ω)
+      = (Renaming.inl Δ Ω ⇑ʳ Φ) ∘ʳ (Renaming.inl Δ Φ) := by
+  funext α y
+  exact (Renaming.extend_inl (Renaming.inl Δ Ω) y).symm
+
+/-- Weakening on the right, twice, is weakening by the product. -/
+theorem Renaming.inl_inl (Γ Δ Ξ : C.Arity) :
+    (Renaming.inl (Γ ⋈ Δ) Ξ) ∘ʳ (Renaming.inl Γ Δ) = Renaming.inl Γ (Δ ⋈ Ξ) := by
+  funext α x
+  exact (C.inl_inl Γ Δ Ξ x).symm
 
 @[simp]
 theorem Renaming.extend_assoc

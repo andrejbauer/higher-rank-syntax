@@ -13,8 +13,6 @@ instantiating `κ` (pushed forward along `σ`).  `act_interchange` is its
 `Θ = 1`, `Φ = 1` instance, used by `act_comp`.
 -/
 
-variable {A : Type} {C : Carrier A}
-
 /-- Push `κ` forward along `σ`. -/
 abbrev pushforward
     {Γ Δ Ξ Θ Ω : C.Arity}

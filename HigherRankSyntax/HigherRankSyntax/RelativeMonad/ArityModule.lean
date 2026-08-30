@@ -22,18 +22,17 @@ the tensor in `ArityModuleTensor`.
 
 open CategoryTheory
 
-variable {A : Type} {C : Carrier A}
-variable {T : RelativeMonad (J C)}
+variable {T : RelativeMonad (J)}
 
 /-- The constant raw-arity functor on a relative Kleisli category. -/
-def arityConst (T : RelativeMonad (J C)) : RelativeMonad.Kleisli T ⥤ Type where
+def arityConst (T : RelativeMonad (J)) : RelativeMonad.Kleisli T ⥤ Type where
   obj _ := C.Arity
   map _ := ↾fun (Φ : C.Arity) => Φ
   map_id _ := by ext Φ; rfl
   map_comp _ _ := by ext Φ; rfl
 
 /-- `T`-modules equipped with a substitution-invariant raw arity. -/
-abbrev ArityMod (T : RelativeMonad (J C)) := CategoryTheory.Over (arityConst T)
+abbrev ArityMod (T : RelativeMonad (J)) := CategoryTheory.Over (arityConst T)
 
 namespace ArityMod
 

@@ -14,8 +14,6 @@ that arity is the substitution action at the unit depth.  Both actions preserve
 the constructor, so `isEq` is invariant under them.
 -/
 
-variable {A : Type} {C : Carrier A}
-
 /-- The boundary of a slot over `Ω`. -/
 inductive Bd (Ω : C.Arity) : Type where
   /-- The slot is a sort. -/
@@ -66,82 +64,6 @@ def instantiate {Γ Δ : C.Arity} (σ : Subst Δ Γ) :
     Bd (Γ ⋈ Δ) → Bd Γ :=
   act (Ξ := 1) σ 1
 
-/-- Transport a boundary along an equality of arities. -/
-def cast {Γ Δ : C.Arity} (h : Γ = Δ) : Bd Γ → Bd Δ :=
-  h ▸ fun β => β
-
-@[simp] theorem cast_sort {Γ Δ : C.Arity} (h : Γ = Δ) :
-  cast h (.sort : Bd Γ) = .sort := by
-  subst h; rfl
-
-@[simp] theorem cast_of {Γ Δ : C.Arity} (h : Γ = Δ) (S : Expr Γ) :
-  cast h (.of S) = .of (_root_.cast (congrArg Expr h) S) := by
-  subst h; rfl
-
-@[simp] theorem cast_eq {Γ Δ : C.Arity} (h : Γ = Δ) (l r : Expr Γ) :
-  cast h (.eq l r)
-    = .eq (_root_.cast (congrArg Expr h) l) (_root_.cast (congrArg Expr h) r) := by
-  subst h; rfl
-
-theorem cast_injective {Γ Δ : C.Arity} (h : Γ = Δ) :
-  Function.Injective (cast (C := C) h) := by
-  subst h
-  intro a b hab
-  exact hab
-
-theorem cast_proof_irrel {Γ Δ : C.Arity} (h k : Γ = Δ) (β : Bd Γ) :
-  cast h β = cast k β := by
-  have hk : h = k := Subsingleton.elim _ _
-  subst k
-  rfl
-
-/-- A transport is heterogeneously the boundary it transports. -/
-theorem cast_heq {Γ Δ : C.Arity} (h : Γ = Δ) (β : Bd Γ) :
-  HEq (cast h β) β := by
-  subst h
-  rfl
-
-/-- Transports of heterogeneously equal boundaries are heterogeneously equal,
-whatever their sources and targets. -/
-theorem cast_congr_heq {Γ Δ Γ' Δ' : C.Arity} (h : Γ = Δ) (k : Γ' = Δ')
-    {β : Bd Γ} {β' : Bd Γ'} (hβ : HEq β β') :
-  HEq (cast h β) (cast k β') := by
-  subst h
-  subst k
-  exact hβ
-
-theorem cast_comp {Γ Δ Ξ : C.Arity} (h : Γ = Δ) (k : Δ = Ξ) (β : Bd Γ) :
-  cast k (cast h β) = cast (h.trans k) β := by
-  subst Δ
-  subst Ξ
-  rfl
-
-theorem cast_eq_cast_comp {Γ Δ Ξ : C.Arity} (h : Γ = Ξ) (k : Γ = Δ) (l : Δ = Ξ)
-    (β : Bd Γ) :
-  cast h β = cast l (cast k β) := by
-  subst Δ
-  subst Ξ
-  rfl
-
-/-- Action commutes with transport of a local segment. -/
-theorem act_cast_local {S Γ Δ Φ Λ Ξ α : C.Arity}
-    (σ : Subst Γ (S ⋈ Δ)) (h : Λ = Ξ)
-    (β : Bd (S ⋈ Γ ⋈ Φ ⋈ Λ ⋈ α)) :
-  act σ (Φ ⋈ Ξ ⋈ α) (cast (congrArg (fun Ω => S ⋈ Γ ⋈ Φ ⋈ Ω ⋈ α) h) β)
-    = cast (congrArg (fun Ω => S ⋈ Δ ⋈ Φ ⋈ Ω ⋈ α) h) (act σ (Φ ⋈ Λ ⋈ α) β) := by
-  subst Ξ
-  rfl
-
-/-- Action by a lifted substitution is action below its fixed suffix. -/
-theorem act_lift {Γ Δ Φ Ψ : C.Arity} (σ : Subst Γ Δ)
-    (β : Bd (Γ ⋈ Φ ⋈ Ψ)) :
-  cast (mul_assoc Δ Φ Ψ) (act (Γ := 1) (Ξ := Δ ⋈ Φ) (Subst.lift σ Φ) Ψ β)
-    = act (Γ := 1) σ (Φ ⋈ Ψ) β := by
-  cases β with
-  | sort => rfl
-  | of S => exact congrArg Bd.of (Subst.act_lift σ Φ Ψ S)
-  | eq l r => exact congrArg₂ Bd.eq (Subst.act_lift σ Φ Ψ l) (Subst.act_lift σ Φ Ψ r)
-
 /-- The boundary asserts an equation. -/
 def isEq {Ω : C.Arity} : Bd Ω → Prop
   | .eq _ _ => True
@@ -153,6 +75,30 @@ def isEq {Ω : C.Arity} : Bd Ω → Prop
 
 @[simp] theorem isEq_eq {Ω : C.Arity} (l r : Expr Ω) : (Bd.eq l r).isEq := trivial
 
+/-- Instantiating a block under a suffix commutes with a renaming of the base. -/
+theorem act_rename {Γ Δ Θ Φ : C.Arity} (ρ : Γ →ʳ Δ) (σ : Subst Θ Γ)
+    (β : Bd (Γ ⋈ Θ ⋈ Φ)) :
+  act (Ξ := 1) (fun ⦃Λ⦄ i => ⟦ ρ ⇑ʳ Λ ⟧ʳ (σ i)) Φ (rename ((ρ ⇑ʳ Θ) ⇑ʳ Φ) β)
+    = rename (ρ ⇑ʳ Φ) (act (Ξ := 1) σ Φ β) := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (_root_.act_rename_suffix Γ Δ Θ ρ σ Φ S)
+  | eq l r =>
+      exact congrArg₂ Bd.eq (_root_.act_rename_suffix Γ Δ Θ ρ σ Φ l)
+        (_root_.act_rename_suffix Γ Δ Θ ρ σ Φ r)
+
+/-- A square of substitutions and renamings, on boundaries. -/
+theorem act_square {Γ Γ' Δ Δ' : C.Arity} (ρ : Γ →ʳ Γ') (ρ' : Δ →ʳ Δ')
+    (κ : Subst Γ' Δ') (κ' : Subst Γ Δ)
+    (h : ∀ ⦃α : C.Arity⦄ (x : Γ ∋ α), κ (ρ x) = ⟦ ρ' ⇑ʳ α ⟧ʳ (κ' x))
+    (Φ : C.Arity) (β : Bd (Γ ⋈ Φ)) :
+    act (Γ := 1) κ Φ (rename (ρ ⇑ʳ Φ) β) = rename (ρ' ⇑ʳ Φ) (act (Γ := 1) κ' Φ β) := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (_root_.act_square ρ ρ' κ κ' h Φ S)
+  | eq l r =>
+      exact congrArg₂ Bd.eq (_root_.act_square ρ ρ' κ κ' h Φ l) (_root_.act_square ρ ρ' κ κ' h Φ r)
+
 /-- Renaming preserves the constructor. -/
 @[simp] theorem isEq_rename {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) (β : Bd Γ) :
   (rename ρ β).isEq ↔ β.isEq := by
@@ -163,6 +109,33 @@ def isEq {Ω : C.Arity} : Bd Ω → Prop
     (β : Bd (Γ ⋈ Δ ⋈ Φ)) :
   (act σ Φ β).isEq ↔ β.isEq := by
   cases β <;> rfl
+
+/-- Instantiating the fresh block of a weakened boundary by the slots it came from
+returns the boundary. -/
+theorem instantiate_rename_inl (Γ α : C.Arity) (β : Bd (Γ ⋈ α)) :
+  instantiate (Subst.instId Γ α)
+      ((rename (Renaming.inl Γ α ⇑ʳ α) β : Bd ((Γ ⋈ α) ⋈ α))) = β := by
+  have key : ∀ e : Expr (Γ ⋈ α),
+      Subst.act (Γ := Γ ⋈ α) (Δ := α) (Ξ := 1) (Subst.instId Γ α) 1
+        (⟦ Renaming.inl Γ α ⇑ʳ α ⟧ʳ e) = e := by
+    intro e
+    have := act_instId_weaken Γ α (Φ := 1) e
+    rwa [Renaming.extend_unit] at this
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (key S)
+  | eq l r => exact congrArg₂ Bd.eq (key l) (key r)
+
+/-- Instantiating commutes with weakening on the right, when the arguments are
+weakened as well. -/
+theorem instantiate_weaken (Γ Δ Θ : C.Arity) (σ : Subst Θ Γ) (β : Bd (Γ ⋈ Θ)) :
+    instantiate (fun ⦃Λ⦄ i => ⟦ Renaming.inl Γ Δ ⇑ʳ Λ ⟧ʳ (σ i))
+        ((rename (Renaming.inl Γ Δ ⇑ʳ Θ) β : Bd ((Γ ⋈ Δ) ⋈ Θ)))
+      = rename (Renaming.inl Γ Δ) (instantiate σ β) := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (_root_.act_rename Γ (Γ ⋈ Δ) Θ (Renaming.inl Γ Δ) σ S)
+  | eq l r => exact congrArg₂ Bd.eq (_root_.act_rename Γ (Γ ⋈ Δ) Θ (Renaming.inl Γ Δ) σ l) (_root_.act_rename Γ (Γ ⋈ Δ) Θ (Renaming.inl Γ Δ) σ r)
 
 /-! ### Functoriality -/
 

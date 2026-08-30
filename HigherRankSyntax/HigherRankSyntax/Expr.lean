@@ -1,4 +1,4 @@
-import HigherRankSyntax.Carrier
+import HigherRankSyntax.ListCarrier
 import HigherRankSyntax.Renaming
 
 /-!
@@ -9,8 +9,6 @@ constructor `ap` takes a head slot `p : Γ ∋ α` and a dependent family of
 children indexed by the slots of `α`, each child living in `Γ` extended by that
 slot's arity.
 -/
-
-variable {A : Type} {C : Carrier A}
 
 /-- Expressions in arity `Γ` over a carrier `C`. -/
 inductive Expr : C.Arity → Type where
@@ -32,7 +30,7 @@ inductive Expr.Subterm :
       {Δ} (j : α ∋ Δ) : Subterm ⟨Γ ⋈ Δ, args j⟩ ⟨Γ, ap x args⟩
 
 theorem Expr.Subterm.wf :
-    WellFounded (@Expr.Subterm A C)
+    WellFounded (@Expr.Subterm)
   := by
   constructor
   intro ⟨Γ, e⟩
@@ -45,13 +43,13 @@ theorem Expr.Subterm.wf :
 
 instance Expr.Subterm.wellFoundedRelation :
     WellFoundedRelation (Σ Γ : C.Arity, Expr Γ) where
-  rel := @Expr.Subterm A C
+  rel := @Expr.Subterm
   wf := Expr.Subterm.wf
 
 /-- η-expansion: a variable `p : Γ ∋ α` becomes the fully-applied tree
 `ap (C.inl p) (fun i => η (C.inr i))`. -/
 def Expr.η {Γ α : C.Arity} : Γ ∋ α → Expr (Γ ⋈ α)
-  | x => .ap (C.inl x) (fun {_} i => η (C.inr i))
+  | x => .ap (C.inl x) (fun ⦃_⦄ i => η (C.inr i))
 termination_by _ => α
 decreasing_by exact ⟨i⟩
 

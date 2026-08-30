@@ -4,8 +4,8 @@ import HigherRankSyntax.RelativeMonad.Kleisli
 /-!
 # Syntax as a relative monad
 
-`SyntaxMonad C` packages `Expr` over a carrier `C` as a relative monad
-over the slots functor `J : C.Arity ⥤ ArityFunc C`, with
+`SyntaxMonad` packages `Expr` as a relative monad over the slots functor
+`J : C.Arity ⥤ ArityFunc`, with
 `T Γ α = Expr (Γ ⋈ α)`.
 
 The base category has arities as objects and renamings as morphisms.  A Kleisli
@@ -17,31 +17,30 @@ map `J Γ ⟶ T Δ` is exactly a substitution from `Γ` to `Δ`: it sends each
 open CategoryTheory
 
 /-- Category structure on arities with renamings as morphisms. -/
-instance arityCategory {A : Type} (C : Carrier A) : Category C.Arity where
+instance arityCategory : Category C.Arity where
   Hom Γ Δ := Γ →ʳ Δ
   id Γ := Renaming.id Γ
   comp f g := g ∘ʳ f
 
 /-- The arity-indexed family category. -/
-@[ext] structure ArityFunc {A : Type} (C : Carrier A) where
+@[ext] structure ArityFunc where
   toFun : C.Arity → Type
 
-instance {A : Type} (C : Carrier A) :
-    CoeFun (ArityFunc C) (fun _ => C.Arity → Type) :=
+instance : CoeFun ArityFunc (fun _ => C.Arity → Type) :=
   ⟨ArityFunc.toFun⟩
 
-instance {A : Type} (C : Carrier A) : Category (ArityFunc C) where
+instance : Category ArityFunc where
   Hom f g := ∀ α, f α → g α
   id _ := fun _ x => x
   comp f g := fun α x => g α (f α x)
 
 /-- The slots functor: arity `Γ ↦ α ↦ Γ ∋ α`. -/
-def J {A : Type} (C : Carrier A) : C.Arity ⥤ ArityFunc C where
+def J : C.Arity ⥤ ArityFunc where
   obj Γ := ⟨fun α => Γ ∋ α⟩
   map {Γ Δ} (ρ : Γ →ʳ Δ) := fun _ p => ρ p
 
 /-- The expressions functor: arity `Γ ↦ α ↦ Expr (Γ ⋈ α)`. -/
-def T {A : Type} (C : Carrier A) : C.Arity ⥤ ArityFunc C where
+def T : C.Arity ⥤ ArityFunc where
 
   obj Γ := ⟨fun α => Expr (Γ ⋈ α)⟩
 
@@ -61,9 +60,9 @@ def T {A : Type} (C : Carrier A) : C.Arity ⥤ ArityFunc C where
       apply Renaming.act_comp
 
 /-- The relative monad of the syntax. -/
-def SyntaxMonad {A : Type} (C : Carrier A) : RelativeMonad (J C) where
+def SyntaxMonad : RelativeMonad J where
 
-  map := (T C).obj
+  map := T.obj
 
   η Γ _ := Expr.η
 
@@ -87,7 +86,7 @@ def SyntaxMonad {A : Type} (C : Carrier A) : RelativeMonad (J C) where
     apply act_comp
 
 /-- Kleisli morphisms for raw syntax are raw substitutions. -/
-def syntaxKleisliHomEquiv {A : Type} (C : Carrier A) (Γ Δ : C.Arity) :
-    (RelativeMonad.Kleisli.of (SyntaxMonad C) Γ ⟶
-      RelativeMonad.Kleisli.of (SyntaxMonad C) Δ) ≃ Subst Γ Δ :=
+def syntaxKleisliHomEquiv (Γ Δ : C.Arity) :
+    (RelativeMonad.Kleisli.of SyntaxMonad Γ ⟶
+      RelativeMonad.Kleisli.of SyntaxMonad Δ) ≃ Subst Γ Δ :=
   Equiv.refl _

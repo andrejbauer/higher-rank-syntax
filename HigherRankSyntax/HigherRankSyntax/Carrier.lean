@@ -145,15 +145,6 @@ theorem before_inclusion {A : Type} (C : Carrier A) {Δ α β : C.Arity}
   rw [Carrier.inclusion, C.before_cast, Carrier.inl]
   exact C.before_inl x
 
-/-- Including from the part preceding `x`'s slot into the part preceding `y`, and
-then into the whole, is including directly. -/
-theorem inclusion_inclusion {A : Type} (C : Carrier A) {Δ α β γ : C.Arity}
-    (y : Δ ∋ α) (w : C.before y ∋ β) (x : C.before w ∋ γ) :
-  C.inclusion y (C.inclusion w x)
-    = C.inclusion (C.inclusion y w) ((C.before_inclusion y w).symm ▸ x) := by
-  unfold Carrier.inclusion
-  sorry
-
 /-- A slot below `y` in its fibre is the inclusion of a slot of `before y`. -/
 theorem before_of_slotRel {A : Type} (C : Carrier A) {Δ α : C.Arity}
     {x y : Δ ∋ α} (h : C.slotRel Δ α x y) :
@@ -190,6 +181,19 @@ theorem copair_inr {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity}
     (x : Δ ∋ α) :
     C.copair Γ Δ X f g (C.inr x) = g x :=
   congrFun (C.copair_inr Γ Δ X f g) x
+
+/-- Split a product slot by its origin. -/
+def split {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity}
+    (x : Γ * Δ ∋ α) : (Γ ∋ α) ⊕ (Δ ∋ α) :=
+  (C.slotAt_mul Γ Δ α).symm x
+
+@[simp] theorem split_inl {A : Type} (C : Carrier A) {Γ Δ α : C.Arity} (x : Γ ∋ α) :
+  C.split Γ Δ (C.inl x) = .inl x := by
+  simp [Carrier.split, Carrier.inl]
+
+@[simp] theorem split_inr {A : Type} (C : Carrier A) {Γ Δ α : C.Arity} (x : Δ ∋ α) :
+  C.split Γ Δ (C.inr x) = .inr x := by
+  simp [Carrier.split, Carrier.inr]
 
 theorem cover
     {A : Type} (C : Carrier A)
