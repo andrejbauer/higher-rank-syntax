@@ -380,23 +380,84 @@ from which soundness follows: declared equations are sent to equalities because
 by substitution and congruence. And functoriality of `J` on `Ctx` must be checked
 against `act_id` and `act_comp`.
 
-### 1.4 `J` exists for every `𝒞`
 
-Reading off what Definition 1.3 asks of the target:
+### 1.4 In other words: `J` is a morphism of categories with families
+
+Everything in §§1.2–1.3 is just a categories-with-families structure, written out
+componentwise. Naming it gives the organising idea; the clauses above are its
+concrete unfolding.
+
+**`PSh(𝒞)` is a CwF**, and 1.2 is exactly its structure:
 
 ```text
-sort         a universe          Hofmann–Streicher; any small 𝒞
-of S         El S                from the universe
-eq l r       an equalizer        PSh(𝒞) is a topos
-telescopes   Σ                   ✓
-binding      Π                   PSh(𝒞) is locally cartesian closed
-higher rank  more Π              ✓
+contexts        presheaves on 𝒞
+Ty Γ            DPSh(Γ)
+Tm Γ A          Sect_Γ(A)
+⋄               1
+Γ ⊲ A           Σ_Γ A,   with π : Σ_Γ A ⟶ Γ
+A[u], s[u]      u^* A,   u^* s
+type formers    Σ_A, Π_A, Eq;  a universe 𝒰 with El
 ```
 
-Every item is available in **any** presheaf topos, so the condition on `𝒞` is:
-be small, and have a terminal object. The price is one Grothendieck universe.
-`J` is therefore not a parameter to be supplied or a hypothesis to be checked but
-canonical infrastructure.
+Two things that both look like comprehension should be kept apart. `PSh(𝒞)`
+*always* has `Γ ⊲ A = Σ_Γ A`; **local representability (1.1) is the further
+demand that the extension be represented by an object of `𝒞`.** The first is CwF
+structure, the second is what Kaposi–Xie call the `⁺` in **`CwF⁺`** — a CwF with
+a distinguished sort of locally representable types.
+
+**`Ctx` is a CwF**, by 13.2: `q : 𝒯̃ ⟶ 𝒯` is a natural model on `Ctx`, and a
+natural model on a category with a terminal object is a CwF (Awodey, Prop. 2).
+
+**`J` is a weak morphism between them.** Definition 1.3 and Proposition 1.3.1 are
+its axioms:
+
+```text
+J : Ctx ⟶ PSh(𝒞)               the functor on contexts
+(ii)      𝒯 Γ ⟶ DPSh(J Γ)       action on types
+(iv)      fillings ⟶ sections    action on terms
+1.3.1(a)  J 𝟙 = 1               preserves the empty context
+(v)       J(Γ ⋈ Θ) ≅ Σ_{J Γ} ⟦Θ⟧_Γ   preserves comprehension
+1.3.1(b)  J p = π ∘ c           preserves the display map
+1.3.1(c)  ⟦σ ⋆ Θ⟧ ≅ (J σ)^* ⟦Θ⟧  preserves substitution
+```
+
+**Weak** because comprehension is preserved only up to the isomorphisms `c` of
+(v); the coherence obligation noted there is the standard one for pseudo
+morphisms of CwFs. So Proposition 1.3.1 is a single statement — *`J` is a weak
+CwF morphism from `(Ctx, q)` to the presheaf CwF* — and (a)–(c) are its unfolding.
+
+
+### 1.5 The analogous construction in Kaposi–Xie
+
+They obtain the same morphism, in two steps where Definition 1.3 takes one.
+
+Their **Problems 16–17** make `PSh(𝒞)` a **model of the theory of signatures
+`ToS⁺`**, assigning
+
+```text
+U          the Hofmann–Streicher universe,  U I γ  := Ty (よI)
+El         decoding
+Π a B      := Π (El a) B
+U⁺         the locally representable types,  U⁺ I γ := Ty⁺ (よI)
+π⁺         dependent product with representable domain
+```
+
+The interpretation `⟦−⟧` is then the **unique morphism of `ToS⁺`-models** out of
+the syntax, `ToS⁺` being bootstrapped so that its syntax is the *initial* one.
+
+**The structural difference is the split.** They separate *giving `PSh(𝒞)` the
+structure* from *the morphism into it*, and get the second free, from initiality
+of their syntax. Definition 1.3 gives the morphism outright, initiality of `Ctx`
+not being available here (yet); the price is Proposition 1.3.1, that the recursion 
+is well posed.
+
+Relatedly, their `⟦−⟧` is strict where `J` is only weak (1.4). The gap is `⋈`:
+extension by a whole telescope needs `Σ`-associativity, `Σ_{J Γ}(Σ_{⟦Δ⟧} X)` and
+`Σ_{Σ_{J Γ} ⟦Δ⟧} X` being isomorphic and not equal. The single-slot clause
+`J(Γ ⋈ [z]) := Σ_{J Γ} ⟦[z]⟧_Γ` does hold on the nose.
+
+Their `U⁺` has no counterpart in our framework: we interpret `sort` by all of `𝒰`
+and impose local representability on the model instead, in 3.1 — see 3.4.
 
 ---
 
@@ -565,6 +626,42 @@ This is immediate from Definition 1.3, `J(Ξ)` being an iterated `Σ` with one
 factor per slot of `Ξ`; the content is in Proposition 1.3.1, that `J` is
 well defined.
 
+### 3.4 The analogous definition in Kaposi–Xie
+
+Continuing 1.5, where `J` was identified as a weak CwF morphism, Definition 3.1
+matches their Def. 18 term for term.
+
+```text
+(Ctx, q : 𝒯̃ ⟶ 𝒯)            the syntax of ToS⁺
+PSh(𝒞) as a CwF             PSh(𝒞) as a model of ToS⁺   (their Problems 16–17)
+J                           ⟦−⟧, the morphism syntax ⟶ PSh(𝒞)
+Ξ                           Ω : Ty ⋄
+J(Ξ)                        ⟦Ω⟧ : Ty_{PSh(𝒞)} ⋄
+1 ⟶ J(Ξ)                    Tm_{PSh(𝒞)} ⋄ ⟦Ω⟧
+```
+
+**The fourth and fifth rows.** We use `Ξ` as an *object* of `Ctx`, they use `Ω`
+as a *closed type*; these are the same datum. `Ξ ∈ 𝒯 𝟙` is a telescope over the
+empty ambient — a type at the empty context — and the object is its
+comprehension, `𝟙 ⋈ Ξ = Ξ`. Clause (v) then gives
+
+```text
+J(Ξ)  =  J(𝟙 ⋈ Ξ)  ≅  Σ_{J 𝟙} ⟦Ξ⟧_𝟙  =  Σ_1 ⟦Ξ⟧_𝟙  ≅  ⟦Ξ⟧_𝟙.
+```
+
+**The sixth row.** In any CwF, `Tm Γ A` is in bijection with the sections of
+`p_A : Γ ⊲ A ⟶ Γ`, and at `Γ = ⋄` a section is just a map `⋄ ⟶ ⋄ ⊲ A`, `⋄` being
+terminal. So a global element of `J(Ξ)` and a term of `⟦Ξ⟧` are the same set: we
+phrase a model via the object, they via the type.
+
+**The difference**, beyond the provenance of `J` discussed in 1.5, is the side
+condition. They have none: `U⁺`, their sub-universe of bindable sorts,
+is interpreted by the locally representable types inside `⟦−⟧`, so a model is a
+bare term. We interpret `sort` by all of `𝒰` and impose local representability on
+the point, in 3.1. The constraint is the same; it sits in the interpretation for
+them and in the definition of a model for us — because for them bindability is
+declared in the object language, whereas for us it is carried by `𝒫` (§2).
+
 ---
 
 ## 4. Why these are the right notions
@@ -659,7 +756,7 @@ axioms appearing as *properties* rather than chosen proof data.
 *Untyped `λ`.* By 4.3, `⟦lam⟧ : T^T ⟶ T` and `⟦app⟧ : T ⟶ T^T` with
 `app ∘ lam = id`, so `T^T` is a retract of `T` — Scott's reflexive object.
 
-### 4.5 Precedents
+### 4.5 Comparisons
 
 **Kaposi–Xie is this definition.** Their Def. 18 reads
 `(𝒞 : Cat_⋄) × Tm_{PSh(𝒞)} ⋄ ⟦Ω⟧_{PSh(𝒞)}`, in two steps: their Problems 16–17
@@ -689,9 +786,7 @@ Uemura's would mean giving that up.
 **Cartmell** is the degenerate case. A GAT is first-order, every judgment is a
 context, and models are lex functors into any lex category. Here that is the case
 where no binder occurs: the telescope clause's `Π` is trivial, everything is built
-by `Σ`, and the monoid instance of 4.4 is exactly Cartmell's functorial semantics.
-What his notion cannot express is binding — `lam : (Tm → Tm) → Tm` is not a GAT
-operation — which is the whole reason for `Π`, `𝒫`, and local representability.
+by `Σ`, and e.g. the monoid instance of 4.4 is exactly Cartmell's functorial semantics.
 
 ### 4.6 What needs to be proven
 
@@ -702,10 +797,6 @@ operation — which is the whole reason for `Π`, `𝒫`, and local representabi
 —     realization: every slotwise structure arises        [conjecture]
 —     initiality of the syntactic model                   [open]
 ```
-
-Freeness is not initiality, and soundness follows from 1.3.1 rather than standing
-beside it. The one genuine gap in the *definition*, as opposed to the theory built
-on it, is 3.2.
 
 ---
 
