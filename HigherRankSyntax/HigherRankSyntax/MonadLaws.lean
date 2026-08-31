@@ -44,6 +44,80 @@ theorem ap_eq_act_η {Γ α : C.Arity} (x : Γ ∋ α) (args : Subst α Γ) :
   congr 1
   exact (C.unit_right Γ x).symm
 
+/-- Acting on an application substitutes the head's filler by the acted
+arguments. -/
+theorem act_ap {Γ Γ' : C.Arity} (s : Subst Γ Γ') {α : C.Arity} (x : Γ ∋ α)
+    (args : Subst α Γ) :
+    Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s 1 (Expr.ap x args)
+      = Subst.act (Γ := Γ') (Δ := α) (Ξ := 1)
+          (fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (args i)) 1 (s x) := by
+  convert act_middle (Γ := 1) s 1 x args using 2
+  exact congrArg (fun w => Expr.ap w args)
+    ((C.unit_left Γ x).symm.trans (C.unit_right (1 ⋈ Γ) (C.inr x)).symm)
+
+/-- Acting on an application whose head goes to an η-expansion rebuilds the
+head. -/
+theorem act_ap_eta {Γ Γ' : C.Arity} (s : Subst Γ Γ') {α : C.Arity} (x : Γ ∋ α)
+    (y : Γ' ∋ α) (h : s x = Expr.η y) (args : Subst α Γ) :
+    Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s 1 (Expr.ap x args)
+      = Expr.ap y (fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (args i)) := by
+  refine Eq.trans (act_ap s x args) ?_
+  refine Eq.trans (congrArg (Subst.act (Γ := Γ') (Δ := α) (Ξ := 1)
+    (fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (args i)) 1) h) ?_
+  refine Eq.trans (act_inst_η _ y) ?_
+  exact congrArg (fun w => Expr.ap w
+    (fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (args i)))
+    (C.unit_right Γ' y)
+
+/-- Acting by `Subst.copair (Subst.id Δ) σ` is acting by `σ` below the fixed
+prefix `Δ`. -/
+theorem act_copair_prefix {Δ Ω : C.Arity} (σ : Subst Ω Δ) (Φ : C.Arity) :
+    ∀ e : Expr ((Δ ⋈ Ω) ⋈ Φ),
+      Subst.act (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ) (Subst.copair (Subst.id Δ) σ) Φ e
+        = Subst.act (Γ := Δ) (Δ := Ω) (Ξ := 1) σ Φ e
+  | .ap x args => by
+      head_cases x with z
+      case right =>
+        refine Eq.trans (act_right (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ)
+          (Subst.copair (Subst.id Δ) σ) Φ z args) ?_
+        refine Eq.trans ?_ (act_right (Γ := Δ) (Δ := Ω) (Ξ := 1) σ Φ z args).symm
+        congr 1
+        funext Λ i
+        exact act_copair_prefix σ (Φ ⋈ Λ) (args i)
+      case middle =>
+        refine Eq.trans ?_ (act_middle (Γ := Δ) (Δ := Ω) (Ξ := 1) σ Φ z args).symm
+        convert act_middle (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ)
+          (Subst.copair (Subst.id Δ) σ) Φ (C.inr z) args using 2
+        · exact congrArg (fun w => Expr.ap w args)
+            (congrArg C.inl (C.unit_left (Δ ⋈ Ω) (C.inr z)).symm)
+        refine Eq.trans ?_ (congrArg
+          (Subst.act (Γ := Δ) (fun ⦃Λ⦄ (i : _) =>
+            Subst.act (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ)
+              (Subst.copair (Subst.id Δ) σ) (Φ ⋈ Λ) (args i)) 1)
+          (Subst.copair_inr (Subst.id Δ) σ z).symm)
+        congr 1
+        funext Λ i
+        exact (act_copair_prefix σ (Φ ⋈ Λ) (args i)).symm
+      case left =>
+        refine Eq.trans ?_ (act_left (Γ := Δ) (Δ := Ω) (Ξ := 1) σ Φ z args).symm
+        refine Eq.trans (congrArg
+          (Subst.act (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ) (Subst.copair (Subst.id Δ) σ) Φ)
+          (congrArg (fun w => Expr.ap w args)
+            (congrArg C.inl (C.unit_left (Δ ⋈ Ω) (C.inl z)).symm))) ?_
+        refine Eq.trans (act_middle (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ)
+          (Subst.copair (Subst.id Δ) σ) Φ (C.inl z) args) ?_
+        refine Eq.trans (congrArg
+          (Subst.act (Γ := Δ) (fun ⦃Λ⦄ (i : _) =>
+            Subst.act (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ)
+              (Subst.copair (Subst.id Δ) σ) (Φ ⋈ Λ) (args i)) 1)
+          (Subst.copair_inl (Subst.id Δ) σ z)) ?_
+        refine Eq.trans (act_inst_η _ z) ?_
+        refine congrArg₂ Expr.ap (congrArg C.inl (C.unit_right Δ z).symm) ?_
+        funext Λ i
+        exact act_copair_prefix σ (Φ ⋈ Λ) (args i)
+termination_by e => (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
+decreasing_by all_goals exact Expr.Subterm.of_arg x args i
+
 /-- Acting by `Subst.copair (Subst.id Γ) args` on an expression weakened by a
 `Γ`-prefix is acting by `args`. -/
 theorem act_copair_id {Γ α : C.Arity} (args : Subst α Γ) (Φ : C.Arity) :
@@ -375,6 +449,38 @@ theorem act_lift {Γ Δ : C.Arity} (σ : Subst Γ Δ) (Φ Ψ : C.Arity)
   · congr 1
     exact (act_id (Γ ⋈ Φ) Ψ e).symm
 
+/-- Acting by the lift of `Subst.copair (Subst.id Δ) σ` past `Φ` is acting by
+`σ` below the prefix `Δ` at depth `Φ ⋈ Ψ`. -/
+theorem act_lift_copair {Δ Ω : C.Arity} (σ : Subst Ω Δ) (Φ Ψ : C.Arity)
+    (e : Expr (((Δ ⋈ Ω) ⋈ Φ) ⋈ Ψ)) :
+    Subst.act (Γ := 1) (Δ := (Δ ⋈ Ω) ⋈ Φ) (Ξ := Δ ⋈ Φ)
+        (Subst.lift (Subst.copair (Subst.id Δ) σ) Φ) Ψ e
+      = Subst.act (Γ := Δ) (Δ := Ω) (Ξ := 1) σ (Φ ⋈ Ψ) e := by
+  refine Eq.trans ?_ (act_copair_prefix σ (Φ ⋈ Ψ) e)
+  refine Eq.trans ?_ (act_lift (Subst.copair (Subst.id Δ) σ) Φ Ψ e)
+  exact (cast_mul_assoc Δ Φ Ψ _).symm
+
+/-- Acting by a lift with no further depth is acting at the lifted depth. -/
+theorem act_lift_depth {Γ Δ Φ : C.Arity} (σ : Subst Γ Δ) (e : Expr (Γ ⋈ Φ)) :
+    Subst.act (Γ := 1) (Δ := Γ ⋈ Φ) (Ξ := Δ ⋈ Φ) (Subst.lift σ Φ) 1 e
+      = Subst.act (Γ := 1) (Δ := Γ) (Ξ := Δ) σ Φ e :=
+  (cast_mul_assoc Δ Φ 1 _).symm.trans (act_lift σ Φ 1 e)
+
+/-- Acting by a lifted substitution and then by the acted fillers is acting by
+the fillers and then by the substitution. -/
+theorem act_lift_fillers {Γ Γ' Χ Λ : C.Arity} (s : Subst Γ Γ') (τ : Subst Χ Γ)
+    (e : Expr (Γ ⋈ Χ ⋈ Λ)) :
+    Subst.act (Γ := Γ') (Δ := Χ) (Ξ := 1)
+        (fun ⦃Λ'⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ' (τ i)) Λ
+        (Subst.act (Γ := 1) (Δ := Γ ⋈ Χ) (Ξ := Γ' ⋈ Χ) (Subst.lift s Χ) Λ e)
+      = Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ
+          (Subst.act (Γ := Γ) (Δ := Χ) (Ξ := 1) τ Λ e) := by
+  refine Eq.trans ?_ (act_interchange.aux (Γ := 1) (Ξ := Γ') (Θ := 1) (Ω := 1)
+    s τ Λ e).symm
+  refine congrArg (Subst.act (Γ := Γ') (Δ := Χ) (Ξ := 1)
+    (fun ⦃Λ'⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ' (τ i)) Λ) ?_
+  exact (cast_mul_assoc Γ' Χ Λ _).symm.trans (act_lift s Χ Λ e)
+
 /-- Lifting the identity substitution is the identity on the extended base. -/
 theorem lift_id (Γ Φ : C.Arity) :
     lift (Subst.id Γ) Φ = Subst.id (Γ ⋈ Φ) := by
@@ -391,6 +497,60 @@ theorem lift_apply {Γ Δ : C.Arity} (σ : Subst Γ Δ) (Φ : C.Arity)
         (Expr.η x : Expr (Γ ⋈ Φ ⋈ Λ)) := by
   rw [← act_η (lift σ Φ) Λ x]
   apply act_lift
+
+/-- A lifted substitution is the identity on the fixed suffix. -/
+theorem lift_inr {Γ Δ Φ : C.Arity} (τ : Subst Γ Δ) {β : C.Arity} (v : Φ ∋ β) :
+    lift τ Φ (C.inr v) = Expr.η (C.inr v) := by
+  unfold lift pushforward
+  exact act_η_right (Γ := 1) τ Φ v
+
+/-- A lifted substitution is the original substitution weakened by the fixed
+suffix. -/
+theorem lift_inl {Γ Δ Φ : C.Arity} (τ : Subst Γ Δ) {β : C.Arity} (u : Γ ∋ β) :
+    lift τ Φ (C.inl u) = ⟦ Renaming.inl Δ Φ ⇑ʳ β ⟧ʳ (τ u) := by
+  unfold lift pushforward
+  rw [Subst.id, Expr.η.eq_1]
+  trans
+  · convert act_middle (Γ := 1) τ (Φ ⋈ β) u
+      (fun {_} i => Expr.η (C.inr (C.inr i))) using 2
+    · rw [← C.inl_inl]
+      congr 1
+      · exact congrArg C.inl (C.unit_left Γ u).symm
+      · funext Λ i
+        exact congrArg Expr.η (C.inr_inr (1 ⋈ Γ) Φ β i).symm
+  · refine Eq.trans (b := Subst.act (Γ := Δ) (Δ := β) (Ξ := Φ ⋈ β)
+        (fun ⦃Λ⦄ (i : β ∋ Λ) => Expr.η (C.inr (C.inr i))) 1 (τ u)) ?_ ?_
+    · congr 1
+      funext Λ i
+      exact act_η_right (Γ := 1) τ (Φ ⋈ β) (C.inr i)
+    · refine Eq.trans (act_ofRenaming_prefixed (S := Δ) (Φ := 1)
+        (fun ⦃_⦄ j => C.inr j) (τ u)) ?_
+      have hρ : (Renaming.prefixed Δ (fun ⦃_⦄ (j : β ∋ _) => C.inr j) ⇑ʳ 1)
+          = (Renaming.inl Δ Φ ⇑ʳ β) := by
+        rw [Renaming.extend_unit]
+        funext Λ y
+        rcases C.cover Δ β y with ⟨z, rfl⟩ | ⟨z, rfl⟩
+        · rw [Renaming.prefixed_inl, Renaming.extend_inl, Renaming.inl,
+            C.inl_inl Δ Φ β z]
+        · rw [Renaming.prefixed_inr, Renaming.extend_inr, C.inr_inr Δ Φ β z]
+      exact congrArg (fun ρ => Renaming.act ρ (τ u)) hρ
+
+/-- The lift of `Subst.copair (Subst.id Δ) σ` is the identity on `Δ`-slots. -/
+theorem lift_copair_inl_inl {Δ Ω Φ : C.Arity} (σ : Subst Ω Δ)
+    {β : C.Arity} (w : Δ ∋ β) :
+    lift (Subst.copair (Subst.id Δ) σ) Φ (C.inl (C.inl w)) = Expr.η (C.inl w) := by
+  refine Eq.trans (lift_inl (Φ := Φ) (Subst.copair (Subst.id Δ) σ) (C.inl w)) ?_
+  rw [Subst.copair_inl, Subst.id]
+  exact Renaming.act_eta (Renaming.inl Δ Φ) w
+
+/-- The lift of `Subst.copair (Subst.id Δ) σ` is `σ` weakened by `Φ` on
+`Ω`-slots. -/
+theorem lift_copair_inl_inr {Δ Ω Φ : C.Arity} (σ : Subst Ω Δ)
+    {β : C.Arity} (y : Ω ∋ β) :
+    lift (Subst.copair (Subst.id Δ) σ) Φ (C.inl (C.inr y))
+      = ⟦ Renaming.inl Δ Φ ⇑ʳ β ⟧ʳ (σ y) := by
+  refine Eq.trans (lift_inl (Φ := Φ) (Subst.copair (Subst.id Δ) σ) (C.inr y)) ?_
+  rw [Subst.copair_inr]
 
 /-- Extending by the empty suffix does not change a substitution. -/
 theorem lift_one {Γ Δ : C.Arity} (σ : Subst Γ Δ) :
@@ -452,3 +612,14 @@ theorem lift_square {Γ Γ' Δ Δ' : C.Arity} (ρ : Γ →ʳ Γ') (ρ' : Δ →�
   refine Eq.trans (act_square ρ ρ' κ κ' h (S ⋈ γ) ((Expr.η x : Expr ((Γ ⋈ S) ⋈ γ)))) ?_
   exact congrArg (fun s => Renaming.act s (Subst.act (Γ := 1) κ' (S ⋈ γ) ((Expr.η x : Expr ((Γ ⋈ S) ⋈ γ)))))
     (Renaming.extend_assoc ρ' S γ)
+
+/-- Substituting into a renamed expression whose slots the substitution merely
+relabels is that relabelling. -/
+theorem act_rename_cancel {Γ Δ' Γ' : C.Arity} (ρ : Γ →ʳ Δ') (ρ' : Γ →ʳ Γ')
+    (κ : Subst Δ' Γ') (h : ∀ ⦃α : C.Arity⦄ (x : Γ ∋ α), κ (ρ x) = Expr.η (ρ' x))
+    (Φ : C.Arity) (e : Expr (Γ ⋈ Φ)) :
+    Subst.act (Γ := 1) κ Φ (⟦ ρ ⇑ʳ Φ ⟧ʳ e) = ⟦ ρ' ⇑ʳ Φ ⟧ʳ e := by
+  refine Eq.trans (act_square ρ ρ' κ (Subst.id Γ) ?_ Φ e) ?_
+  · intro α x
+    exact (h x).trans (Renaming.act_eta ρ' x).symm
+  · exact congrArg (Renaming.act (ρ' ⇑ʳ Φ)) (act_id Γ Φ e)

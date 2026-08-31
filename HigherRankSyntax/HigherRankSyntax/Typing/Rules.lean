@@ -80,6 +80,22 @@ substitution, or a telescope.  The arguments parse above `≈` so that
 @[inherit_doc Eq_bd] notation:50 Ξ " ⊢ " β:51 " ≈ " β':51 => Eq_bd Ξ β β'
 @[inherit_doc Wf_s] notation:50 Ξ " ⊢ " σ:51 " : " Θ:51 => Wf_s Ξ Θ σ
 
+/-! ### Equality of boundaries -/
+
+/-- Equality of boundaries is symmetric. -/
+theorem Eq_bd.symm {Δ : C.Arity} {Ξ : Ambient Δ} :
+    ∀ {β β' : Bd Δ}, Eq_bd Ξ β β' → Eq_bd Ξ β' β
+  | _, _, .sort => .sort
+  | _, _, .of h => .of h.symm
+  | _, _, .eq hl hr => .eq hl.symm hr.symm
+
+/-- Equality of boundaries is transitive. -/
+theorem Eq_bd.trans {Δ : C.Arity} {Ξ : Ambient Δ} :
+    ∀ {β β' β'' : Bd Δ}, Eq_bd Ξ β β' → Eq_bd Ξ β' β'' → Eq_bd Ξ β β''
+  | _, _, _, .sort, .sort => .sort
+  | _, _, _, .of h, .of h' => .of (h.trans h')
+  | _, _, _, .eq hl hr, .eq hl' hr' => .eq (hl.trans hl') (hr.trans hr')
+
 /-! ### Well-formed telescopes -/
 
 /-- A declaration is well formed over the ambient extended by the entries its

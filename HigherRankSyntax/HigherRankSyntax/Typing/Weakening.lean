@@ -4,10 +4,12 @@ import HigherRankSyntax.Typing.Rules
 # Weakening
 
 A derivation stays valid when declarations it does not mention are added to the
-ambient.  The statement is over a renaming of ambients rather than over a literal
-insertion, so that the source ambient is a variable and the induction can case on
-the derivation.
+ambient.  Stated over a renaming of ambients rather than over a literal insertion,
+so that the source ambient is a variable and the induction can case on the
+derivation; the insertion is recovered as `(Ambient.Renaming.weaken Ξ Θ).extend Ψ`.
 -/
+
+/-! ## Renamings of ambients -/
 
 /-- A renaming of ambients: slots keep the entries they bind and their
 declaration, both up to the renaming. -/
@@ -27,11 +29,18 @@ theorem isEq {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
   (Eq.to_iff (congrArg Bd.isEq (ι.declaration x))).trans (Bd.isEq_rename _ _)
 
 /-- Weakening on the right is a renaming of ambients. -/
-def weakenBy {Δ Ω : C.Arity} (Ξ : Ambient Δ) (Θ : dTel Δ Ω) :
+def weaken {Δ Ω : C.Arity} (Ξ : Ambient Δ) (Θ : dTel Δ Ω) :
     Ambient.Renaming Ξ (Ξ.extend Θ) where
   slot := Renaming.inl Δ Ω
   declaration := fun ⦃_⦄ x => dTel.declaration_concatenate_inl Ξ Θ x
   binding := fun ⦃_⦄ x => dTel.binding_concatenate_inl Ξ Θ x
+
+/-- The empty ambient maps into every ambient. -/
+def fromEmpty {Δ : C.Arity} (Ξ : Ambient Δ) :
+    Ambient.Renaming (.nil : Ambient 1) Ξ where
+  slot := Renaming.fromUnit Δ
+  declaration := fun ⦃_⦄ x => (C.unit_is_empty x).elim
+  binding := fun ⦃_⦄ x => (C.unit_is_empty x).elim
 
 /-- A renaming of ambients extends along a telescope. -/
 def extend {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
@@ -93,7 +102,7 @@ theorem boundaryOf {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
 
 end Ambient.Renaming
 
-/-! ### Weakening of the judgements -/
+/-! ## Stability of the judgements -/
 
 mutual
 
@@ -109,15 +118,6 @@ theorem Wf_e.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
         refine Eq.mp ?_ (Wf_s.weaken ι fill)
         exact congrArg (fun T => Wf_s A' T (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (args i)))
           (ι.binding x).symm
-
-/-- 8(8): equality of boundaries is stable under a renaming of ambients. -/
-theorem Eq_bd.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
-    (ι : Ambient.Renaming A A') :
-    ∀ {β β' : Bd Γ}, Eq_bd A β β' →
-      Eq_bd A' (Bd.rename ι.slot β) (Bd.rename ι.slot β')
-  | _, _, .sort => .sort
-  | _, _, .of h => .of (Eq_e.weaken ι h)
-  | _, _, .eq hl hr => .eq (Eq_e.weaken ι hl) (Eq_e.weaken ι hr)
 
 /-- 8(8): equality of expressions is stable under a renaming of ambients. -/
 theorem Eq_e.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
@@ -158,6 +158,15 @@ theorem Eq_e.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
             (⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ z)) (⟦ ι.slot ⇑ʳ Λ ⟧ʳ (θ z)))
           (dTel.instantiate_binding_rename ι.slot σ Θ z).symm
       exact congrArg₂ (Eq_e A') (act_rename _ _ _ ι.slot σ _) (act_rename _ _ _ ι.slot θ _)
+
+/-- 8(8): equality of boundaries is stable under a renaming of ambients. -/
+theorem Eq_bd.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    (ι : Ambient.Renaming A A') :
+    ∀ {β β' : Bd Γ}, Eq_bd A β β' →
+      Eq_bd A' (Bd.rename ι.slot β) (Bd.rename ι.slot β')
+  | _, _, .sort => .sort
+  | _, _, .of h => .of (Eq_e.weaken ι h)
+  | _, _, .eq hl hr => .eq (Eq_e.weaken ι hl) (Eq_e.weaken ι hr)
 
 /-- 8(8): filling is stable under a renaming of ambients. -/
 theorem Wf_s.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
@@ -220,7 +229,7 @@ theorem Wf_s.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
 
 end
 
-/-! ### Well-formed telescopes -/
+/-! ## Stability of telescopes -/
 
 /-- 8(8): a well-formed declaration stays well formed under a renaming of ambients. -/
 theorem Wf_bd.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
@@ -240,6 +249,20 @@ theorem Wf_bd.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
         (Ambient.Renaming.boundaryOf (ι.extend Θ) l).symm
         (Ambient.Renaming.boundaryOf (ι.extend Θ) r).symm
 
+/-- 8(8): a well-formed telescope stays well formed under a renaming of ambients. -/
+theorem Wf_t.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    (ι : Ambient.Renaming A A') :
+    ∀ {Ω : C.Arity} {Θ : dTel Γ Ω}, Wf_t A Θ → Wf_t A' (dTel.rename ι.slot Θ)
+  | _, .nil, _ => trivial
+  | _, .cons bind boundary rest, h =>
+      ⟨Wf_t.weaken ι h.1, Wf_bd.weaken ι bind h.2.1,
+        Wf_t.weaken (ι.extend (dTel.cons bind boundary .nil)) h.2.2⟩
+
+/-- A well-formed ambient is a well-formed telescope over every ambient. -/
+theorem Ambient.Wf.weaken {Δ Ω : C.Arity} {A : Ambient Ω} (h : Ambient.Wf A)
+    (Ξ : Ambient Δ) : Wf_t Ξ (dTel.rename (Renaming.fromUnit Δ) A) :=
+  Wf_t.weaken (Ambient.Renaming.fromEmpty Ξ) h
+
 /-- The declaration of every slot of a well-formed telescope is well formed. -/
 theorem Wf_t.declaration {Δ : C.Arity} {Ξ : Ambient Δ} :
     ∀ {Ω : C.Arity} {Θ : dTel Δ Ω}, Wf_t Ξ Θ → ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
@@ -252,7 +275,7 @@ theorem Wf_t.declaration {Δ : C.Arity} {Ξ : Ambient Δ} :
           ((dTel.cons bind boundary rest).declaration z)) ?head ?tail z
       case head =>
         refine Eq.mp ?_ (Wf_bd.weaken
-          (Ambient.Renaming.weakenBy Ξ (dTel.cons bind boundary rest)) bind h.2.1)
+          (Ambient.Renaming.weaken Ξ (dTel.cons bind boundary rest)) bind h.2.1)
         exact congrArg₂ (fun (T : dTel (Δ ⋈ (C.single α ⋈ Δ')) α)
             (b : Bd ((Δ ⋈ (C.single α ⋈ Δ')) ⋈ α)) =>
             Wf_bd (Ξ.extend (dTel.cons bind boundary rest)) T b)
@@ -269,3 +292,35 @@ theorem Wf_t.declaration {Δ : C.Arity} {Ξ : Ambient Δ} :
             Wf_bd (Ξ.extend (dTel.cons bind boundary rest)) T b)
           (dTel.binding_tail bind boundary rest y).symm
           (dTel.declaration_tail bind boundary rest y).symm
+
+/-- A well-formed declaration is equal to itself. -/
+theorem Wf_bd.refl {Δ Λ : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Λ} :
+    ∀ {β : Bd (Δ ⋈ Λ)}, Wf_bd Ξ Θ β → Eq_bd (Ξ.extend Θ) β β
+  | .sort, _ => .sort
+  | .of _, ⟨hS, _⟩ => .of (.refl hS)
+  | .eq _ _, ⟨hl, hr, _⟩ => .eq (.refl hl) (.refl hr)
+
+/-- The entries bound by every slot of a well-formed telescope are well formed. -/
+theorem Wf_t.binding {Δ : C.Arity} {Ξ : Ambient Δ} :
+    ∀ {Ω : C.Arity} {Θ : dTel Δ Ω}, Wf_t Ξ Θ → ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
+      Wf_t (Ξ.extend Θ) (Θ.binding z)
+  | _, .nil, _, _, z => (C.unit_is_empty z).elim
+  | _, .cons (α := α) (Δ := Δ') bind boundary rest, h, Λ, z => by
+      refine slotCases (α := α) (Δ := Δ')
+        (motive := fun ⦃Λ⦄ z => Wf_t (Ξ.extend (dTel.cons bind boundary rest))
+          ((dTel.cons bind boundary rest).binding z)) ?head ?tail z
+      case head =>
+        refine Eq.mp ?_ (Wf_t.weaken
+          (Ambient.Renaming.weaken Ξ (dTel.cons bind boundary rest)) h.1)
+        exact congrArg (fun (T : dTel (Δ ⋈ (C.single α ⋈ Δ')) α) =>
+            Wf_t (Ξ.extend (dTel.cons bind boundary rest)) T)
+          (dTel.binding_head bind boundary rest).symm
+      case tail =>
+        intro γ y
+        refine Eq.mp (Eq.trans (congrArg (fun (B : Ambient (Δ ⋈ (C.single α ⋈ Δ'))) =>
+            Wf_t B (rest.binding y))
+          (dTel.concatenate_assoc Ξ (dTel.cons bind boundary .nil) rest)) ?_)
+          (Wf_t.binding h.2.2 y)
+        exact congrArg (fun (T : dTel (Δ ⋈ (C.single α ⋈ Δ')) γ) =>
+            Wf_t (Ξ.extend (dTel.cons bind boundary rest)) T)
+          (dTel.binding_tail bind boundary rest y).symm

@@ -362,6 +362,195 @@ theorem instantiate_binding_rename {Γ Γ' Ω Λ : C.Arity} (ρ : Γ →ʳ Γ') 
     (binding_rename ρ Θ z)) ?_
   exact instantiate_rename ρ σ (Θ.binding z)
 
+/-- The declaration of a slot, after a substitution in the base. -/
+theorem declaration_actBase {Ω Ω' : C.Arity} (κ : Subst Ω Ω') :
+    ∀ {Δ : C.Arity} (T : dTel Ω Δ) {β : C.Arity} (z : Δ ∋ β),
+      (actBase κ T).declaration z
+        = Bd.act (Γ := 1) (Ξ := Ω' ⋈ Δ) (Subst.lift κ Δ) β (T.declaration z)
+  | _, .nil, _, z => (C.unit_is_empty z).elim
+  | _, .cons (α := α) (Δ := Δ') bind boundary rest, β, z => by
+      refine slotCases (α := α) (Δ := Δ')
+        (motive := fun ⦃β⦄ z =>
+          (actBase κ (.cons bind boundary rest)).declaration z
+            = Bd.act (Γ := 1) (Ξ := Ω' ⋈ (C.single α ⋈ Δ'))
+                (Subst.lift κ (C.single α ⋈ Δ')) β
+                ((dTel.cons bind boundary rest).declaration z)) ?head ?tail z
+      case head =>
+        refine Eq.trans (declaration_head _ _ _) ?_
+        refine Eq.trans ?_ (congrArg
+          (Bd.act (Γ := 1) (Ξ := Ω' ⋈ (C.single α ⋈ Δ'))
+            (Subst.lift κ (C.single α ⋈ Δ')) α)
+          (declaration_head bind boundary rest)).symm
+        exact (Bd.act_square (Renaming.inl Ω (C.single α ⋈ Δ'))
+          (Renaming.inl Ω' (C.single α ⋈ Δ')) (Subst.lift κ (C.single α ⋈ Δ')) κ
+          (fun ⦃_⦄ x => Subst.lift_inl κ x) α boundary).symm
+      case tail =>
+        intro γ w
+        refine Eq.trans (declaration_tail _ _ _ _) ?_
+        refine Eq.trans (declaration_actBase (Subst.lift κ (C.single α)) rest w) ?_
+        refine Eq.trans ?_ (congrArg
+          (Bd.act (Γ := 1) (Ξ := Ω' ⋈ (C.single α ⋈ Δ'))
+            (Subst.lift κ (C.single α ⋈ Δ')) γ)
+          (declaration_tail bind boundary rest w)).symm
+        exact congrArg (fun s => Bd.act (Γ := 1) (Ξ := Ω' ⋈ (C.single α ⋈ Δ'))
+            s γ (rest.declaration w))
+          (Subst.lift_assoc κ (C.single α) Δ').symm
+
+/-- The entries a slot binds, after a substitution in the base. -/
+theorem binding_actBase {Ω Ω' : C.Arity} (κ : Subst Ω Ω') :
+    ∀ {Δ : C.Arity} (T : dTel Ω Δ) {β : C.Arity} (z : Δ ∋ β),
+      (actBase κ T).binding z = actBase (Subst.lift κ Δ) (T.binding z)
+  | _, .nil, _, z => (C.unit_is_empty z).elim
+  | _, .cons (α := α) (Δ := Δ') bind boundary rest, β, z => by
+      refine slotCases (α := α) (Δ := Δ')
+        (motive := fun ⦃β⦄ z =>
+          (actBase κ (.cons bind boundary rest)).binding z
+            = actBase (Subst.lift κ (C.single α ⋈ Δ'))
+                ((dTel.cons bind boundary rest).binding z)) ?head ?tail z
+      case head =>
+        refine Eq.trans (binding_head _ _ _) ?_
+        refine Eq.trans ?_ (congrArg (actBase (Subst.lift κ (C.single α ⋈ Δ')))
+          (binding_head bind boundary rest)).symm
+        exact (actBase_square (Renaming.inl Ω (C.single α ⋈ Δ'))
+          (Renaming.inl Ω' (C.single α ⋈ Δ')) (Subst.lift κ (C.single α ⋈ Δ')) κ
+          (fun ⦃_⦄ x => Subst.lift_inl κ x) bind).symm
+      case tail =>
+        intro γ w
+        refine Eq.trans (binding_tail _ _ _ _) ?_
+        refine Eq.trans (binding_actBase (Subst.lift κ (C.single α)) rest w) ?_
+        refine Eq.trans ?_ (congrArg (actBase (Subst.lift κ (C.single α ⋈ Δ')))
+          (binding_tail bind boundary rest w)).symm
+        exact congrArg (fun s => actBase s (rest.binding w))
+          (Subst.lift_assoc κ (C.single α) Δ').symm
+
+/-- The identity substitution acts trivially. -/
+theorem actBase_id : ∀ {Γ Ψ : C.Arity} (T : dTel Γ Ψ), actBase (Subst.id Γ) T = T
+  | _, _, .nil => rfl
+  | _, _, .cons (α := α) bind boundary rest => by
+      simp only [actBase]
+      congr 1
+      · exact actBase_id bind
+      · exact Bd.act_id _ α boundary
+      · refine Eq.trans (congrArg (fun s => actBase s rest) (Subst.lift_id _ (C.single α))) ?_
+        exact actBase_id rest
+
+/-- Acting by a composite is successive action. -/
+theorem actBase_comp {Γ Δ Ξ : C.Arity} (κ : Subst Γ Δ) (θ : Subst Δ Ξ) :
+    ∀ {Ψ : C.Arity} (T : dTel Γ Ψ),
+      actBase (Subst.comp (Γ := 1) κ θ) T = actBase θ (actBase κ T)
+  | _, .nil => rfl
+  | _, .cons (α := α) bind boundary rest => by
+      simp only [actBase]
+      congr 1
+      · exact actBase_comp κ θ bind
+      · exact Bd.act_comp (Γ := 1) κ θ α boundary
+      · refine Eq.trans (congrArg (fun s => actBase s rest)
+          (Subst.lift_comp κ θ (C.single α))) ?_
+        exact actBase_comp _ _ rest
+
+/-- A substitution in the base distributes over concatenation. -/
+theorem actBase_concatenate {Γ Γ' Φ Ψ : C.Arity} (κ : Subst Γ Γ') :
+    ∀ (T : dTel Γ Φ) (U : dTel (Γ ⋈ Φ) Ψ),
+      actBase κ (concatenate T U)
+        = concatenate (actBase κ T) (actBase (Subst.lift κ Φ) U)
+  | .nil, U => (congrArg (fun s => actBase s U) (Subst.lift_one κ)).symm
+  | .cons (α := α) (Δ := Δ') bind boundary rest, U => by
+      simp only [concatenate, actBase]
+      congr 1
+      refine Eq.trans (actBase_concatenate (Subst.lift κ (C.single α)) rest U) ?_
+      exact congrArg (fun s => concatenate (actBase (Subst.lift κ (C.single α)) rest)
+          (actBase s U))
+        (Subst.lift_assoc κ (C.single α) Δ').symm
+
+/-- Filling commutes with a substitution in the base. -/
+theorem actBase_instantiate {Γ Γ' Ω Ψ : C.Arity} (κ : Subst Γ Γ') (τ : Subst Ω Γ)
+    (T : dTel (Γ ⋈ Ω) Ψ) :
+    actBase κ (instantiate τ T)
+      = instantiate (fun ⦃Λ⦄ i => Subst.act (Γ := 1) κ Λ (τ i))
+          (actBase (Subst.lift κ Ω) T) := by
+  refine Eq.trans (actBase_comp (Subst.copair (Subst.id Γ) τ) κ T).symm ?_
+  refine Eq.trans (congrArg (fun s => actBase s T) ?_)
+    (actBase_comp (Subst.lift κ Ω)
+      (Subst.copair (Subst.id Γ') (fun ⦃Λ⦄ i => Subst.act (Γ := 1) κ Λ (τ i))) T)
+  funext β x
+  rcases C.cover Γ Ω x with ⟨w, rfl⟩ | ⟨i, rfl⟩
+  · refine Eq.trans (congrArg (Subst.act (Γ := 1) κ β)
+      (Subst.copair_inl (Subst.id Γ) τ w)) ?_
+    refine Eq.trans (act_η κ β w) ?_
+    refine Eq.trans ?_ (congrArg (Subst.act (Γ := 1) (Subst.copair (Subst.id Γ')
+      (fun ⦃Λ⦄ i => Subst.act (Γ := 1) κ Λ (τ i))) β) (Subst.lift_inl κ w)).symm
+    refine Eq.symm (Eq.trans (act_rename_cancel (Renaming.inl Γ' Ω) (𝟙ʳ Γ')
+      (Subst.copair (Subst.id Γ') (fun ⦃Λ⦄ i => Subst.act (Γ := 1) κ Λ (τ i)))
+      (fun ⦃_⦄ u => Subst.copair_inl _ _ u) β (κ w))
+      (Eq.trans (congrArg (fun ρ => Renaming.act ρ (κ w)) (Renaming.extend_id Γ' β))
+        (Renaming.act_id _)))
+  · refine Eq.trans (congrArg (Subst.act (Γ := 1) κ β)
+      (Subst.copair_inr (Subst.id Γ) τ i)) ?_
+    refine Eq.trans ?_ (congrArg (Subst.act (Γ := 1) (Subst.copair (Subst.id Γ')
+      (fun ⦃Λ⦄ i => Subst.act (Γ := 1) κ Λ (τ i))) β) (Subst.lift_inr κ i)).symm
+    refine Eq.trans ?_ (act_η _ β (C.inr i)).symm
+    exact (Subst.copair_inr (Subst.id Γ')
+      (fun ⦃Λ⦄ j => Subst.act (Γ := 1) κ Λ (τ j)) i).symm
+
+/-- The identity renaming acts trivially. -/
+theorem rename_id : ∀ {Γ Ψ : C.Arity} (T : dTel Γ Ψ), rename (𝟙ʳ Γ) T = T
+  | _, _, .nil => rfl
+  | _, _, .cons (α := α) bind boundary rest => by
+      simp only [rename]
+      congr 1
+      · exact rename_id bind
+      · exact (congrArg (fun s => Bd.rename s boundary) (Renaming.extend_id _ _)).trans
+          (Bd.rename_id boundary)
+      · refine Eq.trans (congrArg (fun s => rename s rest)
+          (Renaming.extend_id _ _)) ?_
+        exact rename_id rest
+
+/-- Filling the fresh block of a weakened telescope by its own slots returns it. -/
+theorem instantiate_rename_inl {Δ Ω Ψ : C.Arity} (T : dTel (Δ ⋈ Ω) Ψ) :
+    instantiate (Subst.instId Δ Ω) (rename (Renaming.inl Δ Ω ⇑ʳ Ω) T) = T := by
+  refine Eq.trans (actBase_square (Renaming.inl Δ Ω ⇑ʳ Ω) (𝟙ʳ (Δ ⋈ Ω))
+    (Subst.copair (Subst.id (Δ ⋈ Ω)) (Subst.instId Δ Ω)) (Subst.id (Δ ⋈ Ω)) ?_ T) ?_
+  · intro γ x
+    refine Eq.trans ?_ ((congrArg (fun s => Renaming.act s (Subst.id (Δ ⋈ Ω) x))
+      (Renaming.extend_id _ _)).trans (Renaming.act_id _)).symm
+    rcases C.cover Δ Ω x with ⟨y, rfl⟩ | ⟨z, rfl⟩
+    · refine Eq.trans (congrArg (fun (w : ((Δ ⋈ Ω) ⋈ Ω) ∋ γ) =>
+        Subst.copair (Subst.id (Δ ⋈ Ω)) (Subst.instId Δ Ω) w)
+        (Renaming.extend_inl (Ξ := Ω) (Renaming.inl Δ Ω) y)) ?_
+      exact Subst.copair_inl _ _ (C.inl y)
+    · refine Eq.trans (congrArg (fun (w : ((Δ ⋈ Ω) ⋈ Ω) ∋ γ) =>
+        Subst.copair (Subst.id (Δ ⋈ Ω)) (Subst.instId Δ Ω) w)
+        (Renaming.extend_inr (Renaming.inl Δ Ω) z)) ?_
+      exact Subst.copair_inr _ _ z
+  · exact (congrArg (rename (𝟙ʳ (Δ ⋈ Ω))) (actBase_id T)).trans (rename_id T)
+
+/-- The declaration of a slot of a weakened telescope, filled by its own slots. -/
+theorem act_declaration_instId {Δ Ω Λ : C.Arity} (Θ : dTel Δ Ω) (z : Ω ∋ Λ) :
+    Bd.act (Ξ := 1) (Subst.instId Δ Ω) Λ
+        ((rename (Renaming.inl Δ Ω) Θ).declaration z) = Θ.declaration z := by
+  refine Eq.trans (congrArg (Bd.act (Ξ := 1) (Subst.instId Δ Ω) Λ)
+    (declaration_rename (Renaming.inl Δ Ω) Θ z)) ?_
+  exact Bd.act_instId_weaken Δ Ω Λ (Θ.declaration z)
+
+/-- The entries bound by a slot of a weakened telescope, filled by its own slots. -/
+theorem instantiate_binding_instId {Δ Ω Λ : C.Arity} (Θ : dTel Δ Ω) (z : Ω ∋ Λ) :
+    instantiate (Subst.instId Δ Ω) ((rename (Renaming.inl Δ Ω) Θ).binding z)
+      = Θ.binding z := by
+  refine Eq.trans (congrArg (instantiate (Subst.instId Δ Ω))
+    (binding_rename (Renaming.inl Δ Ω) Θ z)) ?_
+  exact instantiate_rename_inl (Θ.binding z)
+
+/-- Substituting into a renamed telescope whose slots the substitution merely
+relabels is that relabelling. -/
+theorem actBase_rename_cancel {Γ Δ' Γ' : C.Arity} (ρ : Γ →ʳ Δ') (ρ' : Γ →ʳ Γ')
+    (κ : Subst Δ' Γ') (h : ∀ ⦃α : C.Arity⦄ (x : Γ ∋ α), κ (ρ x) = Expr.η (ρ' x)) :
+    ∀ {Ψ : C.Arity} (T : dTel Γ Ψ), actBase κ (rename ρ T) = rename ρ' T := by
+  intro Ψ T
+  refine Eq.trans (actBase_square ρ ρ' κ (Subst.id Γ) ?_ T) ?_
+  · intro α x
+    exact (h x).trans (Renaming.act_eta ρ' x).symm
+  · exact congrArg (rename ρ') (actBase_id T)
+
 /-- Concatenation is associative. -/
 theorem concatenate_assoc {Ω Δ Ξ Φ : C.Arity} :
     ∀ (Θ : dTel Ω Δ) (Ψ : dTel (Ω ⋈ Δ) Ξ) (Χ : dTel ((Ω ⋈ Δ) ⋈ Ξ) Φ),

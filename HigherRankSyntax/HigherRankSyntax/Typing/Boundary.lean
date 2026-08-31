@@ -99,6 +99,57 @@ theorem act_square {Γ Γ' Δ Δ' : C.Arity} (ρ : Γ →ʳ Γ') (ρ' : Δ →ʳ
   | eq l r =>
       exact congrArg₂ Bd.eq (_root_.act_square ρ ρ' κ κ' h Φ l) (_root_.act_square ρ ρ' κ κ' h Φ r)
 
+/-- Acting by `Subst.copair (Subst.id Δ) σ` is acting by `σ` below the fixed
+prefix `Δ`. -/
+theorem act_copair_prefix {Δ Ω : C.Arity} (σ : Subst Ω Δ) (Φ : C.Arity)
+    (β : Bd ((Δ ⋈ Ω) ⋈ Φ)) :
+    act (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ) (Subst.copair (Subst.id Δ) σ) Φ β
+      = act (Γ := Δ) (Δ := Ω) (Ξ := 1) σ Φ β := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (_root_.act_copair_prefix σ Φ S)
+  | eq l r =>
+      exact congrArg₂ Bd.eq (_root_.act_copair_prefix σ Φ l)
+        (_root_.act_copair_prefix σ Φ r)
+
+/-- Acting by the lift of `Subst.copair (Subst.id Δ) σ` past `Φ` is acting by
+`σ` below the prefix `Δ` at depth `Φ ⋈ Ψ`. -/
+theorem act_lift_copair {Δ Ω : C.Arity} (σ : Subst Ω Δ) (Φ Ψ : C.Arity)
+    (β : Bd (((Δ ⋈ Ω) ⋈ Φ) ⋈ Ψ)) :
+    act (Γ := 1) (Δ := (Δ ⋈ Ω) ⋈ Φ) (Ξ := Δ ⋈ Φ)
+        (Subst.lift (Subst.copair (Subst.id Δ) σ) Φ) Ψ β
+      = act (Γ := Δ) (Δ := Ω) (Ξ := 1) σ (Φ ⋈ Ψ) β := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (Subst.act_lift_copair σ Φ Ψ S)
+  | eq l r =>
+      exact congrArg₂ Bd.eq (Subst.act_lift_copair σ Φ Ψ l)
+        (Subst.act_lift_copair σ Φ Ψ r)
+
+/-- Acting by a lift with no further depth is acting at the lifted depth. -/
+theorem act_lift_depth {Γ Δ Φ : C.Arity} (σ : Subst Γ Δ) (β : Bd (Γ ⋈ Φ)) :
+    act (Γ := 1) (Δ := Γ ⋈ Φ) (Ξ := Δ ⋈ Φ) (Subst.lift σ Φ) 1 β
+      = act (Γ := 1) (Δ := Γ) (Ξ := Δ) σ Φ β := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (Subst.act_lift_depth σ S)
+  | eq l r => exact congrArg₂ Bd.eq (Subst.act_lift_depth σ l) (Subst.act_lift_depth σ r)
+
+/-- Acting by a lifted substitution and then by the acted fillers is acting by
+the fillers and then by the substitution. -/
+theorem act_lift_fillers {Γ Γ' Χ Λ : C.Arity} (s : Subst Γ Γ') (τ : Subst Χ Γ)
+    (β : Bd (Γ ⋈ Χ ⋈ Λ)) :
+    act (Γ := Γ') (Δ := Χ) (Ξ := 1)
+        (fun ⦃Λ'⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ' (τ i)) Λ
+        (act (Γ := 1) (Δ := Γ ⋈ Χ) (Ξ := Γ' ⋈ Χ) (Subst.lift s Χ) Λ β)
+      = act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ
+          (act (Γ := Γ) (Δ := Χ) (Ξ := 1) τ Λ β) := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (Subst.act_lift_fillers s τ S)
+  | eq l r =>
+      exact congrArg₂ Bd.eq (Subst.act_lift_fillers s τ l) (Subst.act_lift_fillers s τ r)
+
 /-- Renaming preserves the constructor. -/
 @[simp] theorem isEq_rename {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) (β : Bd Γ) :
   (rename ρ β).isEq ↔ β.isEq := by
@@ -136,6 +187,28 @@ theorem instantiate_weaken (Γ Δ Θ : C.Arity) (σ : Subst Θ Γ) (β : Bd (Γ 
   | sort => rfl
   | of S => exact congrArg Bd.of (_root_.act_rename Γ (Γ ⋈ Δ) Θ (Renaming.inl Γ Δ) σ S)
   | eq l r => exact congrArg₂ Bd.eq (_root_.act_rename Γ (Γ ⋈ Δ) Θ (Renaming.inl Γ Δ) σ l) (_root_.act_rename Γ (Γ ⋈ Δ) Θ (Renaming.inl Γ Δ) σ r)
+
+/-- Filling the fresh block of a weakened boundary by its own slots returns it. -/
+theorem act_instId_weaken (Γ α Φ : C.Arity) (β : Bd (Γ ⋈ α ⋈ Φ)) :
+  act (Ξ := 1) (Subst.instId Γ α) Φ (rename ((Renaming.inl Γ α ⇑ʳ α) ⇑ʳ Φ) β) = β := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (_root_.act_instId_weaken Γ α S)
+  | eq l r =>
+      exact congrArg₂ Bd.eq (_root_.act_instId_weaken Γ α l) (_root_.act_instId_weaken Γ α r)
+
+/-- Substituting into a renamed boundary whose slots the substitution merely
+relabels is that relabelling. -/
+theorem act_rename_cancel {Γ Δ' Γ' : C.Arity} (ρ : Γ →ʳ Δ') (ρ' : Γ →ʳ Γ')
+    (κ : Subst Δ' Γ') (h : ∀ ⦃α : C.Arity⦄ (x : Γ ∋ α), κ (ρ x) = Expr.η (ρ' x))
+    (Φ : C.Arity) (β : Bd (Γ ⋈ Φ)) :
+    act (Γ := 1) κ Φ (rename (ρ ⇑ʳ Φ) β) = rename (ρ' ⇑ʳ Φ) β := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (_root_.act_rename_cancel ρ ρ' κ h Φ S)
+  | eq l r =>
+      exact congrArg₂ Bd.eq (_root_.act_rename_cancel ρ ρ' κ h Φ l)
+        (_root_.act_rename_cancel ρ ρ' κ h Φ r)
 
 /-! ### Functoriality -/
 

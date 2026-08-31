@@ -161,36 +161,59 @@ and `Eq_e.subst` cases, not guessed in advance.
 
 ## A7.3 — D, `Wf_t.declaration`
 
-**Done.** `Wf_t.declaration`, in `Typing/Weakening.lean`; `Rules.lean` is now purely
-definitional. Head case: `Wf_bd.weaken` along `Ambient.Renaming.weakenBy`. Tail case:
+**Done.** `Wf_t.declaration`, together with `Wf_t.weaken` — 8(8) proper, a well-formed
+telescope stays well formed — and `Ambient.Wf.weaken`, the form §9.3 consumes to make
+`Filling Ξ (⇑Γ)` defined. `Rules.lean` is now purely definitional. Head case: `Wf_bd.weaken` along `Ambient.Renaming.weakenBy`. Tail case:
 the induction hypothesis, `concatenate_assoc`, `declaration_tail`, `binding_tail`.
 
 ## A7.4 — 8(5), the variable rule
 
-*Produces.* `Wf_e.eta` — a non-equational slot, fully applied, is well formed over
-the ambient extended by what it binds — and `Wf_s.eta` — the fresh slots of an
-extension fill the telescope they were added for. Mutual, structural on the
-telescope.
+**Done.** `Wf_e.eta` and `Wf_s.eta`, in `Typing/Eta.lean`, together with the lemmas
+they rest on: `dTel.actBase_id`, `dTel.actBase_comp` (`actBase` is functorial),
+`dTel.rename_id`, `dTel.instantiate_rename_inl`, `Bd.act_instId_weaken`,
+`dTel.act_declaration_instId`, `dTel.instantiate_binding_instId`, `Wf_bd.refl` and
+`Wf_t.binding`.
 
-*Needs.* D.
+They are **not** structural but a mutual well-founded recursion, measure `(arity, tag)`
+lexicographic with `C.subWf` on the arity: `Wf_e.eta` at `α` calls `Wf_s.eta` at the
+same `α` (tag decreases), and `Wf_s.eta` at `Ω` calls both at a slot's binding arity
+`Λ < Ω` via `⟨z⟩`. `Θ.binding z` is produced by a recursion, so it is not a structural
+subterm and no plain induction would be accepted.
 
-*Notes.* `Wf_s.eta`'s three premises at a slot: `filler` is `Wf_e.eta` at that
-slot; `equation` is `Eq_e.hyp`, whose premises are D; `declared` is
-`boundaryOf_eta` together with reflexivity of `Eq_bd`, again via `Eq_e.subst`.
+`declared` needed reflexivity of `Eq_bd` at a well-formed declaration — `Wf_bd.refl`,
+three lines from `Eq_e.refl` — not the `Eq_e.subst` route the earlier design needed.
+`equation` applies `Eq_e.hyp` at the slot `C.inl (C.inr z)` of the doubly extended
+ambient with `Subst.instId` as its arguments, and `act_instId_weaken` collapses the
+conclusion back to `l ≈ r`.
 
-## A7.5 — the fold: 8(2), 8(3), 8(4)
+## A7.5 — the fold: 8(2), 8(3), 8(4) — **done**
 
-*Produces.* The substitution lemma. S2 and S3 share their arguments and are one
-theorem with a conjunctive conclusion; S4 sits inside S3's ambient-head case.
+*Produces.* `Typing/Substitution.lean`. Five transports, one for each judgement,
+stated over a **filling of ambients** `Ambient.Filling A A' Ω` — a substitution
+that at every slot is either the η of a slot carrying the same declaration and the
+same entries bound, both under the substitution, or a filler for the slot's
+declared boundary, the filled slots having arities below `Ω`. This stands to
+substitution as `Ambient.Renaming` stands to weakening, and for the same reason:
+the source ambient must be a variable for the induction to case on the derivation.
 
-*Needs.* D, W.
+The five (`Wf_e.subst_step`, `boundaryOf_subst_step`, `Eq_e.fill_step`,
+`Eq_bd.fill_step`, `Wf_s.subst_step`) are one **structural** recursion over the
+derivations. The block-arity drop — at a filled head the argument passes to the
+entries that head binds — is an **outer** well-founded induction on `Ω` under
+`C.subWf` (`substitutionAt`), because a derivation cannot appear in a
+`termination_by` measure. `SubstitutionAt Ω` bundles the five statements at `Ω`.
 
-*Notes.* The statement carries a **suffix telescope**, forced by `Wf_s.mk`'s
-premises living over an extended ambient. The measure is lexicographic: the block
-arity under `C.subWf`, decreasing by `⟨y⟩` at a head in the substituted block, then
-the expression under `Expr.Subterm`, decreasing at a head in the ambient or in the
-suffix. The three-way head split is `threewayOn`. This is the gate: §§9–13 cannot
-begin without it.
+Filling a literal block is `Wf_s.filling` (a filling of a telescope is a filling
+of the ambient it extends) composed with `Ambient.Filling.extend`; the concrete
+corollaries are `Wf_e.subst`, `Eq_e.fill`, `Eq_bd.fill`, `boundaryOf_subst`,
+`Wf_s.subst`.
+
+*Notes.* 8(2) carries one further hypothesis: that the transported source
+boundary is equal to itself. At an η-head the two boundaries are equal on the
+nose, and `Eq_bd` still needs a witness — which an ambient with an ill-formed
+declaration does not have. Callers obtain it from `Eq_bd.trans h h.symm` on the
+`declared` field they already hold. Well-formedness of the ambient is *not* a
+hypothesis of any of the five, which is what keeps them independent of 8(9).
 
 ## A7.6 — 8(6) and 8(7)
 
