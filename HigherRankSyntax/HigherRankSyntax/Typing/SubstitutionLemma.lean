@@ -236,6 +236,14 @@ structure SubstitutionAt (Ω : C.Arity) : Prop where
   equality : ∀ {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
     (F : Ambient.Filling A A' Ω) {l r : Expr Γ}, Eq_e A l r →
       Eq_e A' (F.fill ⋆ l) (F.fill ⋆ r)
+  /-- 8(9) for declarations at `Ω`. -/
+  declaration : ∀ {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    (F : Ambient.Filling A A' Ω) {Λ : C.Arity} {T : dTel Γ Λ} {β : Bd (Γ ⋈ Λ)},
+      Wf_bd A T β → Wf_bd A' (F.fill ⋆ T) (Bd.applyAt F.fill Λ β)
+  /-- 8(9) for telescopes at `Ω`. -/
+  telescope : ∀ {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    (F : Ambient.Filling A A' Ω) {Λ : C.Arity} {T : dTel Γ Λ},
+      Wf_t A T → Wf_t A' (F.fill ⋆ T)
   /-- 8(4) at `Ω`. -/
   filling : ∀ {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
     (F : Ambient.Filling A A' Ω) {Χ : C.Arity} {X : dTel Γ Χ} {τ : Subst Χ Γ},
@@ -383,7 +391,7 @@ theorem Eq_e.subst_step {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'
         exact (ih hsub).equality (Wf_s.filling (Wf_s.subst_step ih F fill))
           (heq (Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') F.fill Λ₀ l)
             (Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') F.fill Λ₀ r) hdeclEq)
-  | _, _, .congr (Ω := Ω₀) (Θ := Θ₀) (e := e₀) (e' := e₀') s t hs ht agree h => by
+  | _, _, .congr (Ω := Ω₀) (Θ := Θ₀) (e := e₀) (e' := e₀') s t hΘ₀ hs ht agree h => by
       have hd : ∀ ⦃Λ : C.Arity⦄ (z : Ω₀ ∋ Λ),
           Bd.act (Γ := Γ') (Δ := Ω₀) (Ξ := 1)
               (F.fill ⋆ s) Λ
@@ -411,7 +419,8 @@ theorem Eq_e.subst_step {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'
       refine Eq_e.congr (Ξ := A') (Θ := dTel.actBase F.fill Θ₀)
         (F.fill ⋆ s)
         (F.fill ⋆ t)
-        (Wf_s.subst_step ih F hs) (Wf_s.subst_step ih F ht) ?agree
+        (Wf_t.subst_step ih F hΘ₀) (Wf_s.subst_step ih F hs) (Wf_s.subst_step ih F ht)
+        ?agree
         (Eq_e.subst_step ih (F.extend Θ₀) h)
       case agree =>
         intro Λ z hne
@@ -536,6 +545,53 @@ theorem Wf_s.subst_step {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'
               (F.fill ⋆ τ) Λ
               ((dTel.actBase F.fill X).declaration z))) (hb z).symm
 
+/-- 8(9): a well-formed declaration is stable under a filling. -/
+theorem Wf_bd.subst_step {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    (ih : ∀ ⦃α : C.Arity⦄, Carrier.Sub α Ω → SubstitutionAt α)
+    (F : Ambient.Filling A A' Ω) :
+    ∀ {Λ : C.Arity} {T : dTel Γ Λ} {β : Bd (Γ ⋈ Λ)}, Wf_bd A T β →
+      Wf_bd A' (F.fill ⋆ T) (Bd.applyAt F.fill Λ β)
+  | _, _, _, .sort => .sort
+  | _, T, _, .of (S := S) hS hsort => by
+      have hmove := Eq_bd.subst_step ih (F.extend T) hsort
+      refine Wf_bd.of ?hS ?hsort
+      case hS =>
+        exact Eq.mp (congrArg (Wf_e (A' ⋈ F.fill ⋆ T))
+          (Subst.act_lift_depth F.fill S)) (Wf_e.subst_step ih (F.extend T) hS)
+      case hsort =>
+        refine Eq.mp ?_ (Eq_bd.trans (boundaryOf_subst_step ih (F.extend T) hS
+          (Eq_bd.trans hmove hmove.symm)) hmove)
+        exact congrArg (fun e => Eq_bd (A' ⋈ F.fill ⋆ T)
+          ((A' ⋈ F.fill ⋆ T).boundaryOf e) Bd.sort) (Subst.act_lift_depth F.fill S)
+  | _, T, _, .eq (l := l) (r := r) hl hr heq => by
+      have hmove := Eq_bd.subst_step ih (F.extend T) heq
+      refine Wf_bd.eq ?hl ?hr ?heq
+      case hl =>
+        exact Eq.mp (congrArg (Wf_e (A' ⋈ F.fill ⋆ T))
+          (Subst.act_lift_depth F.fill l)) (Wf_e.subst_step ih (F.extend T) hl)
+      case hr =>
+        exact Eq.mp (congrArg (Wf_e (A' ⋈ F.fill ⋆ T))
+          (Subst.act_lift_depth F.fill r)) (Wf_e.subst_step ih (F.extend T) hr)
+      case heq =>
+        refine Eq.mp ?_ (Eq_bd.trans (Eq_bd.trans
+          (boundaryOf_subst_step ih (F.extend T) hl (Eq_bd.trans hmove hmove.symm))
+          hmove)
+          (boundaryOf_subst_step ih (F.extend T) hr
+            (Eq_bd.trans hmove.symm hmove)).symm)
+        exact congrArg₂ (fun a b => Eq_bd (A' ⋈ F.fill ⋆ T)
+            ((A' ⋈ F.fill ⋆ T).boundaryOf a) ((A' ⋈ F.fill ⋆ T).boundaryOf b))
+          (Subst.act_lift_depth F.fill l) (Subst.act_lift_depth F.fill r)
+
+/-- 8(9): a well-formed telescope is stable under a filling. -/
+theorem Wf_t.subst_step {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    (ih : ∀ ⦃α : C.Arity⦄, Carrier.Sub α Ω → SubstitutionAt α)
+    (F : Ambient.Filling A A' Ω) :
+    ∀ {Λ : C.Arity} {T : dTel Γ Λ}, Wf_t A T → Wf_t A' (F.fill ⋆ T)
+  | _, _, .nil => .nil
+  | _, _, .cons (bind := bind) (boundary := boundary) hbind hboundary hrest =>
+      .cons (Wf_t.subst_step ih F hbind) (Wf_bd.subst_step ih F hboundary)
+        (Wf_t.subst_step ih (F.extend (dTel.cons bind boundary .nil)) hrest)
+
 end
 
 /-- The substitution lemma, by induction on the arity of the filled slots. -/
@@ -550,7 +606,11 @@ theorem substitutionAt : ∀ Ω : C.Arity, SubstitutionAt Ω
         equality := fun {_ _ _ _} F {_ _} h =>
           Eq_e.subst_step (fun _ hs => substitutionAt _) F h
         filling := fun {_ _ _ _} F {_ _ _} h =>
-          Wf_s.subst_step (fun _ hs => substitutionAt _) F h }
+          Wf_s.subst_step (fun _ hs => substitutionAt _) F h
+        declaration := fun {_ _ _ _} F {_ _ _} h =>
+          Wf_bd.subst_step (fun _ hs => substitutionAt _) F h
+        telescope := fun {_ _ _ _} F {_ _} h =>
+          Wf_t.subst_step (fun _ hs => substitutionAt _) F h }
 termination_by Ω => Ω
 decreasing_by all_goals exact hs
 
@@ -620,6 +680,34 @@ theorem boundaryOf_subst (hΞ : Ambient.Wf (Ξ ⋈ Θ ⋈ Ψ)) (hσ : Wf_s Ξ Θ
   rw [hσ.fillBefore_act_boundary Ψ]
   exact Eq_bd.subst hσ (boundaryOf_refl hΞ h)
 
+/-- 8(9): a well-formed telescope stays well formed under filling a block. -/
+theorem Wf_t.subst (hσ : Wf_s Ξ Θ σ) {Λ : C.Arity} {T : dTel ((Δ ⋈ Ω) ⋈ Φ) Λ}
+    (h : Wf_t (Ξ ⋈ Θ ⋈ Ψ) T) : Wf_t (Ξ ⋈ σ ⋆ Ψ) (σ ⋆ T) :=
+  (substitutionAt Ω).telescope (hσ.fillBefore Ψ) h
+
+/-- 8(3) with no suffix: well-formedness is stable under a well-formed
+substitution. -/
+theorem Wf_e.instantiate (hσ : Wf_s Ξ Θ σ) {g : Expr (Δ ⋈ Ω)} (h : Ξ ⋈ Θ ⊢ g) :
+    Ξ ⊢ σ ⋆ g := by
+  refine Eq.mp (congrArg (fun A => Wf_e A (Subst.instantiate σ g))
+    (dTel.concatenate_nil Ξ)) ?_
+  refine Wf_e.subst (Ψ := .nil) hσ ?_
+  exact Eq.mp (congrArg (fun A => Wf_e A g) (dTel.concatenate_nil (Ξ ⋈ Θ)).symm) h
+
+/-- 8(2) with no suffix: the computed boundary of an instantiated expression is
+the instantiated boundary. -/
+theorem boundaryOf_instantiate (hΞ : Ambient.Wf (Ξ ⋈ Θ)) (hσ : Wf_s Ξ Θ σ)
+    {g : Expr (Δ ⋈ Ω)} (h : Ξ ⋈ Θ ⊢ g) :
+    Ξ ⊢ Ξ.boundaryOf (σ ⋆ g) ≈ σ ⋆ (Ξ ⋈ Θ).boundaryOf g := by
+  have hnil := dTel.concatenate_nil (Ξ ⋈ Θ)
+  refine Eq.mp (congrArg₂ (fun (A : Ambient Δ) (b : Bd Δ) =>
+      Eq_bd A (A.boundaryOf (Subst.instantiate σ g)) b)
+    (dTel.concatenate_nil Ξ)
+    (congrArg (fun B => Bd.instantiate σ (dTel.boundaryOf B g)) hnil)) ?_
+  refine boundaryOf_subst (Ψ := .nil) ?hΞ hσ ?h
+  case hΞ => exact Eq.mp (congrArg Ambient.Wf hnil.symm) hΞ
+  case h => exact Eq.mp (congrArg (fun A => Wf_e A g) hnil.symm) h
+
 /-- 8(4): filling a telescope is stable under filling a block. -/
 theorem Wf_s.subst (hσ : Wf_s Ξ Θ σ) {Χ : C.Arity} {X : dTel ((Δ ⋈ Ω) ⋈ Φ) Χ}
     {τ : Subst Χ ((Δ ⋈ Ω) ⋈ Φ)} (h : Ξ ⋈ Θ ⋈ Ψ ⊢ τ : X) :
@@ -631,3 +719,70 @@ theorem Wf_s.subst (hσ : Wf_s Ξ Θ σ) {Χ : C.Arity} {X : dTel ((Δ ⋈ Ω) �
   exact (substitutionAt Ω).filling (hσ.fillBefore Ψ) h
 
 end
+
+/-! ## Congruence -/
+
+/-- 8(6): an application is equal to itself with its fillers replaced by equal
+ones. -/
+theorem Eq_e.ap {Δ α : C.Arity} {Ξ : Ambient Δ} (hΞ : Ambient.Wf Ξ)
+    (x : Δ ∋ α) (args args' : Subst α Δ)
+    (h : Ξ ⊢ Expr.ap x args) (h' : Ξ ⊢ Expr.ap x args')
+    (agree : ∀ ⦃Λ : C.Arity⦄ (z : α ∋ Λ),
+        ¬ (args ⋆ (Ξ.binding x).declaration z).isEq →
+        Ξ ⋈ args ⋆ (Ξ.binding x).binding z ⊢ args z ≈ args' z) :
+    Ξ ⊢ Expr.ap x args ≈ Expr.ap x args' := by
+  cases h with
+  | ap _ _ head fill =>
+      cases h' with
+      | ap _ _ _ fill' =>
+          refine Eq.mp (congrArg₂ (Eq_e Ξ)
+            (ap_eq_act_η x args).symm (ap_eq_act_η x args').symm) ?_
+          exact Eq_e.congr (Ξ := Ξ) (Θ := Ξ.binding x) args args'
+            (Wf_t.binding hΞ x) fill fill' agree
+            (Eq_e.refl (Wf_e.eta Ξ x (Wf_t.binding hΞ x) head))
+
+/-! ## Presuppositions -/
+
+mutual
+
+/-- 8(7): the left side of an equality is well formed. -/
+theorem Eq_e.wf_left {Δ : C.Arity} {Ξ : Ambient Δ} :
+    ∀ {e e' : Expr Δ}, Ξ ⊢ e ≈ e' → Ξ ⊢ e
+  | _, _, .refl h => h
+  | _, _, .symm h => Eq_e.wf_right h
+  | _, _, .trans h _ => Eq_e.wf_left h
+  | _, _, .hyp q l r args _ hl _ fill => Wf_e.instantiate fill hl
+  | _, _, .congr σ _ _ hσ _ _ h => Wf_e.instantiate hσ (Eq_e.wf_left h)
+
+/-- 8(7): the right side of an equality is well formed. -/
+theorem Eq_e.wf_right {Δ : C.Arity} {Ξ : Ambient Δ} :
+    ∀ {e e' : Expr Δ}, Ξ ⊢ e ≈ e' → Ξ ⊢ e'
+  | _, _, .refl h => h
+  | _, _, .symm h => Eq_e.wf_left h
+  | _, _, .trans _ h' => Eq_e.wf_right h'
+  | _, _, .hyp q l r args _ _ hr fill => Wf_e.instantiate fill hr
+  | _, _, .congr _ θ _ _ hθ _ h => Wf_e.instantiate hθ (Eq_e.wf_right h)
+
+end
+
+/-- 8(7): equal expressions have equal computed boundaries. -/
+theorem Eq_e.boundaryOf : ∀ {Δ : C.Arity} {Ξ : Ambient Δ}, Ambient.Wf Ξ →
+    ∀ {e e' : Expr Δ}, Ξ ⊢ e ≈ e' → Ξ ⊢ Ξ.boundaryOf e ≈ Ξ.boundaryOf e'
+  | _, _, hΞ, _, _, .refl h => boundaryOf_refl hΞ h
+  | _, _, hΞ, _, _, .symm h => (Eq_e.boundaryOf hΞ h).symm
+  | _, _, hΞ, _, _, .trans h h' =>
+      (Eq_e.boundaryOf hΞ h).trans (Eq_e.boundaryOf hΞ h')
+  | _, Ξ, hΞ, _, _, .hyp q l r args decl hl hr fill => by
+      have hb : Wf_t Ξ (Ξ.binding q) := Wf_t.binding hΞ q
+      have hΞ' : Ambient.Wf (Ξ ⋈ Ξ.binding q) := Wf_t.concatenate hΞ hb
+      have hdecl := Wf_bd.eq_boundary (Eq.mp
+        (congrArg (Wf_bd Ξ (Ξ.binding q)) decl) (Wf_t.declaration hΞ q))
+      refine Eq_bd.trans (boundaryOf_instantiate hΞ' fill hl) ?_
+      refine Eq_bd.trans ?_ (boundaryOf_instantiate hΞ' fill hr).symm
+      exact Eq_bd.congr args args hb fill fill fill.agree hdecl
+  | _, Ξ, hΞ, _, _, .congr (Θ := Θ) σ θ hΘ hσ hθ agree h => by
+      have hΞ' : Ambient.Wf (Ξ ⋈ Θ) := Wf_t.concatenate hΞ hΘ
+      refine Eq_bd.trans (boundaryOf_instantiate hΞ' hσ (Eq_e.wf_left h)) ?_
+      refine Eq_bd.trans ?_
+        (boundaryOf_instantiate hΞ' hθ (Eq_e.wf_right h)).symm
+      exact Eq_bd.congr σ θ hΘ hσ hθ agree (Eq_e.boundaryOf hΞ' h)

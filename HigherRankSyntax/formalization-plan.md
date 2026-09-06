@@ -55,6 +55,14 @@ declaration mentions only earlier entries is a theorem, not a typing constraint.
 arities strictly, so `≈`-equal telescopes share an arity and the statements carry
 no transport; 8(10) is the theorem that makes it sound.
 
+**All six judgements are inductive, in one mutual block.** `Wf_e`, `Eq_e`,
+`Eq_bd`, `Wf_s`, `Wf_bd`, `Wf_t`. `Wf_bd` and `Wf_t` were `def`s outside the block
+until A7.6; they are inductives so that `Eq_e.congr` can take `Wf_t Ξ Θ` as a
+premise, which the boundary half of 8(7) needs — `Wf_t` cannot be a `def` and also
+appear in a constructor of the family it is defined over. `Wf_t.cons` mirrors
+`dTel.cons`; `Wf_bd` has one constructor per boundary. `Ambient.Wf` and `Eq_t`
+stay `def`s after the block.
+
 **The hypothesis rule is stated in applied form.** §6.5(2) of the note concludes at
 `Ξ ⋈ ⇑(Ξ.binding q)`, a compound ambient, so the rule can never be applied at a
 weakened target and the system is not closed under weakening. `Eq_e.hyp` therefore
@@ -215,21 +223,57 @@ declaration does not have. Callers obtain it from `Eq_bd.trans h h.symm` on the
 `declared` field they already hold. Well-formedness of the ambient is *not* a
 hypothesis of any of the five, which is what keeps them independent of 8(9).
 
-## A7.6 — 8(6) and 8(7)
+## A7.6 — the judgement block, 8(6), 8(7) — **done**
 
-*Produces.* Congruence (the rule of 6.7), and presuppositions: `Ξ ⊢ e ≈ e'` gives
-`Ξ ⊢ e`, `Ξ ⊢ e'` and `Ξ ⊢ boundaryOf e ≈ boundaryOf e'`.
+`Wf_bd` and `Wf_t` are inductives in the mutual block, with `Wf_bd.eq_left`,
+`Wf_bd.eq_right`, `Wf_bd.eq_boundary` as the projections the old `∧`-form gave for
+free. `Wf_bd.weaken`, `Wf_t.weaken`, `Wf_t.declaration`, `Wf_t.binding` and
+`Wf_bd.refl` recurse on the derivation rather than on the telescope.
 
-*Needs.* The fold. 8(6) also needs the two raw lemmas of 8.2 —
-`ap x args = args ⋆ Expr.η x` and `⟨η, args⟩ ⋆ e = args ⋆ e` — of which the first
-is `ap_eq_act_η` in `MonadLaws.lean`.
+```lean
+theorem Eq_e.ap (hΞ : Ambient.Wf Ξ) (x : Δ ∋ α) (args args' : Subst α Δ)
+    (h : Ξ ⊢ Expr.ap x args) (h' : Ξ ⊢ Expr.ap x args')
+    (agree : ∀ ⦃Λ⦄ (z : α ∋ Λ), ¬ (args ⋆ (Ξ.binding x).declaration z).isEq →
+        Ξ ⋈ args ⋆ (Ξ.binding x).binding z ⊢ args z ≈ args' z) :
+    Ξ ⊢ Expr.ap x args ≈ Expr.ap x args'
 
-*Notes.* 8(7) must come after 8(3): at the `subst` clause its induction hypothesis
-yields a derivation to which 8(3) is applied.
+theorem Eq_e.wf_left  : ∀ {e e' : Expr Δ}, Ξ ⊢ e ≈ e' → Ξ ⊢ e
+theorem Eq_e.wf_right : ∀ {e e' : Expr Δ}, Ξ ⊢ e ≈ e' → Ξ ⊢ e'
+theorem Eq_e.boundaryOf : ∀ {Δ} {Ξ : Ambient Δ}, Ambient.Wf Ξ →
+    ∀ {e e' : Expr Δ}, Ξ ⊢ e ≈ e' → Ξ ⊢ Ξ.boundaryOf e ≈ Ξ.boundaryOf e'
+```
 
-## A7.7 — 8(9), 8(10), 8(11)
+All three live in `SubstitutionLemma.lean`, since 8(7) consumes the fold's
+corollaries and pairs with `boundaryOf_refl`. 8(6) is one application of
+`Eq_e.congr` to `Eq_e.refl (Wf_e.eta …)` and `ap_eq_act_η` on both sides — the
+note's second raw lemma is unnecessary because `binding` is pre-weakened. The two
+well-formedness halves of 8(7) need no hypotheses: `hyp` and `congr` are both
+`Wf_e.instantiate`.
 
-*Produces.* 8(9) `Wf_t` and `≈` under substitution, in both arguments; 8(10)
+`Eq_e.boundaryOf` is what forced `Eq_e.congr` to carry `Wf_t Ξ Θ` (A7.7): its
+`refl` clause needs `boundaryOf_refl`, hence a well-formed ambient, and its
+`congr` clause then needs `Ambient.Wf (Ξ ⋈ Θ)`, which `Wf_s Ξ Θ σ` does not give.
+Auxiliaries added along the way: `Wf_e.instantiate`, `boundaryOf_instantiate`
+(8(3), 8(2) with no suffix — the note's own form), `Eq_bd.congr`,
+`Wf_t.concatenate`, `Wf_s.agree`, `dTel.concatenate_nil`.
+
+## A7.7 — 8(9) in the fold — **done**; then 8(10), 8(11)
+
+**Done:** `Eq_e.congr` carries `(hΘ : Wf_t Ξ Θ)`. The fold has seven members: the
+five of A7.5 plus `Wf_bd.subst_step` and `Wf_t.subst_step`, recursing on their own
+derivations; `SubstitutionAt` gained the fields `declaration` and `telescope`. The
+new premise is supplied at its two use sites by `Wf_t.weaken` and
+`Wf_t.subst_step` — which is why the rule change and the two members had to land
+together. `Wf_bd.weaken` and `Wf_t.weaken` moved into the weakening block for the
+same reason. Exported: `Wf_t.subst`, 8(9)'s first half.
+
+```lean
+theorem Wf_t.subst (hσ : Wf_s Ξ Θ σ) {Λ : C.Arity} {T : dTel ((Δ ⋈ Ω) ⋈ Φ) Λ}
+    (h : Wf_t (Ξ ⋈ Θ ⋈ Ψ) T) : Wf_t (Ξ ⋈ σ ⋆ Ψ) (σ ⋆ T)
+```
+
+*Produces.* 8(9)'s second half — for one `Θ` with `Ξ ⊢ Θ`, two well-formed `σ, θ`
+agreeing up to `≈` at every non-equational slot give `σ ⋆ Θ ≈ θ ⋆ Θ`; 8(10)
 invariance of every judgement under an `≈`-equal ambient; 8(11) that `≈` on
 telescopes, `∼` on fillings and 13.1's heterogeneous comparison are equivalences.
 

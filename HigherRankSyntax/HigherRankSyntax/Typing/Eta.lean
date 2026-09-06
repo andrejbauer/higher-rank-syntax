@@ -53,7 +53,7 @@ theorem Wf_s.eta : ∀ {Δ Ω : C.Arity} (Ξ : Ambient Δ) (Θ : dTel Δ Ω),
         case hl =>
           refine Eq.mp ?_ (Wf_e.weaken
             ((Ambient.Renaming.weaken ((Ξ ⋈ Θ)) (Θ.binding z)).extend (Θ.binding z))
-            hbd.1)
+            hbd.eq_left)
           exact congrArg (fun T => Wf_e ((((((Ξ ⋈ Θ)) ⋈ Θ.binding z)) ⋈ T))
               (⟦ Renaming.inl (Δ ⋈ Ω) Λ ⇑ʳ Λ ⟧ʳ l))
             (((dTel.binding_concatenate_inl ((Ξ ⋈ Θ)) (Θ.binding z) (C.inr z)).trans
@@ -62,7 +62,7 @@ theorem Wf_s.eta : ∀ {Δ Ω : C.Arity} (Ξ : Ambient Δ) (Θ : dTel Δ Ω),
         case hr =>
           refine Eq.mp ?_ (Wf_e.weaken
             ((Ambient.Renaming.weaken ((Ξ ⋈ Θ)) (Θ.binding z)).extend (Θ.binding z))
-            hbd.2.1)
+            hbd.eq_right)
           exact congrArg (fun T => Wf_e ((((((Ξ ⋈ Θ)) ⋈ Θ.binding z)) ⋈ T))
               (⟦ Renaming.inl (Δ ⋈ Ω) Λ ⇑ʳ Λ ⟧ʳ r))
             (((dTel.binding_concatenate_inl ((Ξ ⋈ Θ)) (Θ.binding z) (C.inr z)).trans
