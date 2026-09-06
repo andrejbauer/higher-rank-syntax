@@ -551,6 +551,13 @@ theorem actBase_rename_cancel {Γ Δ' Γ' : C.Arity} (ρ : Γ →ʳ Δ') (ρ' : 
     exact (h x).trans (Renaming.act_eta ρ' x).symm
   · exact congrArg (rename ρ') (actBase_id T)
 
+/-- Concatenating the empty telescope changes nothing. -/
+theorem concatenate_nil {Ω : C.Arity} :
+    ∀ {Δ : C.Arity} (Θ : dTel Ω Δ), concatenate Θ .nil = Θ
+  | _, .nil => rfl
+  | _, .cons bind boundary rest =>
+      congrArg (dTel.cons bind boundary) (concatenate_nil rest)
+
 /-- Concatenation is associative. -/
 theorem concatenate_assoc {Ω Δ Ξ Φ : C.Arity} :
     ∀ (Θ : dTel Ω Δ) (Ψ : dTel (Ω ⋈ Δ) Ξ) (Χ : dTel ((Ω ⋈ Δ) ⋈ Ξ) Φ),
@@ -592,8 +599,60 @@ end dTel
 /-- An ambient is a telescope over the unit base. -/
 abbrev Ambient (Δ : C.Arity) : Type := dTel 1 Δ
 
-/-- Extend an ambient by a telescope over it. -/
-abbrev Ambient.extend {Δ : C.Arity} (Ξ : Ambient Δ) {Ω : C.Arity}
-    (Θ : dTel Δ Ω) : Ambient (Δ ⋈ Ω) :=
-  dTel.concatenate Ξ Θ
+@[inherit_doc dTel.concatenate] infixl:65 " ⋈ " => dTel.concatenate
+
+/-- Fill the block `Ω` of an expression over `Δ ⋈ Ω ⋈ Φ`. -/
+abbrev Subst.fill {Δ Ω Φ : C.Arity} (σ : Subst Ω Δ) (g : Expr ((Δ ⋈ Ω) ⋈ Φ)) :
+    Expr (Δ ⋈ Φ) :=
+  Subst.act (Γ := Δ) (Δ := Ω) (Ξ := 1) σ Φ g
+
+/-- Fill the block `Ω` of a boundary over `Δ ⋈ Ω ⋈ Φ`. -/
+abbrev Bd.fill {Δ Ω Φ : C.Arity} (σ : Subst Ω Δ) (β : Bd ((Δ ⋈ Ω) ⋈ Φ)) :
+    Bd (Δ ⋈ Φ) :=
+  Bd.act (Γ := Δ) (Δ := Ω) (Ξ := 1) σ Φ β
+
+/-- Fill the block `Ω` of an expression over `Δ ⋈ Ω`. -/
+abbrev Subst.instantiate {Δ Ω : C.Arity} (σ : Subst Ω Δ) (g : Expr (Δ ⋈ Ω)) : Expr Δ :=
+  Subst.act (Γ := Δ) (Δ := Ω) (Ξ := 1) σ 1 g
+
+/-- Apply a substitution of one base by another to an expression. -/
+abbrev Subst.apply {Γ Γ' : C.Arity} (s : Subst Γ Γ') (g : Expr Γ) : Expr Γ' :=
+  Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s 1 g
+
+/-- Apply a substitution of one base by another to a boundary. -/
+abbrev Bd.apply {Γ Γ' : C.Arity} (s : Subst Γ Γ') (β : Bd Γ) : Bd Γ' :=
+  Bd.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s 1 β
+
+/-- Fill the block `Ω` of a telescope over `Δ ⋈ Ω ⋈ Φ`. -/
+abbrev dTel.fill {Δ Ω Φ Χ : C.Arity} (σ : Subst Ω Δ) (X : dTel ((Δ ⋈ Ω) ⋈ Φ) Χ) :
+    dTel (Δ ⋈ Φ) Χ :=
+  dTel.actBase (Subst.lift (Subst.copair (Subst.id Δ) σ) Φ) X
+
+/-- Fill the block `Ω` in every filler of a substitution into `Δ ⋈ Ω ⋈ Φ`. -/
+abbrev Subst.fillEach {Δ Ω Φ Χ : C.Arity} (σ : Subst Ω Δ)
+    (τ : Subst Χ ((Δ ⋈ Ω) ⋈ Φ)) : Subst Χ (Δ ⋈ Φ) :=
+  fun ⦃Λ⦄ i => Subst.act (Γ := Δ) (Δ := Ω) (Ξ := 1) σ (Φ ⋈ Λ) (τ i)
+
+/-- Apply a substitution of one base by another in every filler of a
+substitution. -/
+abbrev Subst.applyEach {Γ Γ' Χ : C.Arity} (s : Subst Γ Γ') (τ : Subst Χ Γ) :
+    Subst Χ Γ' :=
+  fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (τ i)
+
+/-- Apply a substitution of one base by another to a boundary at depth `Φ`. -/
+abbrev Bd.applyAt {Γ Γ' : C.Arity} (s : Subst Γ Γ') (Φ : C.Arity) (β : Bd (Γ ⋈ Φ)) :
+    Bd (Γ' ⋈ Φ) :=
+  Bd.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Φ β
+
+@[inherit_doc Subst.apply] infixr:70 " ⋆ " => Subst.apply
+@[inherit_doc dTel.fill] infixr:70 " ⋆ " => dTel.fill
+@[inherit_doc Subst.fillEach] infixr:70 " ⋆ " => Subst.fillEach
+@[inherit_doc Subst.applyEach] infixr:70 " ⋆ " => Subst.applyEach
+@[inherit_doc Bd.apply] infixr:70 " ⋆ " => Bd.apply
+@[inherit_doc dTel.actBase] infixr:70 " ⋆ " => dTel.actBase
+@[inherit_doc Subst.fill] infixr:70 " ⋆ " => Subst.fill
+@[inherit_doc Subst.instantiate] infixr:70 " ⋆ " => Subst.instantiate
+@[inherit_doc Bd.instantiate] infixr:70 " ⋆ " => Bd.instantiate
+@[inherit_doc Bd.fill] infixr:70 " ⋆ " => Bd.fill
+@[inherit_doc dTel.instantiate] infixr:70 " ⋆ " => dTel.instantiate
 

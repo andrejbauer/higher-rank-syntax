@@ -30,7 +30,7 @@ theorem isEq {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
 
 /-- Weakening on the right is a renaming of ambients. -/
 def weaken {Δ Ω : C.Arity} (Ξ : Ambient Δ) (Θ : dTel Δ Ω) :
-    Ambient.Renaming Ξ (Ξ.extend Θ) where
+    Ambient.Renaming Ξ ((Ξ ⋈ Θ)) where
   slot := Renaming.inl Δ Ω
   declaration := fun ⦃_⦄ x => dTel.declaration_concatenate_inl Ξ Θ x
   binding := fun ⦃_⦄ x => dTel.binding_concatenate_inl Ξ Θ x
@@ -45,12 +45,12 @@ def fromEmpty {Δ : C.Arity} (Ξ : Ambient Δ) :
 /-- A renaming of ambients extends along a telescope. -/
 def extend {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
     (ι : Ambient.Renaming A A') (Θ : dTel Γ Ω) :
-    Ambient.Renaming (A.extend Θ) (A'.extend (dTel.rename ι.slot Θ)) where
+    Ambient.Renaming ((A ⋈ Θ)) ((A' ⋈ dTel.rename ι.slot Θ)) where
   slot := ι.slot ⇑ʳ Ω
   declaration := by
     intro α x
     rcases C.cover Γ Ω x with ⟨y, rfl⟩ | ⟨z, rfl⟩
-    · refine Eq.trans (congrArg (fun w => (A'.extend (dTel.rename ι.slot Θ)).declaration w)
+    · refine Eq.trans (congrArg (fun w => ((A' ⋈ dTel.rename ι.slot Θ)).declaration w)
         (Renaming.extend_inl ι.slot y)) ?_
       refine Eq.trans (dTel.declaration_concatenate_inl _ _ _) ?_
       refine Eq.trans (congrArg (Bd.rename (Renaming.inl Γ' Ω ⇑ʳ α)) (ι.declaration y)) ?_
@@ -62,7 +62,7 @@ def extend {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
         (((Renaming.extend_comp _ _ α).symm.trans
           (congrArg (fun s => s ⇑ʳ α) (Renaming.inl_comp ι.slot))).trans
             (Renaming.extend_comp _ _ α))
-    · refine Eq.trans (congrArg (fun w => (A'.extend (dTel.rename ι.slot Θ)).declaration w)
+    · refine Eq.trans (congrArg (fun w => ((A' ⋈ dTel.rename ι.slot Θ)).declaration w)
         (Renaming.extend_inr ι.slot z)) ?_
       refine Eq.trans (dTel.declaration_concatenate_inr _ _ _) ?_
       refine Eq.trans (dTel.declaration_rename _ _ _) ?_
@@ -71,7 +71,7 @@ def extend {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
   binding := by
     intro α x
     rcases C.cover Γ Ω x with ⟨y, rfl⟩ | ⟨z, rfl⟩
-    · refine Eq.trans (congrArg (fun w => (A'.extend (dTel.rename ι.slot Θ)).binding w)
+    · refine Eq.trans (congrArg (fun w => ((A' ⋈ dTel.rename ι.slot Θ)).binding w)
         (Renaming.extend_inl ι.slot y)) ?_
       refine Eq.trans (dTel.binding_concatenate_inl _ _ _) ?_
       refine Eq.trans (congrArg (dTel.rename (Renaming.inl Γ' Ω)) (ι.binding y)) ?_
@@ -80,7 +80,7 @@ def extend {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
         (dTel.binding_concatenate_inl A Θ y)).symm
       refine Eq.trans ?_ (dTel.rename_comp _ _ _)
       exact congrArg (fun ρ => dTel.rename ρ (A.binding y)) (Renaming.inl_comp ι.slot)
-    · refine Eq.trans (congrArg (fun w => (A'.extend (dTel.rename ι.slot Θ)).binding w)
+    · refine Eq.trans (congrArg (fun w => ((A' ⋈ dTel.rename ι.slot Θ)).binding w)
         (Renaming.extend_inr ι.slot z)) ?_
       refine Eq.trans (dTel.binding_concatenate_inr _ _ _) ?_
       refine Eq.trans (dTel.binding_rename _ _ _) ?_
@@ -133,28 +133,28 @@ theorem Eq_e.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
         exact (ι.declaration q).trans (congrArg (Bd.rename (ι.slot ⇑ʳ Λ)) decl)
       case hl =>
         refine Eq.mp ?_ (Wf_e.weaken (ι.extend (A.binding q)) hl)
-        exact congrArg (fun T => Wf_e (A'.extend T) (⟦ ι.slot ⇑ʳ Λ ⟧ʳ l)) (ι.binding q).symm
+        exact congrArg (fun T => Wf_e ((A' ⋈ T)) (⟦ ι.slot ⇑ʳ Λ ⟧ʳ l)) (ι.binding q).symm
       case hr =>
         refine Eq.mp ?_ (Wf_e.weaken (ι.extend (A.binding q)) hr)
-        exact congrArg (fun T => Wf_e (A'.extend T) (⟦ ι.slot ⇑ʳ Λ ⟧ʳ r)) (ι.binding q).symm
+        exact congrArg (fun T => Wf_e ((A' ⋈ T)) (⟦ ι.slot ⇑ʳ Λ ⟧ʳ r)) (ι.binding q).symm
       case fill =>
         refine Eq.mp ?_ (Wf_s.weaken ι fill)
         exact congrArg (fun T => Wf_s A' T (fun ⦃_⦄ i => ⟦ ι.slot ⇑ʳ _ ⟧ʳ (args i)))
           (ι.binding q).symm
       exact congrArg₂ (Eq_e A') (act_rename _ _ _ ι.slot args l) (act_rename _ _ _ ι.slot args r)
-  | _, _, .subst (Ω := Ω) (Θ := Θ) (e := e₁) (e' := e₂) σ θ hσ hθ agree h => by
-      refine Eq.mp ?_ (Eq_e.subst (Ξ := A') (Θ := dTel.rename ι.slot Θ)
+  | _, _, .congr (Ω := Ω) (Θ := Θ) (e := e₁) (e' := e₂) σ θ hσ hθ agree h => by
+      refine Eq.mp ?_ (Eq_e.congr (Ξ := A') (Θ := dTel.rename ι.slot Θ)
         (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ i)) (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (θ i))
         (Wf_s.weaken ι hσ) (Wf_s.weaken ι hθ) ?agree (Eq_e.weaken (ι.extend Θ) h))
       case agree =>
         intro Λ z hne
         have h₀ : ¬ (Bd.act (Ξ := 1) σ Λ (Θ.declaration z)).isEq := by
           refine fun hEq => hne ?_
-          exact (dTel.act_declaration_rename ι.slot σ Θ z) ▸
-            (Bd.isEq_rename (ι.slot ⇑ʳ Λ) _).mpr hEq
+          exact Eq.mp (congrArg Bd.isEq (dTel.act_declaration_rename ι.slot σ Θ z).symm)
+            ((Bd.isEq_rename (ι.slot ⇑ʳ Λ) _).mpr hEq)
         refine Eq.mp ?_ (Eq_e.weaken (ι.extend (dTel.instantiate σ (Θ.binding z)))
           (agree z h₀))
-        exact congrArg (fun T => Eq_e (A'.extend T)
+        exact congrArg (fun T => Eq_e ((A' ⋈ T))
             (⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ z)) (⟦ ι.slot ⇑ʳ Λ ⟧ʳ (θ z)))
           (dTel.instantiate_binding_rename ι.slot σ Θ z).symm
       exact congrArg₂ (Eq_e A') (act_rename _ _ _ ι.slot σ _) (act_rename _ _ _ ι.slot θ _)
@@ -195,7 +195,7 @@ theorem Wf_s.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
             subst hr
             refine Eq.mp ?_ (Eq_e.weaken (ι.extend (dTel.instantiate σ (Θ.binding z)))
               (equation z l₀ r₀ hb))
-            exact congrArg (fun T => Eq_e (A'.extend T)
+            exact congrArg (fun T => Eq_e ((A' ⋈ T))
               (⟦ ι.slot ⇑ʳ Λ ⟧ʳ l₀) (⟦ ι.slot ⇑ʳ Λ ⟧ʳ r₀))
               (dTel.instantiate_binding_rename ι.slot σ Θ z).symm
       case filler =>
@@ -204,25 +204,25 @@ theorem Wf_s.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
           (filler z ?h₀))
         case h₀ =>
           refine fun hEq => hne ?_
-          refine (Bd.isEq_rename (ι.slot ⇑ʳ Λ) _).mpr hEq |> fun hh => ?_
-          exact (dTel.act_declaration_rename ι.slot σ Θ z) ▸ hh
-        exact congrArg (fun T => Wf_e (A'.extend T) (⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ z)))
+          exact Eq.mp (congrArg Bd.isEq (dTel.act_declaration_rename ι.slot σ Θ z).symm)
+            ((Bd.isEq_rename (ι.slot ⇑ʳ Λ) _).mpr hEq)
+        exact congrArg (fun T => Wf_e ((A' ⋈ T)) (⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ z)))
           (dTel.instantiate_binding_rename ι.slot σ Θ z).symm
       case declared =>
         intro Λ z hne
         have h₀ : ¬ (Bd.act (Ξ := 1) σ Λ (Θ.declaration z)).isEq := by
           refine fun hEq => hne ?_
-          exact (dTel.act_declaration_rename ι.slot σ Θ z) ▸
-            (Bd.isEq_rename (ι.slot ⇑ʳ Λ) _).mpr hEq
+          exact Eq.mp (congrArg Bd.isEq (dTel.act_declaration_rename ι.slot σ Θ z).symm)
+            ((Bd.isEq_rename (ι.slot ⇑ʳ Λ) _).mpr hEq)
         refine Eq.mp ?_ (Eq_bd.weaken (ι.extend (dTel.instantiate σ (Θ.binding z)))
           (declared z h₀))
         refine Eq.trans (congrArg₂ (fun (b c : Bd (Γ' ⋈ Λ)) =>
-            Eq_bd (A'.extend (dTel.rename ι.slot (dTel.instantiate σ (Θ.binding z)))) b c)
+            Eq_bd (A' ⋈ dTel.rename ι.slot (dTel.instantiate σ (Θ.binding z))) b c)
           (Ambient.Renaming.boundaryOf (ι.extend (dTel.instantiate σ (Θ.binding z)))
             (σ z)).symm
           (dTel.act_declaration_rename ι.slot σ Θ z).symm) ?_
-        exact congrArg (fun T => Eq_bd (A'.extend T)
-            ((A'.extend T).boundaryOf (⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ z)))
+        exact congrArg (fun T => Eq_bd ((A' ⋈ T))
+            (((A' ⋈ T)).boundaryOf (⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ z)))
             (Bd.act (Ξ := 1) (fun ⦃Λ'⦄ i => ⟦ ι.slot ⇑ʳ Λ' ⟧ʳ (σ i)) Λ
               ((dTel.rename ι.slot Θ).declaration z)))
           (dTel.instantiate_binding_rename ι.slot σ Θ z).symm
@@ -240,12 +240,12 @@ theorem Wf_bd.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
   | .of S, ⟨hS, hsort⟩ => by
       refine ⟨Wf_e.weaken (ι.extend Θ) hS, ?_⟩
       refine Eq.mp ?_ (Eq_bd.weaken (ι.extend Θ) hsort)
-      exact congrArg (fun b => Eq_bd (A'.extend (dTel.rename ι.slot Θ)) b Bd.sort)
+      exact congrArg (fun b => Eq_bd ((A' ⋈ dTel.rename ι.slot Θ)) b Bd.sort)
         (Ambient.Renaming.boundaryOf (ι.extend Θ) S).symm
   | .eq l r, ⟨hl, hr, heq⟩ => by
       refine ⟨Wf_e.weaken (ι.extend Θ) hl, Wf_e.weaken (ι.extend Θ) hr, ?_⟩
       refine Eq.mp ?_ (Eq_bd.weaken (ι.extend Θ) heq)
-      exact congrArg₂ (fun b c => Eq_bd (A'.extend (dTel.rename ι.slot Θ)) b c)
+      exact congrArg₂ (fun b c => Eq_bd ((A' ⋈ dTel.rename ι.slot Θ)) b c)
         (Ambient.Renaming.boundaryOf (ι.extend Θ) l).symm
         (Ambient.Renaming.boundaryOf (ι.extend Θ) r).symm
 
@@ -266,11 +266,11 @@ theorem Ambient.Wf.weaken {Δ Ω : C.Arity} {A : Ambient Ω} (h : Ambient.Wf A)
 /-- The declaration of every slot of a well-formed telescope is well formed. -/
 theorem Wf_t.declaration {Δ : C.Arity} {Ξ : Ambient Δ} :
     ∀ {Ω : C.Arity} {Θ : dTel Δ Ω}, Wf_t Ξ Θ → ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
-      Wf_bd (Ξ.extend Θ) (Θ.binding z) (Θ.declaration z)
+      Wf_bd ((Ξ ⋈ Θ)) (Θ.binding z) (Θ.declaration z)
   | _, .nil, _, _, z => (C.unit_is_empty z).elim
   | _, .cons (α := α) (Δ := Δ') bind boundary rest, h, Λ, z => by
       refine slotCases (α := α) (Δ := Δ')
-        (motive := fun ⦃Λ⦄ z => Wf_bd (Ξ.extend (dTel.cons bind boundary rest))
+        (motive := fun ⦃Λ⦄ z => Wf_bd ((Ξ ⋈ dTel.cons bind boundary rest))
           ((dTel.cons bind boundary rest).binding z)
           ((dTel.cons bind boundary rest).declaration z)) ?head ?tail z
       case head =>
@@ -278,7 +278,7 @@ theorem Wf_t.declaration {Δ : C.Arity} {Ξ : Ambient Δ} :
           (Ambient.Renaming.weaken Ξ (dTel.cons bind boundary rest)) bind h.2.1)
         exact congrArg₂ (fun (T : dTel (Δ ⋈ (C.single α ⋈ Δ')) α)
             (b : Bd ((Δ ⋈ (C.single α ⋈ Δ')) ⋈ α)) =>
-            Wf_bd (Ξ.extend (dTel.cons bind boundary rest)) T b)
+            Wf_bd ((Ξ ⋈ dTel.cons bind boundary rest)) T b)
           (dTel.binding_head bind boundary rest).symm
           (dTel.declaration_head bind boundary rest).symm
       case tail =>
@@ -289,13 +289,13 @@ theorem Wf_t.declaration {Δ : C.Arity} {Ξ : Ambient Δ} :
           (Wf_t.declaration h.2.2 y)
         exact congrArg₂ (fun (T : dTel (Δ ⋈ (C.single α ⋈ Δ')) γ)
             (b : Bd ((Δ ⋈ (C.single α ⋈ Δ')) ⋈ γ)) =>
-            Wf_bd (Ξ.extend (dTel.cons bind boundary rest)) T b)
+            Wf_bd ((Ξ ⋈ dTel.cons bind boundary rest)) T b)
           (dTel.binding_tail bind boundary rest y).symm
           (dTel.declaration_tail bind boundary rest y).symm
 
 /-- A well-formed declaration is equal to itself. -/
 theorem Wf_bd.refl {Δ Λ : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Λ} :
-    ∀ {β : Bd (Δ ⋈ Λ)}, Wf_bd Ξ Θ β → Eq_bd (Ξ.extend Θ) β β
+    ∀ {β : Bd (Δ ⋈ Λ)}, Wf_bd Ξ Θ β → Eq_bd ((Ξ ⋈ Θ)) β β
   | .sort, _ => .sort
   | .of _, ⟨hS, _⟩ => .of (.refl hS)
   | .eq _ _, ⟨hl, hr, _⟩ => .eq (.refl hl) (.refl hr)
@@ -303,17 +303,17 @@ theorem Wf_bd.refl {Δ Λ : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Λ} :
 /-- The entries bound by every slot of a well-formed telescope are well formed. -/
 theorem Wf_t.binding {Δ : C.Arity} {Ξ : Ambient Δ} :
     ∀ {Ω : C.Arity} {Θ : dTel Δ Ω}, Wf_t Ξ Θ → ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
-      Wf_t (Ξ.extend Θ) (Θ.binding z)
+      Wf_t ((Ξ ⋈ Θ)) (Θ.binding z)
   | _, .nil, _, _, z => (C.unit_is_empty z).elim
   | _, .cons (α := α) (Δ := Δ') bind boundary rest, h, Λ, z => by
       refine slotCases (α := α) (Δ := Δ')
-        (motive := fun ⦃Λ⦄ z => Wf_t (Ξ.extend (dTel.cons bind boundary rest))
+        (motive := fun ⦃Λ⦄ z => Wf_t ((Ξ ⋈ dTel.cons bind boundary rest))
           ((dTel.cons bind boundary rest).binding z)) ?head ?tail z
       case head =>
         refine Eq.mp ?_ (Wf_t.weaken
           (Ambient.Renaming.weaken Ξ (dTel.cons bind boundary rest)) h.1)
         exact congrArg (fun (T : dTel (Δ ⋈ (C.single α ⋈ Δ')) α) =>
-            Wf_t (Ξ.extend (dTel.cons bind boundary rest)) T)
+            Wf_t ((Ξ ⋈ dTel.cons bind boundary rest)) T)
           (dTel.binding_head bind boundary rest).symm
       case tail =>
         intro γ y
@@ -322,5 +322,5 @@ theorem Wf_t.binding {Δ : C.Arity} {Ξ : Ambient Δ} :
           (dTel.concatenate_assoc Ξ (dTel.cons bind boundary .nil) rest)) ?_)
           (Wf_t.binding h.2.2 y)
         exact congrArg (fun (T : dTel (Δ ⋈ (C.single α ⋈ Δ')) γ) =>
-            Wf_t (Ξ.extend (dTel.cons bind boundary rest)) T)
+            Wf_t ((Ξ ⋈ dTel.cons bind boundary rest)) T)
           (dTel.binding_tail bind boundary rest y).symm

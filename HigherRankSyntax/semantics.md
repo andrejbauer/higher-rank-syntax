@@ -2,8 +2,9 @@
 
 This note contains three things: what a **higher-rank theory** is, what a
 **model** of one is, and the argument that these are the right notions.
-`equational-telescopes.md` is assumed; bare numbers — `13.2`, `3.2.1` —
-refer to it.
+`equational-telescopes.md` (constructing the category of well-formed contexts Ctx 
+and the natural model q : 𝒯̃ ⟶ 𝒯 of telescopes over it) is assumed; bare
+numbers — `13.2`, `3.2.1` — refer to it.
 
 **Standing assumptions.** The carrier is the list carrier of
 `examples/ListCarrier.lean`. `Ctx` and `𝒯` are taken **quotiented**, not

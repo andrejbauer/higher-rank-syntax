@@ -80,7 +80,7 @@ weakening, **D** for `Wf_t.declaration`, **S2/S3/S4** for 8(2)/8(3)/8(4).
 components of a well-formed expression's computed boundary are well formed — because
 S2, where the head lies in the ambient, must produce `Eq_bd Ξ B B`. It must not be
 discharged by `Eq_e.refl`, which would need *V* and create the cycle
-S4 → S2 → V → S3 → S4. It is discharged instead by **`Eq_e.subst`**, a *constructor*
+S4 → S2 → V → S3 → S4. It is discharged instead by **`Eq_e.congr`**, a *constructor*
 — a rule of the system, not a theorem about it — from
 
 - `hσ = hθ := fill`, the `Wf_s Ξ (Ξ.binding x) args` inside S3 at the same point;
@@ -121,7 +121,7 @@ a literal insertion. Only then is the source ambient a variable, which `cases` n
 against it. `Ambient.Renaming.weakenBy` and `.extend` supply the instances, and
 `.extend` is what reaches the premises of `Wf_s`, which live at extended ambients.
 
-The commutations the `Wf_s` and `Eq_e.subst` cases need all descend from one
+The commutations the `Wf_s` and `Eq_e.congr` cases need all descend from one
 naturality square, `act_square`, which is **associativity of Kleisli composition**
 (`act_comp`) once both renamings are read as substitutions — no induction over
 expressions. From it: `lift_square`, `Bd.act_square`, `dTel.actBase_square`,
@@ -157,7 +157,7 @@ Each case moves `declaration` and `binding` across the insertion, which is exact
 what A7.1's `declaration_concatenate_inl`, `binding_concatenate_inl`,
 `declaration_rename` and `binding_rename` say. The `instantiate`-versus-`rename` and
 `Subst.act`-versus-`rename` commutations are to be read off the goals of the `Wf_s`
-and `Eq_e.subst` cases, not guessed in advance.
+and `Eq_e.congr` cases, not guessed in advance.
 
 ## A7.3 — D, `Wf_t.declaration`
 
@@ -181,14 +181,14 @@ same `α` (tag decreases), and `Wf_s.eta` at `Ω` calls both at a slot's binding
 subterm and no plain induction would be accepted.
 
 `declared` needed reflexivity of `Eq_bd` at a well-formed declaration — `Wf_bd.refl`,
-three lines from `Eq_e.refl` — not the `Eq_e.subst` route the earlier design needed.
+three lines from `Eq_e.refl` — not the `Eq_e.congr` route the earlier design needed.
 `equation` applies `Eq_e.hyp` at the slot `C.inl (C.inr z)` of the doubly extended
 ambient with `Subst.instId` as its arguments, and `act_instId_weaken` collapses the
 conclusion back to `l ≈ r`.
 
 ## A7.5 — the fold: 8(2), 8(3), 8(4) — **done**
 
-*Produces.* `Typing/Substitution.lean`. Five transports, one for each judgement,
+*Produces.* `Typing/SubstitutionLemma.lean`. Five transports, one for each judgement,
 stated over a **filling of ambients** `Ambient.Filling A A' Ω` — a substitution
 that at every slot is either the η of a slot carrying the same declaration and the
 same entries bound, both under the substitution, or a filler for the slot's
@@ -196,8 +196,8 @@ declared boundary, the filled slots having arities below `Ω`. This stands to
 substitution as `Ambient.Renaming` stands to weakening, and for the same reason:
 the source ambient must be a variable for the induction to case on the derivation.
 
-The five (`Wf_e.subst_step`, `boundaryOf_subst_step`, `Eq_e.fill_step`,
-`Eq_bd.fill_step`, `Wf_s.subst_step`) are one **structural** recursion over the
+The five (`Wf_e.subst_step`, `boundaryOf_subst_step`, `Eq_e.subst_step`,
+`Eq_bd.subst_step`, `Wf_s.subst_step`) are one **structural** recursion over the
 derivations. The block-arity drop — at a filled head the argument passes to the
 entries that head binds — is an **outer** well-founded induction on `Ω` under
 `C.subWf` (`substitutionAt`), because a derivation cannot appear in a
@@ -205,7 +205,7 @@ entries that head binds — is an **outer** well-founded induction on `Ω` under
 
 Filling a literal block is `Wf_s.filling` (a filling of a telescope is a filling
 of the ambient it extends) composed with `Ambient.Filling.extend`; the concrete
-corollaries are `Wf_e.subst`, `Eq_e.fill`, `Eq_bd.fill`, `boundaryOf_subst`,
+corollaries are `Wf_e.subst`, `Eq_e.subst`, `Eq_bd.subst`, `boundaryOf_subst`,
 `Wf_s.subst`.
 
 *Notes.* 8(2) carries one further hypothesis: that the transported source

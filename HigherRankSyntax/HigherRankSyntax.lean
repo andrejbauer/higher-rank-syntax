@@ -13,4 +13,4 @@ import HigherRankSyntax.Typing.Telescope
 import HigherRankSyntax.Typing.Rules
 import HigherRankSyntax.Typing.Weakening
 import HigherRankSyntax.Typing.Eta
-import HigherRankSyntax.Typing.Substitution
+import HigherRankSyntax.Typing.SubstitutionLemma

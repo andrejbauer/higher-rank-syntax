@@ -30,18 +30,17 @@ inductive Eq_e : {Δ : C.Arity} → Ambient Δ → Expr Δ → Expr Δ → Prop 
   | hyp {Δ : C.Arity} {Ξ : Ambient Δ} {Λ : C.Arity} (q : Δ ∋ Λ) (l r : Expr (Δ ⋈ Λ))
       (args : Subst Λ Δ)
       (decl : Ξ.declaration q = .eq l r)
-      (hl : Wf_e (Ξ.extend (Ξ.binding q)) l)
-      (hr : Wf_e (Ξ.extend (Ξ.binding q)) r)
+      (hl : Wf_e (Ξ ⋈ Ξ.binding q) l)
+      (hr : Wf_e (Ξ ⋈ Ξ.binding q) r)
       (fill : Wf_s Ξ (Ξ.binding q) args) :
-      Eq_e Ξ (Subst.act (Γ := Δ) (Ξ := 1) args 1 l)
-        (Subst.act (Γ := Δ) (Ξ := 1) args 1 r)
-  | subst {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω} {e e' : Expr (Δ ⋈ Ω)}
+      Eq_e Ξ (args ⋆ l) (args ⋆ r)
+  | congr {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω} {e e' : Expr (Δ ⋈ Ω)}
       (σ θ : Subst Ω Δ) (hσ : Wf_s Ξ Θ σ) (hθ : Wf_s Ξ Θ θ)
       (agree : ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
-          ¬ (Bd.act (Ξ := 1) σ Λ (Θ.declaration z)).isEq →
-          Eq_e (Ξ.extend (dTel.instantiate σ (Θ.binding z))) (σ z) (θ z))
-      (h : Eq_e (Ξ.extend Θ) e e') :
-      Eq_e Ξ (Subst.act (Γ := Δ) (Ξ := 1) σ 1 e) (Subst.act (Γ := Δ) (Ξ := 1) θ 1 e')
+          ¬ (σ ⋆ Θ.declaration z).isEq →
+          Eq_e (Ξ ⋈ σ ⋆ Θ.binding z) (σ z) (θ z))
+      (h : Eq_e (Ξ ⋈ Θ) e e') :
+      Eq_e Ξ (σ ⋆ e) (θ ⋆ e')
 
 /-- Two boundaries over an ambient are equal. -/
 inductive Eq_bd : {Δ : C.Arity} → Ambient Δ → Bd Δ → Bd Δ → Prop where
@@ -55,16 +54,16 @@ inductive Eq_bd : {Δ : C.Arity} → Ambient Δ → Bd Δ → Bd Δ → Prop whe
 inductive Wf_s : {Δ Ω : C.Arity} → Ambient Δ → dTel Δ Ω → Subst Ω Δ → Prop where
   | mk {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω} {σ : Subst Ω Δ}
       (equation : ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ) (l r : Expr (Δ ⋈ Λ)),
-          Bd.act (Ξ := 1) σ Λ (Θ.declaration z) = .eq l r →
-          Eq_e (Ξ.extend (dTel.instantiate σ (Θ.binding z))) l r)
+          σ ⋆ Θ.declaration z = .eq l r →
+          Eq_e (Ξ ⋈ σ ⋆ Θ.binding z) l r)
       (filler : ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
-          ¬ (Bd.act (Ξ := 1) σ Λ (Θ.declaration z)).isEq →
-          Wf_e (Ξ.extend (dTel.instantiate σ (Θ.binding z))) (σ z))
+          ¬ (σ ⋆ Θ.declaration z).isEq →
+          Wf_e (Ξ ⋈ σ ⋆ Θ.binding z) (σ z))
       (declared : ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
-          ¬ (Bd.act (Ξ := 1) σ Λ (Θ.declaration z)).isEq →
-          Eq_bd (Ξ.extend (dTel.instantiate σ (Θ.binding z)))
-            ((Ξ.extend (dTel.instantiate σ (Θ.binding z))).boundaryOf (σ z))
-            (Bd.act (Ξ := 1) σ Λ (Θ.declaration z))) :
+          ¬ (σ ⋆ Θ.declaration z).isEq →
+          Eq_bd (Ξ ⋈ σ ⋆ Θ.binding z)
+            ((Ξ ⋈ σ ⋆ Θ.binding z).boundaryOf (σ z))
+            (σ ⋆ Θ.declaration z)) :
       Wf_s Ξ Θ σ
 
 end
@@ -103,24 +102,24 @@ slot binds. -/
 def Wf_bd {Δ Λ : C.Arity} (Ξ : Ambient Δ) (Θ : dTel Δ Λ) : Bd (Δ ⋈ Λ) → Prop
   | .sort => True
   | .of S =>
-      Wf_e (Ξ.extend Θ) S ∧
-      Eq_bd (Ξ.extend Θ) ((Ξ.extend Θ).boundaryOf S) .sort
+      Wf_e (Ξ ⋈ Θ) S ∧
+      Eq_bd (Ξ ⋈ Θ) ((Ξ ⋈ Θ).boundaryOf S) .sort
   | .eq l r =>
-      Wf_e (Ξ.extend Θ) l ∧ Wf_e (Ξ.extend Θ) r ∧
-      Eq_bd (Ξ.extend Θ) ((Ξ.extend Θ).boundaryOf l) ((Ξ.extend Θ).boundaryOf r)
+      Wf_e (Ξ ⋈ Θ) l ∧ Wf_e (Ξ ⋈ Θ) r ∧
+      Eq_bd (Ξ ⋈ Θ) ((Ξ ⋈ Θ).boundaryOf l) ((Ξ ⋈ Θ).boundaryOf r)
 
 /-- A telescope over an ambient is well formed. -/
 def Wf_t : {Δ Ω : C.Arity} → Ambient Δ → dTel Δ Ω → Prop
   | _, _, _, .nil => True
   | _, _, Ξ, .cons bind boundary rest =>
       Wf_t Ξ bind ∧ Wf_bd Ξ bind boundary ∧
-      Wf_t (Ξ.extend (dTel.cons bind boundary .nil)) rest
+      Wf_t (Ξ ⋈ dTel.cons bind boundary .nil) rest
 
 /-- Two telescopes of one arity are equal when their slots are declared equal. -/
 def Eq_t : {Δ Ω : C.Arity} → Ambient Δ → dTel Δ Ω → dTel Δ Ω → Prop
   | _, _, Ξ, Θ, Θ' => ∀ ⦃Λ : C.Arity⦄ (z : _ ∋ Λ),
-      Eq_bd ((Ξ.extend Θ).extend (Θ.binding z)) (Θ.declaration z) (Θ'.declaration z) ∧
-      Eq_t (Ξ.extend Θ) (Θ.binding z) (Θ'.binding z)
+      Eq_bd (Ξ ⋈ Θ ⋈ Θ.binding z) (Θ.declaration z) (Θ'.declaration z) ∧
+      Eq_t (Ξ ⋈ Θ) (Θ.binding z) (Θ'.binding z)
 termination_by Δ Ω _ _ _ => Ω
 decreasing_by exact ⟨z⟩
 

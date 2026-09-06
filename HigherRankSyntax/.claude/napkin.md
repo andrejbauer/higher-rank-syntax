@@ -39,9 +39,11 @@
    Do instead: use `C.inr_inl`, `C.inr_inr`, and `C.inl_inl` before recursive η/substitution calls whose slot lives across `Γ * (Δ * Ξ)` versus `(Γ * Δ) * Ξ`.
 
 ## User Directives
-1. **[2026-08-10] Keep foundational syntax discussions exploratory and explicit about uncertainty**
+1. **[2026-09-02] Use no LaTeX markup in Markdown documents**
+   Do instead: write mathematical notation with readable Unicode and fenced `text` displays; avoid dollar delimiters and backslash commands.
+2. **[2026-08-10] Keep foundational syntax discussions exploratory and explicit about uncertainty**
    Do instead: separate settled constraints, candidate definitions, and unresolved forks; do not disguise a speculative construction as a polished final model.
-2. **[2026-08-03] Implement staged roadmaps one pass per turn**
+3. **[2026-08-03] Implement staged roadmaps one pass per turn**
    Do instead: update the active roadmap, build and report the current pass, state the next pass, and stop before implementing it.
-3. **[2026-06-23] Keep Lean answers practical**
+4. **[2026-06-23] Keep Lean answers practical**
    Do instead: include a minimal compiling example and explain the key imported names.
