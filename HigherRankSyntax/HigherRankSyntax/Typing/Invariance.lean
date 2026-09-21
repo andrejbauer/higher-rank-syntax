@@ -61,8 +61,8 @@ theorem Eq_e.ofBoth {Δ : C.Arity} {A B : Ambient Δ}
   | _, _, .congr σ θ hΘ hσ hθ agree he =>
       .congr σ θ (Wf_t.ofBoth h hΘ) (Wf_s.ofBoth h hσ (Eq_t.Both.refl h hΘ))
         (Wf_s.ofBoth h hθ (Eq_t.Both.refl h hΘ))
-        (Eq_s.ofBoth h (Eq_t.Both.refl h hΘ) hσ
-          (Wf_s.ofBoth h hσ (Eq_t.Both.refl h hΘ)) agree)
+        (Eq_s.ofBoth h agree (Eq_t.Both.refl h hΘ) hσ
+          (Wf_s.ofBoth h hσ (Eq_t.Both.refl h hΘ)))
         (Eq_e.ofBoth (Eq_t.Both.concatenate h (Eq_t.Both.refl h hΘ)) he)
 
 /-- 8(10): equality of boundaries is invariant under an equal ambient. -/
@@ -120,15 +120,25 @@ telescope. -/
 theorem Eq_s.ofBoth {Δ : C.Arity} {A B : Ambient Δ}
     (h : Eq_t.Both (.nil : Ambient 1) (.nil : Ambient 1) A B) :
     ∀ {Ω : C.Arity} {T T' : dTel Δ Ω} {σ θ : Subst Ω Δ},
-      Eq_t.Both A B T T' → A ⊢ σ : T → B ⊢ σ : T' → A ⊢ σ ≈ θ : T →
+      A ⊢ σ ≈ θ : T → Eq_t.Both A B T T' → A ⊢ σ : T → B ⊢ σ : T' →
         B ⊢ σ ≈ θ : T'
-  | _, _, _, σ, _, hT, hσ, hσ', .mk slot => by
-      refine .mk (fun _ z hne => ?_)
-      refine Eq_e.ofBoth (Eq_t.Both.concatenate h
-        (Eq_t.Both.filling (Wf_s.filling hσ) (Wf_s.filling hσ') rfl
-          (hT.binding z))) ?_
-      exact slot z (fun hEq => hne
-        ((Eq_bd.isEq (Eq_bd.subst hσ (hT.toEq_t.declaration z))).mp hEq))
+  | _, _, _, _, _, .nil, hT, _, _ => by
+      obtain rfl := Eq_t.Both.nil_inv hT
+      exact .nil
+  | _, _, _, _, _, .cons (α := α) (σ := σ) (bind := bind)
+      (boundary := boundary) (rest := rest) slot hrest, hT, hσ, hσ' => by
+      obtain ⟨bind', boundary', rest', rfl, hbind, hboundary, hb', hrest'⟩ :=
+        Eq_t.Both.cons_inv hT
+      have hamb : Eq_t.Both (.nil : Ambient 1) (.nil : Ambient 1)
+          (A ⋈ bind) (B ⋈ bind') := Eq_t.Both.concatenate h hbind
+      refine .cons ?slot ?hrest
+      case slot =>
+        intro hne
+        exact Eq_e.ofBoth hamb (slot (fun hEq => hne ((Eq_bd.isEq hb').mp hEq)))
+      case hrest =>
+        exact Eq_s.ofBoth h hrest
+          (Eq_t.Both.filling (Wf_s.filling hσ.head) (Wf_s.filling hσ'.head) rfl
+            hrest') hσ.tail hσ'.tail
 
 /-- 8(10): a well-formed declaration is invariant under an equal ambient. -/
 theorem Wf_bd.ofBoth {Δ : C.Arity} {A B : Ambient Δ}
@@ -205,6 +215,13 @@ theorem Eq_bd.ofEq {Δ : C.Arity} {A B : Ambient Δ}
     (h : Eq_t (.nil : Ambient 1) A B) {β β' : Bd Δ} : A ⊢ β ≈ β' → B ⊢ β ≈ β' :=
   Eq_bd.ofBoth (Eq_t.toBoth Eq_t.Both.nil h)
 
+/-- 8(10): the computed boundary of a well-formed expression over an equal
+ambient is equal to the one over the original. -/
+theorem boundaryOf_ofEq {Δ : C.Arity} {A B : Ambient Δ}
+    (h : Eq_t (.nil : Ambient 1) A B) {e : Expr Δ} :
+    A ⊢ e → Eq_bd B (B.boundaryOf e) (A.boundaryOf e) :=
+  boundaryOf_ofBoth (Eq_t.toBoth Eq_t.Both.nil h)
+
 /-- 8(10): a well-formed telescope is invariant under an equal ambient. -/
 theorem Wf_t.ofEq {Δ Ω : C.Arity} {A B : Ambient Δ}
     (h : Eq_t (.nil : Ambient 1) A B) {T : dTel Δ Ω} : Wf_t A T → Wf_t B T :=
@@ -278,3 +295,25 @@ theorem Eq_t.agree {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
         (Eq_t.agree (Wf_t.concatenate hA hhead)
           (Wf_t.concatenate hA' (Wf_t.subst_ambient hσ hhead))
           (Wf_sub.lift hσ hhead) hθhead (Eq_sub.lift hσ hhead hst) hrest)
+
+/-- 8(10): equality of telescopes is invariant under an equal ambient. -/
+theorem Eq_t.ofBoth {Δ : C.Arity} {A B : Ambient Δ}
+    (h : Eq_t.Both (.nil : Ambient 1) (.nil : Ambient 1) A B) :
+    ∀ {Ω : C.Arity} {T T' : dTel Δ Ω}, Wf_t A T → Eq_t A T T' → Eq_t B T T'
+  | _, _, _, .nil, hT => by
+      obtain rfl := Eq_t.nil_inv hT
+      exact Eq_t.nil
+  | _, _, _, .cons (bind := bind) (boundary := boundary) hbindw hboundaryw hrestw,
+      hT => by
+      obtain ⟨_, _, _, rfl, hbind, hboundary, hrest⟩ := Eq_t.cons_inv hT
+      refine Eq_t.cons (Eq_t.ofBoth h hbindw hbind)
+        (Eq_bd.ofBoth (Eq_t.Both.concatenate h (Eq_t.Both.refl h hbindw))
+          hboundary) ?_
+      exact Eq_t.ofBoth (Eq_t.Both.concatenate h
+        (Eq_t.Both.refl h (Wf_t.cons hbindw hboundaryw .nil))) hrestw hrest
+
+/-- 8(10): equality of telescopes is invariant under an equal ambient. -/
+theorem Eq_t.ofEq {Δ Ω : C.Arity} {A B : Ambient Δ}
+    (h : Eq_t (.nil : Ambient 1) A B) {T T' : dTel Δ Ω} (hT : Wf_t A T) :
+    Eq_t A T T' → Eq_t B T T' :=
+  Eq_t.ofBoth (Eq_t.toBoth Eq_t.Both.nil h) hT

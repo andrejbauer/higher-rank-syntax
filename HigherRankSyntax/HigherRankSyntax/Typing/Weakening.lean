@@ -161,23 +161,11 @@ theorem Eq_e.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
         exact congrArg (fun T => Wf_s A' T (fun ⦃_⦄ i => ⟦ ι.slot ⇑ʳ _ ⟧ʳ (args i)))
           (ι.binding q).symm
       exact congrArg₂ (Eq_e A') (act_rename _ _ _ ι.slot args l) (act_rename _ _ _ ι.slot args r)
-  | _, _, .congr (Ω := Ω) (Θ := Θ) (e := e₁) (e' := e₂) σ θ hΘ hσ hθ (.mk agree) h => by
+  | _, _, .congr (Ω := Ω) (Θ := Θ) (e := e₁) (e' := e₂) σ θ hΘ hσ hθ agree h => by
       refine Eq.mp ?_ (Eq_e.congr (Ξ := A') (Θ := dTel.rename ι.slot Θ)
         (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ i)) (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (θ i))
-        (Wf_t.weaken ι hΘ) (Wf_s.weaken ι hσ) (Wf_s.weaken ι hθ) ?agree
-        (Eq_e.weaken (ι.extend Θ) h))
-      case agree =>
-        refine Eq_s.mk ?_
-        intro Λ z hne
-        have h₀ : ¬ (Bd.act (Ξ := 1) σ Λ (Θ.declaration z)).isEq := by
-          refine fun hEq => hne ?_
-          exact Eq.mp (congrArg Bd.isEq (dTel.act_declaration_rename ι.slot σ Θ z).symm)
-            ((Bd.isEq_rename (ι.slot ⇑ʳ Λ) _).mpr hEq)
-        refine Eq.mp ?_ (Eq_e.weaken (ι.extend (dTel.instantiate σ (Θ.binding z)))
-          (agree z h₀))
-        exact congrArg (fun T => Eq_e ((A' ⋈ T))
-            (⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ z)) (⟦ ι.slot ⇑ʳ Λ ⟧ʳ (θ z)))
-          (dTel.instantiate_binding_rename ι.slot σ Θ z).symm
+        (Wf_t.weaken ι hΘ) (Wf_s.weaken ι hσ) (Wf_s.weaken ι hθ)
+        (Eq_s.weaken ι agree) (Eq_e.weaken (ι.extend Θ) h))
       exact congrArg₂ (Eq_e A') (act_rename _ _ _ ι.slot σ _) (act_rename _ _ _ ι.slot θ _)
 
 /-- 8(8): equality of boundaries is stable under a renaming of ambients. -/
@@ -223,6 +211,28 @@ theorem Wf_s.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
           (dTel.instantiate_rename ι.slot
             (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) rest).symm) ?_
         exact Wf_s.weaken ι hrest
+
+/-- 8(8): agreement of fillings is stable under a renaming of ambients. -/
+theorem Eq_s.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    (ι : Ambient.Renaming A A') :
+    ∀ {Ω : C.Arity} {Θ : dTel Γ Ω} {σ θ : Subst Ω Γ}, Eq_s A Θ σ θ →
+      Eq_s A' (dTel.rename ι.slot Θ) (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ i))
+        (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (θ i))
+  | _, _, _, _, .nil => .nil
+  | _, _, _, _, .cons (α := α) (σ := σ) (θ := θ) (bind := bind)
+      (boundary := boundary) (rest := rest) slot hrest => by
+      refine .cons ?slot ?hrest
+      case slot =>
+        intro hne
+        exact Eq_e.weaken (ι.extend bind)
+          (slot (fun hEq => hne ((Bd.isEq_rename (ι.slot ⇑ʳ α) boundary).mpr hEq)))
+      case hrest =>
+        refine Eq.mp (congrArg (fun T => Eq_s A' T
+          (fun ⦃β⦄ (j : _ ∋ β) => ⟦ ι.slot ⇑ʳ β ⟧ʳ (σ (C.inr j)))
+          (fun ⦃β⦄ (j : _ ∋ β) => ⟦ ι.slot ⇑ʳ β ⟧ʳ (θ (C.inr j))))
+          (dTel.instantiate_rename ι.slot
+            (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) rest).symm) ?_
+        exact Eq_s.weaken ι hrest
 
 /-- 8(8): a well-formed declaration stays well formed under a renaming of ambients. -/
 theorem Wf_bd.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}

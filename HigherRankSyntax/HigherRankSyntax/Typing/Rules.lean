@@ -66,11 +66,16 @@ inductive Wf_s : {Δ Ω : C.Arity} → Ambient Δ → dTel Δ Ω → Subst Ω Δ
 /-- Two fillings of a telescope agree at every non-equational slot. -/
 inductive Eq_s : {Δ Ω : C.Arity} → Ambient Δ → dTel Δ Ω → Subst Ω Δ → Subst Ω Δ → Prop
   where
-  | mk {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω} {σ θ : Subst Ω Δ}
-      (slot : ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
-          ¬ (σ ⋆ Θ.declaration z).isEq →
-          Eq_e (Ξ ⋈ σ ⋆ Θ.binding z) (σ z) (θ z)) :
-      Eq_s Ξ Θ σ θ
+  | nil {Δ : C.Arity} {Ξ : Ambient Δ} {σ θ : Subst 1 Δ} : Eq_s Ξ .nil σ θ
+  | cons {Δ α Ω : C.Arity} {Ξ : Ambient Δ} {bind : dTel Δ α} {boundary : Bd (Δ ⋈ α)}
+      {rest : dTel (Δ ⋈ C.single α) Ω} {σ θ : Subst (C.single α ⋈ Ω) Δ}
+      (slot : ¬ boundary.isEq →
+          Eq_e (Ξ ⋈ bind) (σ (C.inl (C.singleSlot α))) (θ (C.inl (C.singleSlot α))))
+      (hrest : Eq_s Ξ
+          (dTel.instantiate (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) rest)
+          (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j))
+          (fun ⦃β⦄ (j : Ω ∋ β) => θ (C.inr j))) :
+      Eq_s Ξ (dTel.cons bind boundary rest) σ θ
 
 /-- A declaration is well formed over the ambient extended by the entries its
 slot binds. -/
@@ -344,15 +349,219 @@ theorem Eq_bd.eq_inv {Δ : C.Arity} {Ξ : Ambient Δ} {l r : Expr Δ} {β : Bd �
   | .eq hl hr => ⟨_, _, rfl, hl, hr⟩
 
 /-- The agreement of two fillings, at one slot. -/
-theorem Eq_s.slot {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω} {σ θ : Subst Ω Δ} :
-    Eq_s Ξ Θ σ θ → ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ), ¬ (σ ⋆ Θ.declaration z).isEq →
-      Eq_e (Ξ ⋈ σ ⋆ Θ.binding z) (σ z) (θ z)
-  | .mk slot => slot
+theorem Eq_s.slot {Δ : C.Arity} {Ξ : Ambient Δ} :
+    ∀ {Ω : C.Arity} {Θ : dTel Δ Ω} {σ θ : Subst Ω Δ}, Eq_s Ξ Θ σ θ →
+      ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ), ¬ (σ ⋆ Θ.declaration z).isEq →
+        Eq_e (Ξ ⋈ σ ⋆ Θ.binding z) (σ z) (θ z)
+  | _, _, _, _, .nil, _, z => (C.unit_is_empty z).elim
+  | _, _, _, _, .cons (α := α) (Ω := Ω) (σ := σ) (θ := θ) (bind := bind)
+      (boundary := boundary) (rest := rest) slot hrest, Λ, z => by
+      refine slotCases (α := α) (Δ := Ω)
+        (motive := fun ⦃Λ⦄ z =>
+          ¬ (σ ⋆ (dTel.cons bind boundary rest).declaration z).isEq →
+          Eq_e (Ξ ⋈ σ ⋆ (dTel.cons bind boundary rest).binding z) (σ z) (θ z))
+        ?head ?tail z
+      case head =>
+        intro hne
+        refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T)
+          (σ (C.inl (C.singleSlot α))) (θ (C.inl (C.singleSlot α))))
+          (dTel.binding_head_instantiate bind boundary rest σ).symm) ?_
+        exact slot (fun hEq => hne (Eq.mp (congrArg Bd.isEq
+          (dTel.declaration_head_instantiate bind boundary rest σ).symm) hEq))
+      case tail =>
+        intro γ y hne
+        refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) (σ (C.inr y)) (θ (C.inr y)))
+          (dTel.binding_tail_instantiate bind boundary rest σ y).symm) ?_
+        exact Eq_s.slot hrest y (fun hEq => hne (Eq.mp (congrArg Bd.isEq
+          (dTel.declaration_tail_instantiate bind boundary rest σ y).symm) hEq))
+
+/-- The first slot of a filling is filled. -/
+theorem Wf_s.head {Δ α Ω : C.Arity} {Ξ : Ambient Δ} {bind : dTel Δ α}
+    {boundary : Bd (Δ ⋈ α)} {rest : dTel (Δ ⋈ C.single α) Ω}
+    {σ : Subst (C.single α ⋈ Ω) Δ}
+    (h : Wf_s Ξ (dTel.cons bind boundary rest) σ) :
+    Wf_s Ξ (dTel.cons bind boundary (.nil : dTel (Δ ⋈ C.single α) 1))
+      (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) := by
+  have hd := dTel.declaration_head_instantiate bind boundary rest σ
+  have hb := dTel.binding_head_instantiate bind boundary rest σ
+  have hd' := dTel.declaration_head_instantiate bind boundary
+    (.nil : dTel (Δ ⋈ C.single α) 1) (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i))
+  have hb' := dTel.binding_head_instantiate bind boundary
+    (.nil : dTel (Δ ⋈ C.single α) 1) (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i))
+  refine Wf_s.slotwise ?equation ?filler ?declared
+  case equation =>
+    intro Λ z
+    refine slotCases (α := α) (Δ := 1)
+      (motive := fun ⦃Λ⦄ z => ∀ (l r : Expr (Δ ⋈ Λ)),
+        (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) ⋆
+            (dTel.cons bind boundary (.nil : dTel (Δ ⋈ C.single α) 1)).declaration z
+          = Bd.eq l r →
+        Eq_e (Ξ ⋈ (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) ⋆
+            (dTel.cons bind boundary (.nil : dTel (Δ ⋈ C.single α) 1)).binding z)
+          l r) ?_ (fun _ y => (C.unit_is_empty y).elim) z
+    intro l r heq
+    refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) l r) hb'.symm) ?_
+    refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) l r) hb) ?_
+    exact h.equation (C.inl (C.singleSlot α)) l r (hd.trans (hd'.symm.trans heq))
+  case filler =>
+    intro Λ z
+    refine slotCases (α := α) (Δ := 1)
+      (motive := fun ⦃Λ⦄ z =>
+        ¬ ((fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) ⋆
+            (dTel.cons bind boundary (.nil : dTel (Δ ⋈ C.single α) 1)).declaration
+              z).isEq →
+        Wf_e (Ξ ⋈ (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) ⋆
+            (dTel.cons bind boundary (.nil : dTel (Δ ⋈ C.single α) 1)).binding z)
+          ((fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) z))
+      ?_ (fun _ y => (C.unit_is_empty y).elim) z
+    intro hne
+    refine Eq.mp (congrArg (fun T => Wf_e (Ξ ⋈ T)
+      (σ (C.inl (C.singleSlot α)))) hb'.symm) ?_
+    refine Eq.mp (congrArg (fun T => Wf_e (Ξ ⋈ T)
+      (σ (C.inl (C.singleSlot α)))) hb) ?_
+    exact h.filler (C.inl (C.singleSlot α))
+      (fun hEq => hne (Eq.mp (congrArg Bd.isEq (hd.trans hd'.symm)) hEq))
+  case declared =>
+    intro Λ z
+    refine slotCases (α := α) (Δ := 1)
+      (motive := fun ⦃Λ⦄ z =>
+        ¬ ((fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) ⋆
+            (dTel.cons bind boundary (.nil : dTel (Δ ⋈ C.single α) 1)).declaration
+              z).isEq →
+        Eq_bd (Ξ ⋈ (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) ⋆
+            (dTel.cons bind boundary (.nil : dTel (Δ ⋈ C.single α) 1)).binding z)
+          ((Ξ ⋈ (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) ⋆
+            (dTel.cons bind boundary (.nil : dTel (Δ ⋈ C.single α) 1)).binding
+              z).boundaryOf ((fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) z))
+          ((fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) ⋆
+            (dTel.cons bind boundary (.nil : dTel (Δ ⋈ C.single α) 1)).declaration z))
+      ?_ (fun _ y => (C.unit_is_empty y).elim) z
+    intro hne
+    refine Eq.mp (congrArg₂ (fun (T : dTel Δ α) (b : Bd (Δ ⋈ α)) =>
+      Eq_bd (Ξ ⋈ T) ((Ξ ⋈ T).boundaryOf (σ (C.inl (C.singleSlot α)))) b)
+      hb'.symm hd'.symm) ?_
+    refine Eq.mp (congrArg₂ (fun (T : dTel Δ α) (b : Bd (Δ ⋈ α)) =>
+      Eq_bd (Ξ ⋈ T) ((Ξ ⋈ T).boundaryOf (σ (C.inl (C.singleSlot α)))) b) hb hd) ?_
+    exact h.declared (C.inl (C.singleSlot α))
+      (fun hEq => hne (Eq.mp (congrArg Bd.isEq (hd.trans hd'.symm)) hEq))
+
+/-- The slots after the first of a filling are filled. -/
+theorem Wf_s.tail {Δ α Ω : C.Arity} {Ξ : Ambient Δ} {bind : dTel Δ α}
+    {boundary : Bd (Δ ⋈ α)} {rest : dTel (Δ ⋈ C.single α) Ω}
+    {σ : Subst (C.single α ⋈ Ω) Δ}
+    (h : Wf_s Ξ (dTel.cons bind boundary rest) σ) :
+    Wf_s Ξ (dTel.instantiate (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) rest)
+      (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)) := by
+  refine Wf_s.slotwise (fun Λ y l r heq => ?_) (fun Λ y hne => ?_)
+    (fun Λ y hne => ?_)
+  · refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) l r)
+      (dTel.binding_tail_instantiate bind boundary rest σ y)) ?_
+    exact h.equation (C.inr y) l r
+      ((dTel.declaration_tail_instantiate bind boundary rest σ y).trans heq)
+  · refine Eq.mp (congrArg (fun T => Wf_e (Ξ ⋈ T) (σ (C.inr y)))
+      (dTel.binding_tail_instantiate bind boundary rest σ y)) ?_
+    exact h.filler (C.inr y) (fun hEq => hne (Eq.mp (congrArg Bd.isEq
+      (dTel.declaration_tail_instantiate bind boundary rest σ y)) hEq))
+  · refine Eq.mp (congrArg₂ (fun (T : dTel Δ Λ) (b : Bd (Δ ⋈ Λ)) =>
+      Eq_bd (Ξ ⋈ T) ((Ξ ⋈ T).boundaryOf (σ (C.inr y))) b)
+      (dTel.binding_tail_instantiate bind boundary rest σ y)
+      (dTel.declaration_tail_instantiate bind boundary rest σ y)) ?_
+    exact h.declared (C.inr y) (fun hEq => hne (Eq.mp (congrArg Bd.isEq
+      (dTel.declaration_tail_instantiate bind boundary rest σ y)) hEq))
+
+/-- Agreement of two fillings of a base-substituted telescope, from the
+comparison at every slot. -/
+theorem Eq_s.slotwise_actBase {Δ : C.Arity} {Ξ : Ambient Δ} :
+    ∀ {Γ Ω : C.Arity} (Θ : dTel Γ Ω) (κ : Subst Γ Δ) {σ θ : Subst Ω Δ},
+      (∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
+          ¬ (σ ⋆ (dTel.actBase κ Θ).declaration z).isEq →
+          Eq_e (Ξ ⋈ σ ⋆ (dTel.actBase κ Θ).binding z) (σ z) (θ z)) →
+      Eq_s Ξ (dTel.actBase κ Θ) σ θ
+  | _, _, .nil, _, _, _, _ => .nil
+  | _, _, .cons (α := α) (Δ := Ω) bind boundary rest, κ, σ, θ, slot => by
+      have hd := dTel.declaration_head_instantiate (dTel.actBase κ bind)
+        (Bd.act (Γ := 1) κ α boundary)
+        (dTel.actBase (Subst.lift κ (C.single α)) rest) σ
+      have hb := dTel.binding_head_instantiate (dTel.actBase κ bind)
+        (Bd.act (Γ := 1) κ α boundary)
+        (dTel.actBase (Subst.lift κ (C.single α)) rest) σ
+      have hcat := dTel.actBase_comp (Subst.lift κ (C.single α))
+        (Subst.copair (Subst.id Δ)
+          (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i))) rest
+      refine .cons ?slot ?hrest
+      case slot =>
+        intro hne
+        refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T)
+          (σ (C.inl (C.singleSlot α))) (θ (C.inl (C.singleSlot α)))) hb) ?_
+        exact slot (C.inl (C.singleSlot α))
+          (fun hEq => hne (Eq.mp (congrArg Bd.isEq hd) hEq))
+      case hrest =>
+        have hdt : ∀ ⦃γ : C.Arity⦄ (y : Ω ∋ γ),
+            (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)) ⋆
+                (dTel.actBase (Subst.comp (Γ := 1) (Subst.lift κ (C.single α))
+                  (Subst.copair (Subst.id Δ)
+                    (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)))) rest).declaration y
+              = σ ⋆ (dTel.actBase κ (dTel.cons bind boundary rest)).declaration
+                  (C.inr y) := by
+          intro γ y
+          refine Eq.trans (congrArg (fun T =>
+            (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)) ⋆ dTel.declaration T y) hcat) ?_
+          exact (dTel.declaration_tail_instantiate _ _ _ σ y).symm
+        have hbt : ∀ ⦃γ : C.Arity⦄ (y : Ω ∋ γ),
+            (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)) ⋆
+                (dTel.actBase (Subst.comp (Γ := 1) (Subst.lift κ (C.single α))
+                  (Subst.copair (Subst.id Δ)
+                    (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)))) rest).binding y
+              = σ ⋆ (dTel.actBase κ (dTel.cons bind boundary rest)).binding
+                  (C.inr y) := by
+          intro γ y
+          refine Eq.trans (congrArg (fun (T : dTel Δ Ω) =>
+            dTel.instantiate (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j))
+              (dTel.binding T y)) hcat) ?_
+          exact (dTel.binding_tail_instantiate _ _ _ σ y).symm
+        refine Eq.mp (congrArg (fun T =>
+          Eq_s Ξ T (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j))
+            (fun ⦃β⦄ (j : Ω ∋ β) => θ (C.inr j))) hcat) ?_
+        refine Eq_s.slotwise_actBase rest _ ?_
+        intro γ y hne
+        refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) (σ (C.inr y)) (θ (C.inr y)))
+          (hbt y).symm) ?_
+        exact slot (C.inr y) (fun hEq => hne (Eq.mp (congrArg Bd.isEq
+          (hdt y).symm) hEq))
+
+/-- Agreement of two fillings, from the comparison at every slot. -/
+theorem Eq_s.slotwise {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω}
+    {σ θ : Subst Ω Δ}
+    (slot : ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ), ¬ (σ ⋆ Θ.declaration z).isEq →
+        Eq_e (Ξ ⋈ σ ⋆ Θ.binding z) (σ z) (θ z)) :
+    Eq_s Ξ Θ σ θ := by
+  have hid := dTel.actBase_id Θ
+  refine Eq.mp (congrArg (fun T => Eq_s Ξ T σ θ) hid) ?_
+  refine Eq_s.slotwise_actBase Θ (Subst.id Δ) ?_
+  intro Λ z hne
+  refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ σ ⋆ dTel.binding T z) (σ z) (θ z))
+    hid.symm) ?_
+  exact slot z (fun hEq => hne (Eq.mp (congrArg (fun T =>
+    (σ ⋆ dTel.declaration T z).isEq) hid.symm) hEq))
+
+/-- The slots after the first of two agreeing fillings agree. -/
+theorem Eq_s.tail {Δ α Ω : C.Arity} {Ξ : Ambient Δ} {bind : dTel Δ α}
+    {boundary : Bd (Δ ⋈ α)} {rest : dTel (Δ ⋈ C.single α) Ω}
+    {σ θ : Subst (C.single α ⋈ Ω) Δ}
+    (h : Eq_s Ξ (dTel.cons bind boundary rest) σ θ) :
+    Eq_s Ξ (dTel.instantiate (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) rest)
+      (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j))
+      (fun ⦃β⦄ (j : Ω ∋ β) => θ (C.inr j)) := by
+  refine Eq_s.slotwise (fun Λ y hne => ?_)
+  refine Eq.mp (congrArg (fun T => Eq_e ((Ξ ⋈ T)) (σ (C.inr y)) (θ (C.inr y)))
+    (dTel.binding_tail_instantiate bind boundary rest σ y)) ?_
+  exact h.slot (C.inr y) (fun hEq => hne (Eq.mp (congrArg Bd.isEq
+    (dTel.declaration_tail_instantiate bind boundary rest σ y)) hEq))
 
 /-- A well-formed filling is equal to itself. -/
 theorem Wf_s.refl {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω} {σ : Subst Ω Δ}
     (h : Wf_s Ξ Θ σ) : Eq_s Ξ Θ σ σ :=
-  .mk (fun _ z hne => .refl (h.filler z hne))
+  Eq_s.slotwise (fun _ z hne => .refl (h.filler z hne))
 
 /-- Equality of boundaries under the substitution rule. -/
 theorem Eq_bd.congr {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω}
@@ -363,6 +572,29 @@ theorem Eq_bd.congr {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω}
   | _, _, .of h => .of (Eq_e.congr σ θ hΘ hσ hθ agree h)
   | _, _, .eq hl hr =>
       .eq (Eq_e.congr σ θ hΘ hσ hθ agree hl) (Eq_e.congr σ θ hΘ hσ hθ agree hr)
+
+private def Wf_t.parts : {Δ Ω : C.Arity} → Ambient Δ → dTel Δ Ω → Prop
+  | _, _, _, .nil => True
+  | _, _, Ξ, .cons bind boundary rest =>
+      Wf_t Ξ bind ∧ Wf_bd Ξ bind boundary ∧
+        Wf_t ((Ξ ⋈ dTel.cons bind boundary .nil)) rest
+
+private theorem Wf_t.toParts {Δ : C.Arity} {Ξ : Ambient Δ} :
+    ∀ {Ω : C.Arity} {Θ : dTel Δ Ω}, Wf_t Ξ Θ → Wf_t.parts Ξ Θ
+  | _, _, .nil => by rw [Wf_t.parts]; trivial
+  | _, _, .cons hbind hboundary hrest => by
+      rw [Wf_t.parts]
+      exact ⟨hbind, hboundary, hrest⟩
+
+/-- A well-formed telescope binds well-formed entries at its first slot, declares
+a well-formed boundary there, and is well formed after it. -/
+theorem Wf_t.cons_inv {Δ α Ω : C.Arity} {Ξ : Ambient Δ} {bind : dTel Δ α}
+    {boundary : Bd (Δ ⋈ α)} {rest : dTel (Δ ⋈ C.single α) Ω}
+    (h : Wf_t Ξ (dTel.cons bind boundary rest)) :
+    Wf_t Ξ bind ∧ Wf_bd Ξ bind boundary ∧
+      Wf_t ((Ξ ⋈ dTel.cons bind boundary .nil)) rest := by
+  have hp := Wf_t.toParts h
+  rwa [Wf_t.parts] at hp
 
 /-- Concatenating well-formed telescopes is well formed. -/
 theorem Wf_t.concatenate {Δ : C.Arity} {Ξ : Ambient Δ} :
