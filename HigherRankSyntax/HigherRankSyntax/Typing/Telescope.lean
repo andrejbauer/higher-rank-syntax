@@ -448,6 +448,20 @@ theorem actBase_comp {Γ Δ Ξ : C.Arity} (κ : Subst Γ Δ) (θ : Subst Δ Ξ) 
           (Subst.lift_comp κ θ (C.single α))) ?_
         exact actBase_comp _ _ rest
 
+/-- Reindexing the base distributes over concatenation. -/
+theorem rename_concatenate {Γ Γ' Φ Ψ : C.Arity} (ρ : Γ →ʳ Γ') :
+    ∀ (T : dTel Γ Φ) (U : dTel (Γ ⋈ Φ) Ψ),
+      rename ρ (concatenate T U)
+        = concatenate (rename ρ T) (rename (ρ ⇑ʳ Φ) U)
+  | .nil, U => (congrArg (fun s => rename s U) (Renaming.extend_unit ρ)).symm
+  | .cons (α := α) (Δ := Δ') bind boundary rest, U => by
+      simp only [concatenate, rename]
+      congr 1
+      refine Eq.trans (rename_concatenate (ρ ⇑ʳ C.single α) rest U) ?_
+      exact congrArg (fun s => concatenate (rename (ρ ⇑ʳ C.single α) rest)
+          (rename s U))
+        (Renaming.extend_assoc ρ (C.single α) Δ').symm
+
 /-- A substitution in the base distributes over concatenation. -/
 theorem actBase_concatenate {Γ Γ' Φ Ψ : C.Arity} (κ : Subst Γ Γ') :
     ∀ (T : dTel Γ Φ) (U : dTel (Γ ⋈ Φ) Ψ),
@@ -550,6 +564,17 @@ theorem actBase_rename_cancel {Γ Δ' Γ' : C.Arity} (ρ : Γ →ʳ Δ') (ρ' : 
   · intro α x
     exact (h x).trans (Renaming.act_eta ρ' x).symm
   · exact congrArg (rename ρ') (actBase_id T)
+
+/-- Instantiating the weakening of a telescope into the prefix is reindexing. -/
+theorem instantiate_weaken {Γ Γ' Χ : C.Arity} (s : Subst Γ Γ') (T : dTel Γ Χ) :
+    dTel.instantiate s (dTel.rename (Renaming.inr Γ' Γ) T) = dTel.actBase s T := by
+  refine Eq.trans (actBase_square (Renaming.inr Γ' Γ) (𝟙ʳ Γ')
+    (Subst.copair (Subst.id Γ') s) s ?_ T) ?_
+  · intro α x
+    refine (Subst.copair_inr _ _ x).trans ?_
+    exact ((congrArg (fun ρ => Renaming.act ρ (s x)) (Renaming.extend_id Γ' α)).trans
+      (Renaming.act_id _)).symm
+  · exact rename_id _
 
 /-- Concatenating the empty telescope changes nothing. -/
 theorem concatenate_nil {Ω : C.Arity} :
@@ -656,3 +681,137 @@ abbrev Bd.applyAt {Γ Γ' : C.Arity} (s : Subst Γ Γ') (Φ : C.Arity) (β : Bd 
 @[inherit_doc Bd.fill] infixr:70 " ⋆ " => Bd.fill
 @[inherit_doc dTel.instantiate] infixr:70 " ⋆ " => dTel.instantiate
 
+/-- Filling the weakening of an expression into the prefix is applying. -/
+theorem Subst.act_weaken {Γ Γ' Φ : C.Arity} (s : Subst Γ Γ') (e : Expr (Γ ⋈ Φ)) :
+    Subst.act (Γ := Γ') (Δ := Γ) (Ξ := 1) s Φ
+        (⟦ Renaming.inr Γ' Γ ⇑ʳ Φ ⟧ʳ e)
+      = Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Φ e :=
+  (act_copair_prefix s Φ (⟦ Renaming.inr Γ' Γ ⇑ʳ Φ ⟧ʳ e)).symm.trans
+    (act_copair_inr s Φ e)
+
+/-- Filling the weakening of a boundary into the prefix is applying. -/
+theorem Bd.act_weaken {Γ Γ' Φ : C.Arity} (s : Subst Γ Γ') (β : Bd (Γ ⋈ Φ)) :
+    Bd.act (Γ := Γ') (Δ := Γ) (Ξ := 1) s Φ (Bd.rename (Renaming.inr Γ' Γ ⇑ʳ Φ) β)
+      = Bd.applyAt s Φ β := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (Subst.act_weaken s S)
+  | eq l r => exact congrArg₂ Bd.eq (Subst.act_weaken s l) (Subst.act_weaken s r)
+
+/-- Instantiating the weakening of an expression into the prefix is applying. -/
+theorem Subst.instantiate_weaken {Γ Γ' : C.Arity} (s : Subst Γ Γ') (e : Expr Γ) :
+    Subst.instantiate s (⟦ Renaming.inr Γ' Γ ⟧ʳ e) = Subst.apply s e := by
+  refine Eq.trans (act_copair_prefix s 1 (⟦ Renaming.inr Γ' Γ ⟧ʳ e)).symm ?_
+  refine Eq.trans (congrArg (fun ρ =>
+    Subst.act (Γ := 1) (Δ := Γ' ⋈ Γ) (Ξ := Γ') (Subst.copair (Subst.id Γ') s) 1
+      (Renaming.act ρ e)) (Renaming.extend_unit (Renaming.inr Γ' Γ)).symm) ?_
+  exact act_copair_inr s 1 e
+
+
+/-- Filling a two-block arity is filling the first block and then the second. -/
+theorem Subst.copair_split {Δ α Ω : C.Arity} (σ : Subst (C.single α ⋈ Ω) Δ) :
+    (Subst.comp (Γ := 1) (Ξ := Δ) (Subst.lift (Subst.copair (Subst.id Δ)
+          (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i))) Ω)
+        (Subst.copair (Subst.id Δ) (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j))) :
+      Subst (Δ ⋈ C.single α ⋈ Ω) Δ)
+      = Subst.copair (Subst.id Δ) σ := by
+  have hbase : ∀ ⦃γ : C.Arity⦄ (w : Δ ∋ γ),
+      Subst.copair (Subst.id Δ) (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)) (C.inl w)
+        = Expr.η w := fun ⦃_⦄ w => Subst.copair_inl _ _ w
+  funext β x
+  rcases C.cover (Δ ⋈ C.single α) Ω x with ⟨u, rfl⟩ | ⟨j, rfl⟩
+  · rcases C.cover Δ (C.single α) u with ⟨w, rfl⟩ | ⟨i, rfl⟩
+    · refine Eq.trans (congrArg (Subst.act (Γ := 1) _ β)
+        (Subst.lift_copair_inl_inl _ w)) ?_
+      refine Eq.trans (act_η _ β (C.inl w)) ?_
+      refine Eq.trans (hbase w) ?_
+      refine Eq.trans ?_ (congrArg (fun (z : (Δ ⋈ C.single α ⋈ Ω) ∋ β) =>
+        Subst.copair (Subst.id Δ) σ z) (C.inl_inl Δ (C.single α) Ω w))
+      exact (Subst.copair_inl _ _ w).symm
+    · refine Eq.trans (congrArg (Subst.act (Γ := 1) _ β)
+        (Subst.lift_copair_inl_inr _ i)) ?_
+      refine Eq.trans (act_rename_cancel (Renaming.inl Δ Ω) (𝟙ʳ Δ) _ hbase β
+        (σ (C.inl i))) ?_
+      refine Eq.trans ((congrArg (fun ρ => Renaming.act ρ (σ (C.inl i)))
+        (Renaming.extend_id Δ β)).trans (Renaming.act_id _)) ?_
+      refine Eq.trans ?_ (congrArg (fun (z : (Δ ⋈ C.single α ⋈ Ω) ∋ β) =>
+        Subst.copair (Subst.id Δ) σ z) (C.inr_inl Δ (C.single α) Ω i))
+      exact (Subst.copair_inr _ _ (C.inl i)).symm
+  · refine Eq.trans (congrArg (Subst.act (Γ := 1) _ β) (Subst.lift_inr _ j)) ?_
+    refine Eq.trans (act_η _ β (C.inr j)) ?_
+    refine Eq.trans (Subst.copair_inr _ _ j) ?_
+    refine Eq.trans ?_ (congrArg (fun (z : (Δ ⋈ C.single α ⋈ Ω) ∋ β) =>
+      Subst.copair (Subst.id Δ) σ z) (C.inr_inr Δ (C.single α) Ω j))
+    exact (Subst.copair_inr _ _ (C.inr j)).symm
+
+/-- The entries bound by the first slot, filled, are the entries it binds. -/
+theorem dTel.binding_head_instantiate {Δ α Ω : C.Arity} (bind : dTel Δ α)
+    (boundary : Bd (Δ ⋈ α)) (rest : dTel (Δ ⋈ C.single α) Ω)
+    (σ : Subst (C.single α ⋈ Ω) Δ) :
+    σ ⋆ (dTel.cons bind boundary rest).binding (C.inl (C.singleSlot α)) = bind := by
+  refine Eq.trans (congrArg (dTel.instantiate σ)
+    (dTel.binding_head bind boundary rest)) ?_
+  refine Eq.trans (dTel.actBase_rename_cancel (Renaming.inl Δ (C.single α ⋈ Ω))
+    (𝟙ʳ Δ) (Subst.copair (Subst.id Δ) σ)
+    (fun ⦃_⦄ x => Subst.copair_inl _ _ x) bind) ?_
+  exact dTel.rename_id bind
+
+/-- The declaration of the first slot, filled, is the boundary it declares. -/
+theorem dTel.declaration_head_instantiate {Δ α Ω : C.Arity} (bind : dTel Δ α)
+    (boundary : Bd (Δ ⋈ α)) (rest : dTel (Δ ⋈ C.single α) Ω)
+    (σ : Subst (C.single α ⋈ Ω) Δ) :
+    σ ⋆ (dTel.cons bind boundary rest).declaration (C.inl (C.singleSlot α))
+      = boundary := by
+  refine Eq.trans (congrArg (Bd.act (Γ := Δ) (Δ := C.single α ⋈ Ω) (Ξ := 1) σ α)
+    (dTel.declaration_head bind boundary rest)) ?_
+  refine Eq.trans (Bd.act_copair_prefix σ α _).symm ?_
+  refine Eq.trans (Bd.act_rename_cancel (Renaming.inl Δ (C.single α ⋈ Ω)) (𝟙ʳ Δ)
+    (Subst.copair (Subst.id Δ) σ) (fun ⦃_⦄ x => Subst.copair_inl _ _ x) α
+    boundary) ?_
+  exact (congrArg (fun ρ => Bd.rename ρ boundary)
+    (Renaming.extend_id Δ α)).trans (Bd.rename_id boundary)
+
+/-- The entries bound by a later slot, filled, are those entries after the first
+slot is filled, filled by the remaining fillers. -/
+theorem dTel.binding_tail_instantiate {Δ α Ω Λ : C.Arity} (bind : dTel Δ α)
+    (boundary : Bd (Δ ⋈ α)) (rest : dTel (Δ ⋈ C.single α) Ω)
+    (σ : Subst (C.single α ⋈ Ω) Δ) (y : Ω ∋ Λ) :
+    σ ⋆ (dTel.cons bind boundary rest).binding (C.inr y)
+      = (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)) ⋆
+          (dTel.instantiate (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i))
+            rest).binding y := by
+  refine Eq.trans (congrArg (dTel.instantiate σ)
+    (dTel.binding_tail bind boundary rest y)) ?_
+  refine Eq.trans (congrArg (fun s => dTel.actBase s (rest.binding y))
+    (Subst.copair_split σ).symm) ?_
+  refine Eq.trans (dTel.actBase_comp _ _ (rest.binding y)) ?_
+  exact congrArg (dTel.actBase (Subst.copair (Subst.id Δ)
+      (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j))))
+    (dTel.binding_actBase (Subst.copair (Subst.id Δ)
+      (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i))) rest y).symm
+
+/-- The declaration of a later slot, filled, is that declaration after the first
+slot is filled, filled by the remaining fillers. -/
+theorem dTel.declaration_tail_instantiate {Δ α Ω Λ : C.Arity} (bind : dTel Δ α)
+    (boundary : Bd (Δ ⋈ α)) (rest : dTel (Δ ⋈ C.single α) Ω)
+    (σ : Subst (C.single α ⋈ Ω) Δ) (y : Ω ∋ Λ) :
+    σ ⋆ (dTel.cons bind boundary rest).declaration (C.inr y)
+      = (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)) ⋆
+          (dTel.instantiate (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i))
+            rest).declaration y := by
+  refine Eq.trans (congrArg (Bd.act (Γ := Δ) (Δ := C.single α ⋈ Ω) (Ξ := 1) σ Λ)
+    (dTel.declaration_tail bind boundary rest y)) ?_
+  refine Eq.trans (Bd.act_copair_prefix σ Λ (rest.declaration y)).symm ?_
+  refine Eq.trans (congrArg (fun (s : Subst (Δ ⋈ C.single α ⋈ Ω) Δ) =>
+    Bd.act (Γ := 1) s Λ (rest.declaration y)) (Subst.copair_split σ).symm) ?_
+  refine Eq.trans (Bd.act_comp (Γ := 1)
+    (Subst.lift (Subst.copair (Subst.id Δ)
+      (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i))) Ω)
+    (Subst.copair (Subst.id Δ) (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)))
+    Λ (rest.declaration y)) ?_
+  refine Eq.trans (Bd.act_copair_prefix
+    (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)) Λ _) ?_
+  exact congrArg (Bd.act (Γ := Δ) (Δ := Ω) (Ξ := 1)
+      (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)) Λ)
+    (dTel.declaration_actBase (Subst.copair (Subst.id Δ)
+      (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i))) rest y).symm

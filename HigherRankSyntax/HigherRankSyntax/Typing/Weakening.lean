@@ -35,6 +35,25 @@ def weaken {Δ Ω : C.Arity} (Ξ : Ambient Δ) (Θ : dTel Δ Ω) :
   declaration := fun ⦃_⦄ x => dTel.declaration_concatenate_inl Ξ Θ x
   binding := fun ⦃_⦄ x => dTel.binding_concatenate_inl Ξ Θ x
 
+/-- An ambient is a renaming of itself weakened into another. -/
+def weakenInto {Γ Γ' : C.Arity} (A : Ambient Γ) (A' : Ambient Γ') :
+    Ambient.Renaming A (A' ⋈ dTel.rename (Renaming.fromUnit Γ') A) where
+  slot := Renaming.inr Γ' Γ
+  declaration := by
+    intro α x
+    refine Eq.trans (dTel.declaration_concatenate_inr A'
+      (dTel.rename (Renaming.fromUnit Γ') A) x) ?_
+    refine Eq.trans (dTel.declaration_rename (Renaming.fromUnit Γ') A x) ?_
+    exact congrArg (fun ρ => Bd.rename (ρ ⇑ʳ α) (A.declaration x))
+      (Renaming.fromUnit_extend Γ' Γ)
+  binding := by
+    intro α x
+    refine Eq.trans (dTel.binding_concatenate_inr A'
+      (dTel.rename (Renaming.fromUnit Γ') A) x) ?_
+    refine Eq.trans (dTel.binding_rename (Renaming.fromUnit Γ') A x) ?_
+    exact congrArg (fun ρ => dTel.rename ρ (A.binding x))
+      (Renaming.fromUnit_extend Γ' Γ)
+
 /-- The empty ambient maps into every ambient. -/
 def fromEmpty {Δ : C.Arity} (Ξ : Ambient Δ) :
     Ambient.Renaming (.nil : Ambient 1) Ξ where
@@ -142,12 +161,13 @@ theorem Eq_e.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
         exact congrArg (fun T => Wf_s A' T (fun ⦃_⦄ i => ⟦ ι.slot ⇑ʳ _ ⟧ʳ (args i)))
           (ι.binding q).symm
       exact congrArg₂ (Eq_e A') (act_rename _ _ _ ι.slot args l) (act_rename _ _ _ ι.slot args r)
-  | _, _, .congr (Ω := Ω) (Θ := Θ) (e := e₁) (e' := e₂) σ θ hΘ hσ hθ agree h => by
+  | _, _, .congr (Ω := Ω) (Θ := Θ) (e := e₁) (e' := e₂) σ θ hΘ hσ hθ (.mk agree) h => by
       refine Eq.mp ?_ (Eq_e.congr (Ξ := A') (Θ := dTel.rename ι.slot Θ)
         (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ i)) (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (θ i))
         (Wf_t.weaken ι hΘ) (Wf_s.weaken ι hσ) (Wf_s.weaken ι hθ) ?agree
         (Eq_e.weaken (ι.extend Θ) h))
       case agree =>
+        refine Eq_s.mk ?_
         intro Λ z hne
         have h₀ : ¬ (Bd.act (Ξ := 1) σ Λ (Θ.declaration z)).isEq := by
           refine fun hEq => hne ?_
@@ -174,59 +194,35 @@ theorem Wf_s.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
     (ι : Ambient.Renaming A A') :
     ∀ {Ω : C.Arity} {Θ : dTel Γ Ω} {σ : Subst Ω Γ}, Wf_s A Θ σ →
       Wf_s A' (dTel.rename ι.slot Θ) (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ i))
-  | _, _, _, .mk (Θ := Θ) (σ := σ) equation filler declared => by
-      refine Wf_s.mk ?equation ?filler ?declared
+  | _, _, _, .nil => .nil
+  | _, _, _, .cons (α := α) (σ := σ) (bind := bind) (boundary := boundary)
+      (rest := rest) equation filler declared hrest => by
+      refine .cons ?equation ?filler ?declared ?hrest
       case equation =>
-        intro Λ z l r h
-        replace h := (dTel.act_declaration_rename ι.slot σ Θ z).symm.trans h
-        cases hb : Bd.act (Ξ := 1) σ Λ (Θ.declaration z) with
-        | sort =>
-            rw [hb] at h
-            replace h := (Bd.rename_sort _).symm.trans h
-            cases h
-        | of S =>
-            rw [hb] at h
-            replace h := (Bd.rename_of _ _).symm.trans h
-            cases h
-        | eq l₀ r₀ =>
-            rw [hb] at h
-            replace h := (Bd.rename_eq _ _ _).symm.trans h
-            injection h with hl hr
-            subst hl
-            subst hr
-            refine Eq.mp ?_ (Eq_e.weaken (ι.extend (dTel.instantiate σ (Θ.binding z)))
-              (equation z l₀ r₀ hb))
-            exact congrArg (fun T => Eq_e ((A' ⋈ T))
-              (⟦ ι.slot ⇑ʳ Λ ⟧ʳ l₀) (⟦ ι.slot ⇑ʳ Λ ⟧ʳ r₀))
-              (dTel.instantiate_binding_rename ι.slot σ Θ z).symm
+        intro l r h
+        obtain ⟨l₀, r₀, hβ, hl, hr⟩ := Bd.rename_eq_inv (ι.slot ⇑ʳ α) h
+        subst hl
+        subst hr
+        exact Eq_e.weaken (ι.extend bind) (equation l₀ r₀ hβ)
       case filler =>
-        intro Λ z hne
-        refine Eq.mp ?_ (Wf_e.weaken (ι.extend (dTel.instantiate σ (Θ.binding z)))
-          (filler z ?h₀))
-        case h₀ =>
-          refine fun hEq => hne ?_
-          exact Eq.mp (congrArg Bd.isEq (dTel.act_declaration_rename ι.slot σ Θ z).symm)
-            ((Bd.isEq_rename (ι.slot ⇑ʳ Λ) _).mpr hEq)
-        exact congrArg (fun T => Wf_e ((A' ⋈ T)) (⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ z)))
-          (dTel.instantiate_binding_rename ι.slot σ Θ z).symm
+        intro hne
+        exact Wf_e.weaken (ι.extend bind)
+          (filler (fun hEq => hne ((Bd.isEq_rename (ι.slot ⇑ʳ α) boundary).mpr hEq)))
       case declared =>
-        intro Λ z hne
-        have h₀ : ¬ (Bd.act (Ξ := 1) σ Λ (Θ.declaration z)).isEq := by
-          refine fun hEq => hne ?_
-          exact Eq.mp (congrArg Bd.isEq (dTel.act_declaration_rename ι.slot σ Θ z).symm)
-            ((Bd.isEq_rename (ι.slot ⇑ʳ Λ) _).mpr hEq)
-        refine Eq.mp ?_ (Eq_bd.weaken (ι.extend (dTel.instantiate σ (Θ.binding z)))
-          (declared z h₀))
-        refine Eq.trans (congrArg₂ (fun (b c : Bd (Γ' ⋈ Λ)) =>
-            Eq_bd (A' ⋈ dTel.rename ι.slot (dTel.instantiate σ (Θ.binding z))) b c)
-          (Ambient.Renaming.boundaryOf (ι.extend (dTel.instantiate σ (Θ.binding z)))
-            (σ z)).symm
-          (dTel.act_declaration_rename ι.slot σ Θ z).symm) ?_
-        exact congrArg (fun T => Eq_bd ((A' ⋈ T))
-            (((A' ⋈ T)).boundaryOf (⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ z)))
-            (Bd.act (Ξ := 1) (fun ⦃Λ'⦄ i => ⟦ ι.slot ⇑ʳ Λ' ⟧ʳ (σ i)) Λ
-              ((dTel.rename ι.slot Θ).declaration z)))
-          (dTel.instantiate_binding_rename ι.slot σ Θ z).symm
+        intro hne
+        have h₀ : ¬ boundary.isEq :=
+          fun hEq => hne ((Bd.isEq_rename (ι.slot ⇑ʳ α) boundary).mpr hEq)
+        refine Eq.mp ?_ (Eq_bd.weaken (ι.extend bind) (declared h₀))
+        exact congrArg (fun b => Eq_bd ((A' ⋈ dTel.rename ι.slot bind)) b
+            (Bd.rename (ι.slot ⇑ʳ α) boundary))
+          (Ambient.Renaming.boundaryOf (ι.extend bind)
+            (σ (C.inl (C.singleSlot α)))).symm
+      case hrest =>
+        refine Eq.mp (congrArg (fun T => Wf_s A' T
+          (fun ⦃β⦄ (j : _ ∋ β) => ⟦ ι.slot ⇑ʳ β ⟧ʳ (σ (C.inr j))))
+          (dTel.instantiate_rename ι.slot
+            (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) rest).symm) ?_
+        exact Wf_s.weaken ι hrest
 
 /-- 8(8): a well-formed declaration stays well formed under a renaming of ambients. -/
 theorem Wf_bd.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
@@ -327,3 +323,243 @@ theorem Wf_t.binding {Δ : C.Arity} {Ξ : Ambient Δ} :
         exact congrArg (fun (T : dTel (Δ ⋈ (C.single α ⋈ Δ')) γ) =>
             Wf_t ((Ξ ⋈ dTel.cons bind boundary rest)) T)
           (dTel.binding_tail bind boundary rest y).symm
+
+/-- A well-formed telescope is equal to itself. -/
+theorem Wf_t.refl {Δ : C.Arity} {Ξ : Ambient Δ} :
+    ∀ {Ω : C.Arity} {Θ : dTel Δ Ω}, Wf_t Ξ Θ → Eq_t Ξ Θ Θ
+  | _, _, .nil => .nil
+  | _, _, .cons hbind hboundary hrest =>
+      .cons (Wf_t.refl hbind) (Wf_bd.refl hboundary) (Wf_t.refl hrest)
+
+/-- 8(8): equality of telescopes is stable under a renaming of ambients. -/
+theorem Eq_t.weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    (ι : Ambient.Renaming A A') :
+    ∀ {Ω : C.Arity} {Θ Θ' : dTel Γ Ω}, Eq_t A Θ Θ' →
+      Eq_t A' (dTel.rename ι.slot Θ) (dTel.rename ι.slot Θ')
+  | _, .nil, _, h => by
+      obtain rfl := Eq_t.nil_inv h
+      exact Eq_t.nil
+  | _, .cons bind boundary rest, _, h => by
+      obtain ⟨_, _, _, rfl, hbind, hboundary, hrest⟩ := Eq_t.cons_inv h
+      exact Eq_t.cons (Eq_t.weaken ι hbind) (Eq_bd.weaken (ι.extend bind) hboundary)
+        (Eq_t.weaken (ι.extend (dTel.cons bind boundary .nil)) hrest)
+
+/-- Equality of telescopes is preserved by concatenation. -/
+theorem Eq_t.concatenate {Δ : C.Arity} {Ξ : Ambient Δ} :
+    ∀ {Ω Φ : C.Arity} {Θ Θ' : dTel Δ Ω} {X X' : dTel (Δ ⋈ Ω) Φ},
+      Eq_t Ξ Θ Θ' → Eq_t (Ξ ⋈ Θ) X X' →
+        Eq_t Ξ (dTel.concatenate Θ X) (dTel.concatenate Θ' X')
+  | _, _, .nil, _, X, X', h, hX => by
+      obtain rfl := Eq_t.nil_inv h
+      exact Eq.mp (congrArg (fun A => Eq_t A X X') (dTel.concatenate_nil Ξ)) hX
+  | _, _, .cons bind boundary rest, _, X, X', h, hX => by
+      obtain ⟨_, _, _, rfl, hbind, hboundary, hrest⟩ := Eq_t.cons_inv h
+      refine Eq_t.cons hbind hboundary (Eq_t.concatenate hrest ?_)
+      exact Eq.mp (congrArg (fun A => Eq_t A X X')
+        (dTel.concatenate_assoc Ξ (dTel.cons bind boundary .nil) rest).symm) hX
+
+/-- The declarations of equal telescopes are equal at every slot. -/
+theorem Eq_t.declaration {Δ : C.Arity} {Ξ : Ambient Δ} :
+    ∀ {Ω : C.Arity} {Θ Θ' : dTel Δ Ω}, Eq_t Ξ Θ Θ' → ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
+      Eq_bd ((Ξ ⋈ Θ ⋈ Θ.binding z)) (Θ.declaration z) (Θ'.declaration z)
+  | _, .nil, _, _, _, z => (C.unit_is_empty z).elim
+  | _, .cons (α := α) (Δ := Δ') bind boundary rest, _, h, Λ, z => by
+      obtain ⟨bind', boundary', rest', rfl, hbind, hboundary, hrest⟩ :=
+        Eq_t.cons_inv h
+      refine slotCases (α := α) (Δ := Δ')
+        (motive := fun ⦃Λ⦄ z => Eq_bd ((Ξ ⋈ dTel.cons bind boundary rest
+            ⋈ (dTel.cons bind boundary rest).binding z))
+          ((dTel.cons bind boundary rest).declaration z)
+          ((dTel.cons bind' boundary' rest').declaration z)) ?head ?tail z
+      case head =>
+        refine Eq.mp ?_ (Eq_bd.weaken
+          ((Ambient.Renaming.weaken Ξ (dTel.cons bind boundary rest)).extend bind)
+          hboundary)
+        refine Eq.trans (congrArg (fun (T : dTel (Δ ⋈ (C.single α ⋈ Δ')) α) =>
+            Eq_bd ((Ξ ⋈ dTel.cons bind boundary rest ⋈ T))
+              (Bd.rename (Renaming.inl Δ (C.single α ⋈ Δ') ⇑ʳ α) boundary)
+              (Bd.rename (Renaming.inl Δ (C.single α ⋈ Δ') ⇑ʳ α) boundary'))
+          (dTel.binding_head bind boundary rest).symm) ?_
+        exact congrArg₂ (fun (a b : Bd ((Δ ⋈ (C.single α ⋈ Δ')) ⋈ α)) =>
+            Eq_bd ((Ξ ⋈ dTel.cons bind boundary rest
+              ⋈ (dTel.cons bind boundary rest).binding (C.inl (C.singleSlot α)))) a b)
+          (dTel.declaration_head bind boundary rest).symm
+          (dTel.declaration_head bind' boundary' rest').symm
+      case tail =>
+        intro γ y
+        refine Eq.mp ?_ (Eq_t.declaration hrest y)
+        refine Eq.trans (congrArg (fun (B : Ambient (Δ ⋈ (C.single α ⋈ Δ'))) =>
+            Eq_bd ((B ⋈ rest.binding y)) (rest.declaration y) (rest'.declaration y))
+          (dTel.concatenate_assoc Ξ (dTel.cons bind boundary .nil) rest)) ?_
+        refine Eq.trans (congrArg (fun (T : dTel (Δ ⋈ (C.single α ⋈ Δ')) γ) =>
+            Eq_bd ((Ξ ⋈ dTel.cons bind boundary rest ⋈ T))
+              (rest.declaration y) (rest'.declaration y))
+          (dTel.binding_tail bind boundary rest y).symm) ?_
+        exact congrArg₂ (fun (a b : Bd ((Δ ⋈ (C.single α ⋈ Δ')) ⋈ γ)) =>
+            Eq_bd ((Ξ ⋈ dTel.cons bind boundary rest
+              ⋈ (dTel.cons bind boundary rest).binding (C.inr y))) a b)
+          (dTel.declaration_tail bind boundary rest y).symm
+          (dTel.declaration_tail bind' boundary' rest' y).symm
+
+/-- The entries bound by equal telescopes are equal at every slot. -/
+theorem Eq_t.binding {Δ : C.Arity} {Ξ : Ambient Δ} :
+    ∀ {Ω : C.Arity} {Θ Θ' : dTel Δ Ω}, Eq_t Ξ Θ Θ' → ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
+      Eq_t ((Ξ ⋈ Θ)) (Θ.binding z) (Θ'.binding z)
+  | _, .nil, _, _, _, z => (C.unit_is_empty z).elim
+  | _, .cons (α := α) (Δ := Δ') bind boundary rest, _, h, Λ, z => by
+      obtain ⟨bind', boundary', rest', rfl, hbind, hboundary, hrest⟩ :=
+        Eq_t.cons_inv h
+      refine slotCases (α := α) (Δ := Δ')
+        (motive := fun ⦃Λ⦄ z => Eq_t ((Ξ ⋈ dTel.cons bind boundary rest))
+          ((dTel.cons bind boundary rest).binding z)
+          ((dTel.cons bind' boundary' rest').binding z)) ?head ?tail z
+      case head =>
+        refine Eq.mp ?_ (Eq_t.weaken
+          (Ambient.Renaming.weaken Ξ (dTel.cons bind boundary rest)) hbind)
+        exact congrArg₂ (fun (T U : dTel (Δ ⋈ (C.single α ⋈ Δ')) α) =>
+            Eq_t ((Ξ ⋈ dTel.cons bind boundary rest)) T U)
+          (dTel.binding_head bind boundary rest).symm
+          (dTel.binding_head bind' boundary' rest').symm
+      case tail =>
+        intro γ y
+        refine Eq.mp ?_ (Eq_t.binding hrest y)
+        refine Eq.trans (congrArg (fun (B : Ambient (Δ ⋈ (C.single α ⋈ Δ'))) =>
+            Eq_t B (rest.binding y) (rest'.binding y))
+          (dTel.concatenate_assoc Ξ (dTel.cons bind boundary .nil) rest)) ?_
+        exact congrArg₂ (fun (T U : dTel (Δ ⋈ (C.single α ⋈ Δ')) γ) =>
+            Eq_t ((Ξ ⋈ dTel.cons bind boundary rest)) T U)
+          (dTel.binding_tail bind boundary rest y).symm
+          (dTel.binding_tail bind' boundary' rest' y).symm
+
+/-! ### Telescopes equal over two ambients -/
+
+/-- Telescopes equal over two ambients stay so under a renaming of each by one
+map. -/
+theorem Eq_t.Both.weaken {Γ Γ' : C.Arity} {A A₁ : Ambient Γ} {A' A₁' : Ambient Γ'}
+    (ι : Ambient.Renaming A A') (ι₁ : Ambient.Renaming A₁ A₁')
+    (hslot : ι₁.slot = ι.slot) :
+    ∀ {Ω : C.Arity} {Θ Θ' : dTel Γ Ω}, Eq_t.Both A A₁ Θ Θ' →
+      Eq_t.Both A' A₁' (dTel.rename ι.slot Θ) (dTel.rename ι.slot Θ')
+  | _, .nil, _, h => by
+      obtain rfl := Eq_t.Both.nil_inv h
+      exact Eq_t.Both.nil
+  | _, .cons (α := α) bind boundary rest, _, h => by
+      obtain ⟨bind', boundary', rest', rfl, hbind, hboundary, hboundary', hrest⟩ :=
+        Eq_t.Both.cons_inv h
+      refine Eq_t.Both.cons (Eq_t.Both.weaken ι ι₁ hslot hbind)
+        (Eq_bd.weaken (ι.extend bind) hboundary) ?boundary ?rest
+      case boundary =>
+        refine Eq.mp ?_ (Eq_bd.weaken (ι₁.extend bind') hboundary')
+        exact congrArg (fun (ρ : Γ →ʳ Γ') => Eq_bd ((A₁' ⋈ dTel.rename ρ bind'))
+          (Bd.rename (ρ ⇑ʳ α) boundary) (Bd.rename (ρ ⇑ʳ α) boundary')) hslot
+      case rest =>
+        refine Eq.mp ?_ (Eq_t.Both.weaken
+          (ι.extend (dTel.cons bind boundary .nil))
+          (ι₁.extend (dTel.cons bind' boundary' .nil))
+          (congrArg (fun (ρ : Γ →ʳ Γ') => ρ ⇑ʳ C.single α) hslot) hrest)
+        exact congrArg (fun (ρ : Γ →ʳ Γ') => Eq_t.Both
+          ((A' ⋈ dTel.rename ι.slot (dTel.cons bind boundary .nil)))
+          ((A₁' ⋈ dTel.rename ρ (dTel.cons bind' boundary' .nil)))
+          (dTel.rename (ι.slot ⇑ʳ C.single α) rest)
+          (dTel.rename (ι.slot ⇑ʳ C.single α) rest')) hslot
+
+/-- Telescopes equal over two ambients stay so under concatenation. -/
+theorem Eq_t.Both.concatenate {Δ : C.Arity} {Ξ Ξ' : Ambient Δ} :
+    ∀ {Ω Φ : C.Arity} {Θ Θ' : dTel Δ Ω} {X X' : dTel (Δ ⋈ Ω) Φ},
+      Eq_t.Both Ξ Ξ' Θ Θ' → Eq_t.Both ((Ξ ⋈ Θ)) ((Ξ' ⋈ Θ')) X X' →
+        Eq_t.Both Ξ Ξ' (dTel.concatenate Θ X) (dTel.concatenate Θ' X')
+  | _, _, .nil, _, X, X', h, hX => by
+      obtain rfl := Eq_t.Both.nil_inv h
+      exact Eq.mp (congrArg₂ (fun (A B : Ambient Δ) => Eq_t.Both A B X X')
+        (dTel.concatenate_nil Ξ) (dTel.concatenate_nil Ξ')) hX
+  | _, _, .cons bind boundary rest, _, X, X', h, hX => by
+      obtain ⟨bind', boundary', rest', rfl, hbind, hboundary, hboundary', hrest⟩ :=
+        Eq_t.Both.cons_inv h
+      refine Eq_t.Both.cons hbind hboundary hboundary'
+        (Eq_t.Both.concatenate hrest ?_)
+      exact Eq.mp (congrArg₂ (fun (A B : Ambient _) => Eq_t.Both A B X X')
+        (dTel.concatenate_assoc Ξ (dTel.cons bind boundary .nil) rest).symm
+        (dTel.concatenate_assoc Ξ' (dTel.cons bind' boundary' .nil) rest').symm) hX
+
+/-- The declarations of telescopes equal over two ambients are equal at every
+slot, over the ambient built from the second. -/
+theorem Eq_t.Both.declaration_right {Δ : C.Arity} {Ξ Ξ' : Ambient Δ} :
+    ∀ {Ω : C.Arity} {Θ Θ' : dTel Δ Ω}, Eq_t.Both Ξ Ξ' Θ Θ' →
+      ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
+        Eq_bd ((Ξ' ⋈ Θ' ⋈ Θ'.binding z)) (Θ.declaration z) (Θ'.declaration z)
+  | _, .nil, _, _, _, z => (C.unit_is_empty z).elim
+  | _, .cons (α := α) (Δ := Δ') bind boundary rest, _, h, Λ, z => by
+      obtain ⟨bind', boundary', rest', rfl, hbind, hboundary, hboundary', hrest⟩ :=
+        Eq_t.Both.cons_inv h
+      refine slotCases (α := α) (Δ := Δ')
+        (motive := fun ⦃Λ⦄ z => Eq_bd ((Ξ' ⋈ dTel.cons bind' boundary' rest'
+            ⋈ (dTel.cons bind' boundary' rest').binding z))
+          ((dTel.cons bind boundary rest).declaration z)
+          ((dTel.cons bind' boundary' rest').declaration z)) ?head ?tail z
+      case head =>
+        refine Eq.mp ?_ (Eq_bd.weaken
+          ((Ambient.Renaming.weaken Ξ' (dTel.cons bind' boundary' rest')).extend bind')
+          hboundary')
+        refine Eq.trans (congrArg (fun (T : dTel (Δ ⋈ (C.single α ⋈ Δ')) α) =>
+            Eq_bd ((Ξ' ⋈ dTel.cons bind' boundary' rest' ⋈ T))
+              (Bd.rename (Renaming.inl Δ (C.single α ⋈ Δ') ⇑ʳ α) boundary)
+              (Bd.rename (Renaming.inl Δ (C.single α ⋈ Δ') ⇑ʳ α) boundary'))
+          (dTel.binding_head bind' boundary' rest').symm) ?_
+        exact congrArg₂ (fun (a b : Bd ((Δ ⋈ (C.single α ⋈ Δ')) ⋈ α)) =>
+            Eq_bd ((Ξ' ⋈ dTel.cons bind' boundary' rest'
+              ⋈ (dTel.cons bind' boundary' rest').binding (C.inl (C.singleSlot α))))
+              a b)
+          (dTel.declaration_head bind boundary rest).symm
+          (dTel.declaration_head bind' boundary' rest').symm
+      case tail =>
+        intro γ y
+        refine Eq.mp ?_ (Eq_t.Both.declaration_right hrest y)
+        refine Eq.trans (congrArg (fun (B : Ambient (Δ ⋈ (C.single α ⋈ Δ'))) =>
+            Eq_bd ((B ⋈ rest'.binding y)) (rest.declaration y) (rest'.declaration y))
+          (dTel.concatenate_assoc Ξ' (dTel.cons bind' boundary' .nil) rest')) ?_
+        refine Eq.trans (congrArg (fun (T : dTel (Δ ⋈ (C.single α ⋈ Δ')) γ) =>
+            Eq_bd ((Ξ' ⋈ dTel.cons bind' boundary' rest' ⋈ T))
+              (rest.declaration y) (rest'.declaration y))
+          (dTel.binding_tail bind' boundary' rest' y).symm) ?_
+        exact congrArg₂ (fun (a b : Bd ((Δ ⋈ (C.single α ⋈ Δ')) ⋈ γ)) =>
+            Eq_bd ((Ξ' ⋈ dTel.cons bind' boundary' rest'
+              ⋈ (dTel.cons bind' boundary' rest').binding (C.inr y))) a b)
+          (dTel.declaration_tail bind boundary rest y).symm
+          (dTel.declaration_tail bind' boundary' rest' y).symm
+
+/-- The entries bound at a slot of telescopes equal over two ambients are equal
+over the extended ambients. -/
+theorem Eq_t.Both.binding {Δ : C.Arity} {Ξ Ξ' : Ambient Δ} :
+    ∀ {Ω : C.Arity} {Θ Θ' : dTel Δ Ω}, Eq_t.Both Ξ Ξ' Θ Θ' →
+      ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
+        Eq_t.Both ((Ξ ⋈ Θ)) ((Ξ' ⋈ Θ')) (Θ.binding z) (Θ'.binding z)
+  | _, .nil, _, _, _, z => (C.unit_is_empty z).elim
+  | _, .cons (α := α) (Δ := Δ') bind boundary rest, _, h, Λ, z => by
+      obtain ⟨bind', boundary', rest', rfl, hbind, hboundary, hboundary', hrest⟩ :=
+        Eq_t.Both.cons_inv h
+      refine slotCases (α := α) (Δ := Δ')
+        (motive := fun ⦃Λ⦄ z => Eq_t.Both ((Ξ ⋈ dTel.cons bind boundary rest))
+          ((Ξ' ⋈ dTel.cons bind' boundary' rest'))
+          ((dTel.cons bind boundary rest).binding z)
+          ((dTel.cons bind' boundary' rest').binding z)) ?head ?tail z
+      case head =>
+        refine Eq.mp ?_ (Eq_t.Both.weaken
+          (Ambient.Renaming.weaken Ξ (dTel.cons bind boundary rest))
+          (Ambient.Renaming.weaken Ξ' (dTel.cons bind' boundary' rest')) rfl hbind)
+        exact congrArg₂ (fun (T U : dTel (Δ ⋈ (C.single α ⋈ Δ')) α) =>
+            Eq_t.Both ((Ξ ⋈ dTel.cons bind boundary rest))
+              ((Ξ' ⋈ dTel.cons bind' boundary' rest')) T U)
+          (dTel.binding_head bind boundary rest).symm
+          (dTel.binding_head bind' boundary' rest').symm
+      case tail =>
+        intro γ y
+        refine Eq.mp ?_ (Eq_t.Both.binding hrest y)
+        refine Eq.trans (congrArg₂ (fun (B B' : Ambient (Δ ⋈ (C.single α ⋈ Δ'))) =>
+            Eq_t.Both B B' (rest.binding y) (rest'.binding y))
+          (dTel.concatenate_assoc Ξ (dTel.cons bind boundary .nil) rest)
+          (dTel.concatenate_assoc Ξ' (dTel.cons bind' boundary' .nil) rest')) ?_
+        exact congrArg₂ (fun (T U : dTel (Δ ⋈ (C.single α ⋈ Δ')) γ) =>
+            Eq_t.Both ((Ξ ⋈ dTel.cons bind boundary rest))
+              ((Ξ' ⋈ dTel.cons bind' boundary' rest')) T U)
+          (dTel.binding_tail bind boundary rest y).symm
+          (dTel.binding_tail bind' boundary' rest' y).symm

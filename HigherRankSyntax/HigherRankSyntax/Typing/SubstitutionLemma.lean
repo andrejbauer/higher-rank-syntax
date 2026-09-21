@@ -173,7 +173,9 @@ def Wf_s.filling {Γ Ω : C.Arity} {A : Ambient Γ} {T : dTel Γ Ω} {τ : Subst
           (Subst.copair (Subst.id Γ) τ) (fun ⦃_⦄ u => Subst.copair_inl _ _ u)
           (A.binding w)).symm
         exact (dTel.rename_id _).symm
-    · obtain ⟨equation, filler, declared⟩ := h
+    · have equation := h.equation
+      have filler := h.filler
+      have declared := h.declared
       have hd : Bd.act (Γ := 1) (Ξ := Γ) (Subst.copair (Subst.id Γ) τ) α
               (((A ⋈ T)).declaration (C.inr z))
             = Bd.act (Γ := Γ) (Ξ := 1) τ α (T.declaration z) :=
@@ -391,7 +393,7 @@ theorem Eq_e.subst_step {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'
         exact (ih hsub).equality (Wf_s.filling (Wf_s.subst_step ih F fill))
           (heq (Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') F.fill Λ₀ l)
             (Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') F.fill Λ₀ r) hdeclEq)
-  | _, _, .congr (Ω := Ω₀) (Θ := Θ₀) (e := e₀) (e' := e₀') s t hΘ₀ hs ht agree h => by
+  | _, _, .congr (Ω := Ω₀) (Θ := Θ₀) (e := e₀) (e' := e₀') s t hΘ₀ hs ht (.mk agree) h => by
       have hd : ∀ ⦃Λ : C.Arity⦄ (z : Ω₀ ∋ Λ),
           Bd.act (Γ := Γ') (Δ := Ω₀) (Ξ := 1)
               (F.fill ⋆ s) Λ
@@ -423,6 +425,7 @@ theorem Eq_e.subst_step {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'
         ?agree
         (Eq_e.subst_step ih (F.extend Θ₀) h)
       case agree =>
+        refine Eq_s.mk ?_
         intro Λ z hne
         refine Eq.mp ?_ (Eq_e.subst_step ih (F.extend (dTel.instantiate s (Θ₀.binding z)))
           (agree z (fun hEq => hne (Eq.mp (congrArg Bd.isEq (hd z)).symm
@@ -450,100 +453,42 @@ theorem Wf_s.subst_step {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'
     (F : Ambient.Filling A A' Ω) :
     ∀ {Χ : C.Arity} {X : dTel Γ Χ} {τ : Subst Χ Γ}, Wf_s A X τ →
       Wf_s A' (F.fill ⋆ X) (F.fill ⋆ τ)
-  | Χ, X, τ, .mk equation filler declared => by
-      have hd : ∀ ⦃Λ : C.Arity⦄ (z : Χ ∋ Λ),
-          Bd.act (Γ := Γ') (Δ := Χ) (Ξ := 1)
-              (F.fill ⋆ τ) Λ
-              ((dTel.actBase F.fill X).declaration z)
-            = Bd.act (Γ := 1) (Δ := Γ) (Ξ := Γ') F.fill Λ
-                (Bd.act (Γ := Γ) (Δ := Χ) (Ξ := 1) τ Λ (X.declaration z)) := by
-        intro Λ z
-        refine Eq.trans (congrArg (Bd.act (Γ := Γ') (Δ := Χ) (Ξ := 1)
-          (F.fill ⋆ τ) Λ)
-          (dTel.declaration_actBase F.fill X z)) ?_
-        exact Bd.act_lift_fillers F.fill τ (X.declaration z)
-      have hb : ∀ ⦃Λ : C.Arity⦄ (z : Χ ∋ Λ),
-          dTel.instantiate
-              (F.fill ⋆ τ)
-              ((dTel.actBase F.fill X).binding z)
-            = dTel.actBase F.fill (dTel.instantiate τ (X.binding z)) := by
-        intro Λ z
-        refine Eq.trans (congrArg (dTel.instantiate
-          (F.fill ⋆ τ))
-          (dTel.binding_actBase F.fill X z)) ?_
-        exact (dTel.actBase_instantiate F.fill τ (X.binding z)).symm
-      have hne : ∀ ⦃Λ : C.Arity⦄ (z : Χ ∋ Λ),
-          ¬ (Bd.act (Γ := Γ') (Δ := Χ) (Ξ := 1)
-              (F.fill ⋆ τ) Λ
-              ((dTel.actBase F.fill X).declaration z)).isEq →
-          ¬ (Bd.act (Γ := Γ) (Δ := Χ) (Ξ := 1) τ Λ (X.declaration z)).isEq := by
-        intro Λ z h hEq
-        exact h ((hd z) ▸ (Bd.isEq_act (Γ := 1) F.fill Λ _).mpr hEq)
-      refine Wf_s.mk ?equation ?filler ?declared
+  | _, _, _, .nil => .nil
+  | _, _, _, .cons (α := α) (σ := τ) (bind := bind) (boundary := boundary)
+      (rest := rest) equation filler declared hrest => by
+      refine .cons ?equation ?filler ?declared ?hrest
       case equation =>
-        intro Λ z l r hlr
-        replace hlr := (hd z).symm.trans hlr
-        cases hc : Bd.act (Γ := Γ) (Δ := Χ) (Ξ := 1) τ Λ (X.declaration z) with
-        | sort =>
-            rw [hc] at hlr
-            cases (Bd.act_sort _ _).symm.trans hlr
-        | of S =>
-            rw [hc] at hlr
-            cases (Bd.act_of _ _ _).symm.trans hlr
-        | eq l₀ r₀ =>
-            rw [hc] at hlr
-            replace hlr := (Bd.act_eq _ _ _ _).symm.trans hlr
-            injection hlr with hl hr
-            subst hl
-            subst hr
-            refine Eq.mp ?_ (Eq_e.subst_step ih
-              (F.extend (dTel.instantiate τ (X.binding z))) (equation z l₀ r₀ hc))
-            refine Eq.trans (congrArg₂ (fun a b =>
-                Eq_e (A' ⋈ F.fill ⋆ dTel.instantiate τ (X.binding z)) a b)
-              (Subst.act_lift_depth F.fill l₀) (Subst.act_lift_depth F.fill r₀)) ?_
-            exact congrArg (fun S => Eq_e ((A' ⋈ S))
-                (Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') F.fill Λ l₀)
-                (Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') F.fill Λ r₀)) (hb z).symm
+        intro l r h
+        obtain ⟨l₀, r₀, hβ, hl, hr⟩ := Bd.act_eq_inv (Γ := 1) F.fill α h
+        subst hl
+        subst hr
+        refine Eq.mp (congrArg₂ (Eq_e (A' ⋈ F.fill ⋆ bind))
+          (Subst.act_lift_depth F.fill l₀) (Subst.act_lift_depth F.fill r₀)) ?_
+        exact Eq_e.subst_step ih (F.extend bind) (equation l₀ r₀ hβ)
       case filler =>
-        intro Λ z h
-        refine Eq.mp ?_ (Wf_e.subst_step ih
-          (F.extend (dTel.instantiate τ (X.binding z))) (filler z (hne z h)))
-        refine Eq.trans (congrArg (fun e =>
-            Wf_e (A' ⋈ F.fill ⋆ dTel.instantiate τ (X.binding z)) e)
-          (Subst.act_lift_depth F.fill (τ z))) ?_
-        exact congrArg (fun S => Wf_e ((A' ⋈ S))
-          (Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') F.fill Λ (τ z))) (hb z).symm
+        intro hne
+        have h₀ : ¬ boundary.isEq :=
+          fun hEq => hne ((Bd.isEq_act (Γ := 1) F.fill α boundary).mpr hEq)
+        refine Eq.mp (congrArg (Wf_e (A' ⋈ F.fill ⋆ bind))
+          (Subst.act_lift_depth F.fill (τ (C.inl (C.singleSlot α))))) ?_
+        exact Wf_e.subst_step ih (F.extend bind) (filler h₀)
       case declared =>
-        intro Λ z h
-        refine Eq.mp ?_ (Eq_bd.trans
-          (boundaryOf_subst_step ih (F.extend (dTel.instantiate τ (X.binding z)))
-            (filler z (hne z h))
-            (Eq_bd.trans
-              (Eq_bd.subst_step ih (F.extend (dTel.instantiate τ (X.binding z)))
-                (declared z (hne z h)))
-              (Eq_bd.subst_step ih (F.extend (dTel.instantiate τ (X.binding z)))
-                (declared z (hne z h))).symm))
-          (Eq_bd.subst_step ih (F.extend (dTel.instantiate τ (X.binding z)))
-            (declared z (hne z h))))
-        refine Eq.trans (congrArg (fun e =>
-            Eq_bd (A' ⋈ F.fill ⋆ dTel.instantiate τ (X.binding z))
-              ((A' ⋈ F.fill ⋆ dTel.instantiate τ (X.binding z)).boundaryOf e)
-              (Bd.act (Γ := 1) (Δ := Γ ⋈ Λ) (Ξ := Γ' ⋈ Λ) (Subst.lift F.fill Λ) 1
-                (Bd.act (Γ := Γ) (Δ := Χ) (Ξ := 1) τ Λ (X.declaration z))))
-          (Subst.act_lift_depth F.fill (τ z))) ?_
-        refine Eq.trans (congrArg (fun b =>
-            Eq_bd (A' ⋈ F.fill ⋆ dTel.instantiate τ (X.binding z))
-              ((A' ⋈ F.fill ⋆ dTel.instantiate τ (X.binding z)).boundaryOf
-                (Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') F.fill Λ (τ z))) b)
-          ((Bd.act_lift_depth F.fill
-              (Bd.act (Γ := Γ) (Δ := Χ) (Ξ := 1) τ Λ (X.declaration z))).trans
-            (hd z).symm)) ?_
-        exact congrArg (fun S => Eq_bd ((A' ⋈ S))
-            (((A' ⋈ S)).boundaryOf
-              (Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') F.fill Λ (τ z)))
-            (Bd.act (Γ := Γ') (Δ := Χ) (Ξ := 1)
-              (F.fill ⋆ τ) Λ
-              ((dTel.actBase F.fill X).declaration z))) (hb z).symm
+        intro hne
+        have h₀ : ¬ boundary.isEq :=
+          fun hEq => hne ((Bd.isEq_act (Γ := 1) F.fill α boundary).mpr hEq)
+        have hmove := Eq_bd.subst_step ih (F.extend bind) (declared h₀)
+        refine Eq.mp ?_ (Eq_bd.trans (boundaryOf_subst_step ih (F.extend bind)
+          (filler h₀) (Eq_bd.trans hmove hmove.symm)) hmove)
+        exact congrArg₂ (fun (e : Expr (Γ' ⋈ α)) (b : Bd (Γ' ⋈ α)) =>
+            Eq_bd (A' ⋈ F.fill ⋆ bind) ((A' ⋈ F.fill ⋆ bind).boundaryOf e) b)
+          (Subst.act_lift_depth F.fill (τ (C.inl (C.singleSlot α))))
+          (Bd.act_lift_depth F.fill boundary)
+      case hrest =>
+        refine Eq.mp (congrArg (fun T => Wf_s A' T
+          (fun ⦃β⦄ (j : _ ∋ β) => Subst.act (Γ := 1) F.fill β (τ (C.inr j))))
+          (dTel.actBase_instantiate F.fill
+            (fun ⦃β⦄ (i : C.single α ∋ β) => τ (C.inl i)) rest)) ?_
+        exact Wf_s.subst_step ih F hrest
 
 /-- 8(9): a well-formed declaration is stable under a filling. -/
 theorem Wf_bd.subst_step {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
@@ -694,6 +639,24 @@ theorem Wf_e.instantiate (hσ : Wf_s Ξ Θ σ) {g : Expr (Δ ⋈ Ω)} (h : Ξ �
   refine Wf_e.subst (Ψ := .nil) hσ ?_
   exact Eq.mp (congrArg (fun A => Wf_e A g) (dTel.concatenate_nil (Ξ ⋈ Θ)).symm) h
 
+/-- Equality of expressions is stable under a well-formed substitution. -/
+theorem Eq_e.instantiate (hσ : Wf_s Ξ Θ σ) {l r : Expr (Δ ⋈ Ω)}
+    (h : Ξ ⋈ Θ ⊢ l ≈ r) : Ξ ⊢ σ ⋆ l ≈ σ ⋆ r := by
+  refine Eq.mp (congrArg (fun A => Eq_e A (Subst.instantiate σ l)
+    (Subst.instantiate σ r)) (dTel.concatenate_nil Ξ)) ?_
+  refine Eq_e.subst (Ψ := .nil) hσ ?_
+  exact Eq.mp (congrArg (fun A => Eq_e A l r)
+    (dTel.concatenate_nil (Ξ ⋈ Θ)).symm) h
+
+/-- Equality of boundaries is stable under a well-formed substitution. -/
+theorem Eq_bd.instantiate (hσ : Wf_s Ξ Θ σ) {β β' : Bd (Δ ⋈ Ω)}
+    (h : Ξ ⋈ Θ ⊢ β ≈ β') : Ξ ⊢ σ ⋆ β ≈ σ ⋆ β' := by
+  refine Eq.mp (congrArg (fun A => Eq_bd A (Bd.instantiate σ β)
+    (Bd.instantiate σ β')) (dTel.concatenate_nil Ξ)) ?_
+  refine Eq_bd.subst (Ψ := .nil) hσ ?_
+  exact Eq.mp (congrArg (fun A => Eq_bd A β β')
+    (dTel.concatenate_nil (Ξ ⋈ Θ)).symm) h
+
 /-- 8(2) with no suffix: the computed boundary of an instantiated expression is
 the instantiated boundary. -/
 theorem boundaryOf_instantiate (hΞ : Ambient.Wf (Ξ ⋈ Θ)) (hσ : Wf_s Ξ Θ σ)
@@ -727,9 +690,7 @@ ones. -/
 theorem Eq_e.ap {Δ α : C.Arity} {Ξ : Ambient Δ} (hΞ : Ambient.Wf Ξ)
     (x : Δ ∋ α) (args args' : Subst α Δ)
     (h : Ξ ⊢ Expr.ap x args) (h' : Ξ ⊢ Expr.ap x args')
-    (agree : ∀ ⦃Λ : C.Arity⦄ (z : α ∋ Λ),
-        ¬ (args ⋆ (Ξ.binding x).declaration z).isEq →
-        Ξ ⋈ args ⋆ (Ξ.binding x).binding z ⊢ args z ≈ args' z) :
+    (agree : Ξ ⊢ args ≈ args' : Ξ.binding x) :
     Ξ ⊢ Expr.ap x args ≈ Expr.ap x args' := by
   cases h with
   | ap _ _ head fill =>
@@ -779,10 +740,403 @@ theorem Eq_e.boundaryOf : ∀ {Δ : C.Arity} {Ξ : Ambient Δ}, Ambient.Wf Ξ �
         (congrArg (Wf_bd Ξ (Ξ.binding q)) decl) (Wf_t.declaration hΞ q))
       refine Eq_bd.trans (boundaryOf_instantiate hΞ' fill hl) ?_
       refine Eq_bd.trans ?_ (boundaryOf_instantiate hΞ' fill hr).symm
-      exact Eq_bd.congr args args hb fill fill fill.agree hdecl
+      exact Eq_bd.congr args args hb fill fill fill.refl hdecl
   | _, Ξ, hΞ, _, _, .congr (Θ := Θ) σ θ hΘ hσ hθ agree h => by
       have hΞ' : Ambient.Wf (Ξ ⋈ Θ) := Wf_t.concatenate hΞ hΘ
       refine Eq_bd.trans (boundaryOf_instantiate hΞ' hσ (Eq_e.wf_left h)) ?_
       refine Eq_bd.trans ?_
         (boundaryOf_instantiate hΞ' hθ (Eq_e.wf_right h)).symm
       exact Eq_bd.congr σ θ hΘ hσ hθ agree (Eq_e.boundaryOf hΞ' h)
+
+/-! ## Telescope equality -/
+
+/-- 8(9): equality of telescopes is stable under a filling. -/
+theorem Eq_t.filling {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    (F : Ambient.Filling A A' Ω) :
+    ∀ {Λ : C.Arity} {T T' : dTel Γ Λ}, Eq_t A T T' →
+      Eq_t A' (F.fill ⋆ T) (F.fill ⋆ T')
+  | _, .nil, _, h => by
+      obtain rfl := Eq_t.nil_inv h
+      exact Eq_t.nil
+  | _, .cons bind boundary rest, _, h => by
+      obtain ⟨_, boundary', _, rfl, hbind, hboundary, hrest⟩ := Eq_t.cons_inv h
+      refine Eq_t.cons (Eq_t.filling F hbind) ?_
+        (Eq_t.filling (F.extend (dTel.cons bind boundary .nil)) hrest)
+      refine Eq.mp (congrArg₂ (fun a b => Eq_bd (A' ⋈ F.fill ⋆ bind) a b)
+        (Bd.act_lift_depth F.fill boundary)
+        (Bd.act_lift_depth F.fill boundary')) ?_
+      exact (substitutionAt Ω).boundaryEquality (F.extend bind) hboundary
+
+/-- 8(9): equality of telescopes over two ambients is stable under a filling of
+each by one substitution. -/
+theorem Eq_t.Both.filling {Γ Γ' Ω : C.Arity} {A A₁ : Ambient Γ}
+    {A' A₁' : Ambient Γ'} (F : Ambient.Filling A A' Ω)
+    (F₁ : Ambient.Filling A₁ A₁' Ω) (hfill : F₁.fill = F.fill) :
+    ∀ {Λ : C.Arity} {T T' : dTel Γ Λ}, Eq_t.Both A A₁ T T' →
+      Eq_t.Both A' A₁' (F.fill ⋆ T) (F.fill ⋆ T')
+  | _, .nil, _, h => by
+      obtain rfl := Eq_t.Both.nil_inv h
+      exact Eq_t.Both.nil
+  | _, .cons (α := α) bind boundary rest, _, h => by
+      obtain ⟨bind', boundary', rest', rfl, hbind, hboundary, hboundary', hrest⟩ :=
+        Eq_t.Both.cons_inv h
+      refine Eq_t.Both.cons (Eq_t.Both.filling F F₁ hfill hbind) ?first ?second ?rest
+      case first =>
+        refine Eq.mp (congrArg₂ (fun a b => Eq_bd ((A' ⋈ F.fill ⋆ bind)) a b)
+          (Bd.act_lift_depth F.fill boundary)
+          (Bd.act_lift_depth F.fill boundary')) ?_
+        exact (substitutionAt Ω).boundaryEquality (F.extend bind) hboundary
+      case second =>
+        refine Eq.mp (congrArg (fun (s : Subst Γ Γ') =>
+          Eq_bd ((A₁' ⋈ dTel.actBase s bind'))
+            (Bd.act (Γ := 1) s α boundary) (Bd.act (Γ := 1) s α boundary')) hfill) ?_
+        refine Eq.mp (congrArg₂ (fun a b => Eq_bd ((A₁' ⋈ F₁.fill ⋆ bind')) a b)
+          (Bd.act_lift_depth F₁.fill boundary)
+          (Bd.act_lift_depth F₁.fill boundary')) ?_
+        exact (substitutionAt Ω).boundaryEquality (F₁.extend bind') hboundary'
+      case rest =>
+        refine Eq.mp (congrArg (fun (s : Subst Γ Γ') => Eq_t.Both
+          ((A' ⋈ F.fill ⋆ dTel.cons bind boundary .nil))
+          ((A₁' ⋈ dTel.actBase s (dTel.cons bind' boundary' .nil)))
+          (dTel.actBase (Subst.lift F.fill (C.single α)) rest)
+          (dTel.actBase (Subst.lift F.fill (C.single α)) rest')) hfill) ?_
+        exact Eq_t.Both.filling (F.extend (dTel.cons bind boundary .nil))
+          (F₁.extend (dTel.cons bind' boundary' .nil))
+          (congrArg (fun s => Subst.lift s (C.single α)) hfill) hrest
+
+/-- 8(9): equality of telescopes is stable under filling a block. -/
+theorem Eq_t.subst {Δ Ω Φ : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω}
+    {σ : Subst Ω Δ} {Ψ : dTel (Δ ⋈ Ω) Φ} (hσ : Wf_s Ξ Θ σ) {Χ : C.Arity}
+    {X X' : dTel ((Δ ⋈ Ω) ⋈ Φ) Χ} (h : Eq_t (Ξ ⋈ Θ ⋈ Ψ) X X') :
+    Eq_t (Ξ ⋈ σ ⋆ Ψ) (σ ⋆ X) (σ ⋆ X') :=
+  Eq_t.filling (hσ.fillBefore Ψ) h
+
+/-! ## Substitutions between ambients -/
+
+/-- 6.8: a substitution between ambients is well formed when at every slot it
+gives a filler for that slot's declared boundary, over the target ambient
+extended by the entries the slot binds. -/
+def Wf_sub {Γ Γ' : C.Arity} (A : Ambient Γ) (A' : Ambient Γ') (σ : Subst Γ Γ') :
+    Prop :=
+  ∀ ⦃α : C.Arity⦄ (x : Γ ∋ α),
+    (∀ l r : Expr (Γ' ⋈ α), Bd.applyAt σ α (A.declaration x) = .eq l r →
+        Eq_e (A' ⋈ σ ⋆ A.binding x) l r) ∧
+    (¬ (Bd.applyAt σ α (A.declaration x)).isEq →
+        Wf_e (A' ⋈ σ ⋆ A.binding x) (σ x)) ∧
+    (¬ (Bd.applyAt σ α (A.declaration x)).isEq →
+        Eq_bd (A' ⋈ σ ⋆ A.binding x)
+          ((A' ⋈ σ ⋆ A.binding x).boundaryOf (σ x)) (Bd.applyAt σ α (A.declaration x)))
+
+/-- Two substitutions between ambients agree at every non-equational slot. -/
+def Eq_sub {Γ Γ' : C.Arity} (A : Ambient Γ) (A' : Ambient Γ') (σ θ : Subst Γ Γ') :
+    Prop :=
+  ∀ ⦃α : C.Arity⦄ (x : Γ ∋ α), ¬ (Bd.applyAt σ α (A.declaration x)).isEq →
+    Eq_e (A' ⋈ σ ⋆ A.binding x) (σ x) (θ x)
+
+/-- The slots of an ambient weakened into another. -/
+theorem Ambient.weaken_declaration {Γ Γ' α : C.Arity} (A : Ambient Γ)
+    (A' : Ambient Γ') (x : Γ ∋ α) :
+    (dTel.rename (Renaming.fromUnit Γ') A).declaration x
+      = Bd.rename (Renaming.inr Γ' Γ ⇑ʳ α) (A.declaration x) :=
+  (dTel.declaration_rename (Renaming.fromUnit Γ') A x).trans
+    (congrArg (fun ρ => Bd.rename (ρ ⇑ʳ α) (A.declaration x))
+      (Renaming.fromUnit_extend Γ' Γ))
+
+/-- The entries bound by a slot of an ambient weakened into another. -/
+theorem Ambient.weaken_binding {Γ Γ' α : C.Arity} (A : Ambient Γ)
+    (A' : Ambient Γ') (x : Γ ∋ α) :
+    (dTel.rename (Renaming.fromUnit Γ') A).binding x
+      = dTel.rename (Renaming.inr Γ' Γ) (A.binding x) :=
+  (dTel.binding_rename (Renaming.fromUnit Γ') A x).trans
+    (congrArg (fun ρ => dTel.rename ρ (A.binding x)) (Renaming.fromUnit_extend Γ' Γ))
+
+/-- The boundary declared at a slot of the weakened source. -/
+theorem Wf_sub.declaration_weaken {Γ Γ' : C.Arity} {A : Ambient Γ}
+    {A' : Ambient Γ'} (σ : Subst Γ Γ') ⦃α : C.Arity⦄ (x : Γ ∋ α) :
+    Bd.fill σ ((dTel.rename (Renaming.fromUnit Γ') A).declaration x)
+      = Bd.applyAt σ α (A.declaration x) :=
+  (congrArg (Bd.fill σ) (Ambient.weaken_declaration A A' x)).trans
+    (Bd.act_weaken σ (A.declaration x))
+
+/-- The entries bound at a slot of the weakened source. -/
+theorem Wf_sub.binding_weaken {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    (σ : Subst Γ Γ') ⦃α : C.Arity⦄ (x : Γ ∋ α) :
+    dTel.instantiate σ ((dTel.rename (Renaming.fromUnit Γ') A).binding x)
+      = dTel.actBase σ (A.binding x) :=
+  (congrArg (dTel.instantiate σ) (Ambient.weaken_binding A A' x)).trans
+    (dTel.instantiate_weaken σ (A.binding x))
+
+/-- A well-formed substitution between ambients fills the weakened source. -/
+theorem Wf_sub.toFilling {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ : Subst Γ Γ'} (hσ : Wf_sub A A' σ) :
+    Wf_s A' (dTel.rename (Renaming.fromUnit Γ') A) σ := by
+  refine Wf_s.slotwise ?equation ?filler ?declared
+  case equation =>
+    intro Λ z l r hlr
+    refine Eq.mp (congrArg (fun T => Eq_e (A' ⋈ T) l r)
+      (Wf_sub.binding_weaken (A := A) (A' := A') σ z).symm) ?_
+    exact (hσ z).1 l r
+      ((Wf_sub.declaration_weaken (A := A) (A' := A') σ z).symm.trans hlr)
+  case filler =>
+    intro Λ z hne
+    refine Eq.mp (congrArg (fun T => Wf_e (A' ⋈ T) (σ z))
+      (Wf_sub.binding_weaken (A := A) (A' := A') σ z).symm) ?_
+    refine (hσ z).2.1 (fun hEq => hne ?_)
+    exact Eq.mp (congrArg Bd.isEq
+      (Wf_sub.declaration_weaken (A := A) (A' := A') σ z)).symm hEq
+  case declared =>
+    intro Λ z hne
+    refine Eq.mp (congrArg₂ (fun (T : dTel Γ' Λ) (b : Bd (Γ' ⋈ Λ)) =>
+        Eq_bd (A' ⋈ T) ((A' ⋈ T).boundaryOf (σ z)) b)
+      (Wf_sub.binding_weaken (A := A) (A' := A') σ z).symm
+      (Wf_sub.declaration_weaken (A := A) (A' := A') σ z).symm) ?_
+    refine (hσ z).2.2 (fun hEq => hne ?_)
+    exact Eq.mp (congrArg Bd.isEq
+      (Wf_sub.declaration_weaken (A := A) (A' := A') σ z)).symm hEq
+
+/-- Agreeing substitutions between ambients agree as fillings of the weakened
+source. -/
+theorem Eq_sub.toAgreement {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ θ : Subst Γ Γ'} (hst : Eq_sub A A' σ θ) :
+    Eq_s A' (dTel.rename (Renaming.fromUnit Γ') A) σ θ := by
+  refine Eq_s.mk ?_
+  intro Λ z hne
+  refine Eq.mp (congrArg (fun T => Eq_e (A' ⋈ T) (σ z) (θ z))
+    (Wf_sub.binding_weaken (A := A) (A' := A') σ z).symm) ?_
+  refine hst z (fun hEq => hne ?_)
+  exact Eq.mp (congrArg Bd.isEq
+    (Wf_sub.declaration_weaken (A := A) (A' := A') σ z)).symm hEq
+
+/-- 8(9): agreeing substitutions send a well-formed expression to equal
+expressions. -/
+theorem Eq_e.agree {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ θ : Subst Γ Γ'} (hA : Ambient.Wf A) (hσ : Wf_sub A A' σ)
+    (hθ : Wf_sub A A' θ) (hst : Eq_sub A A' σ θ) {e : Expr Γ} (h : A ⊢ e) :
+    A' ⊢ σ ⋆ e ≈ θ ⋆ e := by
+  have hbridge : ∀ s : Subst Γ Γ',
+      Subst.instantiate s (⟦ Renaming.inr Γ' Γ ⟧ʳ e) = Subst.apply s e := by
+    intro s
+    refine Eq.trans (act_copair_prefix s 1 (⟦ Renaming.inr Γ' Γ ⟧ʳ e)).symm ?_
+    refine Eq.trans (congrArg (fun ρ =>
+      Subst.act (Γ := 1) (Δ := Γ' ⋈ Γ) (Ξ := Γ') (Subst.copair (Subst.id Γ') s) 1
+        (Renaming.act ρ e)) (Renaming.extend_unit (Renaming.inr Γ' Γ)).symm) ?_
+    exact act_copair_inr s 1 e
+  refine Eq.mp (congrArg₂ (Eq_e A') (hbridge σ) (hbridge θ)) ?_
+  exact Eq_e.congr (Ξ := A') (Θ := dTel.rename (Renaming.fromUnit Γ') A) σ θ
+    (Ambient.Wf.weaken hA A') hσ.toFilling hθ.toFilling hst.toAgreement
+    (Eq_e.refl (Wf_e.weaken (Ambient.Renaming.weakenInto A A') h))
+
+/-- 8(3) for a substitution between ambients. -/
+theorem Wf_e.subst_ambient {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ : Subst Γ Γ'} (hσ : Wf_sub A A' σ) {e : Expr Γ} (h : A ⊢ e) : A' ⊢ σ ⋆ e := by
+  refine Eq.mp (congrArg (Wf_e A')
+    ((act_copair_prefix σ 1 (⟦ Renaming.inr Γ' Γ ⟧ʳ e)).trans
+      (Subst.instantiate_weaken σ e))) ?_
+  exact (substitutionAt Γ).expr (Wf_s.filling hσ.toFilling)
+    (Wf_e.weaken (Ambient.Renaming.weakenInto A A') h)
+
+/-- 8(9) for a substitution between ambients. -/
+theorem Wf_t.subst_ambient {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ : Subst Γ Γ'} (hσ : Wf_sub A A' σ) {Χ : C.Arity} {T : dTel Γ Χ}
+    (hT : Wf_t A T) : Wf_t A' (σ ⋆ T) := by
+  refine Eq.mp (congrArg (Wf_t A') (dTel.instantiate_weaken σ T)) ?_
+  exact (substitutionAt Γ).telescope (Wf_s.filling hσ.toFilling)
+    (Wf_t.weaken (Ambient.Renaming.weakenInto A A') hT)
+
+/-- The source of a lifted substitution splits into the two ambients. -/
+theorem Ambient.weaken_concatenate {Γ Γ' Χ : C.Arity} (A : Ambient Γ) (T : dTel Γ Χ) :
+    dTel.rename (Renaming.fromUnit (Γ' ⋈ Χ)) (A ⋈ T)
+      = dTel.rename (Renaming.inl Γ' Χ) (dTel.rename (Renaming.fromUnit Γ') A)
+        ⋈ dTel.rename (Renaming.fromUnit (Γ' ⋈ Χ) ⇑ʳ Γ) T := by
+  refine Eq.trans (dTel.rename_concatenate (Renaming.fromUnit (Γ' ⋈ Χ)) A T) ?_
+  refine congrArg (fun U => dTel.concatenate U
+    (dTel.rename (Renaming.fromUnit (Γ' ⋈ Χ) ⇑ʳ Γ) T)) ?_
+  refine Eq.trans (congrArg (fun ρ => dTel.rename ρ A)
+    (Renaming.eq_fromUnit (Renaming.inl Γ' Χ ∘ʳ Renaming.fromUnit Γ')).symm) ?_
+  exact dTel.rename_comp (Renaming.fromUnit Γ') (Renaming.inl Γ' Χ) A
+
+/-- A well-formed substitution between ambients extends past a telescope. -/
+theorem Wf_sub.lift {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ : Subst Γ Γ'} (hσ : Wf_sub A A' σ) {Χ : C.Arity} {T : dTel Γ Χ}
+    (hT : Wf_t A T) : Wf_sub (A ⋈ T) (A' ⋈ σ ⋆ T) (Subst.lift σ Χ) := by
+  intro α x
+  rcases C.cover Γ Χ x with ⟨w, rfl⟩ | ⟨i, rfl⟩
+  · have hd : Bd.applyAt (Subst.lift σ Χ) α ((A ⋈ T).declaration (C.inl w))
+        = Bd.rename (Renaming.inl Γ' Χ ⇑ʳ α) (Bd.applyAt σ α (A.declaration w)) := by
+      refine Eq.trans (congrArg (Bd.applyAt (Subst.lift σ Χ) α)
+        (dTel.declaration_concatenate_inl A T w)) ?_
+      exact Bd.act_square (Renaming.inl Γ Χ) (Renaming.inl Γ' Χ)
+        (Subst.lift σ Χ) σ (fun ⦃_⦄ u => Subst.lift_inl σ u) α (A.declaration w)
+    have hb : dTel.actBase (Subst.lift σ Χ) ((A ⋈ T).binding (C.inl w))
+        = dTel.rename (Renaming.inl Γ' Χ) (dTel.actBase σ (A.binding w)) := by
+      refine Eq.trans (congrArg (dTel.actBase (Subst.lift σ Χ))
+        (dTel.binding_concatenate_inl A T w)) ?_
+      exact dTel.actBase_square (Renaming.inl Γ Χ) (Renaming.inl Γ' Χ)
+        (Subst.lift σ Χ) σ (fun ⦃_⦄ u => Subst.lift_inl σ u) (A.binding w)
+    have hne : ¬ (Bd.applyAt (Subst.lift σ Χ) α ((A ⋈ T).declaration (C.inl w))).isEq →
+        ¬ (Bd.applyAt σ α (A.declaration w)).isEq := by
+      refine fun h hEq => h ?_
+      exact Eq.mp (congrArg Bd.isEq hd).symm
+        ((Bd.isEq_rename (Renaming.inl Γ' Χ ⇑ʳ α) _).mpr hEq)
+    refine ⟨?_, ?_, ?_⟩
+    · intro l r hlr
+      replace hlr := hd.symm.trans hlr
+      cases hc : Bd.applyAt σ α (A.declaration w) with
+      | sort =>
+          rw [hc] at hlr
+          cases (Bd.rename_sort _).symm.trans hlr
+      | of S =>
+          rw [hc] at hlr
+          cases (Bd.rename_of _ _).symm.trans hlr
+      | eq l₀ r₀ =>
+          rw [hc] at hlr
+          replace hlr := (Bd.rename_eq _ _ _).symm.trans hlr
+          injection hlr with hl hr
+          subst hl
+          subst hr
+          refine Eq.mp (congrArg (fun U => Eq_e (A' ⋈ dTel.actBase σ T ⋈ U)
+            (⟦ Renaming.inl Γ' Χ ⇑ʳ α ⟧ʳ l₀)
+            (⟦ Renaming.inl Γ' Χ ⇑ʳ α ⟧ʳ r₀)) hb.symm) ?_
+          exact Eq_e.weaken ((Ambient.Renaming.weaken A' (dTel.actBase σ T)).extend
+            (dTel.actBase σ (A.binding w))) ((hσ w).1 l₀ r₀ hc)
+    · intro h
+      refine Eq.mp (congrArg (fun U => Wf_e (A' ⋈ dTel.actBase σ T ⋈ U)
+        (Subst.lift σ Χ (C.inl w))) hb.symm) ?_
+      refine Eq.mp (congrArg (fun e => Wf_e (A' ⋈ dTel.actBase σ T ⋈
+        dTel.rename (Renaming.inl Γ' Χ) (dTel.actBase σ (A.binding w))) e)
+        (Subst.lift_inl σ w).symm) ?_
+      exact Wf_e.weaken ((Ambient.Renaming.weaken A' (dTel.actBase σ T)).extend
+        (dTel.actBase σ (A.binding w))) ((hσ w).2.1 (hne h))
+    · intro h
+      refine Eq.mp (congrArg₂ (fun (U : dTel (Γ' ⋈ Χ) α) (b : Bd ((Γ' ⋈ Χ) ⋈ α)) =>
+          Eq_bd (A' ⋈ dTel.actBase σ T ⋈ U)
+            ((A' ⋈ dTel.actBase σ T ⋈ U).boundaryOf (Subst.lift σ Χ (C.inl w))) b)
+        hb.symm hd.symm) ?_
+      refine Eq.mp (congrArg (fun e =>
+        Eq_bd (A' ⋈ dTel.actBase σ T ⋈
+            dTel.rename (Renaming.inl Γ' Χ) (dTel.actBase σ (A.binding w)))
+          ((A' ⋈ dTel.actBase σ T ⋈
+            dTel.rename (Renaming.inl Γ' Χ)
+              (dTel.actBase σ (A.binding w))).boundaryOf e)
+          (Bd.rename (Renaming.inl Γ' Χ ⇑ʳ α) (Bd.applyAt σ α (A.declaration w))))
+        (Subst.lift_inl σ w).symm) ?_
+      refine Eq.mp (congrArg (fun b =>
+        Eq_bd (A' ⋈ dTel.actBase σ T ⋈
+            dTel.rename (Renaming.inl Γ' Χ) (dTel.actBase σ (A.binding w))) b
+          (Bd.rename (Renaming.inl Γ' Χ ⇑ʳ α) (Bd.applyAt σ α (A.declaration w))))
+        (Ambient.Renaming.boundaryOf
+          ((Ambient.Renaming.weaken A' (dTel.actBase σ T)).extend
+            (dTel.actBase σ (A.binding w))) (σ w)).symm) ?_
+      exact Eq_bd.weaken ((Ambient.Renaming.weaken A' (dTel.actBase σ T)).extend
+        (dTel.actBase σ (A.binding w))) ((hσ w).2.2 (hne h))
+  · have hd : Bd.applyAt (Subst.lift σ Χ) α ((A ⋈ T).declaration (C.inr i))
+        = (dTel.actBase σ T).declaration i :=
+      (congrArg (Bd.applyAt (Subst.lift σ Χ) α)
+        (dTel.declaration_concatenate_inr A T i)).trans
+        (dTel.declaration_actBase σ T i).symm
+    have hb : dTel.actBase (Subst.lift σ Χ) ((A ⋈ T).binding (C.inr i))
+        = (dTel.actBase σ T).binding i :=
+      (congrArg (dTel.actBase (Subst.lift σ Χ))
+        (dTel.binding_concatenate_inr A T i)).trans
+        (dTel.binding_actBase σ T i).symm
+    have hT := Wf_s.eta A' (dTel.actBase σ T)
+      (Wf_t.subst_ambient hσ hT)
+    have hde := dTel.act_declaration_instId (dTel.actBase σ T) i
+    have hbe := dTel.instantiate_binding_instId (dTel.actBase σ T) i
+    have hamb := hbe.trans hb.symm
+    have hbd := hde.trans hd.symm
+    have hne : ¬ (Bd.applyAt (Subst.lift σ Χ) α ((A ⋈ T).declaration (C.inr i))).isEq →
+        ¬ (Subst.instId Γ' Χ ⋆ (dTel.rename (Renaming.inl Γ' Χ)
+            (dTel.actBase σ T)).declaration i).isEq :=
+      fun h hEq => h (Eq.mp (congrArg Bd.isEq hbd) hEq)
+    refine ⟨?_, ?_, ?_⟩
+    · intro l r hlr
+      refine Eq.mp (congrArg (fun U =>
+        Eq_e (A' ⋈ dTel.actBase σ T ⋈ U) l r) hamb) ?_
+      exact hT.equation i l r (hbd.trans hlr)
+    · intro h
+      refine Eq.mp (congrArg (fun U =>
+        Wf_e (A' ⋈ dTel.actBase σ T ⋈ U) (Subst.lift σ Χ (C.inr i))) hamb) ?_
+      refine Eq.mp (congrArg (fun e =>
+        Wf_e (A' ⋈ dTel.actBase σ T ⋈ Subst.instId Γ' Χ ⋆
+          (dTel.rename (Renaming.inl Γ' Χ) (dTel.actBase σ T)).binding i) e)
+        (Subst.lift_inr σ i).symm) ?_
+      exact hT.filler i (hne h)
+    · intro h
+      refine Eq.mp (congrArg₂ (fun (U : dTel (Γ' ⋈ Χ) α) (b : Bd ((Γ' ⋈ Χ) ⋈ α)) =>
+          Eq_bd (A' ⋈ dTel.actBase σ T ⋈ U)
+            ((A' ⋈ dTel.actBase σ T ⋈ U).boundaryOf (Subst.lift σ Χ (C.inr i))) b)
+        hamb hbd) ?_
+      refine Eq.mp (congrArg (fun e =>
+        Eq_bd (A' ⋈ dTel.actBase σ T ⋈ Subst.instId Γ' Χ ⋆
+            (dTel.rename (Renaming.inl Γ' Χ) (dTel.actBase σ T)).binding i)
+          ((A' ⋈ dTel.actBase σ T ⋈ Subst.instId Γ' Χ ⋆
+            (dTel.rename (Renaming.inl Γ' Χ) (dTel.actBase σ T)).binding i).boundaryOf e)
+          (Subst.instId Γ' Χ ⋆ (dTel.rename (Renaming.inl Γ' Χ)
+            (dTel.actBase σ T)).declaration i)) (Subst.lift_inr σ i).symm) ?_
+      exact hT.declared i (hne h)
+
+/-- Agreement extends past a telescope. -/
+theorem Eq_sub.lift {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ θ : Subst Γ Γ'} (hσ : Wf_sub A A' σ) {Χ : C.Arity} {T : dTel Γ Χ}
+    (hT : Wf_t A T) (hst : Eq_sub A A' σ θ) :
+    Eq_sub (A ⋈ T) (A' ⋈ σ ⋆ T) (Subst.lift σ Χ) (Subst.lift θ Χ) := by
+  intro α x
+  rcases C.cover Γ Χ x with ⟨w, rfl⟩ | ⟨i, rfl⟩
+  · have hd : Bd.applyAt (Subst.lift σ Χ) α ((A ⋈ T).declaration (C.inl w))
+        = Bd.rename (Renaming.inl Γ' Χ ⇑ʳ α) (Bd.applyAt σ α (A.declaration w)) := by
+      refine Eq.trans (congrArg (Bd.applyAt (Subst.lift σ Χ) α)
+        (dTel.declaration_concatenate_inl A T w)) ?_
+      exact Bd.act_square (Renaming.inl Γ Χ) (Renaming.inl Γ' Χ)
+        (Subst.lift σ Χ) σ (fun ⦃_⦄ u => Subst.lift_inl σ u) α (A.declaration w)
+    have hb : dTel.actBase (Subst.lift σ Χ) ((A ⋈ T).binding (C.inl w))
+        = dTel.rename (Renaming.inl Γ' Χ) (dTel.actBase σ (A.binding w)) := by
+      refine Eq.trans (congrArg (dTel.actBase (Subst.lift σ Χ))
+        (dTel.binding_concatenate_inl A T w)) ?_
+      exact dTel.actBase_square (Renaming.inl Γ Χ) (Renaming.inl Γ' Χ)
+        (Subst.lift σ Χ) σ (fun ⦃_⦄ u => Subst.lift_inl σ u) (A.binding w)
+    intro h
+    refine Eq.mp (congrArg (fun U => Eq_e (A' ⋈ dTel.actBase σ T ⋈ U)
+      (Subst.lift σ Χ (C.inl w)) (Subst.lift θ Χ (C.inl w))) hb.symm) ?_
+    refine Eq.mp (congrArg₂ (fun (a b : Expr ((Γ' ⋈ Χ) ⋈ α)) =>
+        Eq_e (A' ⋈ dTel.actBase σ T ⋈
+          dTel.rename (Renaming.inl Γ' Χ) (dTel.actBase σ (A.binding w))) a b)
+      (Subst.lift_inl σ w).symm (Subst.lift_inl θ w).symm) ?_
+    refine Eq_e.weaken ((Ambient.Renaming.weaken A' (dTel.actBase σ T)).extend
+      (dTel.actBase σ (A.binding w))) (hst w (fun hEq => h ?_))
+    exact Eq.mp (congrArg Bd.isEq hd).symm
+      ((Bd.isEq_rename (Renaming.inl Γ' Χ ⇑ʳ α) _).mpr hEq)
+  · have hb : dTel.actBase (Subst.lift σ Χ) ((A ⋈ T).binding (C.inr i))
+        = (dTel.actBase σ T).binding i :=
+      (congrArg (dTel.actBase (Subst.lift σ Χ))
+        (dTel.binding_concatenate_inr A T i)).trans
+        (dTel.binding_actBase σ T i).symm
+    have hd : Bd.applyAt (Subst.lift σ Χ) α ((A ⋈ T).declaration (C.inr i))
+        = (dTel.actBase σ T).declaration i :=
+      (congrArg (Bd.applyAt (Subst.lift σ Χ) α)
+        (dTel.declaration_concatenate_inr A T i)).trans
+        (dTel.declaration_actBase σ T i).symm
+    have hT := Wf_s.eta A' (dTel.actBase σ T)
+      (Wf_t.subst_ambient hσ hT)
+    have hde := dTel.act_declaration_instId (dTel.actBase σ T) i
+    have hbe := dTel.instantiate_binding_instId (dTel.actBase σ T) i
+    intro h
+    refine Eq.mp (congrArg (fun U => Eq_e (A' ⋈ dTel.actBase σ T ⋈ U)
+      (Subst.lift σ Χ (C.inr i)) (Subst.lift θ Χ (C.inr i))) (hbe.trans hb.symm)) ?_
+    refine Eq.mp (congrArg₂ (fun (a b : Expr ((Γ' ⋈ Χ) ⋈ α)) =>
+        Eq_e (A' ⋈ dTel.actBase σ T ⋈ Subst.instId Γ' Χ ⋆
+          (dTel.rename (Renaming.inl Γ' Χ) (dTel.actBase σ T)).binding i) a b)
+      (Subst.lift_inr σ i).symm (Subst.lift_inr θ i).symm) ?_
+    exact Eq_e.refl (hT.filler i (fun hEq => h
+      (Eq.mp (congrArg Bd.isEq (hde.trans hd.symm)) hEq)))
+
+/-- 8(9): agreeing substitutions send a boundary equal to itself to equal
+boundaries. -/
+theorem Eq_bd.agree {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ θ : Subst Γ Γ'} (hA : Ambient.Wf A) (hσ : Wf_sub A A' σ)
+    (hθ : Wf_sub A A' θ) (hst : Eq_sub A A' σ θ) :
+    ∀ {β : Bd Γ}, A ⊢ β ≈ β → A' ⊢ σ ⋆ β ≈ θ ⋆ β
+  | _, .sort => .sort
+  | _, .of h => .of (Eq_e.agree hA hσ hθ hst h.wf_left)
+  | _, .eq hl hr =>
+      .eq (Eq_e.agree hA hσ hθ hst hl.wf_left) (Eq_e.agree hA hσ hθ hst hr.wf_left)

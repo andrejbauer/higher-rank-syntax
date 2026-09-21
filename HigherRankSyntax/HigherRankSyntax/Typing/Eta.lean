@@ -34,7 +34,7 @@ decreasing_by exact Prod.Lex.right α (by omega)
 theorem Wf_s.eta : ∀ {Δ Ω : C.Arity} (Ξ : Ambient Δ) (Θ : dTel Δ Ω),
     Wf_t Ξ Θ → Wf_s ((Ξ ⋈ Θ)) (dTel.rename (Renaming.inl Δ Ω) Θ) (Subst.instId Δ Ω)
   | Δ, Ω, Ξ, Θ, hΘ => by
-      refine Wf_s.mk ?equation ?filler ?declared
+      refine Wf_s.slotwise ?equation ?filler ?declared
       case equation =>
         intro Λ z l r h
         replace h := (dTel.act_declaration_instId Θ z).symm.trans h

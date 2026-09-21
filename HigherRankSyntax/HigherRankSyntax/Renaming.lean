@@ -103,6 +103,21 @@ def Renaming.inr (Γ Δ : C.Arity) : Δ →ʳ Γ ⋈ Δ := fun ⦃_⦄ x => C.in
 def Renaming.fromUnit (Γ : C.Arity) : (1 : C.Arity) →ʳ Γ :=
   fun ⦃_⦄ x => (C.unit_is_empty x).elim
 
+/-- The renaming out of the unit arity is unique. -/
+theorem Renaming.eq_fromUnit {Γ : C.Arity} (ρ : (1 : C.Arity) →ʳ Γ) :
+    ρ = Renaming.fromUnit Γ := by
+  funext α x
+  exact (C.unit_is_empty x).elim
+
+/-- Extending the renaming out of the unit arity is the right injection. -/
+theorem Renaming.fromUnit_extend (Δ Γ : C.Arity) :
+    (Renaming.fromUnit Δ ⇑ʳ Γ) = Renaming.inr Δ Γ := by
+  funext α x
+  rcases C.cover 1 Γ x with ⟨y, rfl⟩ | ⟨y, rfl⟩
+  · exact (C.unit_is_empty y).elim
+  · exact (Renaming.extend_inr (Renaming.fromUnit Δ) y).trans
+      (congrArg C.inr (C.unit_left Γ y).symm)
+
 /-- Prefixing by the unit arity changes nothing. -/
 theorem Renaming.prefixed_unit {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) :
   Renaming.prefixed 1 ρ = ρ := by

@@ -177,6 +177,19 @@ theorem instantiate_rename_inl (Γ α : C.Arity) (β : Bd (Γ ⋈ α)) :
   | of S => exact congrArg Bd.of (key S)
   | eq l r => exact congrArg₂ Bd.eq (key l) (key r)
 
+/-- A renamed boundary is an equation only if the original is. -/
+theorem rename_eq_inv {Γ Γ' : C.Arity} (ρ : Γ →ʳ Γ') :
+    ∀ {β : Bd Γ} {l r : Expr Γ'}, rename ρ β = .eq l r →
+      ∃ l₀ r₀, β = .eq l₀ r₀ ∧ l = ⟦ ρ ⟧ʳ l₀ ∧ r = ⟦ ρ ⟧ʳ r₀
+  | .eq l₀ r₀, _, _, h => by injection h with hl hr; exact ⟨l₀, r₀, rfl, hl.symm, hr.symm⟩
+
+/-- A boundary acted on is an equation only if the original is. -/
+theorem act_eq_inv {Γ Δ Ξ : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity) :
+    ∀ {β : Bd (Γ ⋈ Δ ⋈ Φ)} {l r : Expr (Γ ⋈ Ξ ⋈ Φ)}, act σ Φ β = .eq l r →
+      ∃ l₀ r₀, β = .eq l₀ r₀ ∧ l = σ.act Φ l₀ ∧ r = σ.act Φ r₀
+  | .eq l₀ r₀, _, _, h => by
+      injection h with hl hr; exact ⟨l₀, r₀, rfl, hl.symm, hr.symm⟩
+
 /-- Instantiating commutes with weakening on the right, when the arguments are
 weakened as well. -/
 theorem instantiate_weaken (Γ Δ Θ : C.Arity) (σ : Subst Θ Γ) (β : Bd (Γ ⋈ Θ)) :

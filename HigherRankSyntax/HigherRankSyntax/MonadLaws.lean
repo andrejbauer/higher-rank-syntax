@@ -623,3 +623,19 @@ theorem act_rename_cancel {Γ Δ' Γ' : C.Arity} (ρ : Γ →ʳ Δ') (ρ' : Γ �
   · intro α x
     exact (h x).trans (Renaming.act_eta ρ' x).symm
   · exact congrArg (Renaming.act (ρ' ⇑ʳ Φ)) (act_id Γ Φ e)
+
+/-- Acting by `Subst.copair (Subst.id Γ') s` on an expression weakened into the
+prefix is acting by `s`. -/
+theorem act_copair_inr {Γ Γ' : C.Arity} (s : Subst Γ Γ') (Φ : C.Arity)
+    (e : Expr (Γ ⋈ Φ)) :
+    Subst.act (Γ := 1) (Δ := Γ' ⋈ Γ) (Ξ := Γ') (Subst.copair (Subst.id Γ') s) Φ
+        (⟦ Renaming.inr Γ' Γ ⇑ʳ Φ ⟧ʳ e)
+      = Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Φ e := by
+  refine Eq.trans (act_square (Renaming.inr Γ' Γ) (𝟙ʳ Γ')
+    (Subst.copair (Subst.id Γ') s) s ?_ Φ e) ?_
+  · intro α x
+    refine (Subst.copair_inr _ _ x).trans ?_
+    exact ((congrArg (fun ρ => Renaming.act ρ (s x)) (Renaming.extend_id Γ' α)).trans
+      (Renaming.act_id _)).symm
+  · exact (congrArg (fun ρ => Renaming.act ρ (Subst.act (Γ := 1) s Φ e))
+      (Renaming.extend_id Γ' Φ)).trans (Renaming.act_id _)
