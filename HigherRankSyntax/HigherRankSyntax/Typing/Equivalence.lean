@@ -163,3 +163,70 @@ theorem Eq_s.trans {Δ : C.Arity} {Ξ : Ambient Δ} (hΞ : Ambient.Wf Ξ) :
         refine Eq_s.trans hΞ hrest ?_ (Wf_t.instantiate hσ.head hrestw) hσ.tail hθT
         exact Eq_s.ofBoth hbase h'.tail (Eq_t.toBoth hbase (Eq_t.symm hΞ hTT'))
           hθ.tail hθT
+
+/-- Agreement of substitutions between ambients is symmetric. -/
+theorem Eq_sub.symm {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ θ : Subst Γ Γ'} (hA : Ambient.Wf A) (hA' : Ambient.Wf A')
+    (hst : Eq_sub A A' σ θ) (hσ : Wf_sub A A' σ) (hθ : Wf_sub A A' θ) :
+    Eq_sub A A' θ σ :=
+  Eq_s.toEq_sub (Eq_s.symm hA' hst.toAgreement (hA.weaken A')
+    hσ.toFilling hθ.toFilling)
+
+/-- Agreement of substitutions between ambients is transitive. -/
+theorem Eq_sub.trans {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ θ κ : Subst Γ Γ'} (hA : Ambient.Wf A) (hA' : Ambient.Wf A')
+    (hst : Eq_sub A A' σ θ) (htk : Eq_sub A A' θ κ)
+    (hσ : Wf_sub A A' σ) (hθ : Wf_sub A A' θ) : Eq_sub A A' σ κ :=
+  Eq_s.toEq_sub (Eq_s.trans hA' hst.toAgreement htk.toAgreement (hA.weaken A')
+    hσ.toFilling hθ.toFilling)
+
+/-- Composition of substitutions between ambients respects agreement. -/
+theorem Eq_sub.comp {Γ Δ Ω : C.Arity} {A : Ambient Γ} {B : Ambient Δ}
+    {D : Ambient Ω} {τ τ' : Subst Γ Δ} {σ σ' : Subst Δ Ω}
+    (hA : Ambient.Wf A) (hB : Ambient.Wf B) (hD : Ambient.Wf D)
+    (hτ : Wf_sub A B τ) (hτ' : Wf_sub A B τ')
+    (hσ : Wf_sub B D σ) (hσ' : Wf_sub B D σ')
+    (htt : Eq_sub A B τ τ') (hss : Eq_sub B D σ σ') :
+    Eq_sub A D (Subst.comp (Γ := 1) τ σ) (Subst.comp (Γ := 1) τ' σ') := by
+  refine Eq_sub.trans hA hD ?first ?second (hτ.comp hσ) (hτ'.comp hσ)
+  case first =>
+    refine Eq_s.toEq_sub (Eq.mp (congrArg (fun T => Eq_s D T
+      (Subst.comp (Γ := 1) τ σ) (Subst.comp (Γ := 1) τ' σ))
+      (Ambient.actBase_weaken A σ)) ?_)
+    exact Eq_s.subst_ambient hσ htt.toAgreement
+  case second =>
+    intro α x hne
+    have hT : Wf_t B (τ' ⋆ A.binding x) :=
+      Wf_t.subst_ambient hτ' (Wf_t.binding hA x)
+    have hbase := Eq_t.Both.refl Eq_t.Both.nil hD
+    have hamb := Eq_t.Both.concatenate hbase
+      (Eq_t.toBoth hbase (Eq_t.agree hB hD hσ hσ' hss hT))
+    have hlift := Wf_sub.ofBoth (Wf_t.concatenate hB hT) hamb.symm
+      (Wf_sub.lift hσ' hT)
+    have hne' : ¬ (Bd.applyAt τ' α (A.declaration x)).isEq := by
+      intro hEq
+      refine hne (Eq.mp (congrArg Bd.isEq
+        (Bd.act_comp τ' σ α (A.declaration x)).symm) ?_)
+      exact (Bd.isEq_act σ α _).mpr hEq
+    have hres := Eq_e.agree (Wf_t.concatenate hB hT) (Wf_sub.lift hσ hT) hlift
+      (Eq_sub.lift hσ hT hss) ((hτ' x).2.1 hne')
+    have hdepth := Eq.mp (congrArg₂
+      (Eq_e (D ⋈ dTel.actBase σ (dTel.actBase τ' (A.binding x))))
+      (Subst.act_lift_depth σ (τ' x)) (Subst.act_lift_depth σ' (τ' x))) hres
+    exact Eq.mp (congrArg (fun T₀ => Eq_e (D ⋈ T₀)
+      (Subst.act (Γ := 1) σ α (τ' x)) (Subst.act (Γ := 1) σ' α (τ' x)))
+      (dTel.actBase_comp τ' σ (A.binding x)).symm) hdepth
+
+/-- 8(10): a filling is invariant under an equal telescope. -/
+theorem Wf_s.ofEq_t {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ Θ' : dTel Δ Ω}
+    {σ : Subst Ω Δ} (hΞ : Ambient.Wf Ξ) (hσ : Wf_s Ξ Θ σ) (h : Eq_t Ξ Θ Θ') :
+    Wf_s Ξ Θ' σ :=
+  Wf_s.ofEq (Wf_t.refl hΞ) hσ h
+
+/-- 8(10): agreement of fillings is invariant under an equal telescope. -/
+theorem Eq_s.ofEq_t {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ Θ' : dTel Δ Ω}
+    {σ θ : Subst Ω Δ} (hΞ : Ambient.Wf Ξ) (hst : Eq_s Ξ Θ σ θ)
+    (hσ : Wf_s Ξ Θ σ) (h : Eq_t Ξ Θ Θ') : Eq_s Ξ Θ' σ θ :=
+  Eq_s.ofBoth (Eq_t.Both.refl Eq_t.Both.nil hΞ) hst
+    (Eq_t.toBoth (Eq_t.Both.refl Eq_t.Both.nil hΞ) h) hσ
+    (Wf_s.ofEq (Wf_t.refl hΞ) hσ h)

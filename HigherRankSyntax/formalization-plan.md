@@ -28,9 +28,12 @@ proofs complete:
 | `Typing/SubstitutionLemma.lean` | substitution for the judgements; `Wf_sub`, `Eq_sub`, their lifting lemmas, and agreement for expressions and boundaries |
 | `Typing/Invariance.lean` | invariance under equal ambients; `Eq_t.Both.symm`, `Wf_sub.ofBoth`, and `Eq_t.agree` |
 | `Typing/Equivalence.lean` | 8(11): `Eq_t.symm`, `Eq_t.trans`, and the preservation lemmas they need |
+| `Ctx/Basic.lean` | `Ctx`, `Ctx.Tele`, `Ctx.weaken`, `Ctx.Subst`, `Ctx.Hom` and the category laws, on representatives |
+| `Ctx/Relations.lean` | `Ctx.empty`; `Tele.Rel` (7.4), `Subst.Rel` (9.2) and `Ctx.Rel` with their setoids; `Hom.comp_congr` |
+| `Ctx/Ctx.lean` | `Ob` the contexts modulo 7.4, `Ob.Subst` and `Ob.setoid`, and `Category Ob` |
 
-*Next:* Part II, B1 — contexts and fillings (§9).
-*Not started:* §§9–13 (the model).
+*Next:* Part II, B2 — telescopes over a context (§10).
+*Not started:* §§10–13 (the model).
 
 ## Standing decisions
 
@@ -58,9 +61,17 @@ structural: each matches on `dTel Ω Δ` with both indices variables.
 telescope, so `C.before` appears in no type and nothing is transported. That a
 declaration mentions only earlier entries is a theorem, not a typing constraint.
 
-**Quotients, not setoids**, objects quotiented too. Enabled by 7.4 comparing
-arities strictly, so `≈`-equal telescopes share an arity and the statements carry
-no transport; 8(10) is the theorem that makes it sound.
+**Quotients, not setoids**, objects quotiented too. 8(10) is the theorem that
+makes it sound. 7.4 compares arities strictly, so `≈`-equal telescopes over one
+context share an arity; between contexts the arity is bundled into `Ctx`, and the
+relation on objects carries a transport, `∃ h : Γ.arity = Γ'.arity, Eq_t .nil
+(h ▸ Γ.ambient) Γ'.ambient`. Every proof that meets it opens by substituting `h`.
+
+**Bundling is by `Sigma` and `Subtype`, not by `structure`,** for everything
+indexed by a context. Quotienting the objects makes `Hom` a `Quotient.lift₂` into
+`Type`, whose obligation is an equality of types; for a subtype that equality
+follows from 8(10) by `funext` and `propext`, and for a structure it does not
+follow at all. `Ctx` itself is a `structure`, being indexed by nothing.
 
 **All seven judgements are inductive, in one mutual block.** `Wf_e`, `Eq_e`,
 `Eq_bd`, `Wf_s`, `Eq_s`, `Wf_bd`, `Wf_t`. `Wf_bd` and `Wf_t` were `def`s outside
@@ -543,14 +554,31 @@ Also added: `Wf_t.instantiate` (8(9) with no suffix).
 
 ## B1 — contexts and fillings (§9)
 
-*Produces.* `Sub Ξ Θ` as the well-formed substitutions filling `Θ` (not
-`Filling`, which would collide with `Ambient.Filling`, the substitution lemma's
-induction invariant); the relation `∼` of 9.2, which is `Eq_s`, comparing
-components at non-equational slots only; the category `Ctx` with well-formed
-ambients as objects and `Sub Ξ (⇑Γ)` as morphisms, both quotiented; identity by
-`Wf_sub.id` and composition by 8(4).
+*Produces.* `Ctx`, `Ctx.Tele`, and `Ctx.Subst Γ Θ` as the well-formed
+substitutions filling `Θ` (not `Filling`, which would collide with
+`Ambient.Filling`, the substitution lemma's induction invariant); the relation
+`∼` of 9.2, which is `Eq_s`, comparing components at non-equational slots only;
+the category with well-formed ambients as objects and `Ctx.Subst Γ (⇑Δ)` as
+morphisms, both quotiented; identity by `Wf_sub.id` and composition by 8(4).
 
-*Needs.* All of Part I.
+*Needs.* All of Part I, plus, in `Typing/`, `Wf_s.toWf_sub`, `Eq_s.toEq_sub`,
+`Wf_s.subst_ambient`, `Wf_sub.comp`, `Eq_s.refl`, `Eq_s.subst_ambient` and
+`Eq_sub.refl`/`symm`/`trans`/`comp`.
+
+*Done.*
+
+*Notes on the transport.* `Tele.Rel` and `toTele` are defined by matching on their
+arguments, so that the arity equation stands between bound variables and `subst`
+applies; over projections `subst` substitutes one side and then cannot clear the
+equation, the `Eq_t` premise transporting along it.
+
+*Notes on the quotient.* No `Quotient` lift lands in `Type`. `Ob.arity` lifts to
+`C.Arity`, `Ob.Wf` and `Ob.Rel` are `Quotient.hrecOn₂` into `Prop` — their `HEq`
+obligations are `wf_hom_iff` and `eq_hom_iff` after substituting the arities — and
+`Ob.Subst`, `Ob.setoid` and the hom-sets are then built uniformly. So the
+identity and the composite are given by their raw substitutions directly, with
+only well-formedness and agreement proved by `Quotient.inductionOn`, and the three
+category laws reduce to `act_id`, `act_η` and `act_comp`.
 
 *Notes.* Take the quotient here, objects included; 8(10) is what licenses it, and
 8(11) is what makes `Eq_t` and `Eq_s` equivalences to quotient by.  The note's §9

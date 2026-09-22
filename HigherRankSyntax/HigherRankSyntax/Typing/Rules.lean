@@ -544,6 +544,11 @@ theorem Eq_s.slotwise {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω}
   exact slot z (fun hEq => hne (Eq.mp (congrArg (fun T =>
     (σ ⋆ dTel.declaration T z).isEq) hid.symm) hEq))
 
+/-- A well-formed filling agrees with itself. -/
+theorem Eq_s.refl {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω} {σ : Subst Ω Δ}
+    (h : Wf_s Ξ Θ σ) : Eq_s Ξ Θ σ σ :=
+  Eq_s.slotwise (fun ⦃_⦄ z hne => .refl (h.filler z hne))
+
 /-- The slots after the first of two agreeing fillings agree. -/
 theorem Eq_s.tail {Δ α Ω : C.Arity} {Ξ : Ambient Δ} {bind : dTel Δ α}
     {boundary : Bd (Δ ⋈ α)} {rest : dTel (Δ ⋈ C.single α) Ω}

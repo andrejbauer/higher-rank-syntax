@@ -911,6 +911,55 @@ theorem Eq_sub.toAgreement {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'
   exact Eq.mp (congrArg Bd.isEq
     (Wf_sub.declaration_weaken (A := A) (A' := A') σ z)).symm hEq
 
+/-- A weakened ambient is unchanged by substitution of the base. -/
+theorem Ambient.actBase_weaken {Γ Δ Ω : C.Arity} (A : Ambient Γ) (σ : Subst Δ Ω) :
+    dTel.actBase σ (dTel.rename (Renaming.fromUnit Δ) A)
+      = dTel.rename (Renaming.fromUnit Ω) A := by
+  refine Eq.trans (dTel.actBase_square (Renaming.fromUnit Δ) (Renaming.fromUnit Ω)
+    σ (Subst.id 1) (fun ⦃_⦄ x => (C.unit_is_empty x).elim) A) ?_
+  exact congrArg (dTel.rename (Renaming.fromUnit Ω)) (dTel.actBase_id A)
+
+/-- A filling of the weakened source is a substitution between ambients. -/
+theorem Wf_s.toWf_sub {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ : Subst Γ Γ'} (hσ : Wf_s A' (dTel.rename (Renaming.fromUnit Γ') A) σ) :
+    Wf_sub A A' σ := by
+  intro α x
+  refine ⟨?equation, ?filler, ?declared⟩
+  case equation =>
+    intro l r hlr
+    refine Eq.mp (congrArg (fun T => Eq_e (A' ⋈ T) l r)
+      (Wf_sub.binding_weaken (A := A) (A' := A') σ x)) ?_
+    exact hσ.equation x l r
+      ((Wf_sub.declaration_weaken (A := A) (A' := A') σ x).trans hlr)
+  case filler =>
+    intro hne
+    refine Eq.mp (congrArg (fun T => Wf_e (A' ⋈ T) (σ x))
+      (Wf_sub.binding_weaken (A := A) (A' := A') σ x)) ?_
+    refine hσ.filler x (fun hEq => hne ?_)
+    exact Eq.mp (congrArg Bd.isEq
+      (Wf_sub.declaration_weaken (A := A) (A' := A') σ x)) hEq
+  case declared =>
+    intro hne
+    refine Eq.mp (congrArg₂ (fun (T : dTel Γ' α) (b : Bd (Γ' ⋈ α)) =>
+        Eq_bd (A' ⋈ T) ((A' ⋈ T).boundaryOf (σ x)) b)
+      (Wf_sub.binding_weaken (A := A) (A' := A') σ x)
+      (Wf_sub.declaration_weaken (A := A) (A' := A') σ x)) ?_
+    refine hσ.declared x (fun hEq => hne ?_)
+    exact Eq.mp (congrArg Bd.isEq
+      (Wf_sub.declaration_weaken (A := A) (A' := A') σ x)) hEq
+
+/-- Fillings of the weakened source that agree agree as substitutions between
+ambients. -/
+theorem Eq_s.toEq_sub {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ θ : Subst Γ Γ'} (hst : Eq_s A' (dTel.rename (Renaming.fromUnit Γ') A) σ θ) :
+    Eq_sub A A' σ θ := by
+  intro α x hne
+  refine Eq.mp (congrArg (fun T => Eq_e (A' ⋈ T) (σ x) (θ x))
+    (Wf_sub.binding_weaken (A := A) (A' := A') σ x)) ?_
+  refine hst.slot x (fun hEq => hne ?_)
+  exact Eq.mp (congrArg Bd.isEq
+    (Wf_sub.declaration_weaken (A := A) (A' := A') σ x)) hEq
+
 /-- 8(5): the identity substitution between ambients is well formed. -/
 theorem Wf_sub.id {Δ : C.Arity} {Ξ : Ambient Δ} (hΞ : Ambient.Wf Ξ) :
     Wf_sub Ξ Ξ (Subst.id Δ) := by
@@ -1137,6 +1186,48 @@ theorem Wf_t.subst_ambient {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'
   refine Eq.mp (congrArg (Wf_t A') (dTel.instantiate_weaken σ T)) ?_
   exact (substitutionAt Γ).telescope (Wf_s.filling hσ.toFilling)
     (Wf_t.weaken (Ambient.Renaming.weakenInto A A') hT)
+
+/-- 8(4) for a substitution between ambients. -/
+theorem Wf_s.subst_ambient {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ : Subst Γ Γ'} (hσ : Wf_sub A A' σ) {Χ : C.Arity} {X : dTel Γ Χ}
+    {τ : Subst Χ Γ} (h : Wf_s A X τ) : Wf_s A' (σ ⋆ X) (σ ⋆ τ) := by
+  have hτ : (fun ⦃Λ : C.Arity⦄ (i : Χ ∋ Λ) =>
+      Subst.act (Γ := 1) (Subst.copair (Subst.id Γ') σ) Λ
+        (⟦ Renaming.inr Γ' Γ ⇑ʳ Λ ⟧ʳ (τ i))) = Subst.applyEach σ τ := by
+    funext Λ i
+    exact act_copair_inr σ Λ (τ i)
+  refine Eq.mp (congrArg₂ (fun (T : dTel Γ' Χ) (s : Subst Χ Γ') => Wf_s A' T s)
+    (dTel.instantiate_weaken σ X) hτ) ?_
+  exact (substitutionAt Γ).filling (Wf_s.filling hσ.toFilling)
+    (Wf_s.weaken (Ambient.Renaming.weakenInto A A') h)
+
+/-- 8(4): substitutions between ambients compose. -/
+theorem Wf_sub.comp {Γ Δ Ω : C.Arity} {A : Ambient Γ} {B : Ambient Δ}
+    {D : Ambient Ω} {τ : Subst Γ Δ} {σ : Subst Δ Ω}
+    (hτ : Wf_sub A B τ) (hσ : Wf_sub B D σ) :
+    Wf_sub A D (Subst.comp (Γ := 1) τ σ) := by
+  refine Wf_s.toWf_sub (Eq.mp (congrArg
+    (fun T => Wf_s D T (Subst.applyEach σ τ)) (Ambient.actBase_weaken A σ)) ?_)
+  exact Wf_s.subst_ambient hσ hτ.toFilling
+
+/-- 8(9) for a substitution between ambients. -/
+theorem Eq_s.subst_ambient {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ : Subst Γ Γ'} (hσ : Wf_sub A A' σ) {Χ : C.Arity} {X : dTel Γ Χ}
+    {τ θ : Subst Χ Γ} (h : Eq_s A X τ θ) : Eq_s A' (σ ⋆ X) (σ ⋆ τ) (σ ⋆ θ) := by
+  have hcomp : ∀ κ : Subst Χ Γ, (fun ⦃Λ : C.Arity⦄ (i : Χ ∋ Λ) =>
+      Subst.act (Γ := 1) (Subst.copair (Subst.id Γ') σ) Λ
+        (⟦ Renaming.inr Γ' Γ ⇑ʳ Λ ⟧ʳ (κ i))) = Subst.applyEach σ κ := by
+    intro κ
+    funext Λ i
+    exact act_copair_inr σ Λ (κ i)
+  rw [← dTel.instantiate_weaken σ X, ← hcomp τ, ← hcomp θ]
+  exact Eq_s.subst_step (fun ⦃_⦄ _ => substitutionAt _) (Wf_s.filling hσ.toFilling)
+    (Eq_s.weaken (Ambient.Renaming.weakenInto A A') h)
+
+/-- A well-formed substitution between ambients agrees with itself. -/
+theorem Eq_sub.refl {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ : Subst Γ Γ'} (hσ : Wf_sub A A' σ) : Eq_sub A A' σ σ :=
+  Eq_s.toEq_sub (Eq_s.refl hσ.toFilling)
 
 /-- The source of a lifted substitution splits into the two ambients. -/
 theorem Ambient.weaken_concatenate {Γ Γ' Χ : C.Arity} (A : Ambient Γ) (T : dTel Γ Χ) :
