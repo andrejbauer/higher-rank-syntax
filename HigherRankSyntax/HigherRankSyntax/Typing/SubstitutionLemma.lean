@@ -1187,6 +1187,15 @@ theorem Wf_t.subst_ambient {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'
   exact (substitutionAt Γ).telescope (Wf_s.filling hσ.toFilling)
     (Wf_t.weaken (Ambient.Renaming.weakenInto A A') hT)
 
+/-- 8(9) for a substitution between ambients. -/
+theorem Eq_t.subst_ambient {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ : Subst Γ Γ'} (hσ : Wf_sub A A' σ) {Χ : C.Arity} {T T' : dTel Γ Χ}
+    (h : Eq_t A T T') : Eq_t A' (σ ⋆ T) (σ ⋆ T') := by
+  refine Eq.mp (congrArg₂ (Eq_t A') (dTel.instantiate_weaken σ T)
+    (dTel.instantiate_weaken σ T')) ?_
+  exact Eq_t.filling (Wf_s.filling hσ.toFilling)
+    (Eq_t.weaken (Ambient.Renaming.weakenInto A A') h)
+
 /-- 8(4) for a substitution between ambients. -/
 theorem Wf_s.subst_ambient {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
     {σ : Subst Γ Γ'} (hσ : Wf_sub A A' σ) {Χ : C.Arity} {X : dTel Γ Χ}

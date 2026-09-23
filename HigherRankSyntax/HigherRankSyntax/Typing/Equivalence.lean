@@ -230,3 +230,37 @@ theorem Eq_s.ofEq_t {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ Θ' : dTel Δ Ω}
   Eq_s.ofBoth (Eq_t.Both.refl Eq_t.Both.nil hΞ) hst
     (Eq_t.toBoth (Eq_t.Both.refl Eq_t.Both.nil hΞ) h) hσ
     (Wf_s.ofEq (Wf_t.refl hΞ) hσ h)
+
+/-- 8(9): agreeing substitutions between ambients send a filling to agreeing
+fillings. -/
+theorem Eq_s.agree {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
+    {σ θ : Subst Γ Γ'} (hA : Ambient.Wf A) (hA' : Ambient.Wf A')
+    (hσ : Wf_sub A A' σ) (hθ : Wf_sub A A' θ) (hst : Eq_sub A A' σ θ)
+    {Χ : C.Arity} {X : dTel Γ Χ} {τ : Subst Χ Γ} (hX : Wf_t A X)
+    (hτ : Wf_s A X τ) : Eq_s A' (σ ⋆ X) (σ ⋆ τ) (θ ⋆ τ) := by
+  refine Eq_s.slotwise_actBase X σ ?_
+  intro Λ z hne
+  have hb := dTel.binding_actBase σ X z
+  have hd := dTel.declaration_actBase σ X z
+  have hint := dTel.actBase_instantiate σ τ (X.binding z)
+  have hT : Wf_t A (dTel.instantiate τ (X.binding z)) :=
+    Wf_t.instantiate hτ (Wf_t.binding hX z)
+  have hne' : ¬ (Bd.fill τ (X.declaration z)).isEq := by
+    intro hEq
+    refine hne (Eq.mp (congrArg
+      (fun b => (Bd.fill (Subst.applyEach σ τ) b).isEq) hd.symm) ?_)
+    exact (Bd.isEq_act _ _ _).mpr ((Bd.isEq_act _ _ _).mpr
+      ((Bd.isEq_act _ _ _).mp hEq))
+  have hbase := Eq_t.Both.refl Eq_t.Both.nil hA'
+  have hamb := Eq_t.Both.concatenate hbase
+    (Eq_t.toBoth hbase (Eq_t.agree hA hA' hσ hθ hst hT))
+  have hθlift := Wf_sub.ofBoth (Wf_t.concatenate hA hT) hamb.symm
+    (Wf_sub.lift hθ hT)
+  have hres := Eq_e.agree (Wf_t.concatenate hA hT) (Wf_sub.lift hσ hT) hθlift
+    (Eq_sub.lift hσ hT hst) (Wf_s.filler hτ z hne')
+  have hdepth := Eq.mp (congrArg₂
+    (Eq_e (A' ⋈ dTel.actBase σ (dTel.instantiate τ (X.binding z))))
+    (Subst.act_lift_depth σ (τ z)) (Subst.act_lift_depth θ (τ z))) hres
+  refine Eq.mp (congrArg (fun T => Eq_e (A' ⋈ T)
+    (Subst.act (Γ := 1) σ Λ (τ z)) (Subst.act (Γ := 1) θ Λ (τ z))) ?_) hdepth
+  exact hint.trans (congrArg (dTel.instantiate (Subst.applyEach σ τ)) hb.symm)

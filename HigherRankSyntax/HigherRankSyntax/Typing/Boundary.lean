@@ -112,6 +112,14 @@ theorem act_copair_prefix {Δ Ω : C.Arity} (σ : Subst Ω Δ) (Φ : C.Arity)
       exact congrArg₂ Bd.eq (_root_.act_copair_prefix σ Φ l)
         (_root_.act_copair_prefix σ Φ r)
 
+/-- Acting by the eta-substitution of a renaming is renaming, on a boundary. -/
+theorem act_ofRenaming {Γ Δ Φ : C.Arity} (ρ : Γ →ʳ Δ) (β : Bd (Γ ⋈ Φ)) :
+    Bd.act (Γ := 1) (Subst.ofRenaming ρ) Φ β = Bd.rename (ρ ⇑ʳ Φ) β := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (_root_.act_ofRenaming ρ S)
+  | eq l r => exact congrArg₂ Bd.eq (_root_.act_ofRenaming ρ l) (_root_.act_ofRenaming ρ r)
+
 /-- Acting by the lift of `Subst.copair (Subst.id Δ) σ` past `Φ` is acting by
 `σ` below the prefix `Δ` at depth `Φ ⋈ Ψ`. -/
 theorem act_lift_copair {Δ Ω : C.Arity} (σ : Subst Ω Δ) (Φ Ψ : C.Arity)

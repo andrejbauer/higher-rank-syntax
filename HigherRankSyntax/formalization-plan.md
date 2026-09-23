@@ -28,11 +28,11 @@ proofs complete:
 | `Typing/SubstitutionLemma.lean` | substitution for the judgements; `Wf_sub`, `Eq_sub`, their lifting lemmas, and agreement for expressions and boundaries |
 | `Typing/Invariance.lean` | invariance under equal ambients; `Eq_t.Both.symm`, `Wf_sub.ofBoth`, and `Eq_t.agree` |
 | `Typing/Equivalence.lean` | 8(11): `Eq_t.symm`, `Eq_t.trans`, and the preservation lemmas they need |
-| `Ctx/Basic.lean` | `Ctx`, `Ctx.Tele`, `Ctx.weaken`, `Ctx.Subst`, `Ctx.Hom` and the category laws, on representatives |
-| `Ctx/Relations.lean` | `Ctx.empty`; `Tele.Rel` (7.4), `Subst.Rel` (9.2) and `Ctx.Rel` with their setoids; `Hom.comp_congr` |
-| `Ctx/Ctx.lean` | `Ob` the contexts modulo 7.4, `Ob.Subst` and `Ob.setoid`, and `Category Ob` |
+| `Ctx/Ctx.lean` | §9: `Ctx`, `Ctx.Tele`, `Ctx.Rel` and `Ctx.setoid`; `Ob` the contexts modulo 7.4, `Ob.Subst` with `Ob.Subst.Wf`/`Rel`/`setoid`, and `Category Ob` |
+| `Ctx/Telescope.lean` | `Ob.Tele` with `Ob.Tele.Wf`/`Eq`/`Rel`/`setoid`; `Ob.Fill` with `Ob.Fill.Wf`/`Eq`/`Rel`/`setoid`; the action `Ob.Tele.subst`, `Ty`, and 10.4 — `Ctx.toOb`, `Ctx.extend`, `Ctx.projection`, `Ctx.lift` and the square |
+| `Ctx/NaturalModel.lean` | `Ob.Term` with `Ob.Term.Rel`/`setoid` (13.1), the action `Ob.Term.subst`, `Tm`, and `q : Tm ⟶ Ty` |
 
-*Next:* Part II, B2 — telescopes over a context (§10).
+*Next:* §11 and §12, if wanted; Part II's target is reached.
 *Not started:* §§10–13 (the model).
 
 ## Standing decisions
@@ -42,6 +42,14 @@ remains as the interface. `before`, `after`, `factor`, `inclusion`, `before_inl`
 `before_inr`, `before_inclusion`, `before_of_lt` and `subWf` are now unused by the
 library and could be dropped from the record; doing so means editing the structure
 and its instance.
+
+**A filling of a concatenation splits.** `Wf_s Ξ (Θ ⋈ X) κ` is `Wf_s Ξ Θ (κ ∘ inl)`
+together with `Wf_s Ξ (κ ∘ inl ⋆ X) (κ ∘ inr)`, and conversely; likewise for
+`Eq_s`. This is 6.3 and 7.1 read off a concatenation, and it is what makes 13.2
+work. The proofs are slotwise, not inductive: the pre-weakened storage of
+declarations means `(Θ ⋈ X).declaration (C.inr z) = X.declaration z` on the nose,
+and `Subst.copair_split` — generalised from a single first block to an arbitrary
+one — supplies the two-stage filling identity for the second block.
 
 **Telescopes are inductive and declarations are stored pre-weakened.**
 
@@ -106,7 +114,18 @@ at the ambient itself — the same shape as `Wf_e.ap`. The note's form is the in
 `args = Subst.instId`, recovered once 8(5) is available, so `≈` is unchanged.
 
 **Naming.** Shapes and telescopes take upper-case Greek only; substitutions
-`σ θ κ`; slots and indices lower-case. No abbreviations.
+`σ θ κ`; slots and indices lower-case. No abbreviations, except that the natural
+model's own vocabulary is kept: `Ty` for the presheaf of telescopes (12.4 settles
+that it, not `ℬ`, is the presheaf of types), `Tm` for the telescopes with a
+filling, and `q : Tm ⟶ Ty`. Subscripts are dropped from the note's `𝒯₀`, `𝒯̃₀`,
+`ℰ₀`, `ℬ₀`.
+
+**Objects are `Ctx.Ob`, not `Ctx`.** `Ctx` is the representatives; the category is
+on `Ob = Quotient Ctx.setoid`. Every presheaf in B2–B5 is over `Obᵒᵖ`.
+
+**Morphisms in `Type` are bundled in this Mathlib** (`TypeCat.Hom`, not a
+function type), so a functor into `Type` gives its `map` through `TypeCat.ofHom`
+and proves `map_id`/`map_comp` after `ext`.
 
 ---
 
@@ -588,11 +607,24 @@ depends on them.
 
 ## B2 — telescopes over a context (§10)
 
-*Produces.* `𝒯₀ : Ctxᵒᵖ ⥤ Type`, the well-formed telescopes over a context modulo
-`≈`; the extension `Γ ⋈ Θ` as an object of `Ctx`; the projection and its
-universal property.
+*Produces.* `Ty : Obᵒᵖ ⥤ Type`, the well-formed telescopes over a context modulo
+`≈`; the extension `Γ ⋈ Θ` as an object; the projection and its universal
+property.
 
-*Needs.* B1, 8(9).
+*Needs.* B1, 8(9), and `Eq_t.subst_ambient` in `Typing/SubstitutionLemma.lean`.
+
+*Done.* 10.4 is given on representatives: `Ctx.extend Γ Θ` for `Θ : Ob.Tele Γ.toOb`,
+with `Ctx.extend_congr` for its invariance, `Ctx.projection`, `Ctx.lift` and
+`Ctx.lift_projection`. The projection is `Wf_s.weaken` applied to `Wf_sub.id`, so
+8(5) for a renaming of ambients was not needed after all.
+
+*Left.* `Ob.extend : (X : Ob) → Ty X → Ob`, the lifted form. It is the first
+construction producing data from a quotient element whose type depends on another
+quotient element, so it needs `Quotient.rec` and an `HEq` between functions on
+`Quotient (Ob.Tele.setoid ⟦Γ⟧)` and `Quotient (Ob.Tele.setoid ⟦Γ'⟧)`, whose
+domains are equal only through `Quotient.sound`. Everything up to here stays
+inside `Prop`. Only §11's tensor needs it: 13.2's representability is an `∃`, so
+`Quotient.ind` on the telescope reduces it to `Ctx.extend`.
 
 ## B3 — the monoid of telescopes (§11)
 
@@ -622,7 +654,123 @@ transformation `boundaryOf : ℰ₀ ⟶ ℬ₀`; `ℰ₀` as an object of `PSh(C
 of `q` along a representable is representable, the pullback of `𝒯̃₀ ⟶ 𝒯₀` along
 `よΓ` being `よ(Γ ⋈ Θ)`.
 
-*Needs.* B1–B4, 8(11) for the equivalence, 8(10) for the pullback square.
+*Needs.* B1, B2, 8(4) and 8(9) for naturality, 8(11) for the equivalence, 8(10)
+for the pullback square. Not §11 and not §12: 12.4 rules that `ℬ` is not the
+presheaf of types, so §12 is a statement about expressions standing beside the
+model rather than under it.
+
+*Order.* 13.1 and 13.2 come before §11 and §12. 13.1 needs the telescope-level
+fillings `Ob.Fill`, which 13.2's right-hand side `Σ (σ : Hom Ξ Γ), Filling Ξ (σ ⋆ Θ)`
+needs too.
+
+*Done.* 13.1: `Ob.Term`, `Ob.Term.Rel` and its setoid, the action, `Tm`, and
+`q : Tm ⟶ Ty`. 13.1's relation is the conjunction of `Ob.Tele.Eq` and
+`Ob.Fill.Eq`, so it needed no lift of its own; its symmetry and transitivity are
+where `Wf_s.ofEq_t` and `Eq_s.ofEq_t` are used, to move the right filling to the
+left telescope and back. `Tm.map`'s congruence needed `Eq_s.agree`, 8(9)'s second
+half for fillings, added in `Typing/Equivalence.lean`.
+
+*Left.* 13.2, whose target is `yoneda.relativelyRepresentable Ctx.q` —
+Mathlib's `Functor.relativelyRepresentable`, which at `yoneda` is the classical
+representable natural transformation. It is an `∃`, so `Quotient.inductionOn` on
+the object and on the telescope reduces it to representatives and
+`Ob.extend : (X : Ob) → Ty X → Ob` is never needed. The witnesses are
+`Ctx.extend Γ Θ`, `Ctx.projection Γ Θ` and, by `yonedaEquiv`, the generic
+telescope-with-filling `(⇑Θ, ν)` with `ν = Subst.instId`, which is
+`Subst.ofRenaming C.inr` definitionally and whose well-formedness is `Wf_s.eta`.
+Yoneda collapses the commuting square to the single equation `⟦⇑Θ⟧ = ⟦p ⋆ Θ⟧`.
+`IsPullback.of_isLimit'` then reduces to `IsLimit`, best given directly by
+`PullbackCone.IsLimit.mk` from the pointwise bijection.
+
+*Done.* Layer 1, the splitting on representatives: `Ctx.weaken_extend`,
+`Ob.Subst.Wf.left`, `Ob.Fill.Wf.right`, `Ob.Subst.Wf.pair`, `Ob.Subst.left`,
+`Ob.Subst.right`, `Ctx.splitEquiv` and `Ctx.splitEquiv_rel`. Stating the codomain
+as a subtype of a *product* rather than a `Σ` keeps the second component's type
+independent of the first, so both round trips are `Subtype.ext` with no `HEq`.
+
+*Layer 2, done.* The fibre transport: `Ob.Tele.Rel.arity`, `Ob.Fill.Wf.ofRel`,
+`Ob.Fill.ofRel`, `Ob.Fill.Rel.ofRel` in `Ctx/Telescope.lean`; `Ob.Term.tele`
+(the underlying map of `q.app`, now factored out), `Ob.Term.fibreSetoid`,
+`Ob.Term.fibre_map`, `Ob.Term.fibre_comap`, `Ob.Term.fibre_left`,
+`Ob.Term.fibreEquiv`, `Ob.Term.tele_eq_iff` and `Ob.fillEquiv` in
+`Ctx/NaturalModel.lean`.
+
+`Ob.Tele.Rel.arity` is what makes the transport possible: the arity equation sits
+under an `∃`, and `Exists.elim` into `Type` is barred, so releasing it as an
+equation — a `Prop`, hence a legal elimination — is the only way to transport a
+filling without choice. `Ob.Term.fibreEquiv` is between the *quotients*, not the
+underlying types: `Ob.Tele.Rel Θ' Θ` does not give `Θ' = Θ`, so there is no
+equivalence of representatives and `Quotient.congr` does not apply;
+`Equiv.subtypeQuotientEquivQuotientSubtype` exchanges the subtype and the
+quotient, and the two maps are `Quotient.map` with `Quotient.sound` for one round
+trip and `rfl` for the other.
+
+*Layer 3, the bijection.* `Ob.Pair`, `Ob.Pair.setoid`, `Ob.Pair.fill`,
+`Ob.Pair.subst`, `Ob.Subst.toPair`, `Ob.Pair.subst_left`, `Ob.Pair.subst_right`,
+`Ob.Subst.toPair_subst`, `Ob.Pair.subst_toPair`, `Ob.Pair.subst_congr`,
+`Ob.Subst.toPair_congr` and
+
+```
+Ctx.pairEquiv : Quotient (Ob.Pair.setoid X Γ Θ) ≃ (X ⟶ Ctx.extend Γ Θ)
+```
+
+One round trip is free — `Ob.Subst.toPair_subst` is `Ctx.splitEquiv.left_inv`. The
+other is not: `splitEquiv.symm` builds `Subst.copair σ τ`, whose halves are only
+propositionally `σ` and `τ` (`Subst.copair_left`/`copair_right`, not `rfl`, `C.copair`
+being an opaque carrier field), so `a.subst.left` must be rewritten inside an
+`Ob.Term`. That rewrite is dependent as stated and becomes non-dependent once
+`Ob.Term.Rel` is unfolded to its conjunction: the proof components do not occur in
+it, only the raw telescope and substitution do.
+
+*Layer 3, the pointwise bijection.* `Bd.act_ofRenaming`, `Subst.lift_ofRenaming`
+and `dTel.actBase_ofRenaming` in the raw layer; then `Ctx.genericTele`,
+`Ctx.generic_wf`, `Ctx.generic`, `Ctx.Ty_map_mk`, `Ctx.generic_tele`,
+`Ctx.fibrePred`, `Ctx.fibrePred_iff`, `Ctx.fibreEquiv` and
+
+```
+Ctx.homEquiv : { p : Tm X × (X ⟶ Γ.toOb) // Ob.Term.tele p.1 = Ty.map p.2.op ⟦Θ⟧ }
+                 ≃ (X ⟶ Ctx.extend Γ Θ)
+```
+
+The generic filling costs nothing: `ν` is `Subst.instId`, which is
+`Subst.ofRenaming C.inr` definitionally, and `Wf_s.eta` is exactly its
+well-formedness. `Ctx.generic_tele` — the whole commuting square, by Yoneda — is
+`dTel.actBase_ofRenaming`, the statement that acting by the eta-substitution of a
+renaming is renaming, which existed only at the `Expr` level.
+
+*Layer 3, naturality.* `Subst.applyEach_copair` — applying a substitution in every
+filler distributes over pairing — and `Ctx.homEquiv_naturality`. The induction
+needs an explicit motive that abstracts both constraint proofs, since they mention
+the three quotient arguments, and the hom types must be ascribed inside it because
+a bound quotient variable does not carry `⟶`'s notation. Once on representatives
+the whole statement reduces to `Subst.applyEach_copair`, the transports vanishing
+after `Quotient.exact` supplies the arity equation to `subst`.
+
+*Layer 3, the square.* `Ob.Tele.subst_comp`, `Ctx.tele_map` (the constraint is
+stable under restriction), `Ob.ind`, `Ctx.homEquiv_projection`,
+`Ctx.homEquiv_generic`, `Ctx.q_commSq` and `Ctx.q_cone_condition`. The square is
+`tele_map` applied to `generic_tele`. `Ob.ind` — induction on a context class
+through `Ctx.toOb` rather than `Quotient.mk` — is what makes the `Ob`-indexed
+lemmas provable: `Ob.Tele.Eq` and `Ob.Fill.Eq` only reduce at a representative,
+but inducting through bare `Quotient.mk` loses the `Category Ob` instance, since
+`Ob` is a `def` and instance search does not see through it.
+
+*Layer 3, done.* `Ctx.q_lift`, `Ctx.homEquiv_symm_apply`, `Ctx.q_fac_left`,
+`Ctx.q_fac_right`, `Ctx.q_uniq`, `Ctx.q_isPullback` and
+
+```
+theorem Ctx.q_representable : yoneda.relativelyRepresentable Ctx.q
+```
+
+**Part II's target is reached: `q : Tm ⟶ Ty` is a natural model.**
+
+Every categorical goal here first needs
+`simp only [TypeCat.Fun.toFun_apply, types_comp_apply, TypeCat.ofHom_apply]`.
+`ext` on a morphism of `Type`-valued presheaves leaves the goal as
+`(ConcreteCategory.hom (f ≫ g)).toFun x = …`, which no composition lemma matches
+until `TypeCat.Fun.toFun_apply` bridges `.toFun` to the coercion; `types_comp_apply`
+only fires afterwards. That one line is what unblocked `q_lift`'s naturality and
+both factorisations.
 
 *Notes.* 13.1's relation varies the telescope as well as the filling, so it is not
 9.2's `∼`; it typechecks because 7.4 forces equal arities.

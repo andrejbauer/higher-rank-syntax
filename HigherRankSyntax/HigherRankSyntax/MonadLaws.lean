@@ -535,6 +535,18 @@ theorem lift_inl {Γ Δ Φ : C.Arity} (τ : Subst Γ Δ) {β : C.Arity} (u : Γ 
         · rw [Renaming.prefixed_inr, Renaming.extend_inr, C.inr_inr Δ Φ β z]
       exact congrArg (fun ρ => Renaming.act ρ (τ u)) hρ
 
+/-- Lifting the eta-substitution of a renaming is the eta-substitution of the
+extended renaming. -/
+theorem lift_ofRenaming {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) (Φ : C.Arity) :
+    lift (Subst.ofRenaming ρ) Φ = Subst.ofRenaming (ρ ⇑ʳ Φ) := by
+  funext β x
+  rcases C.cover Γ Φ x with ⟨u, rfl⟩ | ⟨v, rfl⟩
+  · refine (lift_inl (Subst.ofRenaming ρ) u).trans ?_
+    refine (Renaming.act_eta (Renaming.inl Δ Φ) (ρ u)).trans ?_
+    exact congrArg Expr.η (Renaming.extend_inl ρ u).symm
+  · refine (lift_inr (Subst.ofRenaming ρ) v).trans ?_
+    exact congrArg Expr.η (Renaming.extend_inr ρ v).symm
+
 /-- The lift of `Subst.copair (Subst.id Δ) σ` is the identity on `Δ`-slots. -/
 theorem lift_copair_inl_inl {Δ Ω Φ : C.Arity} (σ : Subst Ω Δ)
     {β : C.Arity} (w : Δ ∋ β) :

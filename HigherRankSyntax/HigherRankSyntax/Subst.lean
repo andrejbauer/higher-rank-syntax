@@ -102,6 +102,27 @@ def Subst.copair {Γ Δ Ω : C.Arity} (σ : Subst Γ Ω) (θ : Subst Δ Ω) :
   Subst.copair σ θ (C.inr x) = θ x
   := by simp [Subst.copair, Carrier.copair, Carrier.inr]
 
+/-- The first half of a paired substitution. -/
+theorem Subst.copair_left {Γ Δ Ω : C.Arity} (σ : Subst Γ Ω) (θ : Subst Δ Ω) :
+    (fun ⦃α⦄ (y : Γ ∋ α) => Subst.copair σ θ (C.inl y)) = σ := by
+  funext α y
+  exact Subst.copair_inl σ θ y
+
+/-- The second half of a paired substitution. -/
+theorem Subst.copair_right {Γ Δ Ω : C.Arity} (σ : Subst Γ Ω) (θ : Subst Δ Ω) :
+    (fun ⦃α⦄ (z : Δ ∋ α) => Subst.copair σ θ (C.inr z)) = θ := by
+  funext α z
+  exact Subst.copair_inr σ θ z
+
+/-- A substitution out of a two-block arity is the pair of its halves. -/
+theorem Subst.copair_eta {Γ Δ Ω : C.Arity} (κ : Subst (Γ ⋈ Δ) Ω) :
+    Subst.copair (fun ⦃α⦄ (y : Γ ∋ α) => κ (C.inl y))
+        (fun ⦃α⦄ (z : Δ ∋ α) => κ (C.inr z)) = κ := by
+  funext α x
+  rcases C.cover Γ Δ x with ⟨y, rfl⟩ | ⟨z, rfl⟩
+  · exact Subst.copair_inl _ _ y
+  · exact Subst.copair_inr _ _ z
+
 
 /-! ### The substitution action -/
 

@@ -462,6 +462,20 @@ theorem rename_concatenate {Γ Γ' Φ Ψ : C.Arity} (ρ : Γ →ʳ Γ') :
           (rename s U))
         (Renaming.extend_assoc ρ (C.single α) Δ').symm
 
+/-- Acting by the eta-substitution of a renaming is renaming, on a telescope. -/
+theorem actBase_ofRenaming {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) :
+    ∀ {Ψ : C.Arity} (T : dTel Γ Ψ),
+      dTel.actBase (Subst.ofRenaming ρ) T = dTel.rename ρ T
+  | _, .nil => rfl
+  | _, .cons (α := α) bind boundary rest => by
+      simp only [dTel.actBase, dTel.rename]
+      congr 1
+      · exact actBase_ofRenaming ρ bind
+      · exact Bd.act_ofRenaming ρ boundary
+      · refine Eq.trans (congrArg (fun s => dTel.actBase s rest)
+          (Subst.lift_ofRenaming ρ (C.single α))) ?_
+        exact actBase_ofRenaming (ρ ⇑ʳ C.single α) rest
+
 /-- A substitution in the base distributes over concatenation. -/
 theorem actBase_concatenate {Γ Γ' Φ Ψ : C.Arity} (κ : Subst Γ Γ') :
     ∀ (T : dTel Γ Φ) (U : dTel (Γ ⋈ Φ) Ψ),
@@ -664,6 +678,20 @@ abbrev Subst.applyEach {Γ Γ' Χ : C.Arity} (s : Subst Γ Γ') (τ : Subst Χ �
     Subst Χ Γ' :=
   fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (τ i)
 
+/-- Applying a substitution in every filler distributes over pairing. -/
+theorem Subst.applyEach_copair {Γ Δ Ω Ω' : C.Arity} (s : Subst Ω Ω')
+    (σ : Subst Γ Ω) (τ : Subst Δ Ω) :
+    Subst.applyEach s (Subst.copair σ τ)
+      = Subst.copair (Subst.applyEach s σ) (Subst.applyEach s τ) := by
+  funext α x
+  rcases C.cover Γ Δ x with ⟨u, rfl⟩ | ⟨v, rfl⟩
+  · refine Eq.trans (congrArg (fun e => Subst.act (Γ := 1) s α e)
+      (Subst.copair_inl σ τ u)) ?_
+    exact (Subst.copair_inl (Subst.applyEach s σ) (Subst.applyEach s τ) u).symm
+  · refine Eq.trans (congrArg (fun e => Subst.act (Γ := 1) s α e)
+      (Subst.copair_inr σ τ v)) ?_
+    exact (Subst.copair_inr (Subst.applyEach s σ) (Subst.applyEach s τ) v).symm
+
 /-- Apply a substitution of one base by another to a boundary at depth `Φ`. -/
 abbrev Bd.applyAt {Γ Γ' : C.Arity} (s : Subst Γ Γ') (Φ : C.Arity) (β : Bd (Γ ⋈ Φ)) :
     Bd (Γ' ⋈ Φ) :=
@@ -709,40 +737,180 @@ theorem Subst.instantiate_weaken {Γ Γ' : C.Arity} (s : Subst Γ Γ') (e : Expr
 
 
 /-- Filling a two-block arity is filling the first block and then the second. -/
-theorem Subst.copair_split {Δ α Ω : C.Arity} (σ : Subst (C.single α ⋈ Ω) Δ) :
+theorem Subst.copair_split {Δ Ω Φ : C.Arity} (σ : Subst (Ω ⋈ Φ) Δ) :
     (Subst.comp (Γ := 1) (Ξ := Δ) (Subst.lift (Subst.copair (Subst.id Δ)
-          (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i))) Ω)
-        (Subst.copair (Subst.id Δ) (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j))) :
-      Subst (Δ ⋈ C.single α ⋈ Ω) Δ)
+          (fun ⦃β⦄ (i : Ω ∋ β) => σ (C.inl i))) Φ)
+        (Subst.copair (Subst.id Δ) (fun ⦃β⦄ (j : Φ ∋ β) => σ (C.inr j))) :
+      Subst (Δ ⋈ Ω ⋈ Φ) Δ)
       = Subst.copair (Subst.id Δ) σ := by
   have hbase : ∀ ⦃γ : C.Arity⦄ (w : Δ ∋ γ),
-      Subst.copair (Subst.id Δ) (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)) (C.inl w)
+      Subst.copair (Subst.id Δ) (fun ⦃β⦄ (j : Φ ∋ β) => σ (C.inr j)) (C.inl w)
         = Expr.η w := fun ⦃_⦄ w => Subst.copair_inl _ _ w
   funext β x
-  rcases C.cover (Δ ⋈ C.single α) Ω x with ⟨u, rfl⟩ | ⟨j, rfl⟩
-  · rcases C.cover Δ (C.single α) u with ⟨w, rfl⟩ | ⟨i, rfl⟩
+  rcases C.cover (Δ ⋈ Ω) Φ x with ⟨u, rfl⟩ | ⟨j, rfl⟩
+  · rcases C.cover Δ (Ω) u with ⟨w, rfl⟩ | ⟨i, rfl⟩
     · refine Eq.trans (congrArg (Subst.act (Γ := 1) _ β)
         (Subst.lift_copair_inl_inl _ w)) ?_
       refine Eq.trans (act_η _ β (C.inl w)) ?_
       refine Eq.trans (hbase w) ?_
-      refine Eq.trans ?_ (congrArg (fun (z : (Δ ⋈ C.single α ⋈ Ω) ∋ β) =>
-        Subst.copair (Subst.id Δ) σ z) (C.inl_inl Δ (C.single α) Ω w))
+      refine Eq.trans ?_ (congrArg (fun (z : (Δ ⋈ Ω ⋈ Φ) ∋ β) =>
+        Subst.copair (Subst.id Δ) σ z) (C.inl_inl Δ (Ω) Φ w))
       exact (Subst.copair_inl _ _ w).symm
     · refine Eq.trans (congrArg (Subst.act (Γ := 1) _ β)
         (Subst.lift_copair_inl_inr _ i)) ?_
-      refine Eq.trans (act_rename_cancel (Renaming.inl Δ Ω) (𝟙ʳ Δ) _ hbase β
+      refine Eq.trans (act_rename_cancel (Renaming.inl Δ Φ) (𝟙ʳ Δ) _ hbase β
         (σ (C.inl i))) ?_
       refine Eq.trans ((congrArg (fun ρ => Renaming.act ρ (σ (C.inl i)))
         (Renaming.extend_id Δ β)).trans (Renaming.act_id _)) ?_
-      refine Eq.trans ?_ (congrArg (fun (z : (Δ ⋈ C.single α ⋈ Ω) ∋ β) =>
-        Subst.copair (Subst.id Δ) σ z) (C.inr_inl Δ (C.single α) Ω i))
+      refine Eq.trans ?_ (congrArg (fun (z : (Δ ⋈ Ω ⋈ Φ) ∋ β) =>
+        Subst.copair (Subst.id Δ) σ z) (C.inr_inl Δ (Ω) Φ i))
       exact (Subst.copair_inr _ _ (C.inl i)).symm
   · refine Eq.trans (congrArg (Subst.act (Γ := 1) _ β) (Subst.lift_inr _ j)) ?_
     refine Eq.trans (act_η _ β (C.inr j)) ?_
     refine Eq.trans (Subst.copair_inr _ _ j) ?_
-    refine Eq.trans ?_ (congrArg (fun (z : (Δ ⋈ C.single α ⋈ Ω) ∋ β) =>
-      Subst.copair (Subst.id Δ) σ z) (C.inr_inr Δ (C.single α) Ω j))
+    refine Eq.trans ?_ (congrArg (fun (z : (Δ ⋈ Ω ⋈ Φ) ∋ β) =>
+      Subst.copair (Subst.id Δ) σ z) (C.inr_inr Δ (Ω) Φ j))
     exact (Subst.copair_inr _ _ (C.inr j)).symm
+
+/-- Filling a two-block arity agrees with filling the first block, on the slots
+weakened into the first block. -/
+theorem Subst.copair_weaken {Δ Ω Φ : C.Arity} (κ : Subst (Ω ⋈ Φ) Δ) :
+    ∀ ⦃α : C.Arity⦄ (x : (Δ ⋈ Ω) ∋ α),
+      Subst.copair (Subst.id Δ) κ (Renaming.inl (Δ ⋈ Ω) Φ x)
+        = ⟦ 𝟙ʳ Δ ⇑ʳ α ⟧ʳ (Subst.copair (Subst.id Δ)
+            (fun ⦃β⦄ (w : Ω ∋ β) => κ (C.inl w)) x) := by
+  intro α x
+  have hid : ∀ e : Expr (Δ ⋈ α), (⟦ 𝟙ʳ Δ ⇑ʳ α ⟧ʳ e : Expr (Δ ⋈ α)) = e := by
+    intro e
+    exact (congrArg (fun ρ => Renaming.act ρ e) (Renaming.extend_id Δ α)).trans
+      (Renaming.act_id e)
+  refine Eq.trans ?_ (hid _).symm
+  rcases C.cover Δ Ω x with ⟨u, rfl⟩ | ⟨v, rfl⟩
+  · refine Eq.trans (congrArg (fun w : (Δ ⋈ Ω ⋈ Φ) ∋ α =>
+      Subst.copair (Subst.id Δ) κ w) (C.inl_inl Δ Ω Φ u).symm) ?_
+    exact (Subst.copair_inl _ _ u).trans (Subst.copair_inl _ _ u).symm
+  · refine Eq.trans (congrArg (fun w : (Δ ⋈ Ω ⋈ Φ) ∋ α =>
+      Subst.copair (Subst.id Δ) κ w) (C.inr_inl Δ Ω Φ v).symm) ?_
+    refine (Subst.copair_inr _ _ (C.inl v)).trans ?_
+    exact (Subst.copair_inr (Subst.id Δ)
+      (fun ⦃β⦄ (w : Ω ∋ β) => κ (C.inl w)) v).symm
+
+/-- Filling a two-block arity in a boundary weakened into the first block is
+filling the first block. -/
+theorem Bd.fill_weaken_inl {Δ Ω Φ Λ : C.Arity} (κ : Subst (Ω ⋈ Φ) Δ)
+    (β : Bd ((Δ ⋈ Ω) ⋈ Λ)) :
+    Bd.fill κ (Bd.rename (Renaming.inl (Δ ⋈ Ω) Φ ⇑ʳ Λ) β)
+      = Bd.fill (fun ⦃γ⦄ (w : Ω ∋ γ) => κ (C.inl w)) β := by
+  refine Eq.trans (Bd.act_copair_prefix κ Λ _).symm ?_
+  refine Eq.trans (Bd.act_square (Renaming.inl (Δ ⋈ Ω) Φ) (𝟙ʳ Δ)
+    (Subst.copair (Subst.id Δ) κ : Subst (Δ ⋈ (Ω ⋈ Φ)) Δ)
+    (Subst.copair (Subst.id Δ) (fun ⦃γ⦄ (w : Ω ∋ γ) => κ (C.inl w)))
+    (Subst.copair_weaken κ) Λ β) ?_
+  refine Eq.trans (congrArg (fun ρ => Bd.rename ρ
+    (Bd.act (Γ := 1) (Subst.copair (Subst.id Δ)
+      (fun ⦃γ⦄ (w : Ω ∋ γ) => κ (C.inl w))) Λ β)) (Renaming.extend_id Δ Λ)) ?_
+  refine Eq.trans (Bd.rename_id _) ?_
+  exact Bd.act_copair_prefix (fun ⦃γ⦄ (w : Ω ∋ γ) => κ (C.inl w)) Λ β
+
+/-- Filling a two-block arity in a telescope weakened into the first block is
+filling the first block. -/
+theorem dTel.instantiate_weaken_inl {Δ Ω Φ Λ : C.Arity} (κ : Subst (Ω ⋈ Φ) Δ)
+    (T : dTel (Δ ⋈ Ω) Λ) :
+    dTel.instantiate κ (dTel.rename (Renaming.inl (Δ ⋈ Ω) Φ) T)
+      = dTel.instantiate (fun ⦃γ⦄ (w : Ω ∋ γ) => κ (C.inl w)) T := by
+  refine Eq.trans (dTel.actBase_square (Renaming.inl (Δ ⋈ Ω) Φ) (𝟙ʳ Δ)
+    (Subst.copair (Subst.id Δ) κ : Subst (Δ ⋈ (Ω ⋈ Φ)) Δ)
+    (Subst.copair (Subst.id Δ) (fun ⦃γ⦄ (w : Ω ∋ γ) => κ (C.inl w)))
+    (Subst.copair_weaken κ) T) ?_
+  exact dTel.rename_id _
+
+/-- The declaration of a slot of the first block of a concatenation, filled. -/
+theorem dTel.declaration_left_instantiate {Δ Ω Φ Λ : C.Arity} (Θ : dTel Δ Ω)
+    (X : dTel (Δ ⋈ Ω) Φ) (κ : Subst (Ω ⋈ Φ) Δ) (w : Ω ∋ Λ) :
+    Bd.fill κ ((dTel.concatenate Θ X).declaration (C.inl w))
+      = Bd.fill (fun ⦃γ⦄ (v : Ω ∋ γ) => κ (C.inl v)) (Θ.declaration w) :=
+  (congrArg (Bd.fill κ) (dTel.declaration_concatenate_inl Θ X w)).trans
+    (Bd.fill_weaken_inl κ (Θ.declaration w))
+
+/-- The entries bound by a slot of the first block of a concatenation, filled. -/
+theorem dTel.binding_left_instantiate {Δ Ω Φ Λ : C.Arity} (Θ : dTel Δ Ω)
+    (X : dTel (Δ ⋈ Ω) Φ) (κ : Subst (Ω ⋈ Φ) Δ) (w : Ω ∋ Λ) :
+    dTel.instantiate κ ((dTel.concatenate Θ X).binding (C.inl w))
+      = dTel.instantiate (fun ⦃γ⦄ (v : Ω ∋ γ) => κ (C.inl v)) (Θ.binding w) :=
+  (congrArg (dTel.instantiate κ) (dTel.binding_concatenate_inl Θ X w)).trans
+    (dTel.instantiate_weaken_inl κ (Θ.binding w))
+
+/-- The declaration of a slot of the second block of a concatenation, filled. -/
+theorem dTel.declaration_right_instantiate {Δ Ω Φ Λ : C.Arity} (Θ : dTel Δ Ω)
+    (X : dTel (Δ ⋈ Ω) Φ) (κ : Subst (Ω ⋈ Φ) Δ) (z : Φ ∋ Λ) :
+    Bd.fill (fun ⦃γ⦄ (j : Φ ∋ γ) => κ (C.inr j))
+        ((dTel.instantiate (fun ⦃γ⦄ (i : Ω ∋ γ) => κ (C.inl i)) X).declaration z)
+      = Bd.fill κ ((dTel.concatenate Θ X).declaration (C.inr z)) := by
+  refine Eq.trans (congrArg (Bd.fill (fun ⦃γ⦄ (j : Φ ∋ γ) => κ (C.inr j)))
+    (dTel.declaration_actBase _ X z)) ?_
+  refine Eq.trans (Bd.act_copair_prefix
+    (fun ⦃γ⦄ (j : Φ ∋ γ) => κ (C.inr j)) Λ _).symm ?_
+  refine Eq.trans (Bd.act_comp (Γ := 1)
+    (Subst.lift (Subst.copair (Subst.id Δ)
+      (fun ⦃γ⦄ (i : Ω ∋ γ) => κ (C.inl i))) Φ)
+    (Subst.copair (Subst.id Δ) (fun ⦃γ⦄ (j : Φ ∋ γ) => κ (C.inr j)))
+    Λ (X.declaration z)).symm ?_
+  refine Eq.trans (congrArg (fun t => Bd.act (Γ := 1) t Λ (X.declaration z))
+    (Subst.copair_split κ)) ?_
+  refine Eq.trans (Bd.act_copair_prefix κ Λ (X.declaration z)) ?_
+  exact congrArg (Bd.fill κ) (dTel.declaration_concatenate_inr Θ X z).symm
+
+/-- The entries bound by a slot of the second block of a concatenation, filled. -/
+theorem dTel.binding_right_instantiate {Δ Ω Φ Λ : C.Arity} (Θ : dTel Δ Ω)
+    (X : dTel (Δ ⋈ Ω) Φ) (κ : Subst (Ω ⋈ Φ) Δ) (z : Φ ∋ Λ) :
+    dTel.instantiate (fun ⦃γ⦄ (j : Φ ∋ γ) => κ (C.inr j))
+        ((dTel.instantiate (fun ⦃γ⦄ (i : Ω ∋ γ) => κ (C.inl i)) X).binding z)
+      = dTel.instantiate κ ((dTel.concatenate Θ X).binding (C.inr z)) := by
+  refine Eq.trans (congrArg (dTel.instantiate
+    (fun ⦃γ⦄ (j : Φ ∋ γ) => κ (C.inr j))) (dTel.binding_actBase _ X z)) ?_
+  refine Eq.trans (dTel.actBase_comp
+    (Subst.lift (Subst.copair (Subst.id Δ)
+      (fun ⦃γ⦄ (i : Ω ∋ γ) => κ (C.inl i))) Φ)
+    (Subst.copair (Subst.id Δ) (fun ⦃γ⦄ (j : Φ ∋ γ) => κ (C.inr j)))
+    (X.binding z)).symm ?_
+  refine Eq.trans (congrArg (fun t => dTel.actBase t (X.binding z))
+    (Subst.copair_split κ)) ?_
+  exact congrArg (dTel.instantiate κ) (dTel.binding_concatenate_inr Θ X z).symm
+
+/-- The declaration of a slot of the first block, filled by a pair. -/
+theorem dTel.declaration_left_copair {Δ Ω Φ Λ : C.Arity} (Θ : dTel Δ Ω)
+    (X : dTel (Δ ⋈ Ω) Φ) (σ : Subst Ω Δ) (τ : Subst Φ Δ) (w : Ω ∋ Λ) :
+    Bd.fill (Subst.copair σ τ) ((dTel.concatenate Θ X).declaration (C.inl w))
+      = Bd.fill σ (Θ.declaration w) := by
+  refine (dTel.declaration_left_instantiate Θ X (Subst.copair σ τ) w).trans ?_
+  exact congrArg (fun s => Bd.fill s (Θ.declaration w)) (Subst.copair_left σ τ)
+
+/-- The entries bound by a slot of the first block, filled by a pair. -/
+theorem dTel.binding_left_copair {Δ Ω Φ Λ : C.Arity} (Θ : dTel Δ Ω)
+    (X : dTel (Δ ⋈ Ω) Φ) (σ : Subst Ω Δ) (τ : Subst Φ Δ) (w : Ω ∋ Λ) :
+    dTel.instantiate (Subst.copair σ τ)
+        ((dTel.concatenate Θ X).binding (C.inl w))
+      = dTel.instantiate σ (Θ.binding w) := by
+  refine (dTel.binding_left_instantiate Θ X (Subst.copair σ τ) w).trans ?_
+  exact congrArg (fun s => dTel.instantiate s (Θ.binding w))
+    (Subst.copair_left σ τ)
+
+/-- The declaration of a slot of the second block, filled by a pair. -/
+theorem dTel.declaration_right_copair {Δ Ω Φ Λ : C.Arity} (Θ : dTel Δ Ω)
+    (X : dTel (Δ ⋈ Ω) Φ) (σ : Subst Ω Δ) (τ : Subst Φ Δ) (z : Φ ∋ Λ) :
+    Bd.fill (Subst.copair σ τ) ((dTel.concatenate Θ X).declaration (C.inr z))
+      = Bd.fill τ ((dTel.instantiate σ X).declaration z) := by
+  refine (dTel.declaration_right_instantiate Θ X (Subst.copair σ τ) z).symm.trans ?_
+  rw [Subst.copair_left σ τ, Subst.copair_right σ τ]
+
+/-- The entries bound by a slot of the second block, filled by a pair. -/
+theorem dTel.binding_right_copair {Δ Ω Φ Λ : C.Arity} (Θ : dTel Δ Ω)
+    (X : dTel (Δ ⋈ Ω) Φ) (σ : Subst Ω Δ) (τ : Subst Φ Δ) (z : Φ ∋ Λ) :
+    dTel.instantiate (Subst.copair σ τ)
+        ((dTel.concatenate Θ X).binding (C.inr z))
+      = dTel.instantiate τ ((dTel.instantiate σ X).binding z) := by
+  refine (dTel.binding_right_instantiate Θ X (Subst.copair σ τ) z).symm.trans ?_
+  rw [Subst.copair_left σ τ, Subst.copair_right σ τ]
 
 /-- The entries bound by the first slot, filled, are the entries it binds. -/
 theorem dTel.binding_head_instantiate {Δ α Ω : C.Arity} (bind : dTel Δ α)

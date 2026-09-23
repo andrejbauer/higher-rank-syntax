@@ -549,6 +549,157 @@ theorem Eq_s.refl {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω} {σ : Su
     (h : Wf_s Ξ Θ σ) : Eq_s Ξ Θ σ σ :=
   Eq_s.slotwise (fun ⦃_⦄ z hne => .refl (h.filler z hne))
 
+/-- A filling of a concatenation fills the first block. -/
+theorem Wf_s.concatenate_left {Δ Ω Φ : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω}
+    {X : dTel (Δ ⋈ Ω) Φ} {κ : Subst (Ω ⋈ Φ) Δ}
+    (h : Wf_s Ξ (dTel.concatenate Θ X) κ) :
+    Wf_s Ξ Θ (fun ⦃α⦄ (w : Ω ∋ α) => κ (C.inl w)) := by
+  refine Wf_s.slotwise ?equation ?filler ?declared
+  case equation =>
+    intro Λ w l r hlr
+    refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) l r)
+      (dTel.binding_left_instantiate Θ X κ w)) ?_
+    exact h.equation (C.inl w) l r
+      ((dTel.declaration_left_instantiate Θ X κ w).trans hlr)
+  case filler =>
+    intro Λ w hne
+    refine Eq.mp (congrArg (fun T => Wf_e (Ξ ⋈ T) (κ (C.inl w)))
+      (dTel.binding_left_instantiate Θ X κ w)) ?_
+    exact h.filler (C.inl w) (fun hEq => hne (Eq.mp (congrArg Bd.isEq
+      (dTel.declaration_left_instantiate Θ X κ w)) hEq))
+  case declared =>
+    intro Λ w hne
+    refine Eq.mp (congrArg₂ (fun (T : dTel Δ Λ) (b : Bd (Δ ⋈ Λ)) =>
+      Eq_bd (Ξ ⋈ T) ((Ξ ⋈ T).boundaryOf (κ (C.inl w))) b)
+      (dTel.binding_left_instantiate Θ X κ w)
+      (dTel.declaration_left_instantiate Θ X κ w)) ?_
+    exact h.declared (C.inl w) (fun hEq => hne (Eq.mp (congrArg Bd.isEq
+      (dTel.declaration_left_instantiate Θ X κ w)) hEq))
+
+/-- A filling of a concatenation fills the second block, instantiated by the
+first. -/
+theorem Wf_s.concatenate_right {Δ Ω Φ : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω}
+    {X : dTel (Δ ⋈ Ω) Φ} {κ : Subst (Ω ⋈ Φ) Δ}
+    (h : Wf_s Ξ (dTel.concatenate Θ X) κ) :
+    Wf_s Ξ (dTel.instantiate (fun ⦃α⦄ (w : Ω ∋ α) => κ (C.inl w)) X)
+      (fun ⦃α⦄ (z : Φ ∋ α) => κ (C.inr z)) := by
+  refine Wf_s.slotwise_actBase X (Subst.copair (Subst.id Δ)
+    (fun ⦃γ⦄ (i : Ω ∋ γ) => κ (C.inl i))) ?equation ?filler ?declared
+  case equation =>
+    intro Λ z l r hlr
+    refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) l r)
+      (dTel.binding_right_instantiate Θ X κ z).symm) ?_
+    exact h.equation (C.inr z) l r
+      ((dTel.declaration_right_instantiate Θ X κ z).symm.trans hlr)
+  case filler =>
+    intro Λ z hne
+    refine Eq.mp (congrArg (fun T => Wf_e (Ξ ⋈ T) (κ (C.inr z)))
+      (dTel.binding_right_instantiate Θ X κ z).symm) ?_
+    exact h.filler (C.inr z) (fun hEq => hne (Eq.mp (congrArg Bd.isEq
+      (dTel.declaration_right_instantiate Θ X κ z).symm) hEq))
+  case declared =>
+    intro Λ z hne
+    refine Eq.mp (congrArg₂ (fun (T : dTel Δ Λ) (b : Bd (Δ ⋈ Λ)) =>
+      Eq_bd (Ξ ⋈ T) ((Ξ ⋈ T).boundaryOf (κ (C.inr z))) b)
+      (dTel.binding_right_instantiate Θ X κ z).symm
+      (dTel.declaration_right_instantiate Θ X κ z).symm) ?_
+    exact h.declared (C.inr z) (fun hEq => hne (Eq.mp (congrArg Bd.isEq
+      (dTel.declaration_right_instantiate Θ X κ z).symm) hEq))
+
+/-- Two agreeing fillings of a concatenation agree on the first block. -/
+theorem Eq_s.concatenate_left {Δ Ω Φ : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω}
+    {X : dTel (Δ ⋈ Ω) Φ} {κ κ' : Subst (Ω ⋈ Φ) Δ}
+    (h : Eq_s Ξ (dTel.concatenate Θ X) κ κ') :
+    Eq_s Ξ Θ (fun ⦃α⦄ (w : Ω ∋ α) => κ (C.inl w))
+      (fun ⦃α⦄ (w : Ω ∋ α) => κ' (C.inl w)) := by
+  refine Eq_s.slotwise ?_
+  intro Λ w hne
+  refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) (κ (C.inl w)) (κ' (C.inl w)))
+    (dTel.binding_left_instantiate Θ X κ w)) ?_
+  exact h.slot (C.inl w) (fun hEq => hne (Eq.mp (congrArg Bd.isEq
+    (dTel.declaration_left_instantiate Θ X κ w)) hEq))
+
+/-- Two agreeing fillings of a concatenation agree on the second block. -/
+theorem Eq_s.concatenate_right {Δ Ω Φ : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω}
+    {X : dTel (Δ ⋈ Ω) Φ} {κ κ' : Subst (Ω ⋈ Φ) Δ}
+    (h : Eq_s Ξ (dTel.concatenate Θ X) κ κ') :
+    Eq_s Ξ (dTel.instantiate (fun ⦃α⦄ (w : Ω ∋ α) => κ (C.inl w)) X)
+      (fun ⦃α⦄ (z : Φ ∋ α) => κ (C.inr z))
+      (fun ⦃α⦄ (z : Φ ∋ α) => κ' (C.inr z)) := by
+  refine Eq_s.slotwise_actBase X (Subst.copair (Subst.id Δ)
+    (fun ⦃γ⦄ (i : Ω ∋ γ) => κ (C.inl i))) ?_
+  intro Λ z hne
+  refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) (κ (C.inr z)) (κ' (C.inr z)))
+    (dTel.binding_right_instantiate Θ X κ z).symm) ?_
+  exact h.slot (C.inr z) (fun hEq => hne (Eq.mp (congrArg Bd.isEq
+    (dTel.declaration_right_instantiate Θ X κ z).symm) hEq))
+
+section
+
+variable {Δ Ω Φ : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω} {X : dTel (Δ ⋈ Ω) Φ}
+  {σ σ' : Subst Ω Δ} {τ τ' : Subst Φ Δ}
+
+/-- Filling the first block and then the second gives a filling of the
+concatenation. -/
+theorem Wf_s.concatenate (hσ : Wf_s Ξ Θ σ)
+    (hτ : Wf_s Ξ (dTel.instantiate σ X) τ) :
+    Wf_s Ξ (dTel.concatenate Θ X) (Subst.copair σ τ) := by
+  refine Wf_s.slotwise ?equation ?filler ?declared
+  case equation =>
+    intro Λ x l r hlr
+    rcases C.cover Ω Φ x with ⟨w, rfl⟩ | ⟨z, rfl⟩
+    · refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) l r) (dTel.binding_left_copair Θ X σ τ w).symm) ?_
+      exact hσ.equation w l r ((dTel.declaration_left_copair Θ X σ τ w).symm.trans hlr)
+    · refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) l r) (dTel.binding_right_copair Θ X σ τ z).symm) ?_
+      exact hτ.equation z l r ((dTel.declaration_right_copair Θ X σ τ z).symm.trans hlr)
+  case filler =>
+    intro Λ x hne
+    rcases C.cover Ω Φ x with ⟨w, rfl⟩ | ⟨z, rfl⟩
+    · refine Eq.mp (congrArg₂ (fun (T : dTel Δ Λ) (e : Expr (Δ ⋈ Λ)) =>
+        Wf_e (Ξ ⋈ T) e) (dTel.binding_left_copair Θ X σ τ w).symm (Subst.copair_inl σ τ w).symm) ?_
+      exact hσ.filler w
+        (fun hEq => hne (Eq.mp (congrArg Bd.isEq (dTel.declaration_left_copair Θ X σ τ w).symm) hEq))
+    · refine Eq.mp (congrArg₂ (fun (T : dTel Δ Λ) (e : Expr (Δ ⋈ Λ)) =>
+        Wf_e (Ξ ⋈ T) e) (dTel.binding_right_copair Θ X σ τ z).symm (Subst.copair_inr σ τ z).symm) ?_
+      exact hτ.filler z
+        (fun hEq => hne (Eq.mp (congrArg Bd.isEq (dTel.declaration_right_copair Θ X σ τ z).symm) hEq))
+  case declared =>
+    intro Λ x hne
+    rcases C.cover Ω Φ x with ⟨w, rfl⟩ | ⟨z, rfl⟩
+    · refine Eq.mp (congrArg₂ (fun (p : dTel Δ Λ × Expr (Δ ⋈ Λ)) (b : Bd (Δ ⋈ Λ)) =>
+        Eq_bd (Ξ ⋈ p.1) ((Ξ ⋈ p.1).boundaryOf p.2) b)
+        (congrArg₂ Prod.mk (dTel.binding_left_copair Θ X σ τ w).symm (Subst.copair_inl σ τ w).symm)
+        (dTel.declaration_left_copair Θ X σ τ w).symm) ?_
+      exact hσ.declared w
+        (fun hEq => hne (Eq.mp (congrArg Bd.isEq (dTel.declaration_left_copair Θ X σ τ w).symm) hEq))
+    · refine Eq.mp (congrArg₂ (fun (p : dTel Δ Λ × Expr (Δ ⋈ Λ)) (b : Bd (Δ ⋈ Λ)) =>
+        Eq_bd (Ξ ⋈ p.1) ((Ξ ⋈ p.1).boundaryOf p.2) b)
+        (congrArg₂ Prod.mk (dTel.binding_right_copair Θ X σ τ z).symm (Subst.copair_inr σ τ z).symm)
+        (dTel.declaration_right_copair Θ X σ τ z).symm) ?_
+      exact hτ.declared z
+        (fun hEq => hne (Eq.mp (congrArg Bd.isEq (dTel.declaration_right_copair Θ X σ τ z).symm) hEq))
+
+/-- Agreeing fillings of the two blocks agree as fillings of the
+concatenation. -/
+theorem Eq_s.concatenate (hσ : Eq_s Ξ Θ σ σ')
+    (hτ : Eq_s Ξ (dTel.instantiate σ X) τ τ') :
+    Eq_s Ξ (dTel.concatenate Θ X) (Subst.copair σ τ) (Subst.copair σ' τ') := by
+  refine Eq_s.slotwise ?_
+  intro Λ x hne
+  rcases C.cover Ω Φ x with ⟨w, rfl⟩ | ⟨z, rfl⟩
+  · refine Eq.mp (congrArg₂ (fun (p : dTel Δ Λ × Expr (Δ ⋈ Λ)) (e : Expr (Δ ⋈ Λ)) =>
+      Eq_e (Ξ ⋈ p.1) p.2 e)
+      (congrArg₂ Prod.mk (dTel.binding_left_copair Θ X σ τ w).symm (Subst.copair_inl σ τ w).symm)
+      (Subst.copair_inl σ' τ' w).symm) ?_
+    exact hσ.slot w (fun hEq => hne (Eq.mp (congrArg Bd.isEq (dTel.declaration_left_copair Θ X σ τ w).symm) hEq))
+  · refine Eq.mp (congrArg₂ (fun (p : dTel Δ Λ × Expr (Δ ⋈ Λ)) (e : Expr (Δ ⋈ Λ)) =>
+      Eq_e (Ξ ⋈ p.1) p.2 e)
+      (congrArg₂ Prod.mk (dTel.binding_right_copair Θ X σ τ z).symm (Subst.copair_inr σ τ z).symm)
+      (Subst.copair_inr σ' τ' z).symm) ?_
+    exact hτ.slot z (fun hEq => hne (Eq.mp (congrArg Bd.isEq (dTel.declaration_right_copair Θ X σ τ z).symm) hEq))
+
+end
+
 /-- The slots after the first of two agreeing fillings agree. -/
 theorem Eq_s.tail {Δ α Ω : C.Arity} {Ξ : Ambient Δ} {bind : dTel Δ α}
     {boundary : Bd (Δ ⋈ α)} {rest : dTel (Δ ⋈ C.single α) Ω}

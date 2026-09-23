@@ -179,6 +179,46 @@ presentation — `Γ ▷ ⊤ = Γ` and `Γ ▷ Σ a c = (Γ ▷ a) ▷ c` — ar
 there being no `⊤` and no `Σ`. The raw layer is canonical: slot heads, total
 argument lists, η-long terms, hereditary substitution.
 
+**Theories as closed types.** In Kaposi–Xie a signature is a closed type of
+`ToS⁺`, packed by `Σ`; here a theory is an object of `Ctx`. In the telescope
+model `q : Tm ⟶ Ty` of `NaturalModel.lean:135` a theory is three things at once:
+
+```text
+Ξ : Ctx                      an object                        Ctx.lean:17
+Ξ : empty.Tele               a telescope over ⋄, Ctx.toTele   Ctx.lean:35
+Ξ : Ty.obj (op empty.toOb)   a closed type                    Ctx/Telescope.lean:204
+```
+
+At `X := empty.toOb` both `X.arity = 1` and `Ob.Tele.Wf X Θ = Wf_t .nil Θ` hold
+by `rfl`, `Quotient.liftOn` and `Quotient.hrecOn` computing on `Quotient.mk`. So
+`Ctx ≃ Ob.Tele X` is field-for-field, and `Ctx.Rel` (`Ctx.lean:62`) and
+`Ob.Tele.Rel` (`Ctx/Telescope.lean:61`) differ only by a `Wf_t` conjunct that the
+subtype supplies. `Quotient.congr` then gives
+
+```lean
+Ob ≃ Ty.obj (Opposite.op empty.toOb)
+```
+
+`[routine]`. It is the `⋄` instance of: `extend X : Ty.obj (op X) → Ob`
+(`Ctx/Telescope.lean:229`) is injective, i.e. `Eq_t` cancels a common prefix
+under `concatenate`; at `X = ⋄` it is also surjective. `[open]`
+
+The packing `Σ` does for Kaposi–Xie is done here by telescope concatenation,
+associative on the nose (`concatenate_assoc`) where `Σ` in a CwF is associative
+up to isomorphism: the telescope presheaf `Ty` is the strict `Σ`-closure of the
+single-entry `Ty` of the table above. As a specification, `HrS_tel` is `HrS` with
+a telescope former and the strict laws
+
+```text
+Γ ▷ (Θ ⋈ Ψ) = (Γ ▷ Θ) ▷ Ψ          Γ ▷ nil = Γ
+```
+
+`Ctx` with telescopes as types is a strict model of `HrS_tel`, and every
+`HrS`-model becomes one by taking lists of types as telescopes. Presheaf
+categories are not strict `HrS_tel`-models, so initiality is claimed for `HrS`;
+`HrS_tel` is the packaging layer above it in which "a theory is a closed type"
+holds verbatim.
+
 ---
 
 ## Why this fragment specifies higher-rank theories

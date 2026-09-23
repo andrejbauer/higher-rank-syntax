@@ -16,6 +16,6 @@ import HigherRankSyntax.Typing.Eta
 import HigherRankSyntax.Typing.SubstitutionLemma
 import HigherRankSyntax.Typing.Invariance
 import HigherRankSyntax.Typing.Equivalence
-import HigherRankSyntax.Ctx.Basic
-import HigherRankSyntax.Ctx.Relations
 import HigherRankSyntax.Ctx.Ctx
+import HigherRankSyntax.Ctx.Telescope
+import HigherRankSyntax.Ctx.NaturalModel
