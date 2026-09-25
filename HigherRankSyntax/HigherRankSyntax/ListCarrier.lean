@@ -461,6 +461,16 @@ theorem ListCarrier.get_singleton {ℓ : List Entry} {a : Entry} (hl : ℓ = [a]
   subst hi
   rfl
 
+/-- Single-entry arities are equal only for equal binding arities. -/
+theorem C.single_injective : Function.Injective C.single := by
+  intro α β h
+  have hlist : [Entry.mk (underlyingList α)] = [Entry.mk (underlyingList β)] :=
+    (C.underlyingList_single α).symm.trans
+      ((congrArg underlyingList h).trans (C.underlyingList_single β))
+  injection hlist with hentry
+  injection hentry with hunder
+  exact underlyingList_injective hunder
+
 /-- A single-entry arity has exactly one slot. -/
 theorem C.single_slot_unique {α : C.Arity} (z : C.single α ∋ α) : z = C.singleSlot α := by
   apply Subtype.ext

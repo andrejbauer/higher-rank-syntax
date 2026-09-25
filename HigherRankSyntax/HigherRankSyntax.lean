@@ -19,3 +19,11 @@ import HigherRankSyntax.Typing.Equivalence
 import HigherRankSyntax.Ctx.Ctx
 import HigherRankSyntax.Ctx.Telescope
 import HigherRankSyntax.Ctx.NaturalModel
+import HigherRankSyntax.HrS.Structure
+import HigherRankSyntax.HrS.Morphism
+import HigherRankSyntax.Ctx.Extension
+import HigherRankSyntax.Ctx.Single
+import HigherRankSyntax.Ctx.Universe
+import HigherRankSyntax.Ctx.Binding
+import HigherRankSyntax.Ctx.Identity
+import HigherRankSyntax.Ctx.Model

@@ -678,6 +678,17 @@ abbrev Subst.applyEach {Γ Γ' Χ : C.Arity} (s : Subst Γ Γ') (τ : Subst Χ �
     Subst Χ Γ' :=
   fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (τ i)
 
+/-- Applying a substitution in every filler of a single-entry filling acts on its
+one expression. -/
+theorem Subst.applyEach_single {Γ Γ' α : C.Arity} (s : Subst Γ Γ') (t : Expr (Γ ⋈ α)) :
+    Subst.applyEach s (Subst.single t) = Subst.single (Subst.act (Γ := 1) s α t) := by
+  funext β x
+  rcases C.cover (C.single α) 1 x with ⟨y, rfl⟩ | ⟨z, rfl⟩
+  · obtain rfl := C.single_arity y
+    rw [C.single_slot_unique y, Subst.single_head]
+    exact congrArg (Subst.act (Γ := 1) s β) (Subst.single_head t)
+  · exact (C.unit_is_empty z).elim
+
 /-- Applying a substitution in every filler distributes over pairing. -/
 theorem Subst.applyEach_copair {Γ Δ Ω Ω' : C.Arity} (s : Subst Ω Ω')
     (σ : Subst Γ Ω) (τ : Subst Δ Ω) :

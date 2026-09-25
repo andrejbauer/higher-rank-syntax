@@ -752,6 +752,77 @@ theorem Wf_t.cons_inv {Δ α Ω : C.Arity} {Ξ : Ambient Δ} {bind : dTel Δ α}
   have hp := Wf_t.toParts h
   rwa [Wf_t.parts] at hp
 
+/-- A declaration binding a telescope over an extended ambient binds the
+concatenation over the ambient. -/
+theorem Wf_bd.concatenate {Δ Λ Φ : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Λ}
+    {Ψ : dTel (Δ ⋈ Λ) Φ} {β : Bd ((Δ ⋈ Λ) ⋈ Φ)} (h : Wf_bd (Ξ ⋈ Θ) Ψ β) :
+    Wf_bd Ξ (dTel.concatenate Θ Ψ) β := by
+  have hassoc : (Ξ ⋈ Θ) ⋈ Ψ = Ξ ⋈ dTel.concatenate Θ Ψ :=
+    dTel.concatenate_assoc Ξ Θ Ψ
+  cases h with
+  | sort => exact Wf_bd.sort
+  | of hS hsort =>
+      exact Wf_bd.of (Eq.mp (congrArg (fun A => Wf_e A _) hassoc) hS)
+        (Eq.mp (congrArg (fun A => Eq_bd A (dTel.boundaryOf A _) .sort) hassoc)
+          hsort)
+  | eq hl hr heq =>
+      exact Wf_bd.eq (Eq.mp (congrArg (fun A => Wf_e A _) hassoc) hl)
+        (Eq.mp (congrArg (fun A => Wf_e A _) hassoc) hr)
+        (Eq.mp (congrArg (fun A => Eq_bd A (dTel.boundaryOf A _)
+          (dTel.boundaryOf A _)) hassoc) heq)
+
+/-- A filling of a one-entry telescope is an expression of its declared
+boundary. -/
+theorem Wf_s.single_iff {Δ α : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ α}
+    {β : Bd (Δ ⋈ α)} (t : Expr (Δ ⋈ α)) :
+    Wf_s Ξ (dTel.cons Θ β .nil) (Subst.single t)
+      ↔ (∀ l r : Expr (Δ ⋈ α), β = .eq l r → Eq_e (Ξ ⋈ Θ) l r) ∧
+          (¬ β.isEq → Wf_e (Ξ ⋈ Θ) t) ∧
+          (¬ β.isEq → Eq_bd (Ξ ⋈ Θ) ((Ξ ⋈ Θ).boundaryOf t) β) := by
+  have hb := dTel.binding_head_instantiate Θ β
+    (.nil : dTel (Δ ⋈ C.single α) 1) (Subst.single t)
+  have hd := dTel.declaration_head_instantiate Θ β
+    (.nil : dTel (Δ ⋈ C.single α) 1) (Subst.single t)
+  constructor
+  · intro h
+    refine ⟨fun l r he => ?_, fun hne => ?_, fun hne => ?_⟩
+    · exact Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) l r) hb)
+        (h.equation (C.inl (C.singleSlot α)) l r (hd.trans he))
+    · exact Eq.mp (congrArg₂ (fun T e => Wf_e (Ξ ⋈ T) e) hb (Subst.single_head t))
+        (h.filler (C.inl (C.singleSlot α)) (by rw [hd]; exact hne))
+    · refine Eq.mp (congrArg (fun b => Eq_bd (Ξ ⋈ Θ) ((Ξ ⋈ Θ).boundaryOf t) b) hd) ?_
+      exact Eq.mp (congrArg₂ (fun T e => Eq_bd (Ξ ⋈ T) ((Ξ ⋈ T).boundaryOf e)
+          (Subst.single t ⋆ (dTel.cons Θ β .nil).declaration
+            (C.inl (C.singleSlot α)))) hb (Subst.single_head t))
+        (h.declared (C.inl (C.singleSlot α)) (by rw [hd]; exact hne))
+  · rintro ⟨heq, hfill, hdecl⟩
+    refine Wf_s.cons heq (fun hne => ?_) (fun hne => ?_) Wf_s.nil
+    · rw [Subst.single_head]
+      exact hfill hne
+    · rw [Subst.single_head]
+      exact hdecl hne
+
+/-- Two fillings of a one-entry telescope agree when their expressions do. -/
+theorem Eq_s.single_iff {Δ α : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ α}
+    {β : Bd (Δ ⋈ α)} (t t' : Expr (Δ ⋈ α)) :
+    Eq_s Ξ (dTel.cons Θ β .nil) (Subst.single t) (Subst.single t')
+      ↔ (¬ β.isEq → Eq_e (Ξ ⋈ Θ) t t') := by
+  have hb := dTel.binding_head_instantiate Θ β
+    (.nil : dTel (Δ ⋈ C.single α) 1) (Subst.single t)
+  have hd := dTel.declaration_head_instantiate Θ β
+    (.nil : dTel (Δ ⋈ C.single α) 1) (Subst.single t)
+  constructor
+  · intro h hne
+    refine Eq.mp (congrArg (fun T => Eq_e (Ξ ⋈ T) t t') hb) ?_
+    exact Eq.mp (congrArg₂ (fun e e' => Eq_e (Ξ ⋈ (Subst.single t ⋆
+        (dTel.cons Θ β .nil).binding (C.inl (C.singleSlot α)))) e e')
+        (Subst.single_head t) (Subst.single_head t'))
+      (h.slot (C.inl (C.singleSlot α)) (by rw [hd]; exact hne))
+  · intro h
+    refine Eq_s.cons (fun hne => ?_) Eq_s.nil
+    rw [Subst.single_head, Subst.single_head]
+    exact h hne
+
 /-- Concatenating well-formed telescopes is well formed. -/
 theorem Wf_t.concatenate {Δ : C.Arity} {Ξ : Ambient Δ} :
     ∀ {Ω Φ : C.Arity} {Θ : dTel Δ Ω} {X : dTel (Δ ⋈ Ω) Φ},

@@ -1,5 +1,6 @@
 import Mathlib.CategoryTheory.Opposites
 import Mathlib.CategoryTheory.Types.Basic
+import Mathlib.CategoryTheory.Limits.Shapes.Terminal
 import HigherRankSyntax.Ctx.Ctx
 
 /-!
@@ -311,5 +312,17 @@ theorem lift_projection {Ξ Γ : Ctx} (σ : Ob.Subst Ξ.toOb Γ.toOb)
   refine Eq.trans (act_η (_root_.Subst.lift σ.1 Θ.arity) Λ (C.inl x)) ?_
   refine Eq.trans (Subst.lift_inl σ.1 x) ?_
   exact (act_ofRenaming (Renaming.inl Ξ.arity Θ.arity) (σ.1 x)).symm
+
+/-- The empty context is terminal. -/
+def emptyIsTerminal : Limits.IsTerminal empty.toOb :=
+  Limits.IsTerminal.ofUniqueHom
+    (fun X => Quotient.mk (Ob.Subst.setoid X empty.toOb)
+      ⟨fun ⦃_⦄ x => (C.unit_is_empty x).elim, by obtain ⟨Ξ⟩ := X; exact Wf_s.nil⟩)
+    (by
+      intro X σ
+      obtain ⟨σ⟩ := σ
+      refine congrArg (Quotient.mk (Ob.Subst.setoid X empty.toOb)) (Subtype.ext ?_)
+      funext α x
+      exact (C.unit_is_empty x).elim)
 
 end Ctx

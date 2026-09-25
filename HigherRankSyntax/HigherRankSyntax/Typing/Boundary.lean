@@ -134,6 +134,17 @@ theorem act_lift_copair {Δ Ω : C.Arity} (σ : Subst Ω Δ) (Φ Ψ : C.Arity)
       exact congrArg₂ Bd.eq (Subst.act_lift_copair σ Φ Ψ l)
         (Subst.act_lift_copair σ Φ Ψ r)
 
+/-- Acting by a lift past `Φ` at depth `Ψ` is acting at depth `Φ ⋈ Ψ`. -/
+theorem act_lift {Γ Δ : C.Arity} (σ : Subst Γ Δ) (Φ Ψ : C.Arity)
+    (β : Bd ((Γ ⋈ Φ) ⋈ Ψ)) :
+    act (Γ := 1) (Δ := Γ ⋈ Φ) (Ξ := Δ ⋈ Φ) (Subst.lift σ Φ) Ψ β
+      = act (Γ := 1) (Δ := Γ) (Ξ := Δ) σ (Φ ⋈ Ψ) β := by
+  cases β with
+  | sort => rfl
+  | of S => exact congrArg Bd.of (Subst.act_lift σ Φ Ψ S)
+  | eq l r =>
+      exact congrArg₂ Bd.eq (Subst.act_lift σ Φ Ψ l) (Subst.act_lift σ Φ Ψ r)
+
 /-- Acting by a lift with no further depth is acting at the lifted depth. -/
 theorem act_lift_depth {Γ Δ Φ : C.Arity} (σ : Subst Γ Δ) (β : Bd (Γ ⋈ Φ)) :
     act (Γ := 1) (Δ := Γ ⋈ Φ) (Ξ := Δ ⋈ Φ) (Subst.lift σ Φ) 1 β

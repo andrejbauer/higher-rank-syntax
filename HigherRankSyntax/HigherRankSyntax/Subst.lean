@@ -124,6 +124,29 @@ theorem Subst.copair_eta {Γ Δ Ω : C.Arity} (κ : Subst (Γ ⋈ Δ) Ω) :
   · exact Subst.copair_inr _ _ z
 
 
+/-- The substitution on a single-entry arity sending its one slot to a given
+expression. -/
+def Subst.single {Δ α : C.Arity} (t : Expr (Δ ⋈ α)) : Subst (C.single α ⋈ 1) Δ :=
+  fun ⦃β⦄ x =>
+    C.copair (C.single α) 1 (Expr (Δ ⋈ β))
+      (fun y => cast (congrArg (fun γ => Expr (Δ ⋈ γ)) (C.single_arity y).symm) t)
+      (fun z => (C.unit_is_empty z).elim) x
+
+@[simp] theorem Subst.single_head {Δ α : C.Arity} (t : Expr (Δ ⋈ α)) :
+    Subst.single t (C.inl (C.singleSlot α)) = t := by
+  simp only [Subst.single, Carrier.copair_apply_inl]
+  rfl
+
+/-- A substitution out of a single-entry arity is determined by its one slot. -/
+theorem Subst.single_eta {Δ α : C.Arity} (τ : Subst (C.single α ⋈ 1) Δ) :
+    Subst.single (τ (C.inl (C.singleSlot α))) = τ := by
+  funext β x
+  rcases C.cover (C.single α) 1 x with ⟨y, rfl⟩ | ⟨z, rfl⟩
+  · obtain rfl := C.single_arity y
+    rw [C.single_slot_unique y]
+    exact Subst.single_head _
+  · exact (C.unit_is_empty z).elim
+
 /-! ### The substitution action -/
 
 /-- Apply the substitution `σ` to an expression at depth `Φ`. -/
