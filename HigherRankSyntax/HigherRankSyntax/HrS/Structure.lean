@@ -84,17 +84,11 @@ structure Structure where
   /-- The projection paired with the generic term is the identity. -/
   pair_eta : ∀ {Γ : Ob} (a : Ty Γ),
     pair (projection a) (generic a) = identity (extend Γ a)
-  /-- The substitution from the extension by `substTy a σ` to the extension by
-  `a` lying over `σ`. -/
-  lift : {Γ Δ : Ob} → (a : Ty Γ) → (σ : Sub Δ Γ) →
-    Sub (extend Δ (substTy a σ)) (extend Γ a)
-  /-- The projection after `lift a σ` is `σ` after the projection. -/
-  projection_lift : ∀ {Γ Δ : Ob} (a : Ty Γ) (σ : Sub Δ Γ),
-    comp (projection a) (lift a σ) = comp σ (projection (substTy a σ))
-  /-- The generic term reindexed along `lift a σ` is the generic term of
-  `substTy a σ`. -/
-  generic_lift : ∀ {Γ Δ : Ob} (a : Ty Γ) (σ : Sub Δ Γ),
-    HEq (substTm (generic a) (lift a σ)) (generic (substTy a σ))
+  /-- `pair σ t` after `θ` is `σ` after `θ` paired with `t` reindexed along
+  `θ`. -/
+  pair_comp : ∀ {Γ Δ Ξ : Ob} {a : Ty Γ} (σ : Sub Δ Γ) (t : Tm Δ (substTy a σ))
+      (θ : Sub Ξ Δ),
+    comp (pair σ t) θ = pair (comp σ θ) (substTy_comp a σ θ ▸ substTm t θ)
   -- The universe of sorts
   /-- The type whose terms are the sorts. -/
   U : (Γ : Ob) → Ty Γ
@@ -121,13 +115,21 @@ structure Structure where
   /-- `unlam` after `lam` is the identity. -/
   unlam_lam : ∀ {Γ : Ob} {a : Ty Γ} {c : Ty (extend Γ a)} (e : Tm (extend Γ a) c),
     unlam (lam e) = e
-  /-- A binding type is stable under reindexing. -/
+  /-- A binding type reindexed along `σ` binds its reindexed domain, with the
+  type over the extension reindexed along `σ` carried through the extension:
+  `σ` after the projection, paired with the generic term. -/
   Bind_subst : ∀ {Γ Δ : Ob} (a : Ty Γ) (c : Ty (extend Γ a)) (σ : Sub Δ Γ),
-    substTy (Bind a c) σ = Bind (substTy a σ) (substTy c (lift a σ))
-  /-- `lam` commutes with reindexing. -/
+    substTy (Bind a c) σ
+      = Bind (substTy a σ)
+        (substTy c (pair (comp σ (projection (substTy a σ)))
+          (substTy_comp a σ (projection (substTy a σ)) ▸ generic (substTy a σ))))
+  /-- `lam` commutes with reindexing, the term over the extension being
+  reindexed along `σ` carried through the extension. -/
   lam_subst : ∀ {Γ Δ : Ob} {a : Ty Γ} {c : Ty (extend Γ a)}
       (e : Tm (extend Γ a) c) (σ : Sub Δ Γ),
-    Bind_subst a c σ ▸ substTm (lam e) σ = lam (substTm e (lift a σ))
+    Bind_subst a c σ ▸ substTm (lam e) σ
+      = lam (substTm e (pair (comp σ (projection (substTy a σ)))
+          (substTy_comp a σ (projection (substTy a σ)) ▸ generic (substTy a σ))))
   -- Equality of sorts
   /-- The type asserting that two sorts are equal. -/
   IdSort : {Γ : Ob} → Tm Γ (U Γ) → Tm Γ (U Γ) → Ty Γ

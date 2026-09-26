@@ -12,6 +12,7 @@ CwF
   ν : (a : Ty Γ) → Tm (Γ ▷ a) (a[p a])
   ⟨_,_⟩ : (σ : Sub Δ Γ) → Tm Δ (a[σ]) → Sub Δ (Γ ▷ a)
   p a ∘ ⟨σ,t⟩ = σ      (ν a)[⟨σ,t⟩] = t      ⟨p a, ν a⟩ = id
+  ⟨σ,t⟩ ∘ θ = ⟨σ ∘ θ, t[θ]⟩
   σ⁺a := ⟨σ ∘ p (a[σ]), ν (a[σ])⟩                                 derived
 
 UNIVERSE — Tarski, closed under nothing

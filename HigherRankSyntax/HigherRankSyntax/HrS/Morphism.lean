@@ -9,13 +9,13 @@ corresponding sort of the target and commutes with every operation other than
 earlier law is a heterogeneous equality.
 -/
 
-universe u
+universe u v
 
 namespace HrS
 
 /-- A morphism of models: a map for each sort, commuting with the operations
 other than `toEmpty` and `unlam`. -/
-structure Morphism (M N : Structure.{u}) where
+structure Morphism (M : Structure.{u}) (N : Structure.{v}) where
   /-- The map on objects. -/
   onOb : M.Ob → N.Ob
   /-- The map on substitutions. -/
@@ -54,9 +54,6 @@ structure Morphism (M N : Structure.{u}) where
       (t : M.Tm Δ (M.substTy a σ)),
     HEq (onSub (M.pair σ t))
       (N.pair (onSub σ) (onTy_substTy a σ ▸ onTm t))
-  /-- The lifted substitution is preserved. -/
-  onSub_lift : ∀ {Γ Δ : M.Ob} (a : M.Ty Γ) (σ : M.Sub Δ Γ),
-    HEq (onSub (M.lift a σ)) (N.lift (onTy a) (onSub σ))
   -- The universe of sorts
   /-- The universe is preserved. -/
   onTy_U : ∀ (Γ : M.Ob), onTy (M.U Γ) = N.U (onOb Γ)

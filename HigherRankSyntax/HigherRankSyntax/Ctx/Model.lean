@@ -41,9 +41,7 @@ def model : HrS.Structure where
   projection_pair σ t := Ty₁.projection_pair σ t
   generic_pair σ t := Ty₁.generic_pair σ t
   pair_eta a := Ty₁.pair_eta a
-  lift a σ := Ty₁.lift a σ
-  projection_lift a σ := Ty₁.projection_lift a σ
-  generic_lift a σ := Ty₁.generic_lift a σ
+  pair_comp σ t θ := Ty₁.pair_comp σ t θ
   U X := U X
   U_subst σ := U_subst σ
   El S := El S
@@ -53,8 +51,16 @@ def model : HrS.Structure where
   unlam t := unlam t
   lam_unlam t := lam_unlam t
   unlam_lam e := unlam_lam e
-  Bind_subst a c σ := Bind_subst a c σ
-  lam_subst e σ := lam_subst e σ
+  Bind_subst a c σ := by
+    rw [Bind_subst, Ty₁.lift_eq_pair]
+  lam_subst e σ := by
+    apply Tm₁.cast_eq
+    have h : ((lam e).subst σ).1 = (lam (e.subst (Ty₁.lift _ σ))).1 := by
+      rw [← lam_subst e σ]
+      apply Tm₁.eq_of_heq (Bind_subst _ _ σ)
+      symm
+      apply eqRec_heq
+    rwa [Ty₁.lift_eq_pair] at h
   IdSort S S' := IdSort S S'
   IdSort_refl S := IdSort_refl S
   IdSort_subst S S' σ := IdSort_subst S S' σ

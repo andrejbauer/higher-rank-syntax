@@ -314,24 +314,6 @@ theorem Ty₁.lift_mk {Ξ Γ : Ctx} (e : Ob.Entry Γ.toOb) (σ : Ob.Subst Ξ.toO
     = Ctx.lift σ e.toTele
   := Ob.lift_mk σ e.toTele
 
-/-- `a.lift σ` followed by the projection is the projection followed by `σ`. -/
-theorem Ty₁.projection_lift {X Y : Ob} (a : Ty₁ X) (σ : Y ⟶ X) :
-  a.lift σ ≫ Ob.projection X a.toTy = Ob.projection Y (a.subst σ).toTy ≫ σ
-  := by
-  obtain ⟨e⟩ := a
-  obtain ⟨σ⟩ := σ
-  apply Ob.pair_projection
-
-/-- The generic term reindexed along `a.lift σ` is the generic term of
-`a.subst σ`. -/
-theorem Ty₁.generic_lift {X Y : Ob} (a : Ty₁ X) (σ : Y ⟶ X) :
-  HEq ((Tm₁.generic a).subst (a.lift σ)) (Tm₁.generic (a.subst σ))
-  := by
-  apply Tm₁.heq_of_eq
-  obtain ⟨e⟩ := a
-  obtain ⟨σ⟩ := σ
-  apply Ob.pair_generic
-
 /-- A substitution paired with a term of the reindexed one-entry type, as a
 substitution into the extension by that type. -/
 def Ty₁.pair {X Y : Ob} {a : Ty₁ Y} (σ : X ⟶ Y) (t : Tm₁ X (a.subst σ)) :
@@ -352,5 +334,34 @@ theorem Ty₁.generic_pair {X Y : Ob} {a : Ty₁ Y} (σ : X ⟶ Y) (t : Tm₁ X 
 theorem Ty₁.pair_eta {X : Ob} (a : Ty₁ X) :
   Ty₁.pair (Ob.projection X a.toTy) (Tm₁.generic a) = 𝟙 (Ob.extend X a.toTy)
   := Ob.pair_eta X a.toTy
+
+/-- `Ty₁.pair σ t` after `θ` is `θ ≫ σ` paired with `t` reindexed along `θ`. -/
+theorem Ty₁.pair_comp
+    {X Y Z : Ob} {a : Ty₁ Y} (σ : X ⟶ Y) (t : Tm₁ X (a.subst σ)) (θ : Z ⟶ X) :
+  θ ≫ Ty₁.pair σ t = Ty₁.pair (θ ≫ σ) (Ty₁.subst_comp a σ θ ▸ t.subst θ)
+  := by
+  rw [Ty₁.pair, Ty₁.pair]
+  convert Ob.pair_comp σ t.1 _ θ _ using 2
+  · apply Tm₁.eq_of_heq (Ty₁.subst_comp a σ θ) (t' := t.subst θ)
+    apply eqRec_heq
+  · rw [Ob.Term.tele_map, t.2, Ty₁.toTy_subst, op_comp, Functor.map_comp_apply]
+
+/-- `a.lift σ` is the projection followed by `σ`, paired with the generic term. -/
+theorem Ty₁.lift_eq_pair {X Y : Ob} (a : Ty₁ X) (σ : Y ⟶ X) :
+  Ty₁.lift a σ
+    = Ty₁.pair (Ob.projection Y (a.subst σ).toTy ≫ σ)
+        (Ty₁.subst_comp a σ (Ob.projection Y (a.subst σ).toTy) ▸ Tm₁.generic (a.subst σ))
+  := by
+  induction a using Quotient.ind with
+  | _ e =>
+  induction σ using Quotient.ind with
+  | _ σ =>
+  have hlift : Ty₁.lift (Quotient.mk _ e) (Quotient.mk _ σ)
+      = Ob.lift (Ty₁.toTy (Quotient.mk _ e)) (Quotient.mk _ σ) := rfl
+  rw [hlift, Ty₁.pair, Ob.lift]
+  congr 1
+  symm
+  apply Tm₁.eq_of_heq (Ty₁.subst_comp _ _ _) (t' := Tm₁.generic _)
+  apply eqRec_heq
 
 end Ctx

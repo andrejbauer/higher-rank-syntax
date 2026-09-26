@@ -335,6 +335,21 @@ theorem pair_eta (X : Ob) (a : Ty.obj (Opposite.op X)) :
   symm
   exact h
 
+/-- `pair σ t` after `θ` is `θ ≫ σ` paired with `t` reindexed along `θ`. -/
+theorem pair_comp
+    {X Y Z : Ob} {a : Ty.obj (Opposite.op Y)} (σ : X ⟶ Y)
+    (t : Tm.obj (Opposite.op X)) (ht : Ob.Term.tele t = Ty.map σ.op a) (θ : Z ⟶ X)
+    (ht' : Ob.Term.tele (Tm.map θ.op t) = Ty.map (θ ≫ σ).op a) :
+  θ ≫ pair σ t ht = pair (θ ≫ σ) (Tm.map θ.op t) ht'
+  := by
+  obtain ⟨Γ⟩ := Y
+  obtain ⟨Θ⟩ := a
+  obtain ⟨σ⟩ := σ
+  obtain ⟨t⟩ := t
+  obtain ⟨θ⟩ := θ
+  symm
+  exact homEquiv_naturality Γ Θ _ _ _ ht ht'
+
 /-- The lift of `σ` past the telescope class `a`: the pair of the projection
 followed by `σ` with the generic term. -/
 def lift {X Y : Ob} (a : Ty.obj (Opposite.op Y)) (σ : X ⟶ Y) :
