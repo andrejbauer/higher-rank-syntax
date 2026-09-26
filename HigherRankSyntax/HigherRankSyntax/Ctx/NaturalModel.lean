@@ -5,8 +5,11 @@ import HigherRankSyntax.Ctx.Telescope
 /-!
 # The natural model
 
-`Tm` is the telescopes with a filling modulo 13.1, and `q : Tm ⟶ Ty` forgets the
-filling.
+`Tm` is the presheaf of telescopes with a filling, modulo equality of the
+telescopes and agreement of the fillings, and `q : Tm ⟶ Ty` forgets the filling.
+For a telescope `Θ` over `Γ`, the generic telescope with a filling over `Γ`
+extended by `Θ`, the projection, `q` and `Θ` form a pullback square, so `q` is
+relatively representable.
 -/
 
 open CategoryTheory
@@ -16,90 +19,104 @@ namespace Ctx
 /-- A telescope over a context class together with a filling of it. -/
 def Ob.Term (X : Ob) : Type := Σ Θ : Ob.Tele X, Ob.Fill X Θ
 
-/-- 13.1: two telescopes with fillings declare the same arity, are equal, and
-their fillings agree. -/
+/-- Two telescopes with fillings declare the same arity, are equal, and their
+fillings agree. -/
 def Ob.Term.Rel {X : Ob} : Ob.Term X → Ob.Term X → Prop
   | ⟨⟨Ω, Θ, _⟩, σ, _⟩, ⟨⟨Ω', Θ', _⟩, σ', _⟩ =>
       ∃ h : Ω = Ω', Ob.Tele.Eq X (h ▸ Θ) Θ' ∧ Ob.Fill.Eq X (h ▸ Θ) (h ▸ σ) σ'
 
-theorem Ob.Term.Rel.refl {X : Ob} (t : Ob.Term X) : Ob.Term.Rel t t := by
-  refine Quotient.inductionOn (motive := fun X => ∀ t : Ob.Term X,
-    Ob.Term.Rel t t) X ?_ t
-  rintro _ ⟨⟨_, _, hΘ⟩, _, hσ⟩
+theorem Ob.Term.Rel.refl {X : Ob} (t : Ob.Term X) :
+  Ob.Term.Rel t t
+  := by
+  obtain ⟨_⟩ := X
+  obtain ⟨⟨_, _, hΘ⟩, _, hσ⟩ := t
   exact ⟨rfl, ⟨hΘ, Wf_t.refl hΘ⟩, hσ.1, hσ.2, Eq_s.refl hσ.2⟩
 
 theorem Ob.Term.Rel.symm {X : Ob} {t t' : Ob.Term X} (h : Ob.Term.Rel t t') :
-    Ob.Term.Rel t' t := by
-  refine Quotient.inductionOn (motive := fun X => ∀ t t' : Ob.Term X,
-    Ob.Term.Rel t t' → Ob.Term.Rel t' t) X ?_ t t' h
-  rintro Γ ⟨⟨_, _, _⟩, _, _⟩ ⟨⟨_, _, hΘ'⟩, _, hσ'⟩ ⟨rfl, ⟨hΘ, he⟩, _, hσ, hst⟩
+  Ob.Term.Rel t' t
+  := by
+  obtain ⟨Γ⟩ := X
+  obtain ⟨⟨_, _, _⟩, _, _⟩ := t
+  obtain ⟨⟨_, _, hΘ'⟩, _, hσ'⟩ := t'
+  obtain ⟨rfl, ⟨hΘ, he⟩, _, hσ, hst⟩ := h
   have hsym := Eq_t.symm Γ.wf he
   have hσ'Θ := Wf_s.ofEq_t Γ.wf hσ'.2 hsym
-  refine ⟨rfl, ⟨hΘ', hsym⟩, hΘ', hσ'.2, ?_⟩
-  exact Eq_s.ofEq_t Γ.wf (Eq_s.symm Γ.wf hst hΘ hσ hσ'Θ) hσ'Θ he
+  use rfl, ⟨hΘ', hsym⟩, hΘ', hσ'.2
+  apply Eq_s.ofEq_t Γ.wf (Eq_s.symm Γ.wf hst hΘ hσ hσ'Θ) hσ'Θ he
 
-theorem Ob.Term.Rel.trans {X : Ob} {t t' t'' : Ob.Term X} (h : Ob.Term.Rel t t')
-    (h' : Ob.Term.Rel t' t'') : Ob.Term.Rel t t'' := by
-  refine Quotient.inductionOn (motive := fun X => ∀ t t' t'' : Ob.Term X,
-    Ob.Term.Rel t t' → Ob.Term.Rel t' t'' → Ob.Term.Rel t t'') X ?_ t t' t'' h h'
-  rintro Γ ⟨⟨_, _, _⟩, _, _⟩ ⟨⟨_, _, _⟩, _, _⟩ ⟨⟨_, _, _⟩, _, _⟩
-    ⟨rfl, ⟨hΘ, he⟩, _, hσ, hst⟩ ⟨rfl, ⟨_, he'⟩, _, hσ', hst'⟩
+theorem Ob.Term.Rel.trans
+    {X : Ob} {t t' t'' : Ob.Term X}
+    (h : Ob.Term.Rel t t') (h' : Ob.Term.Rel t' t'') :
+  Ob.Term.Rel t t''
+  := by
+  obtain ⟨Γ⟩ := X
+  obtain ⟨⟨_, _, _⟩, _, _⟩ := t
+  obtain ⟨⟨_, _, _⟩, _, _⟩ := t'
+  obtain ⟨⟨_, _, _⟩, _, _⟩ := t''
+  obtain ⟨rfl, ⟨hΘ, he⟩, _, hσ, hst⟩ := h
+  obtain ⟨rfl, ⟨_, he'⟩, _, hσ', hst'⟩ := h'
   have hsym := Eq_t.symm Γ.wf he
   have hσ'Θ := Wf_s.ofEq_t Γ.wf hσ' hsym
-  refine ⟨rfl, ⟨hΘ, Eq_t.trans Γ.wf hΘ he he'⟩, hΘ, hσ, ?_⟩
-  exact Eq_s.trans Γ.wf hst (Eq_s.ofEq_t Γ.wf hst' hσ' hsym) hΘ hσ hσ'Θ
+  use rfl, ⟨hΘ, Eq_t.trans Γ.wf hΘ he he'⟩, hΘ, hσ
+  apply Eq_s.trans Γ.wf hst (Eq_s.ofEq_t Γ.wf hst' hσ' hsym) hΘ hσ hσ'Θ
 
-/-- 13.1 as a setoid on the telescopes with a filling. -/
+/-- The setoid of telescopes with a filling over `X` under `Ob.Term.Rel`. -/
 def Ob.Term.setoid (X : Ob) : Setoid (Ob.Term X) where
   r := Ob.Term.Rel
   iseqv := ⟨Ob.Term.Rel.refl, Ob.Term.Rel.symm, Ob.Term.Rel.trans⟩
 
-/-- Telescopes with fillings that agree componentwise agree. -/
-theorem Ob.Term.ext {X : Ob} {Ω : C.Arity} {Θ Θ' : dTel X.arity Ω}
+/-- Telescopes with fillings whose telescopes and fillings are equal are equal. -/
+theorem Ob.Term.ext
+    {X : Ob} {Ω : C.Arity} {Θ Θ' : dTel X.arity Ω}
     {hΘ : Ob.Tele.Wf X Θ} {hΘ' : Ob.Tele.Wf X Θ'}
-    {τ τ' : _root_.Subst Ω X.arity} {hτ : Ob.Fill.Wf X Θ τ}
-    {hτ' : Ob.Fill.Wf X Θ' τ'} (h : Θ = Θ') (h' : τ = τ') :
-    (⟨⟨Ω, Θ, hΘ⟩, τ, hτ⟩ : Ob.Term X) = ⟨⟨Ω, Θ', hΘ'⟩, τ', hτ'⟩ := by
+    {τ τ' : _root_.Subst Ω X.arity} {hτ : Ob.Fill.Wf X Θ τ} {hτ' : Ob.Fill.Wf X Θ' τ'}
+    (h : Θ = Θ') (h' : τ = τ') :
+  (⟨⟨Ω, Θ, hΘ⟩, τ, hτ⟩ : Ob.Term X) = ⟨⟨Ω, Θ', hΘ'⟩, τ', hτ'⟩
+  := by
   subst h
   subst h'
   rfl
 
 theorem Ob.Fill.Wf.subst {X Y : Ob} (σ : Ob.Subst X Y) (t : Ob.Term Y) :
-    Ob.Fill.Wf X (Ob.Tele.subst σ t.1).telescope
-      (_root_.Subst.applyEach σ.1 t.2.1) := by
-  refine Quotient.inductionOn₂ (motive := fun X Y => ∀ (σ : Ob.Subst X Y)
-    (t : Ob.Term Y), Ob.Fill.Wf X (Ob.Tele.subst σ t.1).telescope
-      (_root_.Subst.applyEach σ.1 t.2.1)) X Y ?_ σ t
-  intro _ _ σ t
-  exact ⟨Wf_t.subst_ambient σ.2.toWf_sub t.2.2.1,
-    Wf_s.subst_ambient σ.2.toWf_sub t.2.2.2⟩
+  Ob.Fill.Wf X (Ob.Tele.subst σ t.1).telescope (_root_.Subst.applyEach σ.1 t.2.1)
+  := by
+  obtain ⟨_⟩ := X
+  obtain ⟨_⟩ := Y
+  constructor
+  · apply Wf_t.subst_ambient σ.2.toWf_sub t.2.2.1
+  · apply Wf_s.subst_ambient σ.2.toWf_sub t.2.2.2
 
-/-- 13.1: the action of a filling on a telescope with a filling. -/
+/-- The filling `σ` substituted into the telescope of `t` and into every filler
+of its filling. -/
 def Ob.Term.subst {X Y : Ob} (σ : Ob.Subst X Y) (t : Ob.Term Y) : Ob.Term X :=
   ⟨Ob.Tele.subst σ t.1, _root_.Subst.applyEach σ.1 t.2.1, Ob.Fill.Wf.subst σ t⟩
 
-theorem Ob.Term.Rel.subst {X Y : Ob} {σ σ' : Ob.Subst X Y} {t t' : Ob.Term Y}
+theorem Ob.Term.Rel.subst
+    {X Y : Ob} {σ σ' : Ob.Subst X Y} {t t' : Ob.Term Y}
     (hσ : Ob.Subst.Rel X Y σ.1 σ'.1) (ht : Ob.Term.Rel t t') :
-    Ob.Term.Rel (Ob.Term.subst σ t) (Ob.Term.subst σ' t') := by
-  refine Quotient.inductionOn₂ (motive := fun X Y =>
-    ∀ (σ σ' : Ob.Subst X Y) (t t' : Ob.Term Y), Ob.Subst.Rel X Y σ.1 σ'.1 →
-      Ob.Term.Rel t t' → Ob.Term.Rel (Ob.Term.subst σ t) (Ob.Term.subst σ' t'))
-    X Y ?_ σ σ' t t' hσ ht
-  rintro Γ Δ σ σ' ⟨⟨_, _, _⟩, _, _⟩ ⟨⟨_, _, hΘ'⟩, _, hτ'w⟩ hs
-    ⟨rfl, ⟨hΘ, he⟩, _, hτ, hst⟩
-  have hτ'Θ := Wf_s.ofEq_t Δ.wf hτ'w.2 (Eq_t.symm Δ.wf he)
+  Ob.Term.Rel (Ob.Term.subst σ t) (Ob.Term.subst σ' t')
+  := by
+  obtain ⟨Γ⟩ := X
+  obtain ⟨Δ⟩ := Y
+  obtain ⟨⟨_, _, _⟩, _, _⟩ := t
+  obtain ⟨⟨_, _, hΘ'⟩, _, hτ'⟩ := t'
+  obtain ⟨rfl, ⟨hΘ, he⟩, _, hτ, hst⟩ := ht
   have hΘσ := Wf_t.subst_ambient σ.2.toWf_sub hΘ
   have hτσ := Wf_s.subst_ambient σ.2.toWf_sub hτ
-  refine ⟨rfl, ⟨hΘσ, ?tele⟩, hΘσ, hτσ, ?fill⟩
-  case tele =>
-    refine Eq_t.trans Γ.wf hΘσ (Eq_t.subst_ambient σ.2.toWf_sub he) ?_
-    exact Eq_t.agree Δ.wf Γ.wf σ.2.toWf_sub σ'.2.toWf_sub hs.2.toEq_sub hΘ'
-  case fill =>
-    refine Eq_s.trans Γ.wf (Eq_s.subst_ambient σ.2.toWf_sub hst) ?_ hΘσ hτσ
-      (Wf_s.subst_ambient σ.2.toWf_sub hτ'Θ)
-    exact Eq_s.agree Δ.wf Γ.wf σ.2.toWf_sub σ'.2.toWf_sub hs.2.toEq_sub hΘ hτ'Θ
+  use rfl
+  constructor
+  · use hΘσ
+    apply Eq_t.trans Γ.wf hΘσ (Eq_t.subst_ambient σ.2.toWf_sub he)
+    apply Eq_t.agree Δ.wf Γ.wf σ.2.toWf_sub σ'.2.toWf_sub hσ.2.toEq_sub hΘ'
+  · use hΘσ, hτσ
+    have hτ'Θ := Wf_s.ofEq_t Δ.wf hτ'.2 (Eq_t.symm Δ.wf he)
+    have hτ'σ := Wf_s.subst_ambient σ.2.toWf_sub hτ'Θ
+    apply Eq_s.trans Γ.wf (Eq_s.subst_ambient σ.2.toWf_sub hst) ?_ hΘσ hτσ hτ'σ
+    apply Eq_s.agree Δ.wf Γ.wf σ.2.toWf_sub σ'.2.toWf_sub hσ.2.toEq_sub hΘ hτ'Θ
 
-/-- 13.1: the presheaf of telescopes with a filling. -/
+/-- The presheaf sending a context class `X` to the classes of telescopes with a
+filling over `X`, a filling acting by substitution into the telescope and into
+every filler. -/
 def Tm : Obᵒᵖ ⥤ Type where
   obj X := Quotient (Ob.Term.setoid X.unop)
   map {X Y} f :=
@@ -108,352 +125,311 @@ def Tm : Obᵒᵖ ⥤ Type where
       Ob.Term.subst (fun _ _ hσ _ _ ht => Ob.Term.Rel.subst hσ ht) f.unop)
   map_id X := by
     ext t
-    refine Quotient.inductionOn t ?_
-    rintro ⟨⟨_, Θ₀, _⟩, τ₀, _⟩
-    refine congrArg (Quotient.mk (Ob.Term.setoid X.unop))
-      (Ob.Term.ext (dTel.actBase_id Θ₀) ?_)
+    obtain ⟨⟨⟨_, Θ, _⟩, _, _⟩⟩ := t
+    apply congrArg (Quotient.mk _)
+    apply Ob.Term.ext (dTel.actBase_id Θ)
     funext Λ i
-    exact act_id (Ob.arity X.unop) Λ (τ₀ i)
-  map_comp {X Y Z} f g := by
-    obtain ⟨u⟩ := f
-    obtain ⟨v⟩ := g
+    apply act_id
+  map_comp f g := by
+    obtain ⟨⟨σ⟩⟩ := f
+    obtain ⟨⟨θ⟩⟩ := g
     ext t
-    refine Quotient.inductionOn₃ u v t ?_
-    rintro σ θ ⟨⟨_, Θ₀, _⟩, τ₀, _⟩
-    refine congrArg (Quotient.mk (Ob.Term.setoid Z.unop))
-      (Ob.Term.ext (dTel.actBase_comp σ.1 θ.1 Θ₀) ?_)
+    obtain ⟨⟨⟨_, Θ, _⟩, _, _⟩⟩ := t
+    apply congrArg (Quotient.mk _)
+    apply Ob.Term.ext (dTel.actBase_comp σ.1 θ.1 Θ)
     funext Λ i
-    exact act_comp (Γ := 1) σ.1 θ.1 Λ (τ₀ i)
+    apply act_comp (Γ := 1)
 
 theorem Ob.Term.Rel.tele {X : Ob} {t t' : Ob.Term X} (h : Ob.Term.Rel t t') :
-    Ob.Tele.Rel t.1 t'.1 := by
-  obtain ⟨⟨_, _, _⟩, _, _⟩ := t
-  obtain ⟨⟨_, _, _⟩, _, _⟩ := t'
-  obtain ⟨rfl, hTele, _⟩ := h
-  exact ⟨rfl, hTele⟩
+  Ob.Tele.Rel t.1 t'.1
+  := ⟨h.1, h.2.1⟩
 
-/-- The class of the telescope carried by a telescope with a filling. -/
+/-- Sends the class of a telescope with a filling to the class of its telescope. -/
 def Ob.Term.tele {X : Ob} :
     Quotient (Ob.Term.setoid X) → Quotient (Ob.Tele.setoid X) :=
   Quotient.map Sigma.fst (fun _ _ h => Ob.Term.Rel.tele h)
 
-/-- 13.1: the projection forgetting the filling. -/
+/-- The natural transformation forgetting the filling. -/
 def q : Tm ⟶ Ty where
   app X := TypeCat.ofHom (Ob.Term.tele (X := X.unop))
-  naturality {X Y} f := by
-    obtain ⟨u⟩ := f
+  naturality _ _ f := by
+    obtain ⟨⟨_⟩⟩ := f
     ext t
-    refine Quotient.inductionOn₂ u t ?_
-    intro _ _
+    obtain ⟨_⟩ := t
     rfl
 
-/-- 13.1 on the telescopes with a filling lying over a fixed telescope. -/
+/-- The setoid, under `Ob.Term.Rel`, of the telescopes with a filling whose
+telescope is equal to `Θ`. -/
 def Ob.Term.fibreSetoid {X : Ob} (Θ : Ob.Tele X) :
     Setoid { s : Ob.Term X // Ob.Tele.Rel s.1 Θ } where
   r a b := Ob.Term.Rel a.1 b.1
   iseqv := ⟨fun a => Ob.Term.Rel.refl a.1, Ob.Term.Rel.symm, Ob.Term.Rel.trans⟩
 
-theorem Ob.Term.fibre_map {X : Ob} {Θ : Ob.Tele X}
+theorem Ob.Term.fibre_map
+    {X : Ob} {Θ : Ob.Tele X}
     (a b : { s : Ob.Term X // Ob.Tele.Rel s.1 Θ }) (h : Ob.Term.Rel a.1 b.1) :
-    Ob.Fill.Rel (Ob.Fill.ofRel a.2 a.1.2) (Ob.Fill.ofRel b.2 b.1.2) := by
-  refine Quotient.inductionOn (motive := fun X => ∀ (Θ : Ob.Tele X)
-    (a b : { s : Ob.Term X // Ob.Tele.Rel s.1 Θ }), Ob.Term.Rel a.1 b.1 →
-      Ob.Fill.Rel (Ob.Fill.ofRel a.2 a.1.2) (Ob.Fill.ofRel b.2 b.1.2))
-    X ?_ Θ a b h
-  rintro Ξ ⟨_, _, _⟩ ⟨⟨⟨_, _, _⟩, τ, hτ⟩, ⟨rfl, hwfa, heqa⟩⟩
-    ⟨⟨⟨_, _, _⟩, τ', hτ'⟩, ⟨rfl, _, _⟩⟩ ⟨_, ⟨_, _⟩, _, _, hst⟩
-  exact ⟨Wf_t.ofEq_t Ξ.wf hwfa heqa, Wf_s.ofEq_t Ξ.wf hτ.2 heqa,
-    Eq_s.ofEq_t Ξ.wf hst hτ.2 heqa⟩
+  Ob.Fill.Rel (Ob.Fill.ofRel a.2 a.1.2) (Ob.Fill.ofRel b.2 b.1.2)
+  := by
+  obtain ⟨Ξ⟩ := X
+  obtain ⟨_, _, _⟩ := Θ
+  obtain ⟨⟨⟨_, _, _⟩, _, hτ⟩, ⟨rfl, hΘ, he⟩⟩ := a
+  obtain ⟨⟨⟨_, _, _⟩, _, _⟩, ⟨rfl, _, _⟩⟩ := b
+  obtain ⟨_, _, _, _, hst⟩ := h
+  use Wf_t.ofEq_t Ξ.wf hΘ he, Wf_s.ofEq_t Ξ.wf hτ.2 he
+  apply Eq_s.ofEq_t Ξ.wf hst hτ.2 he
 
-theorem Ob.Term.fibre_comap {X : Ob} {Θ : Ob.Tele X} (τ τ' : Ob.Fill X Θ)
-    (h : Ob.Fill.Rel τ τ') :
-    Ob.Term.Rel (⟨Θ, τ⟩ : Ob.Term X) ⟨Θ, τ'⟩ := by
-  refine Quotient.inductionOn (motive := fun X => ∀ (Θ : Ob.Tele X)
-    (τ τ' : Ob.Fill X Θ), Ob.Fill.Rel τ τ' →
-      Ob.Term.Rel (⟨Θ, τ⟩ : Ob.Term X) ⟨Θ, τ'⟩) X ?_ Θ τ τ' h
-  rintro Ξ ⟨_, _, hΘ⟩ τ τ' h
+theorem Ob.Term.fibre_comap
+    {X : Ob} {Θ : Ob.Tele X}
+    (τ τ' : Ob.Fill X Θ) (h : Ob.Fill.Rel τ τ') :
+  Ob.Term.Rel (⟨Θ, τ⟩ : Ob.Term X) ⟨Θ, τ'⟩
+  := by
+  obtain ⟨_⟩ := X
+  obtain ⟨_, _, hΘ⟩ := Θ
   exact ⟨rfl, ⟨hΘ, Wf_t.refl hΘ⟩, h⟩
 
-theorem Ob.Term.fibre_left {X : Ob} {Θ : Ob.Tele X}
+theorem Ob.Term.fibre_left
+    {X : Ob} {Θ : Ob.Tele X}
     (s : { s : Ob.Term X // Ob.Tele.Rel s.1 Θ }) :
-    Ob.Term.Rel (⟨Θ, Ob.Fill.ofRel s.2 s.1.2⟩ : Ob.Term X) s.1 := by
-  refine Quotient.inductionOn (motive := fun X => ∀ (Θ : Ob.Tele X)
-    (s : { s : Ob.Term X // Ob.Tele.Rel s.1 Θ }),
-      Ob.Term.Rel (⟨Θ, Ob.Fill.ofRel s.2 s.1.2⟩ : Ob.Term X) s.1) X ?_ Θ s
-  rintro Ξ ⟨_, _, hΘ⟩ ⟨⟨⟨_, _, _⟩, τ, hτ⟩, ⟨rfl, _, heq⟩⟩
-  exact ⟨rfl, ⟨hΘ, Eq_t.symm Ξ.wf heq⟩, hΘ, Wf_s.ofEq_t Ξ.wf hτ.2 heq,
-    Eq_s.refl (Wf_s.ofEq_t Ξ.wf hτ.2 heq)⟩
+  Ob.Term.Rel (⟨Θ, Ob.Fill.ofRel s.2 s.1.2⟩ : Ob.Term X) s.1
+  := by
+  obtain ⟨Ξ⟩ := X
+  obtain ⟨_, _, hΘ⟩ := Θ
+  obtain ⟨⟨⟨_, _, _⟩, _, hτ⟩, ⟨rfl, _, he⟩⟩ := s
+  have hτΘ := Wf_s.ofEq_t Ξ.wf hτ.2 he
+  exact ⟨rfl, ⟨hΘ, Eq_t.symm Ξ.wf he⟩, hΘ, hτΘ, Eq_s.refl hτΘ⟩
 
-/-- 13.2: the telescopes with a filling lying over a telescope are its
-fillings. -/
+/-- Classes of telescopes with a filling whose telescope is equal to `Θ`
+correspond to classes of fillings of `Θ`. -/
 def Ob.Term.fibreEquiv {X : Ob} (Θ : Ob.Tele X) :
     Quotient (Ob.Term.fibreSetoid Θ) ≃ Quotient (Ob.Fill.setoid Θ) where
   toFun := Quotient.map (fun s => Ob.Fill.ofRel s.2 s.1.2) Ob.Term.fibre_map
   invFun := Quotient.map (fun τ => ⟨⟨Θ, τ⟩, Ob.Tele.Rel.refl Θ⟩)
     (fun _ _ h => Ob.Term.fibre_comap _ _ h)
   left_inv := by
-    refine Quotient.ind ?_
-    intro s
-    exact Quotient.sound (Ob.Term.fibre_left s)
+    rintro ⟨s⟩
+    apply Quotient.sound (Ob.Term.fibre_left s)
   right_inv := by
-    refine Quotient.ind ?_
-    intro _
+    rintro ⟨_⟩
     rfl
 
-/-- A telescope with a filling lies over a telescope exactly when its class
-does. -/
-theorem Ob.Term.tele_eq_iff {X : Ob} {Θ : Ob.Tele X} (s : Ob.Term X) :
-    Ob.Tele.Rel s.1 Θ ↔ Ob.Term.tele ⟦s⟧ = ⟦Θ⟧ :=
-  ⟨fun h => Quotient.sound h, fun h => Quotient.exact h⟩
-
-/-- 13.2: the fibre of `q` over a telescope is the fillings of that
-telescope. -/
-def Ob.fillEquiv {X : Ob} (Θ : Ob.Tele X) :
-    { t : Quotient (Ob.Term.setoid X) // Ob.Term.tele t = ⟦Θ⟧ }
-      ≃ Quotient (Ob.Fill.setoid Θ) :=
-  (Equiv.subtypeQuotientEquivQuotientSubtype (s₂ := Ob.Term.fibreSetoid Θ)
-      (fun s => Ob.Tele.Rel s.1 Θ) (fun t => Ob.Term.tele t = ⟦Θ⟧)
-      Ob.Term.tele_eq_iff (fun _ _ => Iff.rfl)).trans
-    (Ob.Term.fibreEquiv Θ)
-
-/-- The weakening of an extension splits into the two weakenings. -/
+/-- `Γ.ambient ⋈ Θ.telescope` renamed into the arity of `Ξ` is `Γ.ambient` renamed
+into the arity of `Ξ`, concatenated with `Θ.telescope` renamed along
+`Renaming.inr`. -/
 theorem weaken_extend (Ξ Γ : Ctx) (Θ : Ob.Tele Γ.toOb) :
-    dTel.rename (Renaming.fromUnit Ξ.arity) (Γ.ambient ⋈ Θ.telescope)
-      = dTel.concatenate (dTel.rename (Renaming.fromUnit Ξ.arity) Γ.ambient)
-          (dTel.rename (Renaming.inr Ξ.arity Γ.arity) Θ.telescope) := by
-  refine (dTel.rename_concatenate _ Γ.ambient Θ.telescope).trans ?_
-  exact congrArg (fun ρ => dTel.concatenate
-    (dTel.rename (Renaming.fromUnit Ξ.arity) Γ.ambient) (dTel.rename ρ Θ.telescope))
-    (Renaming.fromUnit_extend Ξ.arity Γ.arity)
+  dTel.rename (Renaming.fromUnit Ξ.arity) (Γ.ambient ⋈ Θ.telescope)
+    = dTel.concatenate (dTel.rename (Renaming.fromUnit Ξ.arity) Γ.ambient)
+        (dTel.rename (Renaming.inr Ξ.arity Γ.arity) Θ.telescope)
+  := by
+  rw [dTel.rename_concatenate, Renaming.fromUnit_extend]
+  rfl
 
-/-- The first half of a filling of an extension fills the base. -/
+/-- The restriction to the slots of `Γ` of a filling from `X` to `Γ` extended by
+`Θ` is a filling from `X` to `Γ`. -/
 theorem Ob.Subst.Wf.left {X : Ob} {Γ : Ctx} {Θ : Ob.Tele Γ.toOb}
-    (κ : Ob.Subst X (Ctx.extend Γ Θ)) :
-    Ob.Subst.Wf X Γ.toOb (fun ⦃α⦄ (w : Γ.arity ∋ α) => κ.1 (C.inl w)) := by
-  refine Quotient.inductionOn (motive := fun X =>
-    ∀ κ : Ob.Subst X (Ctx.extend Γ Θ),
-      Ob.Subst.Wf X Γ.toOb (fun ⦃α⦄ (w : Γ.arity ∋ α) => κ.1 (C.inl w))) X ?_ κ
-  intro Ξ κ
-  exact Wf_s.concatenate_left
-    (Eq.mp (congrArg (fun T => Wf_s Ξ.ambient T κ.1) (weaken_extend Ξ Γ Θ)) κ.2)
+    (κ : Ob.Subst X (extend Γ Θ)) :
+  Ob.Subst.Wf X Γ.toOb (fun ⦃α⦄ (w : Γ.arity ∋ α) => κ.1 (C.inl w))
+  := by
+  obtain ⟨Ξ⟩ := X
+  apply Wf_s.concatenate_left (Θ := dTel.rename (Renaming.fromUnit Ξ.arity) Γ.ambient)
+    (X := dTel.rename (Renaming.inr Ξ.arity Γ.arity) Θ.telescope)
+  rw [← weaken_extend]
+  apply κ.2
 
-/-- The second half of a filling of an extension fills the telescope. -/
+/-- The fillers at the slots of `Θ` of a filling `κ` from `X` to `Γ` extended by
+`Θ` fill `Θ` with the restriction of `κ` to `Γ` substituted. -/
 theorem Ob.Fill.Wf.right {X : Ob} {Γ : Ctx} {Θ : Ob.Tele Γ.toOb}
-    (κ : Ob.Subst X (Ctx.extend Γ Θ)) :
-    Ob.Fill.Wf X
-        (dTel.actBase (fun ⦃α⦄ (w : Γ.arity ∋ α) => κ.1 (C.inl w)) Θ.telescope)
-        (fun ⦃α⦄ (z : Θ.arity ∋ α) => κ.1 (C.inr z)) := by
-  refine Quotient.inductionOn (motive := fun X =>
-    ∀ κ : Ob.Subst X (Ctx.extend Γ Θ), Ob.Fill.Wf X
-      (dTel.actBase (fun ⦃α⦄ (w : Γ.arity ∋ α) => κ.1 (C.inl w)) Θ.telescope)
-      (fun ⦃α⦄ (z : Θ.arity ∋ α) => κ.1 (C.inr z))) X ?_ κ
-  intro Ξ κ
-  have hcat := Eq.mp (congrArg (fun T => Wf_s Ξ.ambient T κ.1)
-    (weaken_extend Ξ Γ Θ)) κ.2
-  refine ⟨Wf_t.subst_ambient (Wf_s.toWf_sub (Wf_s.concatenate_left hcat)) Θ.wf, ?_⟩
-  exact Eq.mp (congrArg (fun T => Wf_s Ξ.ambient T
-    (fun ⦃α⦄ (z : Θ.arity ∋ α) => κ.1 (C.inr z)))
-    (dTel.instantiate_weaken _ Θ.telescope)) (Wf_s.concatenate_right hcat)
+    (κ : Ob.Subst X (extend Γ Θ)) :
+  Ob.Fill.Wf X
+    (dTel.actBase (fun ⦃α⦄ (w : Γ.arity ∋ α) => κ.1 (C.inl w)) Θ.telescope)
+    (fun ⦃α⦄ (z : Θ.arity ∋ α) => κ.1 (C.inr z))
+  := by
+  obtain ⟨Ξ⟩ := X
+  constructor
+  · apply Wf_t.subst_ambient (Ob.Subst.Wf.left κ).toWf_sub Θ.wf
+  · rw [← dTel.instantiate_weaken]
+    apply Wf_s.concatenate_right (Θ := dTel.rename (Renaming.fromUnit Ξ.arity) Γ.ambient)
+      (X := dTel.rename (Renaming.inr Ξ.arity Γ.arity) Θ.telescope)
+    rw [← weaken_extend]
+    apply κ.2
 
-/-- A filling of the base and a filling of the telescope pair to a filling of the
-extension. -/
-theorem Ob.Subst.Wf.pair {X : Ob} {Γ : Ctx} {Θ : Ob.Tele Γ.toOb}
+/-- A filling `σ` from `X` to `Γ` and a filling of `Θ` with `σ` substituted pair
+to a filling from `X` to `Γ` extended by `Θ`. -/
+theorem Ob.Subst.Wf.pair
+    {X : Ob} {Γ : Ctx} {Θ : Ob.Tele Γ.toOb}
     (σ : Ob.Subst X Γ.toOb) (τ : _root_.Subst Θ.arity X.arity)
     (hτ : Ob.Fill.Wf X (dTel.actBase σ.1 Θ.telescope) τ) :
-    Ob.Subst.Wf X (Ctx.extend Γ Θ) (Subst.copair σ.1 τ) := by
-  refine Quotient.inductionOn (motive := fun X =>
-    ∀ (σ : Ob.Subst X Γ.toOb) (τ : _root_.Subst Θ.arity (Ob.arity X)),
-      Ob.Fill.Wf X (dTel.actBase σ.1 Θ.telescope) τ →
-        Ob.Subst.Wf X (Ctx.extend Γ Θ) (Subst.copair σ.1 τ)) X ?_ σ τ hτ
-  intro Ξ σ τ hτ
-  refine Eq.mp (congrArg (fun T => Wf_s Ξ.ambient T (Subst.copair σ.1 τ))
-    (weaken_extend Ξ Γ Θ).symm) ?_
-  refine Wf_s.concatenate σ.2 ?_
-  exact Eq.mp (congrArg (fun T => Wf_s Ξ.ambient T τ)
-    (dTel.instantiate_weaken σ.1 Θ.telescope).symm) hτ.2
+  Ob.Subst.Wf X (extend Γ Θ) (Subst.copair σ.1 τ)
+  := by
+  obtain ⟨Ξ⟩ := X
+  apply Eq.mpr (congrArg (fun T => Wf_s Ξ.ambient T _) (weaken_extend Ξ Γ Θ))
+  apply Wf_s.concatenate σ.2
+  convert hτ.2 using 1
+  apply dTel.instantiate_weaken
 
-/-- The base half of a filling of an extension. -/
+/-- The restriction to the slots of `Γ` of a filling from `X` to `Γ` extended by
+`Θ`. -/
 def Ob.Subst.left {X : Ob} {Γ : Ctx} {Θ : Ob.Tele Γ.toOb}
-    (κ : Ob.Subst X (Ctx.extend Γ Θ)) : Ob.Subst X Γ.toOb :=
+    (κ : Ob.Subst X (extend Γ Θ)) : Ob.Subst X Γ.toOb :=
   ⟨fun ⦃α⦄ (w : Γ.arity ∋ α) => κ.1 (C.inl w), Ob.Subst.Wf.left κ⟩
 
-/-- The telescope half of a filling of an extension. -/
+/-- The fillers at the slots of `Θ` of a filling from `X` to `Γ` extended by
+`Θ`. -/
 def Ob.Subst.right {X : Ob} {Γ : Ctx} {Θ : Ob.Tele Γ.toOb}
-    (κ : Ob.Subst X (Ctx.extend Γ Θ)) : _root_.Subst Θ.arity X.arity :=
+    (κ : Ob.Subst X (extend Γ Θ)) : _root_.Subst Θ.arity X.arity :=
   fun ⦃α⦄ (z : Θ.arity ∋ α) => κ.1 (C.inr z)
 
-/-- 13.2: a filling of an extension is a filling of the base together with a
-filling of the telescope it carries. -/
+/-- Fillings from `X` to `Γ` extended by `Θ` correspond to pairs of a filling `σ`
+from `X` to `Γ` and a filling of `Θ` with `σ` substituted. -/
 def splitEquiv (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb) :
-    Ob.Subst X (Ctx.extend Γ Θ) ≃
+    Ob.Subst X (extend Γ Θ) ≃
       { p : Ob.Subst X Γ.toOb × _root_.Subst Θ.arity X.arity //
           Ob.Fill.Wf X (dTel.actBase p.1.1 Θ.telescope) p.2 } where
   toFun κ := ⟨(κ.left, κ.right), Ob.Fill.Wf.right κ⟩
   invFun p := ⟨Subst.copair p.1.1.1 p.1.2, Ob.Subst.Wf.pair p.1.1 p.1.2 p.2⟩
   left_inv κ := Subtype.ext (Subst.copair_eta κ.1)
   right_inv p := by
-    refine Subtype.ext (Prod.ext (Subtype.ext ?_) ?_)
-    · exact Subst.copair_left p.1.1.1 p.1.2
-    · exact Subst.copair_right p.1.1.1 p.1.2
+    apply Subtype.ext
+    apply Prod.ext
+    · apply Subtype.ext
+      apply Subst.copair_left
+    · apply Subst.copair_right
 
-/-- The splitting respects 9.2 on both sides. -/
-theorem splitEquiv_rel (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
-    (κ κ' : Ob.Subst X (Ctx.extend Γ Θ)) :
-    Ob.Subst.Rel X (Ctx.extend Γ Θ) κ.1 κ'.1
-      ↔ Ob.Subst.Rel X Γ.toOb κ.left.1 κ'.left.1 ∧
-          Ob.Fill.Eq X (dTel.actBase κ.left.1 Θ.telescope) κ.right κ'.right := by
-  refine Quotient.inductionOn (motive := fun X =>
-    ∀ κ κ' : Ob.Subst X (Ctx.extend Γ Θ),
-      (Ob.Subst.Rel X (Ctx.extend Γ Θ) κ.1 κ'.1
-        ↔ Ob.Subst.Rel X Γ.toOb κ.left.1 κ'.left.1 ∧
-            Ob.Fill.Eq X (dTel.actBase κ.left.1 Θ.telescope) κ.right κ'.right))
-    X ?_ κ κ'
-  intro Ξ κ κ'
+/-- Two fillings from `X` to `Γ` extended by `Θ` agree exactly when their
+restrictions to `Γ` agree and their fillers at the slots of `Θ` agree as
+fillings of `Θ` with the first restriction substituted. -/
+theorem splitEquiv_rel
+    (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
+    (κ κ' : Ob.Subst X (extend Γ Θ)) :
+  Ob.Subst.Rel X (extend Γ Θ) κ.1 κ'.1
+    ↔ Ob.Subst.Rel X Γ.toOb κ.left.1 κ'.left.1 ∧
+        Ob.Fill.Eq X (dTel.actBase κ.left.1 Θ.telescope) κ.right κ'.right
+  := by
+  obtain ⟨Ξ⟩ := X
   constructor
   · rintro ⟨hwf, heq⟩
-    have hwf' := Eq.mp (congrArg (fun T => Wf_s Ξ.ambient T κ.1)
-      (weaken_extend Ξ Γ Θ)) hwf
-    have heq' := Eq.mp (congrArg (fun T => Eq_s Ξ.ambient T κ.1 κ'.1)
-      (weaken_extend Ξ Γ Θ)) heq
-    refine ⟨⟨Wf_s.concatenate_left hwf', Eq_s.concatenate_left heq'⟩,
-      Wf_t.subst_ambient (Wf_s.toWf_sub (Wf_s.concatenate_left hwf')) Θ.wf, ?_, ?_⟩
-    · exact Eq.mp (congrArg (fun T => Wf_s Ξ.ambient T κ.right)
-        (dTel.instantiate_weaken _ Θ.telescope)) (Wf_s.concatenate_right hwf')
-    · exact Eq.mp (congrArg (fun T => Eq_s Ξ.ambient T κ.right κ'.right)
-        (dTel.instantiate_weaken _ Θ.telescope)) (Eq_s.concatenate_right heq')
+    rw [weaken_extend] at hwf heq
+    have hleft := Wf_s.concatenate_left hwf
+    constructor
+    · exact ⟨hleft, Eq_s.concatenate_left heq⟩
+    · use Wf_t.subst_ambient hleft.toWf_sub Θ.wf
+      constructor
+      · rw [← dTel.instantiate_weaken]
+        apply Wf_s.concatenate_right hwf
+      · rw [← dTel.instantiate_weaken]
+        apply Eq_s.concatenate_right heq
   · rintro ⟨⟨hσ, hst⟩, _, hτ, htt⟩
-    have hτ' := Eq.mp (congrArg (fun T => Wf_s Ξ.ambient T κ.right)
-      (dTel.instantiate_weaken κ.left.1 Θ.telescope).symm) hτ
-    have htt' := Eq.mp (congrArg (fun T => Eq_s Ξ.ambient T κ.right κ'.right)
-      (dTel.instantiate_weaken κ.left.1 Θ.telescope).symm) htt
-    refine ⟨?_, ?_⟩
-    · refine Eq.mp (congrArg₂ (fun (T : dTel Ξ.arity (Γ.arity ⋈ Θ.arity)) s => Wf_s Ξ.ambient T s)
-        (weaken_extend Ξ Γ Θ).symm (Subst.copair_eta κ.1)) ?_
-      exact Wf_s.concatenate hσ hτ'
-    · refine Eq.mp (congrArg₂ (fun (T : dTel Ξ.arity (Γ.arity ⋈ Θ.arity))
-        (p : _root_.Subst (Γ.arity ⋈ Θ.arity) Ξ.arity ×
-             _root_.Subst (Γ.arity ⋈ Θ.arity) Ξ.arity) => Eq_s Ξ.ambient T p.1 p.2)
-        (weaken_extend Ξ Γ Θ).symm
-        (congrArg₂ Prod.mk (Subst.copair_eta κ.1) (Subst.copair_eta κ'.1))) ?_
-      exact Eq_s.concatenate hst htt'
+    rw [← dTel.instantiate_weaken] at hτ htt
+    constructor
+    · rw [weaken_extend, ← Subst.copair_eta κ.1]
+      apply Wf_s.concatenate hσ hτ
+    · rw [weaken_extend, ← Subst.copair_eta κ.1, ← Subst.copair_eta κ'.1]
+      apply Eq_s.concatenate hst htt
 
 section
 
 variable {X : Ob} {Γ : Ctx} {Θ : Ob.Tele Γ.toOb}
 
-/-- A telescope with a filling, paired with a filling of the base it lies
-over. -/
+/-- A telescope with a filling over `X` together with a filling `σ` from `X` to
+`Γ`, such that the telescope is equal to `Θ` with `σ` substituted. -/
 def Ob.Pair (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb) : Type :=
   { p : Ob.Term X × Ob.Subst X Γ.toOb //
       Ob.Tele.Rel p.1.1 (Ob.Tele.subst p.2 Θ) }
 
-/-- 13.1 and 9.2 componentwise on such pairs. -/
+/-- The setoid on `Ob.Pair X Γ Θ` given by `Ob.Term.Rel` on the telescopes with a
+filling and `Ob.Subst.Rel` on the fillings from `X` to `Γ`. -/
 def Ob.Pair.setoid (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb) :
     Setoid (Ob.Pair X Γ Θ) where
   r a b := Ob.Term.Rel a.1.1 b.1.1 ∧ Ob.Subst.Rel X Γ.toOb a.1.2.1 b.1.2.1
-  iseqv := ⟨fun a => ⟨Ob.Term.Rel.refl a.1.1, Ob.Subst.Rel.refl a.1.2⟩,
-    fun h => ⟨Ob.Term.Rel.symm h.1, Ob.Subst.Rel.symm h.2⟩,
-    fun h h' => ⟨Ob.Term.Rel.trans h.1 h'.1, Ob.Subst.Rel.trans h.2 h'.2⟩⟩
+  iseqv.refl a := ⟨Ob.Term.Rel.refl a.1.1, Ob.Subst.Rel.refl a.1.2⟩
+  iseqv.symm h := ⟨Ob.Term.Rel.symm h.1, Ob.Subst.Rel.symm h.2⟩
+  iseqv.trans h h' := ⟨Ob.Term.Rel.trans h.1 h'.1, Ob.Subst.Rel.trans h.2 h'.2⟩
 
-/-- The filling of the telescope carried by such a pair. -/
+/-- The filling carried by `a`, as a filling of `Θ` with `a.1.2` substituted. -/
 def Ob.Pair.fill {X : Ob} {Γ : Ctx} {Θ : Ob.Tele Γ.toOb} (a : Ob.Pair X Γ Θ) :
     Ob.Fill X (Ob.Tele.subst a.1.2 Θ) :=
   Ob.Fill.ofRel a.2 a.1.1.2
 
-/-- The filling of the extension determined by such a pair. -/
+/-- The filling from `X` to `Γ` extended by `Θ` that is `a.1.2` on the slots of
+`Γ` and `a.fill` on the slots of `Θ`. -/
 def Ob.Pair.subst {X : Ob} {Γ : Ctx} {Θ : Ob.Tele Γ.toOb} (a : Ob.Pair X Γ Θ) :
-    Ob.Subst X (Ctx.extend Γ Θ) :=
-  (Ctx.splitEquiv X Γ Θ).symm ⟨(a.1.2, a.fill.1), a.fill.2⟩
+    Ob.Subst X (extend Γ Θ) :=
+  (splitEquiv X Γ Θ).symm ⟨(a.1.2, a.fill.1), a.fill.2⟩
 
-/-- The pair determined by a filling of the extension. -/
+/-- The telescope `Θ` with `κ.left` substituted, filled by `κ.right`, paired with
+`κ.left`. -/
 def Ob.Subst.toPair {X : Ob} {Γ : Ctx} {Θ : Ob.Tele Γ.toOb}
-    (κ : Ob.Subst X (Ctx.extend Γ Θ)) : Ob.Pair X Γ Θ :=
+    (κ : Ob.Subst X (extend Γ Θ)) : Ob.Pair X Γ Θ :=
   ⟨(⟨Ob.Tele.subst κ.left Θ, κ.right, Ob.Fill.Wf.right κ⟩, κ.left),
     Ob.Tele.Rel.refl _⟩
 
-
-theorem Ob.Pair.subst_left (a : Ob.Pair X Γ Θ) : a.subst.left = a.1.2 :=
-  Subtype.ext (Subst.copair_left a.1.2.1 a.fill.1)
-
-theorem Ob.Pair.subst_right (a : Ob.Pair X Γ Θ) : a.subst.right = a.fill.1 :=
-  Subst.copair_right a.1.2.1 a.fill.1
-
-theorem Ob.Subst.toPair_subst (κ : Ob.Subst X (Ctx.extend Γ Θ)) :
-    κ.toPair.subst = κ :=
-  (Ctx.splitEquiv X Γ Θ).left_inv κ
+theorem Ob.Subst.toPair_subst (κ : Ob.Subst X (extend Γ Θ)) :
+  κ.toPair.subst = κ
+  := (splitEquiv X Γ Θ).left_inv κ
 
 theorem Ob.Pair.subst_toPair (a : Ob.Pair X Γ Θ) :
-    Ob.Term.Rel a.subst.toPair.1.1 a.1.1 ∧
-      Ob.Subst.Rel X Γ.toOb a.subst.toPair.1.2.1 a.1.2.1 := by
-  refine Quotient.inductionOn (motive := fun X => ∀ a : Ob.Pair X Γ Θ,
-    Ob.Term.Rel a.subst.toPair.1.1 a.1.1 ∧
-      Ob.Subst.Rel X Γ.toOb a.subst.toPair.1.2.1 a.1.2.1) X ?_ a
-  rintro Ξ ⟨⟨⟨⟨_, _, _⟩, τ, hτ⟩, σ⟩, ⟨rfl, hwf, heq⟩⟩
+  Ob.Term.Rel a.subst.toPair.1.1 a.1.1
+    ∧ Ob.Subst.Rel X Γ.toOb a.subst.toPair.1.2.1 a.1.2.1
+  := by
+  obtain ⟨Ξ⟩ := X
+  obtain ⟨⟨⟨⟨_, _, _⟩, τ, hτ⟩, σ⟩, ⟨rfl, hwf, heq⟩⟩ := a
   have hl := Subst.copair_left σ.1 τ
-  have hr := Subst.copair_right σ.1 τ
   have hwfσ := Wf_t.ofEq_t Ξ.wf hwf heq
   have hτσ := Wf_s.ofEq_t Ξ.wf hτ.2 heq
-  refine ⟨⟨rfl, ?tele, ?fill⟩, ?base⟩
-  case tele =>
-    refine Eq.mp (congrArg (fun s => Ob.Tele.Eq (Quotient.mk Ctx.setoid Ξ)
-      (dTel.actBase s Θ.telescope) _) hl.symm) ?_
-    exact ⟨hwfσ, Eq_t.symm Ξ.wf heq⟩
-  case fill =>
-    refine Eq.mp (congrArg₂ (fun s (t : _root_.Subst Θ.arity Ξ.arity) =>
-      Ob.Fill.Eq (Quotient.mk Ctx.setoid Ξ)
-        (dTel.actBase s Θ.telescope) t τ) hl.symm hr.symm) ?_
-    exact ⟨hwfσ, hτσ, Eq_s.refl hτσ⟩
-  case base =>
-    refine Eq.mp (congrArg (fun s => Ob.Subst.Rel (Quotient.mk Ctx.setoid Ξ)
-      Γ.toOb s σ.1) hl.symm) ?_
-    exact Ob.Subst.Rel.refl σ
+  constructor
+  · use rfl
+    constructor
+    · apply Eq.mpr (congrArg (fun s => Ob.Tele.Eq ⟦Ξ⟧ (dTel.actBase s Θ.telescope) _) hl)
+      exact ⟨hwfσ, Eq_t.symm Ξ.wf heq⟩
+    · apply Eq.mpr (congrArg₂ (fun s (t : _root_.Subst Θ.arity Ξ.arity) =>
+        Ob.Fill.Eq ⟦Ξ⟧ (dTel.actBase s Θ.telescope) t τ) hl (Subst.copair_right σ.1 τ))
+      exact ⟨hwfσ, hτσ, Eq_s.refl hτσ⟩
+  · convert Ob.Subst.Rel.refl σ using 2
+    apply Subtype.ext hl
 
-theorem Ob.Pair.subst_congr (a b : Ob.Pair X Γ Θ)
+theorem Ob.Pair.subst_congr
+    (a b : Ob.Pair X Γ Θ)
     (h : Ob.Term.Rel a.1.1 b.1.1 ∧ Ob.Subst.Rel X Γ.toOb a.1.2.1 b.1.2.1) :
-    Ob.Subst.Rel X (Ctx.extend Γ Θ) a.subst.1 b.subst.1 := by
-  refine Quotient.inductionOn (motive := fun X => ∀ (a b : Ob.Pair X Γ Θ),
-    (Ob.Term.Rel a.1.1 b.1.1 ∧ Ob.Subst.Rel X Γ.toOb a.1.2.1 b.1.2.1) →
-      Ob.Subst.Rel X (Ctx.extend Γ Θ) a.subst.1 b.subst.1) X ?_ a b h
-  rintro Ξ ⟨⟨⟨⟨_, _, _⟩, τ, hτ⟩, σ⟩, ⟨rfl, hwfa, heqa⟩⟩
-    ⟨⟨⟨⟨_, _, _⟩, τ', hτ'⟩, σ'⟩, ⟨rfl, _, _⟩⟩ ⟨⟨_, ⟨_, _⟩, _, _, hst⟩, hσσ⟩
-  refine (Ctx.splitEquiv_rel _ Γ Θ _ _).mpr ⟨?base, ?fill⟩
-  case base =>
-    exact Eq.mp (congrArg₂ (fun s t => Ob.Subst.Rel (Quotient.mk Ctx.setoid Ξ)
-      Γ.toOb s t) (Subst.copair_left σ.1 τ).symm
-      (Subst.copair_left σ'.1 τ').symm) hσσ
-  case fill =>
-    refine Eq.mp (congrArg (fun s => Ob.Fill.Eq (Quotient.mk Ctx.setoid Ξ)
-      (dTel.actBase s Θ.telescope) _ _) (Subst.copair_left σ.1 τ).symm) ?_
-    refine Eq.mp (congrArg₂ (fun (s t : _root_.Subst Θ.arity Ξ.arity) =>
-      Ob.Fill.Eq (Quotient.mk Ctx.setoid Ξ)
-        (dTel.actBase σ.1 Θ.telescope) s t)
-      (Subst.copair_right σ.1 τ).symm (Subst.copair_right σ'.1 τ').symm) ?_
-    exact ⟨Wf_t.ofEq_t Ξ.wf hwfa heqa, Wf_s.ofEq_t Ξ.wf hτ.2 heqa,
-      Eq_s.ofEq_t Ξ.wf hst hτ.2 heqa⟩
+  Ob.Subst.Rel X (extend Γ Θ) a.subst.1 b.subst.1
+  := by
+  obtain ⟨Ξ⟩ := X
+  obtain ⟨⟨⟨⟨_, _, _⟩, τ, hτ⟩, σ⟩, ⟨rfl, hwfa, heqa⟩⟩ := a
+  obtain ⟨⟨⟨⟨_, _, _⟩, τ', _⟩, σ'⟩, ⟨rfl, _, _⟩⟩ := b
+  obtain ⟨⟨_, ⟨_, _⟩, _, _, hst⟩, hσσ⟩ := h
+  apply (splitEquiv_rel _ Γ Θ _ _).mpr
+  constructor
+  · convert hσσ using 2
+    · apply Subtype.ext (Subst.copair_left σ.1 τ)
+    · apply Subtype.ext (Subst.copair_left σ'.1 τ')
+  · have hττ' : Ob.Fill.Eq ⟦Ξ⟧ (dTel.actBase σ.1 Θ.telescope) τ τ' := by
+      use Wf_t.ofEq_t Ξ.wf hwfa heqa, Wf_s.ofEq_t Ξ.wf hτ.2 heqa
+      apply Eq_s.ofEq_t Ξ.wf hst hτ.2 heqa
+    convert hττ' using 2
+    · apply Subst.copair_left
+    · apply Subst.copair_right
+    · apply Subst.copair_right
 
-theorem Ob.Subst.toPair_congr (κ κ' : Ob.Subst X (Ctx.extend Γ Θ))
-    (h : Ob.Subst.Rel X (Ctx.extend Γ Θ) κ.1 κ'.1) :
-    Ob.Term.Rel κ.toPair.1.1 κ'.toPair.1.1 ∧
-      Ob.Subst.Rel X Γ.toOb κ.toPair.1.2.1 κ'.toPair.1.2.1 := by
-  obtain ⟨hσ, hfill⟩ := (Ctx.splitEquiv_rel X Γ Θ κ κ').mp h
+theorem Ob.Subst.toPair_congr
+    (κ κ' : Ob.Subst X (extend Γ Θ))
+    (h : Ob.Subst.Rel X (extend Γ Θ) κ.1 κ'.1) :
+  Ob.Term.Rel κ.toPair.1.1 κ'.toPair.1.1
+    ∧ Ob.Subst.Rel X Γ.toOb κ.toPair.1.2.1 κ'.toPair.1.2.1
+  := by
+  obtain ⟨hσ, hfill⟩ := (splitEquiv_rel X Γ Θ κ κ').mp h
   obtain ⟨_, htele⟩ := Ob.Tele.Rel.subst hσ (Ob.Tele.Rel.refl Θ)
   exact ⟨⟨rfl, htele, hfill⟩, hσ⟩
 
-/-- 13.2: a filling of an extension is a telescope with a filling lying over the
-telescope, paired with a filling of the base. -/
+/-- Classes of pairs in `Ob.Pair X Γ Θ` correspond to morphisms from `X` to `Γ`
+extended by `Θ`. -/
 def pairEquiv (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb) :
-    Quotient (Ob.Pair.setoid X Γ Θ) ≃ (X ⟶ Ctx.extend Γ Θ) where
+    Quotient (Ob.Pair.setoid X Γ Θ) ≃ (X ⟶ extend Γ Θ) where
   toFun := Quotient.map Ob.Pair.subst (fun _ _ h => Ob.Pair.subst_congr _ _ h)
   invFun := Quotient.map Ob.Subst.toPair (fun _ _ h => Ob.Subst.toPair_congr _ _ h)
   left_inv := by
-    refine Quotient.ind ?_
-    intro a
-    exact Quotient.sound (Ob.Pair.subst_toPair a)
+    rintro ⟨a⟩
+    apply Quotient.sound (Ob.Pair.subst_toPair a)
   right_inv := by
-    refine Quotient.ind ?_
-    intro κ
-    exact congrArg (Quotient.mk (Ob.Subst.setoid X (Ctx.extend Γ Θ)))
-      (Ob.Subst.toPair_subst κ)
+    rintro ⟨κ⟩
+    apply congrArg (Quotient.mk _) (Ob.Subst.toPair_subst κ)
 
 end
 
@@ -461,33 +437,28 @@ section
 
 variable (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
 
-/-- 13.2: the telescope of an extension read over the extension. -/
-def genericTele : Ob.Tele (Ctx.extend Γ Θ) :=
+/-- The telescope `Θ` with its base renamed along `Renaming.inl`, as a telescope
+over `Γ` extended by `Θ`. -/
+def genericTele : Ob.Tele (extend Γ Θ) :=
   ⟨Θ.arity, _, Wf_t.weaken (Ambient.Renaming.weaken Γ.ambient Θ.telescope) Θ.wf⟩
 
-theorem generic_wf : Ob.Fill.Wf (Ctx.extend Γ Θ) (genericTele Γ Θ).telescope
-    (_root_.Subst.instId Γ.arity Θ.arity) :=
-  ⟨(genericTele Γ Θ).wf, Wf_s.eta Γ.ambient Θ.telescope Θ.wf⟩
+theorem generic_wf :
+  Ob.Fill.Wf (extend Γ Θ) (genericTele Γ Θ).telescope (_root_.Subst.instId Γ.arity Θ.arity)
+  := ⟨(genericTele Γ Θ).wf, Wf_s.eta Γ.ambient Θ.telescope Θ.wf⟩
 
-/-- 13.2: the generic telescope with a filling, each slot filled by itself. -/
-def generic : Ob.Term (Ctx.extend Γ Θ) :=
+/-- The telescope `genericTele Γ Θ` with the filling `Subst.instId Γ.arity Θ.arity`,
+which sends each slot `z` of `Θ` to the η-expansion of `C.inr z`. -/
+def generic : Ob.Term (extend Γ Θ) :=
   ⟨genericTele Γ Θ, _root_.Subst.instId Γ.arity Θ.arity, generic_wf Γ Θ⟩
 
-theorem Ty_map_mk {X : Ob} (σ : Ob.Subst X Γ.toOb) :
-    Ty.map (Quiver.Hom.op (Quotient.mk (Ob.Subst.setoid X Γ.toOb) σ :
-        X ⟶ Γ.toOb)) ⟦Θ⟧ = ⟦Ob.Tele.subst σ Θ⟧ := rfl
-
 theorem generic_tele :
-    Ob.Term.tele (Quotient.mk (Ob.Term.setoid (Ctx.extend Γ Θ)) (generic Γ Θ))
-      = Ty.map (Ctx.projection Γ Θ).op ⟦Θ⟧ := by
-  have h : dTel.rename (Renaming.inl Γ.arity Θ.arity) Θ.telescope
-      = dTel.actBase (_root_.Subst.ofRenaming (Renaming.inl Γ.arity Θ.arity))
-          Θ.telescope :=
-    (dTel.actBase_ofRenaming (Renaming.inl Γ.arity Θ.arity) Θ.telescope).symm
-  refine Quotient.sound ⟨rfl, ?_⟩
-  refine Eq.mp (congrArg (fun T => Ob.Tele.Eq (Ctx.extend Γ Θ)
-    (dTel.rename (Renaming.inl Γ.arity Θ.arity) Θ.telescope) T) h) ?_
-  exact ⟨(genericTele Γ Θ).wf, Wf_t.refl (genericTele Γ Θ).wf⟩
+  Ob.Term.tele (Quotient.mk (Ob.Term.setoid (extend Γ Θ)) (generic Γ Θ))
+    = Ty.map (projection Γ Θ).op ⟦Θ⟧
+  := by
+  apply congrArg (Quotient.mk _)
+  symm
+  apply Ob.Tele.ext (Θ' := (genericTele Γ Θ).telescope)
+  apply dTel.actBase_ofRenaming
 
 end
 
@@ -495,28 +466,34 @@ section
 
 variable (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
 
-/-- Lying over `Θ`, as a predicate on classes of pairs. -/
+/-- For a class of pairs `(t, σ)` of a telescope with a filling over `X` and a
+filling from `X` to `Γ`, the telescope of `t` is equal to `Θ` with `σ`
+substituted. -/
 def fibrePred :
     Quotient ((Ob.Term.setoid X).prod (Ob.Subst.setoid X Γ.toOb)) → Prop :=
   Quotient.lift (fun s => Ob.Tele.Rel s.1.1 (Ob.Tele.subst s.2 Θ))
     (by
-      rintro ⟨s, σ⟩ ⟨s', σ'⟩ ⟨hs, hσ⟩
-      refine propext ⟨fun h => ?_, fun h => ?_⟩
-      · refine Ob.Tele.Rel.trans (Ob.Tele.Rel.symm (Ob.Term.Rel.tele hs)) ?_
-        exact Ob.Tele.Rel.trans h (Ob.Tele.Rel.subst hσ (Ob.Tele.Rel.refl Θ))
-      · refine Ob.Tele.Rel.trans (Ob.Term.Rel.tele hs) ?_
-        refine Ob.Tele.Rel.trans h ?_
-        exact Ob.Tele.Rel.symm (Ob.Tele.Rel.subst hσ (Ob.Tele.Rel.refl Θ)))
+      rintro _ _ ⟨hs, hσ⟩
+      have hΘ := Ob.Tele.Rel.subst hσ (Ob.Tele.Rel.refl Θ)
+      apply propext
+      constructor
+      · intro h
+        apply Ob.Tele.Rel.trans (Ob.Tele.Rel.symm (Ob.Term.Rel.tele hs))
+        apply Ob.Tele.Rel.trans h hΘ
+      · intro h
+        apply Ob.Tele.Rel.trans (Ob.Term.Rel.tele hs)
+        apply Ob.Tele.Rel.trans h (Ob.Tele.Rel.symm hΘ))
 
 theorem fibrePred_iff (p : Tm.obj (Opposite.op X) × (X ⟶ Γ.toOb)) :
-    (Ob.Term.tele p.1 = Ty.map p.2.op ⟦Θ⟧)
-      ↔ fibrePred X Γ Θ (Setoid.prodQuotientEquiv _ _ p) := by
-  obtain ⟨t, s⟩ := p
-  refine Quotient.inductionOn₂ t s ?_
-  intro a b
+  (Ob.Term.tele p.1 = Ty.map p.2.op ⟦Θ⟧)
+    ↔ fibrePred X Γ Θ (Setoid.prodQuotientEquiv _ _ p)
+  := by
+  obtain ⟨⟨_⟩, ⟨_⟩⟩ := p
   exact ⟨fun h => Quotient.exact h, fun h => Quotient.sound h⟩
 
-/-- 13.2: a telescope with a filling lying over `Θ[σ]`, paired with `σ`. -/
+/-- Pairs of a class `t` of telescopes with a filling over `X` and a morphism `σ`
+from `X` to `Γ` such that `q` sends `t` to the restriction of `Θ` along `σ`
+correspond to classes of `Ob.Pair X Γ Θ`. -/
 def fibreEquiv :
     { p : Tm.obj (Opposite.op X) × (X ⟶ Γ.toOb) //
         Ob.Term.tele p.1 = Ty.map p.2.op ⟦Θ⟧ }
@@ -528,221 +505,180 @@ def fibreEquiv :
         Ob.Tele.Rel s.1.1 (Ob.Tele.subst s.2 Θ)) (fibrePred X Γ Θ)
       (fun _ => Iff.rfl) (fun _ _ => Iff.rfl))
 
-/-- 13.2: the hom-set bijection, pointwise. -/
+/-- Pairs of a class `t` of telescopes with a filling over `X` and a morphism `σ`
+from `X` to `Γ` such that `q` sends `t` to the restriction of `Θ` along `σ`
+correspond to morphisms from `X` to `Γ` extended by `Θ`. -/
 def homEquiv :
     { p : Tm.obj (Opposite.op X) × (X ⟶ Γ.toOb) //
         Ob.Term.tele p.1 = Ty.map p.2.op ⟦Θ⟧ }
-      ≃ (X ⟶ Ctx.extend Γ Θ) :=
+      ≃ (X ⟶ extend Γ Θ) :=
   (fibreEquiv X Γ Θ).trans (pairEquiv X Γ Θ)
 
 end
 
-/-- 13.2: the hom-set bijection is natural. -/
-theorem homEquiv_naturality {X Y : Ob} (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
+/-- `homEquiv` sends the restriction of `(t, s)` along `g` to `g` followed by the
+image of `(t, s)`. -/
+theorem homEquiv_naturality
+    {X Y : Ob} (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
     (t : Tm.obj (Opposite.op X)) (s : X ⟶ Γ.toOb) (g : Y ⟶ X)
     (hp : Ob.Term.tele t = Ty.map s.op ⟦Θ⟧)
     (hq : Ob.Term.tele (Tm.map g.op t) = Ty.map (g ≫ s).op ⟦Θ⟧) :
-    homEquiv Y Γ Θ ⟨(Tm.map g.op t, g ≫ s), hq⟩
-      = g ≫ homEquiv X Γ Θ ⟨(t, s), hp⟩ := by
-  refine Quotient.inductionOn₃ (motive := fun t s g =>
-    ∀ (hp : Ob.Term.tele t
-          = Ty.map (Quiver.Hom.op (s : X ⟶ Γ.toOb)) ⟦Θ⟧)
-      (hq : Ob.Term.tele (Tm.map (Quiver.Hom.op (g : Y ⟶ X)) t)
-          = Ty.map (Quiver.Hom.op ((g : Y ⟶ X) ≫ (s : X ⟶ Γ.toOb))) ⟦Θ⟧),
-      homEquiv Y Γ Θ ⟨(Tm.map (Quiver.Hom.op (g : Y ⟶ X)) t,
-          (g : Y ⟶ X) ≫ (s : X ⟶ Γ.toOb)), hq⟩
-        = (g : Y ⟶ X) ≫ homEquiv X Γ Θ ⟨(t, s), hp⟩) t s g ?_ hp hq
-  rintro ⟨⟨_, _, _⟩, τ, hτ⟩ b c hp hq
+  homEquiv Y Γ Θ ⟨(Tm.map g.op t, g ≫ s), hq⟩ = g ≫ homEquiv X Γ Θ ⟨(t, s), hp⟩
+  := by
+  obtain ⟨⟨⟨_, _, _⟩, _, _⟩⟩ := t
+  obtain ⟨_⟩ := s
+  obtain ⟨_⟩ := g
   obtain ⟨rfl, _⟩ := Quotient.exact hp
-  refine congrArg (Quotient.mk (Ob.Subst.setoid Y (Ctx.extend Γ Θ))) ?_
-  refine Subtype.ext ?_
-  exact (Subst.applyEach_copair c.1 b.1 τ).symm
+  apply congrArg (Quotient.mk _)
+  apply Subtype.ext
+  symm
+  apply Subst.applyEach_copair
 
-theorem Ob.Tele.subst_comp {X Y Z : Ob} (f : Ob.Subst X Y) (g : Ob.Subst Y Z)
-    (Θ : Ob.Tele Z) :
-    Ob.Tele.subst (Ob.Subst.comp f g) Θ = Ob.Tele.subst f (Ob.Tele.subst g Θ) :=
-  Ob.Tele.ext (dTel.actBase_comp g.1 f.1 Θ.telescope)
-
-/-- The constraint of 13.2 is stable under restriction. -/
-theorem tele_map {X Y : Ob} (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
+/-- If `q` sends `t` to the restriction of `Θ` along `s`, it sends the restriction
+of `t` along `g` to the restriction of `Θ` along `g ≫ s`. -/
+theorem tele_map
+    {X Y : Ob} (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
     (t : Tm.obj (Opposite.op X)) (s : X ⟶ Γ.toOb) (g : Y ⟶ X)
     (h : Ob.Term.tele t = Ty.map s.op ⟦Θ⟧) :
-    Ob.Term.tele (Tm.map g.op t) = Ty.map (g ≫ s).op ⟦Θ⟧ := by
-  refine Quotient.inductionOn₃ (motive := fun t s g =>
-    Ob.Term.tele t = Ty.map (Quiver.Hom.op (s : X ⟶ Γ.toOb)) ⟦Θ⟧ →
-      Ob.Term.tele (Tm.map (Quiver.Hom.op (g : Y ⟶ X)) t)
-        = Ty.map (Quiver.Hom.op ((g : Y ⟶ X) ≫ (s : X ⟶ Γ.toOb))) ⟦Θ⟧)
-    t s g ?_ h
-  intro a b c h
-  refine Quotient.sound ?_
-  refine Eq.mp (congrArg (fun T => Ob.Tele.Rel (Ob.Tele.subst c a.1) T)
-    (Ob.Tele.subst_comp c b Θ).symm) ?_
-  exact Ob.Tele.Rel.subst (Ob.Subst.Rel.refl c) (Quotient.exact h)
+  Ob.Term.tele (Tm.map g.op t) = Ty.map (g ≫ s).op ⟦Θ⟧
+  := by
+  calc Ob.Term.tele (Tm.map g.op t)
+      = Ty.map g.op (Ob.Term.tele t) := NatTrans.naturality_apply q g.op t
+    _ = _ := by rw [h, op_comp, Functor.map_comp_apply]
 
-/-- 13.2: the bijection recovers the filling of the base. -/
-theorem homEquiv_projection (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
+/-- `homEquiv X Γ Θ p` followed by the projection is the second component of
+`p`. -/
+theorem homEquiv_projection
+    (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
     (p : { p : Tm.obj (Opposite.op X) × (X ⟶ Γ.toOb) //
         Ob.Term.tele p.1 = Ty.map p.2.op ⟦Θ⟧ }) :
-    homEquiv X Γ Θ p ≫ Ctx.projection Γ Θ = p.1.2 := by
-  obtain ⟨⟨t, s⟩, hp⟩ := p
-  refine Quotient.inductionOn₂ (motive := fun t s =>
-    ∀ hp : Ob.Term.tele t = Ty.map (Quiver.Hom.op (s : X ⟶ Γ.toOb)) ⟦Θ⟧,
-      homEquiv X Γ Θ ⟨(t, s), hp⟩ ≫ Ctx.projection Γ Θ
-        = (s : X ⟶ Γ.toOb)) t s ?_ hp
-  intro a b hp
-  refine congrArg (Quotient.mk (Ob.Subst.setoid X Γ.toOb)) (Subtype.ext ?_)
+  homEquiv X Γ Θ p ≫ projection Γ Θ = p.1.2
+  := by
+  obtain ⟨⟨⟨_⟩, ⟨σ⟩⟩, _⟩ := p
+  apply congrArg (Quotient.mk _)
+  apply Subtype.ext
   funext Λ w
-  exact (act_η _ Λ (C.inl w)).trans (Subst.copair_inl b.1 _ w)
+  apply Eq.trans (act_η _ Λ (C.inl w))
+  apply Subst.copair_inl
 
 /-- Induction on a context class through its representatives. -/
 theorem Ob.ind {motive : Ob → Prop} (h : ∀ Γ : Ctx, motive Γ.toOb) (X : Ob) :
-    motive X :=
-  Quotient.ind h X
+  motive X
+  := Quotient.ind h X
 
-/-- 13.2: the bijection recovers the telescope with its filling. -/
-theorem homEquiv_generic (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
+/-- `Tm` restricts the generic telescope with a filling along `homEquiv X Γ Θ p`
+to the first component of `p`. -/
+theorem homEquiv_generic
+    (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
     (p : { p : Tm.obj (Opposite.op X) × (X ⟶ Γ.toOb) //
         Ob.Term.tele p.1 = Ty.map p.2.op ⟦Θ⟧ }) :
-    Tm.map (homEquiv X Γ Θ p).op ⟦Ctx.generic Γ Θ⟧ = p.1.1 := by
-  obtain ⟨⟨t, s⟩, hp⟩ := p
-  refine Ob.ind (motive := fun X =>
-    ∀ (t : Tm.obj (Opposite.op X)) (s : X ⟶ Γ.toOb)
-      (hp : Ob.Term.tele t = Ty.map (Quiver.Hom.op s) ⟦Θ⟧),
-      Tm.map (Quiver.Hom.op (homEquiv X Γ Θ ⟨(t, s), hp⟩))
-          ⟦Ctx.generic Γ Θ⟧ = t) ?_ X t s hp
-  intro Ξ t s
-  refine Quotient.inductionOn₂ (motive := fun t s =>
-    ∀ (hp : Ob.Term.tele t = Ty.map (Quiver.Hom.op (s : Ξ.toOb ⟶ Γ.toOb)) ⟦Θ⟧),
-      Tm.map (Quiver.Hom.op (homEquiv Ξ.toOb Γ Θ ⟨(t, s), hp⟩))
-          ⟦Ctx.generic Γ Θ⟧ = t) t s ?_
-  rintro ⟨⟨_, Θ₀, hΘ₀⟩, τ, hτ⟩ b hp
-  obtain ⟨rfl, hwf, heq⟩ := Quotient.exact hp
-  have hrel : Ob.Tele.Rel (⟨Θ.arity, Θ₀, hΘ₀⟩ : Ob.Tele Ξ.toOb)
-      (Ob.Tele.subst b Θ) := ⟨rfl, hwf, heq⟩
-  have hi : dTel.actBase
-        (Ob.Pair.subst ⟨(⟨⟨Θ.arity, Θ₀, hΘ₀⟩, τ, hτ⟩, b), hrel⟩).1
-        (Ctx.genericTele Γ Θ).telescope
-      = dTel.actBase b.1 Θ.telescope := by
-    refine Eq.trans (dTel.actBase_square (Renaming.inl Γ.arity Θ.arity)
-      (𝟙ʳ Ξ.arity) _ b.1 ?_ Θ.telescope) ?_
+  Tm.map (homEquiv X Γ Θ p).op ⟦generic Γ Θ⟧ = p.1.1
+  := by
+  obtain ⟨⟨⟨t⟩, ⟨σ⟩⟩, hp⟩ := p
+  apply Eq.trans _ (Quotient.sound (Ob.Term.fibre_left ⟨t, Quotient.exact hp⟩))
+  apply congrArg (Quotient.mk _)
+  apply Ob.Term.ext
+  · apply Eq.trans (dTel.actBase_square (Renaming.inl Γ.arity Θ.arity) (𝟙ʳ _) _ σ.1 _ _)
+    · apply dTel.rename_id
     · intro α u
-      refine (Subst.copair_inl b.1 _ u).trans ?_
-      refine Eq.symm (Eq.trans (congrArg (fun ρ => Renaming.act ρ (b.1 u))
-        (Renaming.extend_id Ξ.arity α)) ?_)
-      exact Renaming.act_id _
-    · exact dTel.rename_id _
-  have hii : Subst.applyEach
-        (Ob.Pair.subst ⟨(⟨⟨Θ.arity, Θ₀, hΘ₀⟩, τ, hτ⟩, b), hrel⟩).1
-        (_root_.Subst.instId Γ.arity Θ.arity)
-      = (Ob.Pair.fill ⟨(⟨⟨Θ.arity, Θ₀, hΘ₀⟩, τ, hτ⟩, b), hrel⟩).1 := by
-    funext Λ z
-    exact (act_η _ Λ (C.inr z)).trans (Subst.copair_inr _ _ z)
-  refine Quotient.sound ⟨rfl, ?tele, ?fill⟩
-  case tele =>
-    refine Eq.mp (congrArg (fun T => Ob.Tele.Eq Ξ.toOb T Θ₀) hi.symm) ?_
-    exact (Ob.Tele.Rel.symm hrel).2
-  case fill =>
-    refine Eq.mp (congrArg₂ (fun T s => Ob.Fill.Eq Ξ.toOb T s τ)
-      hi.symm hii.symm) ?_
-    exact Ob.Fill.Rel.refl
-      (Ob.Pair.fill ⟨(⟨⟨Θ.arity, Θ₀, hΘ₀⟩, τ, hτ⟩, b), hrel⟩)
+      rw [Renaming.extend_id, Renaming.act_id]
+      apply Subst.copair_inl
+  · funext Λ z
+    apply Eq.trans (act_η _ Λ (C.inr z))
+    apply Subst.copair_inr
 
-/-- 13.2: the square of the natural model commutes. -/
+/-- The square with sides `⟦generic Γ Θ⟧`, the projection, `q` and `⟦Θ⟧`
+commutes. -/
 theorem q_commSq (Γ : Ctx) (Θ : Ob.Tele Γ.toOb) :
-    CommSq (yonedaEquiv.symm ⟦Ctx.generic Γ Θ⟧)
-      (yoneda.map (Ctx.projection Γ Θ)) Ctx.q (yonedaEquiv.symm ⟦Θ⟧) := by
-  refine ⟨?_⟩
+  CommSq (yonedaEquiv.symm ⟦generic Γ Θ⟧)
+    (yoneda.map (projection Γ Θ)) q (yonedaEquiv.symm ⟦Θ⟧)
+  := by
+  constructor
   ext Y κ
-  exact tele_map Γ Θ ⟦Ctx.generic Γ Θ⟧ (Ctx.projection Γ Θ) κ
-    (generic_tele Γ Θ)
+  apply tele_map Γ Θ ⟦generic Γ Θ⟧ (projection Γ Θ) κ (generic_tele Γ Θ)
 
-theorem homEquiv_symm_apply (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
-    (κ : X ⟶ Ctx.extend Γ Θ) :
-    ((homEquiv X Γ Θ).symm κ).1
-      = (Tm.map κ.op ⟦Ctx.generic Γ Θ⟧, κ ≫ Ctx.projection Γ Θ) := by
+theorem homEquiv_symm_apply
+    (X : Ob) (Γ : Ctx) (Θ : Ob.Tele Γ.toOb) (κ : X ⟶ extend Γ Θ) :
+  ((homEquiv X Γ Θ).symm κ).1 = (Tm.map κ.op ⟦generic Γ Θ⟧, κ ≫ projection Γ Θ)
+  := by
   have h₁ := homEquiv_generic X Γ Θ ((homEquiv X Γ Θ).symm κ)
   have h₂ := homEquiv_projection X Γ Θ ((homEquiv X Γ Θ).symm κ)
   rw [Equiv.apply_symm_apply] at h₁ h₂
-  exact Prod.ext h₁.symm h₂.symm
+  rw [h₁, h₂]
 
 section
 
 variable (Γ : Ctx) (Θ : Ob.Tele Γ.toOb)
-  (s : Limits.PullbackCone Ctx.q (yonedaEquiv.symm ⟦Θ⟧))
+  (s : Limits.PullbackCone q (yonedaEquiv.symm ⟦Θ⟧))
 
 theorem q_cone_condition (Y : Obᵒᵖ) (x : s.pt.obj Y) :
-    Ob.Term.tele (s.fst.app Y x) = Ty.map (s.snd.app Y x).op ⟦Θ⟧ :=
-  ConcreteCategory.congr_hom (NatTrans.congr_app s.condition Y) x
+  Ob.Term.tele (s.fst.app Y x) = Ty.map (s.snd.app Y x).op ⟦Θ⟧
+  := ConcreteCategory.congr_hom (NatTrans.congr_app s.condition Y) x
 
-
-/-- 13.2: the lift into the extension. -/
-def q_lift : s.pt ⟶ yoneda.obj (Ctx.extend Γ Θ) where
+/-- The lift of the cone `s` into the representable presheaf of `Γ` extended by
+`Θ`, given pointwise by `homEquiv`. -/
+def q_lift : s.pt ⟶ yoneda.obj (extend Γ Θ) where
   app Y := TypeCat.ofHom (fun x => homEquiv (Opposite.unop Y) Γ Θ
     ⟨(s.fst.app Y x, s.snd.app Y x), q_cone_condition Γ Θ s Y x⟩)
-  naturality := by
-    intro Y Z g
+  naturality Y Z g := by
     ext x
-    simp only [TypeCat.Fun.toFun_apply, types_comp_apply, TypeCat.ofHom_apply]
-    refine Eq.trans ?_ (homEquiv_naturality Γ Θ (s.fst.app Y x)
-      (s.snd.app Y x) g.unop (q_cone_condition Γ Θ s Y x)
-      (tele_map Γ Θ (s.fst.app Y x) (s.snd.app Y x) g.unop
-        (q_cone_condition Γ Θ s Y x)))
-    refine congrArg (homEquiv (Opposite.unop Z) Γ Θ) (Subtype.ext ?_)
-    exact congrArg₂ Prod.mk (ConcreteCategory.congr_hom (s.fst.naturality g) x)
-      (ConcreteCategory.congr_hom (s.snd.naturality g) x)
-
+    have hx := q_cone_condition Γ Θ s Y x
+    apply Eq.trans _ (homEquiv_naturality Γ Θ _ _ g.unop hx (tele_map Γ Θ _ _ g.unop hx))
+    apply congrArg (homEquiv (Opposite.unop Z) Γ Θ)
+    apply Subtype.ext
+    apply Prod.ext
+    · apply ConcreteCategory.congr_hom (s.fst.naturality g) x
+    · apply ConcreteCategory.congr_hom (s.snd.naturality g) x
 
 theorem q_fac_left :
-    q_lift Γ Θ s ≫ yonedaEquiv.symm ⟦Ctx.generic Γ Θ⟧ = s.fst := by
+  q_lift Γ Θ s ≫ yonedaEquiv.symm ⟦generic Γ Θ⟧ = s.fst
+  := by
   ext Y x
-  simp only [TypeCat.Fun.toFun_apply, types_comp_apply, TypeCat.ofHom_apply]
-  exact homEquiv_generic (Opposite.unop Y) Γ Θ
-    ⟨(s.fst.app Y x, s.snd.app Y x), q_cone_condition Γ Θ s Y x⟩
+  apply homEquiv_generic
 
 theorem q_fac_right :
-    q_lift Γ Θ s ≫ yoneda.map (Ctx.projection Γ Θ) = s.snd := by
+  q_lift Γ Θ s ≫ yoneda.map (projection Γ Θ) = s.snd
+  := by
   ext Y x
-  simp only [TypeCat.Fun.toFun_apply, types_comp_apply, TypeCat.ofHom_apply]
-  exact homEquiv_projection (Opposite.unop Y) Γ Θ
-    ⟨(s.fst.app Y x, s.snd.app Y x), q_cone_condition Γ Θ s Y x⟩
+  apply homEquiv_projection
 
-theorem q_uniq (m : s.pt ⟶ yoneda.obj (Ctx.extend Γ Θ))
-    (h₁ : m ≫ yonedaEquiv.symm ⟦Ctx.generic Γ Θ⟧ = s.fst)
-    (h₂ : m ≫ yoneda.map (Ctx.projection Γ Θ) = s.snd) :
-    m = q_lift Γ Θ s := by
+theorem q_uniq
+    (m : s.pt ⟶ yoneda.obj (extend Γ Θ))
+    (h₁ : m ≫ yonedaEquiv.symm ⟦generic Γ Θ⟧ = s.fst)
+    (h₂ : m ≫ yoneda.map (projection Γ Θ) = s.snd) :
+  m = q_lift Γ Θ s
+  := by
   ext Y x
-  simp only [TypeCat.Fun.toFun_apply, types_comp_apply, TypeCat.ofHom_apply]
-  refine Eq.trans
-    (Equiv.apply_symm_apply (homEquiv (Opposite.unop Y) Γ Θ) _).symm ?_
-  refine congrArg (homEquiv (Opposite.unop Y) Γ Θ) (Subtype.ext ?_)
-  refine (homEquiv_symm_apply _ Γ Θ (m.app Y x)).trans ?_
-  refine congrArg₂ Prod.mk ?_ ?_
-  · exact ConcreteCategory.congr_hom (NatTrans.congr_app h₁ Y) x
-  · exact ConcreteCategory.congr_hom (NatTrans.congr_app h₂ Y) x
+  simp only [TypeCat.Fun.toFun_apply]
+  rw [← Equiv.apply_symm_apply (homEquiv (Opposite.unop Y) Γ Θ) (m.app Y x)]
+  apply congrArg (homEquiv (Opposite.unop Y) Γ Θ)
+  apply Subtype.ext
+  rw [homEquiv_symm_apply]
+  apply Prod.ext
+  · apply ConcreteCategory.congr_hom (NatTrans.congr_app h₁ Y) x
+  · apply ConcreteCategory.congr_hom (NatTrans.congr_app h₂ Y) x
 
 end
 
-/-- 13.2: the square of the natural model is a pullback. -/
+/-- The square with sides `⟦generic Γ Θ⟧`, the projection, `q` and `⟦Θ⟧` is a
+pullback. -/
 theorem q_isPullback (Γ : Ctx) (Θ : Ob.Tele Γ.toOb) :
-    IsPullback (yonedaEquiv.symm ⟦Ctx.generic Γ Θ⟧)
-      (yoneda.map (Ctx.projection Γ Θ)) Ctx.q (yonedaEquiv.symm ⟦Θ⟧) :=
-  IsPullback.of_isLimit' (q_commSq Γ Θ)
-    (Limits.PullbackCone.IsLimit.mk (q_commSq Γ Θ).w (q_lift Γ Θ) (q_fac_left Γ Θ)
-      (q_fac_right Γ Θ) (fun s m h₁ h₂ => q_uniq Γ Θ s m h₁ h₂))
+  IsPullback (yonedaEquiv.symm ⟦generic Γ Θ⟧)
+    (yoneda.map (projection Γ Θ)) q (yonedaEquiv.symm ⟦Θ⟧)
+  := by
+  apply IsPullback.of_isLimit' (q_commSq Γ Θ)
+  apply Limits.PullbackCone.IsLimit.mk (q_commSq Γ Θ).w (q_lift Γ Θ) (q_fac_left Γ Θ)
+    (q_fac_right Γ Θ)
+  apply q_uniq Γ Θ
 
-/-- 13.2: `q` is a natural model — every pullback of it along a representable is
-representable, the pullback along `よΓ` being `よ(Γ ⋈ Θ)`. -/
-theorem q_representable : yoneda.relativelyRepresentable Ctx.q := by
+/-- `q` is relatively representable with respect to `yoneda`. -/
+theorem q_representable :
+  yoneda.relativelyRepresentable q
+  := by
   intro a g
-  refine Ob.ind (motive := fun a => ∀ g : yoneda.obj a ⟶ Ty,
-    ∃ (b : Ob) (snd : b ⟶ a) (fst : yoneda.obj b ⟶ Tm),
-      IsPullback fst (yoneda.map snd) Ctx.q g) ?_ a g
-  intro Γ g
-  obtain ⟨Θ, rfl⟩ : ∃ Θ, g = yonedaEquiv.symm Θ := ⟨yonedaEquiv g, by simp⟩
-  refine Quotient.ind (motive := fun Θ =>
-    ∃ (b : Ob) (snd : b ⟶ Γ.toOb) (fst : yoneda.obj b ⟶ Tm),
-      IsPullback fst (yoneda.map snd) Ctx.q (yonedaEquiv.symm Θ)) ?_ Θ
-  intro Θ
-  exact ⟨Ctx.extend Γ Θ, Ctx.projection Γ Θ, _, q_isPullback Γ Θ⟩
+  obtain ⟨Γ⟩ := a
+  obtain ⟨Θ, rfl⟩ := yonedaEquiv.symm.surjective g
+  obtain ⟨Θ⟩ := Θ
+  exact ⟨extend Γ Θ, projection Γ Θ, _, q_isPullback Γ Θ⟩
 
 end Ctx

@@ -9,8 +9,8 @@ import HigherRankSyntax.RelativeMonad.Kleisli
 `T Γ α = Expr (Γ ⋈ α)`.
 
 The base category has arities as objects and renamings as morphisms.  A Kleisli
-map `J Γ ⟶ T Δ` is exactly a substitution from `Γ` to `Δ`: it sends each
-`Γ`-slot of arity `α` to an expression in `Δ ⋈ α`.
+map `J.obj Γ ⟶ T.obj Δ` is a substitution `Subst Γ Δ`: it sends each slot of `Γ`
+of arity `α` to an expression over `Δ ⋈ α`.
 -/
 
 
@@ -22,7 +22,7 @@ instance arityCategory : Category C.Arity where
   id Γ := Renaming.id Γ
   comp f g := g ∘ʳ f
 
-/-- The arity-indexed family category. -/
+/-- Arity-indexed families of types. -/
 @[ext] structure ArityFunc where
   toFun : C.Arity → Type
 
@@ -34,12 +34,13 @@ instance : Category ArityFunc where
   id _ := fun _ x => x
   comp f g := fun α x => g α (f α x)
 
-/-- The slots functor: arity `Γ ↦ α ↦ Γ ∋ α`. -/
+/-- The functor sending `Γ` to the family of its slots `α ↦ Γ ∋ α` and a renaming to
+its action on slots. -/
 def J : C.Arity ⥤ ArityFunc where
   obj Γ := ⟨fun α => Γ ∋ α⟩
   map {Γ Δ} (ρ : Γ →ʳ Δ) := fun _ p => ρ p
 
-/-- The expressions functor: arity `Γ ↦ α ↦ Expr (Γ ⋈ α)`. -/
+/-- The functor sending `Γ` to `α ↦ Expr (Γ ⋈ α)` and `ρ` to renaming along `ρ ⇑ʳ α`. -/
 def T : C.Arity ⥤ ArityFunc where
 
   obj Γ := ⟨fun α => Expr (Γ ⋈ α)⟩
@@ -48,18 +49,16 @@ def T : C.Arity ⥤ ArityFunc where
 
   map_id Γ := by
     funext α e
-    have hId : (𝟙 Γ : Γ →ʳ Γ) = 𝟙ʳ Γ := rfl
-    rw [hId, Renaming.extend_id]
-    apply Renaming.act_id
+    convert Renaming.act_id e
+    apply Renaming.extend_id
 
-  map_comp {Γ Δ Ξ} (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ξ) := by
+  map_comp ρ σ := by
     funext α e
-    trans ⟦ (σ ∘ʳ ρ) ⇑ʳ α ⟧ʳ e
-    · congr 2
-    · rw [Renaming.extend_comp]
-      apply Renaming.act_comp
+    convert Renaming.act_comp (ρ ⇑ʳ α) (σ ⇑ʳ α) e
+    apply Renaming.extend_comp
 
-/-- The relative monad of the syntax. -/
+/-- The relative monad over `J` sending `Γ` to `α ↦ Expr (Γ ⋈ α)`, with unit `Expr.η` and
+Kleisli extension the substitution action `Subst.act` at depth `α`. -/
 def SyntaxMonad : RelativeMonad J where
 
   map := T.obj
@@ -69,23 +68,20 @@ def SyntaxMonad : RelativeMonad J where
   lift {Γ Δ} f α e :=
     Subst.act @f (Γ := 1) α e
 
-  unit_right := by
-    intro Γ
+  unit_right Γ := by
     funext α e
     apply act_id
 
-  unit_left := by
-    intro Γ Δ f
-    funext α p
+  unit_left f := by
+    funext α x
     symm
     apply act_η
 
-  comp_lift := by
-    intro Γ Δ Ξ f g
+  comp_lift f g := by
     funext α e
     apply act_comp
 
-/-- Kleisli morphisms for raw syntax are raw substitutions. -/
+/-- Kleisli morphisms `Γ ⟶ Δ` of `SyntaxMonad` are the substitutions `Subst Γ Δ`. -/
 def syntaxKleisliHomEquiv (Γ Δ : C.Arity) :
     (RelativeMonad.Kleisli.of SyntaxMonad Γ ⟶
       RelativeMonad.Kleisli.of SyntaxMonad Δ) ≃ Subst Γ Δ :=

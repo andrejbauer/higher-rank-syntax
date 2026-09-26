@@ -1,15 +1,13 @@
 /-!
 # Models of the framework
 
-A structure is a model of the framework `HrS`: four sorts, the operations
-listed in `initiality.md`, and their laws.  Nothing here refers to the syntax
-of the other folders; `Ctx` is shown to be one of these, and to be the initial
-one, elsewhere.
-
-The four sorts are objects, substitutions between two objects, types over an
-object, and terms of a type over an object.  The operations come in four
-groups: a category with a terminal object and context extension, a universe
-with its decoding, binding, and equality at the two atoms.
+A model of the framework `HrS` has four sorts: objects, substitutions between
+two objects, types over an object, and terms of a type over an object.  Its
+operations and their laws come in four groups: a category with a terminal
+object, reindexing and context extension; a universe of sorts with its decoding
+into types of elements; binding, a type over an extension read as a type over
+the base, with a bijection on terms; and extensional equality types of sorts
+and of elements of a sort.
 -/
 
 universe u
@@ -38,11 +36,11 @@ structure Structure where
   identity_comp : ∀ {Γ Δ : Ob} (σ : Sub Δ Γ), comp (identity Γ) σ = σ
   /-- The identity is a right unit. -/
   comp_identity : ∀ {Γ Δ : Ob} (σ : Sub Δ Γ), comp σ (identity Δ) = σ
-  /-- The object declaring nothing. -/
+  /-- The terminal object. -/
   empty : Ob
   /-- The substitution into the empty object. -/
   toEmpty : (Γ : Ob) → Sub Γ empty
-  /-- There is no other substitution into the empty object. -/
+  /-- Every substitution into the empty object is `toEmpty`. -/
   toEmpty_unique : ∀ {Γ : Ob} (σ : Sub Γ empty), σ = toEmpty Γ
   -- Reindexing
   /-- A type reindexed along a substitution. -/
@@ -50,15 +48,17 @@ structure Structure where
   /-- A term reindexed along a substitution. -/
   substTm : {Γ Δ : Ob} → {a : Ty Γ} → Tm Γ a → (σ : Sub Δ Γ) →
     Tm Δ (substTy a σ)
-  /-- Reindexing a type along the identity. -/
+  /-- Reindexing a type along the identity leaves it unchanged. -/
   substTy_identity : ∀ {Γ : Ob} (a : Ty Γ), substTy a (identity Γ) = a
-  /-- Reindexing a term along the identity. -/
+  /-- Reindexing a term along the identity leaves it unchanged. -/
   substTm_identity : ∀ {Γ : Ob} {a : Ty Γ} (t : Tm Γ a),
     substTy_identity a ▸ substTm t (identity Γ) = t
-  /-- Reindexing a type along a composite. -/
+  /-- Reindexing a type along `comp σ θ` is reindexing it along `σ`, then along
+  `θ`. -/
   substTy_comp : ∀ {Γ Δ Ξ : Ob} (a : Ty Γ) (σ : Sub Δ Γ) (θ : Sub Ξ Δ),
     substTy a (comp σ θ) = substTy (substTy a σ) θ
-  /-- Reindexing a term along a composite. -/
+  /-- Reindexing a term along `comp σ θ` is reindexing it along `σ`, then along
+  `θ`. -/
   substTm_comp : ∀ {Γ Δ Ξ : Ob} {a : Ty Γ} (t : Tm Γ a) (σ : Sub Δ Γ)
       (θ : Sub Ξ Δ),
     substTy_comp a σ θ ▸ substTm t (comp σ θ) = substTm (substTm t σ) θ
@@ -67,32 +67,36 @@ structure Structure where
   extend : (Γ : Ob) → Ty Γ → Ob
   /-- The projection off an extension. -/
   projection : {Γ : Ob} → (a : Ty Γ) → Sub (extend Γ a) Γ
-  /-- The term the extension adjoins. -/
+  /-- The generic term over the extension by `a`, of type `a` reindexed along the
+  projection. -/
   generic : {Γ : Ob} → (a : Ty Γ) → Tm (extend Γ a) (substTy a (projection a))
-  /-- A substitution together with a term of the type it reindexes. -/
+  /-- A substitution paired with a term of the type reindexed along it, as a
+  substitution into the extension. -/
   pair : {Γ Δ : Ob} → {a : Ty Γ} → (σ : Sub Δ Γ) → Tm Δ (substTy a σ) →
     Sub Δ (extend Γ a)
-  /-- Projecting a pair. -/
+  /-- The projection after `pair σ t` is `σ`. -/
   projection_pair : ∀ {Γ Δ : Ob} {a : Ty Γ} (σ : Sub Δ Γ)
       (t : Tm Δ (substTy a σ)),
     comp (projection a) (pair σ t) = σ
-  /-- Reindexing the adjoined term along a pair. -/
+  /-- The generic term reindexed along `pair σ t` is `t`. -/
   generic_pair : ∀ {Γ Δ : Ob} {a : Ty Γ} (σ : Sub Δ Γ) (t : Tm Δ (substTy a σ)),
     HEq (substTm (generic a) (pair σ t)) t
-  /-- Pairing the projection with the adjoined term. -/
+  /-- The projection paired with the generic term is the identity. -/
   pair_eta : ∀ {Γ : Ob} (a : Ty Γ),
     pair (projection a) (generic a) = identity (extend Γ a)
-  /-- A substitution carried through an extension. -/
+  /-- The substitution from the extension by `substTy a σ` to the extension by
+  `a` lying over `σ`. -/
   lift : {Γ Δ : Ob} → (a : Ty Γ) → (σ : Sub Δ Γ) →
     Sub (extend Δ (substTy a σ)) (extend Γ a)
-  /-- The lifted substitution over the projections. -/
+  /-- The projection after `lift a σ` is `σ` after the projection. -/
   projection_lift : ∀ {Γ Δ : Ob} (a : Ty Γ) (σ : Sub Δ Γ),
     comp (projection a) (lift a σ) = comp σ (projection (substTy a σ))
-  /-- The lifted substitution fixes the adjoined term. -/
+  /-- The generic term reindexed along `lift a σ` is the generic term of
+  `substTy a σ`. -/
   generic_lift : ∀ {Γ Δ : Ob} (a : Ty Γ) (σ : Sub Δ Γ),
     HEq (substTm (generic a) (lift a σ)) (generic (substTy a σ))
   -- The universe of sorts
-  /-- The type whose terms are the sorts of the object theory. -/
+  /-- The type whose terms are the sorts. -/
   U : (Γ : Ob) → Ty Γ
   /-- The universe is stable under reindexing. -/
   U_subst : ∀ {Γ Δ : Ob} (σ : Sub Δ Γ), substTy (U Γ) σ = U Δ
@@ -102,7 +106,8 @@ structure Structure where
   El_subst : ∀ {Γ Δ : Ob} (S : Tm Γ (U Γ)) (σ : Sub Δ Γ),
     substTy (El S) σ = El (U_subst σ ▸ substTm S σ)
   -- Binding
-  /-- The type of the hypothetico-general judgement. -/
+  /-- A type over the extension by `a`, bound over `a` into a type over the
+  base. -/
   Bind : {Γ : Ob} → (a : Ty Γ) → Ty (extend Γ a) → Ty Γ
   /-- A term over an extension, read as a term of a binding type. -/
   lam : {Γ : Ob} → {a : Ty Γ} → {c : Ty (extend Γ a)} →
@@ -110,16 +115,16 @@ structure Structure where
   /-- A term of a binding type, read as a term over an extension. -/
   unlam : {Γ : Ob} → {a : Ty Γ} → {c : Ty (extend Γ a)} →
     Tm Γ (Bind a c) → Tm (extend Γ a) c
-  /-- Reading back and forth. -/
+  /-- `lam` after `unlam` is the identity. -/
   lam_unlam : ∀ {Γ : Ob} {a : Ty Γ} {c : Ty (extend Γ a)} (t : Tm Γ (Bind a c)),
     lam (unlam t) = t
-  /-- Reading forth and back. -/
+  /-- `unlam` after `lam` is the identity. -/
   unlam_lam : ∀ {Γ : Ob} {a : Ty Γ} {c : Ty (extend Γ a)} (e : Tm (extend Γ a) c),
     unlam (lam e) = e
   /-- A binding type is stable under reindexing. -/
   Bind_subst : ∀ {Γ Δ : Ob} (a : Ty Γ) (c : Ty (extend Γ a)) (σ : Sub Δ Γ),
     substTy (Bind a c) σ = Bind (substTy a σ) (substTy c (lift a σ))
-  /-- Reading is stable under reindexing. -/
+  /-- `lam` commutes with reindexing. -/
   lam_subst : ∀ {Γ Δ : Ob} {a : Ty Γ} {c : Ty (extend Γ a)}
       (e : Tm (extend Γ a) c) (σ : Sub Δ Γ),
     Bind_subst a c σ ▸ substTm (lam e) σ = lam (substTm e (lift a σ))
@@ -132,10 +137,10 @@ structure Structure where
   IdSort_subst : ∀ {Γ Δ : Ob} (S S' : Tm Γ (U Γ)) (σ : Sub Δ Γ),
     substTy (IdSort S S') σ
       = IdSort (U_subst σ ▸ substTm S σ) (U_subst σ ▸ substTm S' σ)
-  /-- An equality of sorts carries no datum. -/
+  /-- Any two terms of `IdSort S S'` are equal. -/
   IdSort_irrelevant : ∀ {Γ : Ob} {S S' : Tm Γ (U Γ)} (t t' : Tm Γ (IdSort S S')),
     t = t'
-  /-- An equality of sorts makes them equal. -/
+  /-- A term of `IdSort S S'` gives `S = S'`. -/
   IdSort_reflect : ∀ {Γ : Ob} {S S' : Tm Γ (U Γ)}, Tm Γ (IdSort S S') → S = S'
   -- Equality of elements
   /-- The type asserting that two elements of a sort are equal. -/
@@ -148,10 +153,10 @@ structure Structure where
       (σ : Sub Δ Γ),
     substTy (IdElement l r) σ
       = IdElement (El_subst S σ ▸ substTm l σ) (El_subst S σ ▸ substTm r σ)
-  /-- An equality of elements carries no datum. -/
+  /-- Any two terms of `IdElement l r` are equal. -/
   IdElement_irrelevant : ∀ {Γ : Ob} {S : Tm Γ (U Γ)} {l r : Tm Γ (El S)}
     (t t' : Tm Γ (IdElement l r)), t = t'
-  /-- An equality of elements makes them equal. -/
+  /-- A term of `IdElement l r` gives `l = r`. -/
   IdElement_reflect : ∀ {Γ : Ob} {S : Tm Γ (U Γ)} {l r : Tm Γ (El S)},
     Tm Γ (IdElement l r) → l = r
 

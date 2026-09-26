@@ -3,16 +3,18 @@ import HigherRankSyntax.Ctx.Identity
 import HigherRankSyntax.HrS.Structure
 
 /-!
-# The contexts as a structure
+# The model on context classes
 
-The HrS structure carried by the contexts.
+The context classes, with the substitutions between them, the one-entry types
+over them and the terms of those types, form a model of the framework `HrS`.
 -/
 
 open CategoryTheory
 
 namespace Ctx
 
-/-- The HrS structure on the contexts. -/
+/-- The model of `HrS` whose objects are the context classes, whose substitutions
+are the morphisms of `Ob`, and whose types and terms are `Ty₁` and `Tm₁`. -/
 def model : HrS.Structure where
   Ob := Ob
   Sub X Y := X ⟶ Y
@@ -20,7 +22,7 @@ def model : HrS.Structure where
   Tm := Tm₁
   identity X := 𝟙 X
   comp σ θ := θ ≫ σ
-  comp_assoc σ θ κ := (Category.assoc κ θ σ).symm
+  comp_assoc σ θ κ := by rw [Category.assoc]
   identity_comp σ := Category.comp_id σ
   comp_identity σ := Category.id_comp σ
   empty := Ctx.empty.toOb

@@ -105,9 +105,13 @@ Tm Γ (Bind a c)    an expression over |Γ| ⋈ (C.single α ⋈ Δ),  boundary 
 Tm (Γ ▷ a) c       an expression over (|Γ| ⋈ C.single α) ⋈ Δ,  boundary β_c
 ```
 
-`lam` and `unlam` are therefore the identity, both round trips are `rfl`, and
-`β`, `η` hold definitionally — which is why `Eq_e` carries neither rule.
-`[proved]`
+`lam` and `unlam` are therefore the identity on that expression. They are not
+literally identity maps: a filling packages the expression at a slot, and the
+two slots differ, so the two sides are fillings of different telescopes over
+different objects. What makes the round trips hold is that a filling of a
+one-entry telescope is exactly its one expression, which is `Subst.single` and
+`Subst.single_eta` (`Subst.lean:129`). `β` and `η` are then definitional, which
+is why `Eq_e` carries neither rule. `[proved]`
 
 **Equality.** `Id a l r := cons .nil (.eq l r) .nil`. It is well formed because
 `Wf_bd.eq` asks the two sides to have equal boundaries, and they do — both
@@ -251,6 +255,41 @@ operations would be a claim about the framework rather than about the theory.
 judgment** form that is central to the definition of many logical systems",
 citing "the deductive apparatus of a logic — its basic, hypothetical, and
 general judgments, and the evidence for them (Martin-Löf, 1987)".
+
+**What `Bind` means.** The framework's primitive is not a variable but a slot
+that takes arguments:
+
+```text
+x : (Θ) β          the entry  dTel.cons Θ β .nil       Telescope.lean:15
+```
+
+read as "β, generically in Θ". Extending a context by such an entry is the
+hypothetical reading of "given an `a`"; putting that entry at the front of a
+slot's argument list is the general reading:
+
+```text
+hypothetical   Γ, x : (Θ) β  ⊢  y : (Ψ) ε          a is an assumption
+general        Γ  ⊢  z : ( x : (Θ) β , Ψ ) ε       a is an argument
+```
+
+`Bind a c` is the second, built from the first, and `bind` (`Binding.lean:90`)
+is exactly that move: the binding of the new slot is `a`'s own entry prefixed to
+`c`'s arguments, and its declaration is `c`'s, unchanged. Nothing is created —
+the entry travels from the context into the argument list. So `Bind` is not a
+type former added to the framework but the internalisation of a notion the
+syntax already has.
+
+A term of a one-entry type is the single expression written under that entry's
+arguments, so the two readings have the same terms on the nose: on both sides
+the expression lives under `Γ`, then `x`, then `Ψ`. The characteristic
+isomorphism of `Π` is therefore not arranged, it is the identity on expressions,
+which is why `β` and `η` are definitional here rather than rules.
+
+The domain is unrestricted because the prepended entry may itself be of any
+rank. That is the step from second order, where a binder's argument must be a
+plain variable, to arbitrary rank. It is also why a GAT's higher-rank premises
+can be written as types at all: writing such a premise down inside the theory
+*is* applying `Bind`.
 
 **Where the rank comes from.** A GAT is rank 2 because its premises are
 *elements*. Make a premise itself a hypothetical judgement and the rank rises;

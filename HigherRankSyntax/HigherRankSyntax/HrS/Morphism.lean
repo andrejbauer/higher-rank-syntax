@@ -3,18 +3,18 @@ import HigherRankSyntax.HrS.Structure
 /-!
 # Morphisms of models
 
-A morphism carries each of the four sorts of the source to the corresponding
-sort of the target, and commutes with every operation.  Where the two sides of
-a law live in types identified by an earlier law, the law is stated as a
-heterogeneous equality rather than by transporting along that identification.
+A morphism of models carries each of the four sorts of the source to the
+corresponding sort of the target and commutes with every operation other than
+`toEmpty` and `unlam`.  A law whose two sides lie in types identified by an
+earlier law is a heterogeneous equality.
 -/
 
 universe u
 
 namespace HrS
 
-/-- A morphism of models: a map for each sort, commuting with the
-operations. -/
+/-- A morphism of models: a map for each sort, commuting with the operations
+other than `toEmpty` and `unlam`. -/
 structure Morphism (M N : Structure.{u}) where
   /-- The map on objects. -/
   onOb : M.Ob → N.Ob
@@ -68,7 +68,7 @@ structure Morphism (M N : Structure.{u}) where
   onTy_Bind : ∀ {Γ : M.Ob} (a : M.Ty Γ) (c : M.Ty (M.extend Γ a))
       (c' : N.Ty (N.extend (onOb Γ) (onTy a))), HEq (onTy c) c' →
     onTy (M.Bind a c) = N.Bind (onTy a) c'
-  /-- Reading a term over an extension is preserved. -/
+  /-- `lam` is preserved. -/
   onTm_lam : ∀ {Γ : M.Ob} {a : M.Ty Γ} {c : M.Ty (M.extend Γ a)}
       (e : M.Tm (M.extend Γ a) c) (c' : N.Ty (N.extend (onOb Γ) (onTy a)))
       (e' : N.Tm (N.extend (onOb Γ) (onTy a)) c'),

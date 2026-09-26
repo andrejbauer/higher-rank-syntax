@@ -12,20 +12,21 @@ import HigherRankSyntax.Expr
 `Γ`, `Δ`, or `Ξ`.
 -/
 
-/-- A substitution from a domain arity into a target arity. -/
+/-- A substitution from `Δ` into `Γ`: an expression over `Γ ⋈ α` for each slot
+of `Δ` of arity `α`. -/
 abbrev Subst (Δ Γ : C.Arity) :=
   ∀ ⦃α : C.Arity⦄, Δ ∋ α → Expr (Γ ⋈ α)
 
-/-- The identity substitution at arity `Γ`. -/
+/-- The identity substitution on `Γ`, sending each slot to its η-expansion. -/
 def Subst.id (Γ : C.Arity) : Subst Γ Γ :=
   (fun ⦃_⦄ p => Expr.η p)
 
-/-- The substitution obtained by eta-expanding the image of each renamed slot. -/
+/-- The substitution sending each slot `x` to the η-expansion of `ρ x`. -/
 def Subst.ofRenaming {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) : Subst Γ Δ :=
   fun ⦃_⦄ x => Expr.η (ρ x)
 
-/-- Three-way dispatch of a slot of `Γ ⋈ Δ ⋈ Ξ`, used by `Subst.act`: the
-prefix `Γ`, the substitution domain `Δ`, or the current depth `Ξ`. -/
+/-- The origin of a slot of `Γ ⋈ Δ ⋈ Ξ`: the prefix `Γ`, the substitution
+domain `Δ`, or the current depth `Ξ`. -/
 inductive LeftMiddleRight (Γ Δ Ξ α : C.Arity) : Type where
   /-- The slot belongs to the prefix `Γ`. -/
   | left (q : Γ ∋ α)
@@ -34,8 +35,8 @@ inductive LeftMiddleRight (Γ Δ Ξ α : C.Arity) : Type where
   /-- The slot belongs to the current depth `Ξ`. -/
   | right (q : Ξ ∋ α)
 
-/-- Dispatching a `Γ ⋈ Δ ⋈ Ξ`-slot into its source: prefix `Γ`, substitution
-domain `Δ`, or current depth `Ξ`. -/
+/-- The origin of `p : Γ ⋈ Δ ⋈ Ξ ∋ α`: `.left x` for `p = C.inl (C.inl x)`,
+`.middle y` for `p = C.inl (C.inr y)`, `.right z` for `p = C.inr z`. -/
 def Subst.threeway {Γ Δ Ξ : C.Arity}
     {α : C.Arity} (p : Γ ⋈ Δ ⋈ Ξ ∋ α) :
     LeftMiddleRight Γ Δ Ξ α :=
@@ -43,50 +44,53 @@ def Subst.threeway {Γ Δ Ξ : C.Arity}
     (fun q => C.copair Γ Δ _ (fun x => .left x) (fun y => .middle y) q)
     (fun q => .right q) p
 
-/-- Embed a classified site back into `Γ ⋈ Δ ⋈ Ξ`. -/
+/-- The slot of `Γ ⋈ Δ ⋈ Ξ` with a given origin: `C.inl (C.inl x)`,
+`C.inl (C.inr x)` or `C.inr x`. -/
 def Subst.reinject {Γ Δ Ξ : C.Arity} {α : C.Arity} :
   LeftMiddleRight Γ Δ Ξ α → Γ ⋈ Δ ⋈ Ξ ∋ α
   | .left x => C.inl (C.inl x)
   | .middle x => C.inl (C.inr x)
   | .right x => C.inr x
 
-/-- Every `Γ ⋈ Δ ⋈ Ξ` slot is the reinjection of its three-way classification. -/
+/-- Every slot of `Γ ⋈ Δ ⋈ Ξ` is `Subst.reinject` of some origin. -/
 theorem Subst.isReinject {Γ Δ Ξ : C.Arity} {α : C.Arity}
     (x : Γ ⋈ Δ ⋈ Ξ ∋ α) :
   ∃ y : LeftMiddleRight Γ Δ Ξ α, x = reinject y
   := by
   rcases C.cover (Γ ⋈ Δ) Ξ x with ⟨y, rfl⟩ | ⟨x, rfl⟩
   · rcases C.cover Γ Δ y with ⟨w, rfl⟩ | ⟨z, rfl⟩
-    · exact ⟨.left w, rfl⟩
-    · exact ⟨.middle z, rfl⟩
-  · exact ⟨.right x, rfl⟩
+    · exists .left w
+    · exists .middle z
+  · exists .right x
 
-/-- Classifying a concrete current-depth `Ξ` head returns the right site. -/
+/-- The origin of `C.inr x` with `x : Ξ ∋ α` is `.right x`. -/
 @[simp] theorem Subst.threeway_right {Γ Δ Ξ : C.Arity}
     {α : C.Arity} (x : Ξ ∋ α) :
   threeway (Γ := Γ) (Δ := Δ) (C.inr x) = .right x
   := by
-  simp [threeway, Carrier.copair, Carrier.inr]
+  rw [threeway, C.copair_apply_inr]
 
-/-- Classifying a concrete domain `Δ` head returns the middle site. -/
+/-- The origin of `C.inl (C.inr x)` with `x : Δ ∋ α` is `.middle x`. -/
 @[simp] theorem Subst.threeway_middle {Γ Δ Ξ : C.Arity}
     {α : C.Arity} (x : Δ ∋ α) :
   threeway (Γ := Γ) (Ξ := Ξ) (C.inl (C.inr x)) = .middle x
   := by
-  simp [threeway, Carrier.copair, Carrier.inl, Carrier.inr]
+  rw [threeway, C.copair_apply_inl, C.copair_apply_inr]
 
-/-- Classifying a concrete prefix `Γ` head returns the left site. -/
+/-- The origin of `C.inl (C.inl x)` with `x : Γ ∋ α` is `.left x`. -/
 @[simp] theorem Subst.threeway_left {Γ Δ Ξ : C.Arity}
     {α : C.Arity} (x : Γ ∋ α) :
   threeway (Δ := Δ) (Ξ := Ξ) (C.inl (C.inl x)) = .left x
   := by
-  simp [threeway, Carrier.copair, Carrier.inl]
+  rw [threeway, C.copair_apply_inl, C.copair_apply_inl]
 
-/-- The identity instantiation at arity `α`, with an arbitrary fixed prefix `Δ`. -/
+/-- The substitution `Subst α (Δ ⋈ α)` sending each slot `i` to the
+η-expansion of `C.inr i`. -/
 def Subst.instId (Δ α : C.Arity) : Subst α (Δ ⋈ α) :=
   fun ⦃_⦄ i => Expr.η (C.inr i)
 
-/-- The substitution on `Γ ⋈ Δ` given by `σ` on `Γ`-slots and `θ` on `Δ`-slots. -/
+/-- The substitution out of `Γ ⋈ Δ` sending `C.inl y` to `σ y` and `C.inr z` to
+`θ z`. -/
 def Subst.copair {Γ Δ Ω : C.Arity} (σ : Subst Γ Ω) (θ : Subst Δ Ω) :
     Subst (Γ ⋈ Δ) Ω :=
   fun ⦃Λ⦄ x =>
@@ -94,38 +98,43 @@ def Subst.copair {Γ Δ Ω : C.Arity} (σ : Subst Γ Ω) (θ : Subst Δ Ω) :
 
 @[simp] theorem Subst.copair_inl {Γ Δ Ω : C.Arity}
     (σ : Subst Γ Ω) (θ : Subst Δ Ω) {Λ : C.Arity} (x : Γ ∋ Λ) :
-  Subst.copair σ θ (C.inl x) = σ x
-  := by simp [Subst.copair, Carrier.copair, Carrier.inl]
+  copair σ θ (C.inl x) = σ x
+  := by
+  apply C.copair_apply_inl
 
 @[simp] theorem Subst.copair_inr {Γ Δ Ω : C.Arity}
     (σ : Subst Γ Ω) (θ : Subst Δ Ω) {Λ : C.Arity} (x : Δ ∋ Λ) :
-  Subst.copair σ θ (C.inr x) = θ x
-  := by simp [Subst.copair, Carrier.copair, Carrier.inr]
+  copair σ θ (C.inr x) = θ x
+  := by
+  apply C.copair_apply_inr
 
-/-- The first half of a paired substitution. -/
+/-- `Subst.copair σ θ` restricted to the `Γ`-slots is `σ`. -/
 theorem Subst.copair_left {Γ Δ Ω : C.Arity} (σ : Subst Γ Ω) (θ : Subst Δ Ω) :
-    (fun ⦃α⦄ (y : Γ ∋ α) => Subst.copair σ θ (C.inl y)) = σ := by
+  (fun ⦃α⦄ (y : Γ ∋ α) => copair σ θ (C.inl y)) = σ
+  := by
   funext α y
-  exact Subst.copair_inl σ θ y
+  apply copair_inl
 
-/-- The second half of a paired substitution. -/
+/-- `Subst.copair σ θ` restricted to the `Δ`-slots is `θ`. -/
 theorem Subst.copair_right {Γ Δ Ω : C.Arity} (σ : Subst Γ Ω) (θ : Subst Δ Ω) :
-    (fun ⦃α⦄ (z : Δ ∋ α) => Subst.copair σ θ (C.inr z)) = θ := by
+  (fun ⦃α⦄ (z : Δ ∋ α) => copair σ θ (C.inr z)) = θ
+  := by
   funext α z
-  exact Subst.copair_inr σ θ z
+  apply copair_inr
 
-/-- A substitution out of a two-block arity is the pair of its halves. -/
+/-- A substitution out of `Γ ⋈ Δ` is the copair of its restrictions to `Γ` and
+to `Δ`. -/
 theorem Subst.copair_eta {Γ Δ Ω : C.Arity} (κ : Subst (Γ ⋈ Δ) Ω) :
-    Subst.copair (fun ⦃α⦄ (y : Γ ∋ α) => κ (C.inl y))
-        (fun ⦃α⦄ (z : Δ ∋ α) => κ (C.inr z)) = κ := by
+  copair (fun ⦃α⦄ (y : Γ ∋ α) => κ (C.inl y))
+      (fun ⦃α⦄ (z : Δ ∋ α) => κ (C.inr z))
+    = κ
+  := by
   funext α x
   rcases C.cover Γ Δ x with ⟨y, rfl⟩ | ⟨z, rfl⟩
-  · exact Subst.copair_inl _ _ y
-  · exact Subst.copair_inr _ _ z
+  · apply copair_inl
+  · apply copair_inr
 
-
-/-- The substitution on a single-entry arity sending its one slot to a given
-expression. -/
+/-- The substitution out of `C.single α ⋈ 1` sending its one slot to `t`. -/
 def Subst.single {Δ α : C.Arity} (t : Expr (Δ ⋈ α)) : Subst (C.single α ⋈ 1) Δ :=
   fun ⦃β⦄ x =>
     C.copair (C.single α) 1 (Expr (Δ ⋈ β))
@@ -133,23 +142,28 @@ def Subst.single {Δ α : C.Arity} (t : Expr (Δ ⋈ α)) : Subst (C.single α �
       (fun z => (C.unit_is_empty z).elim) x
 
 @[simp] theorem Subst.single_head {Δ α : C.Arity} (t : Expr (Δ ⋈ α)) :
-    Subst.single t (C.inl (C.singleSlot α)) = t := by
-  simp only [Subst.single, Carrier.copair_apply_inl]
-  rfl
+  single t (C.inl (C.singleSlot α)) = t
+  := by
+  rw [single, C.copair_apply_inl, cast_eq]
 
-/-- A substitution out of a single-entry arity is determined by its one slot. -/
+/-- A substitution out of `C.single α ⋈ 1` is `Subst.single` of its value on
+the one slot. -/
 theorem Subst.single_eta {Δ α : C.Arity} (τ : Subst (C.single α ⋈ 1) Δ) :
-    Subst.single (τ (C.inl (C.singleSlot α))) = τ := by
+  single (τ (C.inl (C.singleSlot α))) = τ
+  := by
   funext β x
   rcases C.cover (C.single α) 1 x with ⟨y, rfl⟩ | ⟨z, rfl⟩
   · obtain rfl := C.single_arity y
     rw [C.single_slot_unique y]
-    exact Subst.single_head _
+    apply single_head
   · exact (C.unit_is_empty z).elim
 
 /-! ### The substitution action -/
 
-/-- Apply the substitution `σ` to an expression at depth `Φ`. -/
+/-- The action of `σ : Subst Δ (Γ ⋈ Ξ)` at depth `Φ`, from `Expr (Γ ⋈ Δ ⋈ Φ)` to
+`Expr (Γ ⋈ Ξ ⋈ Φ)`: an application headed by `C.inl (C.inr z)` with `z : Δ ∋ α`
+becomes `σ z` with its `α`-slots substituted by the acted arguments; an
+application with any other head keeps the head and acts on the arguments. -/
 def Subst.act {Γ Δ Ξ : C.Arity}
       (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity) :
     Expr (Γ ⋈ Δ ⋈ Φ) → Expr (Γ ⋈ Ξ ⋈ Φ)
@@ -164,14 +178,13 @@ def Subst.act {Γ Δ Ξ : C.Arity}
           .ap (C.inl (C.inl z)) (fun {_} i => σ.act (Φ ⋈ _) (args i))
 termination_by e => (Δ, (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ))
 decreasing_by
-  all_goals
-    first
-    | exact Prod.Lex.right _ (Expr.Subterm.of_arg x args i)
-    | exact Prod.Lex.left _ _ ⟨z⟩
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args i)
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args i)
+  · exact Prod.Lex.left _ _ ⟨z⟩
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args i)
 
-/-- Substitution-level composition.  First substitute with `σ`, producing
-expressions over `Γ ⋈ Θ`; then act on each filler with `θ`, producing
-expressions over `Γ ⋈ Ξ`. -/
+/-- The composite of `σ` and `θ`, sending `x : Δ ∋ β` to `θ` acting at depth `β`
+on `σ x`. -/
 def Subst.comp {Γ Δ Θ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Θ))
     (θ : Subst Θ (Γ ⋈ Ξ)) :

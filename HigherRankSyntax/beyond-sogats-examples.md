@@ -25,6 +25,9 @@ Two ways to fail Definition 1.1, and they behave differently.
              usually the Russell reading of something type theory writes à la Tarski
 (ii) fails   rank ≥ 4: a binding is nested two deep
              an operation that CONSUMES a binder rather than producing one
+(iii) fails  a sort bound inside a binding is kept out of 𝒫
+             the same signature, its binder read as an infinitary rule rather
+             than as a variable (§5)
 ```
 
 The second is the sharper phenomenon, because it is not a formalization choice:
@@ -327,6 +330,48 @@ branching family, coinductive streams with an infinitary destructor, and the
 eliminator of an inductive-recursive universe, whose `π` branch binds
 `[x : of (T a)]` twice over and is likewise rank 4.
 
+### 2.1 What the recursor is for, and its two readings
+
+The constructors alone specify an *algebra*: any `O` with a point, a unary
+operation and an operation on `ℕ`-indexed sequences. `O = 𝟙` is a model. An
+inductive type is the initial such algebra, and type theory does not state
+initiality as a property of models; it states it as an operation of the theory,
+with computation rules:
+
+```text
+rec z s l oz      = z
+rec z s l (os a)  = s a (rec z s l a)
+rec z s l (ol f)  = l f ((n) rec z s l (f n))
+```
+
+`rec` says that `O` maps to every `R`-algebra; a uniqueness equation would say
+uniquely. It is what makes `O` the Brouwer ordinals rather than some algebra, and
+what lets the theory use them: ordinal addition, multiplication and normal forms
+are all instances of `rec`. Every inductive type of Martin-Löf type theory comes
+with such an eliminator, and the `W`-type eliminator of Kaposi–Xie, Definition
+32, is this `rec` for an arbitrary branching family.
+
+**Where the line falls.** `ol` takes its sequence as an outermost argument,
+`f : Bind([n : of Nat], of O)`, a `π⁺`-code, legal in `ToS⁺`. The `ol`-branch
+of `rec` takes the sequence of recursive results as an argument of an argument,
+`g : Bind([n : of Nat], of R)` inside `l`'s binding, and `π⁺` cannot bind it:
+its domain must be a representable sort, and `ℕ → R` is never one. So the
+constructors are a SOGAT and the recursor is not — §0's recipe in its simplest
+instance.
+
+**Two readings of `g`.** Read fully, `g` ranges over all sequences in `R`; over
+`Set` the models are the initial algebra of `X ↦ 1 + X + X^ℕ`, the set-theoretic
+Brouwer ordinals, whose limits are over arbitrary sequences. Read through
+reification (`beyond-sogats-semantics.md` 4.1), a declared sort `F ≅ ℕ → R` with
+`abs`, `app`, `β`, `η`, both `ol` and `rec` see only the sequences that are
+elements of `F`; in a syntactic model those are the sequences the theory can
+name. That is the constructive reading: Kleene's `𝒪` is Brouwer ordinals whose
+limit notations code *recursive* sequences. Martin-Löf type theory takes this
+side automatically, its own `Π` being the reification — `sup s f` has
+`f : Tm (Π (P s) …)`, a term of the object-level function type — which is why
+`W`-types with their eliminators are SOGATs inside MLTT and not as a standalone
+theory.
+
 ---
 
 ## 3. Large elimination
@@ -400,7 +445,7 @@ separations**, and shows something worth knowing:
 > Definition 1.1 is a property of a *presentation*, not of a theory. One theory may
 > have both a SOGAT presentation and a non-SOGAT one.
 
-That is consistent with, and reinforces, §6: failing Definition 1.1 is not the
+That is consistent with, and reinforces, §6.2: failing Definition 1.1 is not the
 same as having no first-order presentation. Whether *every* quasi-identity can be
 re-presented this way is the open question. The encoding must force a dependent
 sort to be *exactly* the equalizer, and a GAT axiom is an equation in a context of
@@ -409,7 +454,100 @@ that it always can.
 
 ---
 
-## 5. What is *not* an example
+## 5. The ω-rule
+
+A failure of (iii) alone: every binding is `of`-boundaried and the rank is 3, but
+a sort bound inside a binding is kept out of `𝒫`. It is the phenomenon of §§1–2
+one level down — a binder over a base sort rather than over a function telescope
+— and the classical instance of it.
+
+### 5.1 The rule
+
+First-order arithmetic has one way to prove `∀n. φ(n)`:
+
+```text
+∀-introduction      Γ, n : nat  ⊢  φ(n)            n not free in Γ
+                    ───────────────────────
+                    Γ           ⊢  ∀n. φ(n)
+```
+
+One derivation, with `n` a free variable it knows nothing about. Derivations are
+finite and provability is semi-decidable. Gödel's theorem shows the price: for
+`φ(n)` = "`n` does not code a PA-derivation of `0 = 1`", PA proves each instance
+`φ(0), φ(1), …` by a finite computation and does not prove `∀n. φ(n)`, which is
+`Con(PA)`. Hilbert's and Schütte's response is a second rule,
+
+```text
+ω-rule              ⊢ φ(0)     ⊢ φ(1)     ⊢ φ(2)     …       one premise per numeral
+                    ───────────────────────────────────
+                    ⊢ ∀n. φ(n)
+```
+
+with no free variable anywhere. Derivations are infinite well-founded trees.
+Arithmetic with the ω-rule proves exactly the sentences true in `ℕ`, and its cut
+elimination, measured by the ordinal height of derivations, is how the strength
+of PA (`ε₀`) is computed. The cost is that there is no finite syntax and the set
+of theorems is not recursively enumerable.
+
+### 5.2 The signature
+
+Kaposi–Xie's first-order logic (their Definition 7), restricted to arithmetic:
+
+```text
+nat : sort      prop : sort      pf : Bind([P : of prop], sort)
+∀   : Bind([φ : Bind([n : of nat], of prop)], of prop)
+∀I  : Bind([φ : Bind([n : of nat], of prop),
+            p : Bind([n : of nat], of (pf (φ n)))],  of (pf (∀ φ)))      rank 3
+```
+
+Both rules are this one entry. What differs is the reading of the premise
+`p : Bind([n : of nat], of (pf (φ n)))`, that is, whether `nat ∈ 𝒫`:
+
+```text
+nat ∈ 𝒫    ⟦p⟧(I) = ⟦pf (φ n)⟧(I ⊲ nat)         one proof, in I extended by a fresh n      ∀-introduction
+nat ∉ 𝒫    ⟦p⟧(I) = Π_{⟦nat⟧} ⟦pf (φ n)⟧ (I)    for every J → I, every n ∈ ⟦nat⟧(J), a proof   the ω-rule
+```
+
+Over `𝒞 = 1` with `⟦nat⟧ = ℕ` the second is one proof per numeral. The first is
+Definition 7 verbatim, with `Tm : U⁺`. The second is not a `ToS⁺` signature,
+since (iii) fails; Kaposi–Xie reach it only through the infinitary extension of
+their §7, a product `Π̂` over an *external* set `ℕ : Set°`, whereas here `nat`
+remains an internal sort with `zero`, `succ` and its own equations.
+
+The same bit turns second-order logic's
+`∀₂ : Bind([Φ : Bind([P : of prop], of prop)], of prop)` from Henkin semantics
+into standard semantics.
+
+### 5.3 Why one wants each
+
+`nat ∈ 𝒫` when the theory is a *syntax*: finite derivations, proof search,
+reasoning with variables, nonstandard models and compactness. Its models over
+`𝒞 = 1` are trivial, only a point being representable there; the interesting
+ones live over categories of contexts, and the syntactic base — objects the
+numbers of free variables, maps the tuples of terms — is the finitary proof
+system.
+
+`nat ∉ 𝒫` when the theory *specifies the standard model*: categoricity, once
+induction ranges over all predicates; completeness for truth; ordinal analysis;
+or whenever `nat` is an externally given set of numerals rather than a type with
+variables. Its models over `𝒞 = 1` are exactly the structures in which the
+ω-rule holds.
+
+### 5.4 What is separated
+
+Not the structure `ℕ`, which is a model of both readings over different bases;
+that is what §6.1 records. What is separated is the *rule*: which premises count
+as a derivation over a given base. In the terms of `beyond-sogats-semantics.md`,
+Lemma 3.2 applies to any non-representable `X`, so the `nat ∉ 𝒫` reading has no
+first-order presentation uniform in the base, by the mechanism of Proposition
+3.3. `[open]`, as that proposition is. The classical shadow is that ω-logic is
+neither finitary nor compact.
+
+---
+
+## 6. Non-examples, and status
+
+### 6.1 What is *not* an example
 
 Worth recording, since the nearest neighbours of §§2–3 are all SOGATs.
 
@@ -433,27 +571,33 @@ equation `El (U n) = Ty n` is a sort equation, and it forces `Ty ∈ 𝒫`.
 `𝒫` does not separate any of these. Demanding `[n : of Nat] ∈ 𝒫` forces
 `Nat ≅ よR` by the terminal-base lemma, so at `𝒞 = 1` it collapses `Nat` to a
 singleton and destroys the intended model `Nat = ℕ`, while over a syntactic base
-it holds automatically. That is `sogats.md` §3.1, not a separation.
+it holds automatically. That is `sogats.md` §3.1, not a separation. §5
+qualifies this: the *structure* is not separated, the *rule* is, and only
+uniformly in the base.
 
 ---
 
-## 6. Status
+### 6.2 Status
 
 ```text
 §1  λ-syntax with case    rank 4, fails (ii)     model verified, V ⇒ T not loc. rep.  [proved]
 §2  Brouwer ordinals      rank 4, fails (ii)     rank arithmetic [proved];
                                                  Θ_l non-representability            [open]
+    constructors SOGAT, recursor not; full vs reified reading                        [proved]
 §3  large elimination     rank 3, fails (i)      consistency                         [routine]
 §4  quasi-identities      rank 2, fails (i)      rank arithmetic [proved];
                                                  whether it separates at all         [open]
+§5  the ω-rule            rank 3, fails (iii)    ∀-introduction / ω-rule as one bit  [proved];
+                                                 separation uniform in the base      [open]
 ```
 
-The three flavours, side by side:
+The four flavours, side by side:
 
 ```text
 §1, §2   consuming a binder        fails (ii)   not a formalization choice
 §3       Russell quantification    fails (i)    strictly stronger than its Tarski shadow
 §4       Horn premises             fails (i)    about logic, not binding; rank 2
+§5       full binder over a sort   fails (iii)  the rule is separated, the structure is not
 ```
 
 In every case, failing Definition 1.1 says the theory is not second-order by a

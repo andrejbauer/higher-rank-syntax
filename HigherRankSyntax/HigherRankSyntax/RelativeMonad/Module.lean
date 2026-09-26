@@ -28,7 +28,7 @@ namespace LeftModule
 variable {D : Type u₃} [Category.{v₃} D]
   {T : RelativeMonad J}
 
-/-- The action of a module on a relative Kleisli morphism. -/
+/-- The action `M.map f` of a Kleisli arrow `f : J.obj X ⟶ T.map Y`. -/
 abbrev act (M : LeftModule T D) {X Y : A}
     (f : J.obj X ⟶ T.map Y) :
     M.obj (Kleisli.of T X) ⟶ M.obj (Kleisli.of T Y) :=
@@ -36,16 +36,19 @@ abbrev act (M : LeftModule T D) {X Y : A}
 
 @[simp]
 theorem act_η (M : LeftModule T D) (X : A) :
-    act M (T.η X) = 𝟙 (M.obj (Kleisli.of T X)) := by
+  act M (T.η X) = 𝟙 (M.obj (Kleisli.of T X))
+  := by
   apply M.map_id
 
 @[simp]
-theorem act_comp (M : LeftModule T D)
+theorem act_comp
+    (M : LeftModule T D)
     {X Y Z : A} (f : J.obj X ⟶ T.map Y) (g : J.obj Y ⟶ T.map Z) :
-    act M (f ≫ T.lift g) = act M f ≫ act M g := by
+  act M (f ≫ T.lift g) = act M f ≫ act M g
+  := by
   apply M.map_comp
 
-/-- A morphism of relative-monad modules is a natural transformation. -/
+/-- A morphism of left modules over `T` is a natural transformation. -/
 abbrev Hom (M N : LeftModule T D) := M ⟶ N
 
 end LeftModule

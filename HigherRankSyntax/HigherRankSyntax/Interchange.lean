@@ -3,24 +3,24 @@ import Batteries.Tactic.Trans
 import Mathlib.Order.GameAdd
 import Mathlib.Tactic.Convert
 
-universe u
-
 /-!
-# The substitution commuting square
+# Interchange of substitutions
 
-`act_interchange.aux` is the general square: acting by `σ` commutes with
-instantiating `κ` (pushed forward along `σ`).  `act_interchange` is its
-`Θ = 1`, `Φ = 1` instance, used by `act_comp`.
+* `act_interchange.aux`: acting by `κ` and then by `σ` equals acting by `σ` and
+  then by `pushforward σ κ`.
+* `act_interchange`: `θ.act Ω (κ.act 1 e) = (pushforward θ κ).act 1 (θ.act Ψ e)`.
 -/
 
-/-- Push `κ` forward along `σ`. -/
+/-- The substitution sending each slot `x : Θ ∋ β` to `σ` acting at depth `Ω ⋈ β`
+on `κ x`. -/
 abbrev pushforward
     {Γ Δ Ξ Θ Ω : C.Arity}
     (σ : Subst Δ (Γ ⋈ Ξ)) (κ : Subst Θ (Γ ⋈ Δ ⋈ Ω)) :
   Subst Θ (Γ ⋈ Ξ ⋈ Ω) :=
     fun {β} x => σ.act (Ω ⋈ β) (κ x)
 
-/-- `σ.act` preserves a head from the `Φ` component of depth `Λ ⋈ Φ ⋈ Ρ`. -/
+/-- `σ` acting at depth `Λ ⋈ Φ ⋈ Ρ` keeps a head `C.inl (C.inr z)` with
+`z : Φ ∋ α` and acts on the arguments. -/
 theorem act_ap_depth
     {Γ Δ Ξ : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ)) (Λ Φ Ρ : C.Arity)
     {α : C.Arity} (z : Φ ∋ α)
@@ -29,17 +29,17 @@ theorem act_ap_depth
     = Expr.ap (C.inl (C.inr (Γ := Γ ⋈ Ξ ⋈ Λ) z))
         (fun {Ω} j => σ.act (Λ ⋈ Φ ⋈ Ρ ⋈ Ω) (args j))
   := by
-  convert act_right σ (Λ ⋈ Φ ⋈ Ρ) (C.inl (Γ := Λ ⋈ Φ) (Δ := Ρ) (C.inr z)) args using 2
-  · congr 1
+  have head : ∀ Θ : C.Arity,
+      (C.inl (C.inr z) : Θ ⋈ Λ ⋈ Φ ⋈ Ρ ∋ α) = C.inr (Γ := Θ) (C.inl (C.inr z)) := by
+    intro Θ
     rw [← C.inr_inr]
     symm
     apply C.inr_inl
-  · congr 1
-    · rw [← C.inr_inr]
-      symm
-      apply C.inr_inl
+  rw [head, head]
+  apply act_right
 
-/-- `σ.act` preserves heads obtained by extending a renaming from `Γ`. -/
+/-- `σ` acting at depth `Θ ⋈ Ρ ⋈ Φ` keeps a head `(((C.inl ⇑ʳ Θ) ⇑ʳ Ρ) ⇑ʳ Φ) p`
+with `p : Γ ⋈ Θ ⋈ Ρ ⋈ Φ ∋ β` and acts on the arguments. -/
 theorem act_renamed_head
     {Γ Δ Ξ Θ Ρ Φ : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ)) {β : C.Arity}
     (p : Γ ⋈ Θ ⋈ Ρ ⋈ Φ ∋ β) (args : Expr.Args (Γ ⋈ Δ ⋈ Θ ⋈ Ρ ⋈ Φ) β) :
@@ -86,8 +86,8 @@ local instance : WellFoundedRelation (Sym2 C.Arity) where
 
 mutual
 
-/-- Acting by `θ` commutes with applying `κ` when `θ` acts on variables that may
-occur in the fillers of `κ`. -/
+/-- Acting by `κ` at depth `Χ` and then by `θ`, which substitutes the `Ψ`-slots of
+the fillers of `κ`, equals acting by `pushforward θ κ` at depth `Χ`. -/
 theorem act_interchange.subst
     {Γ Λ Θ Ψ Ω Φ Χ : C.Arity} (θ : Subst Ψ (Γ ⋈ Θ ⋈ Ω))
     (κ : Subst Λ (Γ ⋈ Θ ⋈ Ψ ⋈ Φ)) (e : Expr (Γ ⋈ Λ ⋈ Χ)) :
@@ -97,59 +97,52 @@ theorem act_interchange.subst
   match e with
   | .ap (α := β) x args =>
     let actedArgs : Expr.Args (Γ ⋈ Θ ⋈ Ψ ⋈ (Φ ⋈ Χ)) β :=
-      fun {Λ} (i : _) => Subst.act (Ξ := Θ ⋈ Ψ ⋈ Φ) κ (Χ ⋈ Λ) (args i)
+      fun {Ξ} i => Subst.act (Ξ := Θ ⋈ Ψ ⋈ Φ) κ (Χ ⋈ Ξ) (args i)
     head_cases x with z
     case right =>
       rw [act_right]
       trans
       · convert act_right θ (Φ ⋈ Χ) (C.inr z) actedArgs using 2
-        · congr 1
-          symm
-          apply C.inr_inr (Γ ⋈ Θ ⋈ Ψ) Φ Χ
+        congr 1
+        symm
+        apply C.inr_inr (Γ ⋈ Θ ⋈ Ψ) Φ Χ
       · rw [act_right]
         congr 1
         · apply C.inr_inr (Γ ⋈ Θ ⋈ Ω) Φ Χ
-        · funext Λ i
-          dsimp [actedArgs]
-          convert act_interchange.subst (Χ := Χ ⋈ Λ) θ κ (args i) using 2
+        · funext Ξ i
+          exact act_interchange.subst (Χ := Χ ⋈ Ξ) θ κ (args i)
     case middle =>
       rw [act_middle]
       convert act_interchange.aux θ actedArgs 1 (κ z) using 2
-      · rw [act_middle]
-        congr 1
-        funext Λ i
-        symm
-        dsimp [actedArgs]
-        convert act_interchange.subst (Χ := Χ ⋈ Λ) θ κ (args i) using 2
+      rw [act_middle]
+      congr 1
+      funext Ξ i
+      symm
+      exact act_interchange.subst (Χ := Χ ⋈ Ξ) θ κ (args i)
     case left =>
       rw [act_left]
       convert act_left θ (Φ ⋈ Χ) (C.inl z) actedArgs using 2
       · congr 1
-        rw [C.inl_inl Γ (Θ ⋈ Ψ) Φ z]
-        rw [C.inl_inl Γ Θ Ψ z]
+        rw [C.inl_inl Γ (Θ ⋈ Ψ) Φ z, C.inl_inl Γ Θ Ψ z]
         symm
         apply C.inl_inl
       · rw [act_left]
         congr 1
-        · rw [C.inl_inl Γ (Θ ⋈ Ω) Φ z]
-          rw [C.inl_inl Γ Θ Ω z]
+        · rw [C.inl_inl Γ (Θ ⋈ Ω) Φ z, C.inl_inl Γ Θ Ω z]
           symm
           apply C.inl_inl
-        · funext Ω' i
+        · funext Ξ i
           symm
-          dsimp [actedArgs]
-          convert act_interchange.subst (Χ := Χ ⋈ Ω') θ κ (args i) using 2
+          exact act_interchange.subst (Χ := Χ ⋈ Ξ) θ κ (args i)
 termination_by (s(Ψ, Λ), (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ))
 decreasing_by
-  all_goals
-    first
-    | apply Prod.Lex.right
-      exact Expr.Subterm.of_arg x args _
-    | apply Prod.Lex.left
-      apply Sym2.GameAdd.snd
-      exact ⟨z⟩
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact Prod.Lex.left _ _ (Sym2.GameAdd.snd ⟨z⟩)
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
 
-/-- Acting by `σ` commutes with instantiating `κ` (pushed forward along `σ`). -/
+/-- Acting by `κ` at depth `Φ` and then by `σ` equals acting by `σ` and then by
+`pushforward σ κ` at depth `Φ`. -/
 theorem act_interchange.aux
     {Γ Δ Ξ Θ Ψ Ω : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ))
     (κ : Subst Ψ (Γ ⋈ Δ ⋈ Θ ⋈ Ω)) (Φ : C.Arity)
@@ -164,125 +157,102 @@ theorem act_interchange.aux
       fun {Λ} i => κ.act (Φ ⋈ Λ) (args i)
     head_cases x with z
     case right =>
+      have headΩ := act_renamed_head σ (C.inr z) instantiatedArgs
+      have headΨ := act_renamed_head σ (C.inr z) args
+      simp only [Renaming.extend_inr] at headΩ headΨ
       rw [act_right]
-      have headΩ := act_renamed_head σ (C.inr z)
-        (fun {Λ} i => κ.act (Φ ⋈ Λ) (args i))
-      simp only [Renaming.extend_inr] at headΩ
       apply Eq.trans headΩ
       symm
-      trans Subst.act (Ξ := Ω)
-          (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
+      trans Subst.act (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
           (.ap (C.inr z) (fun {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
-      · congr 1
-        have headΨ := act_renamed_head σ (C.inr z) args
-        simp only [Renaming.extend_inr] at headΨ
-        apply headΨ
+      · apply congrArg _ headΨ
       · rw [act_right]
         congr 1
         funext Λ i
-        simpa using (act_interchange.aux σ κ (Φ ⋈ Λ) (args i)).symm
+        symm
+        exact act_interchange.aux σ κ (Φ ⋈ Λ) (args i)
     case middle =>
       rw [act_middle]
       convert act_interchange.aux (Θ := Θ ⋈ Ω) σ instantiatedArgs 1 (κ z) using 2
-      · let shiftedArgs : Expr.Args (Γ ⋈ Ξ ⋈ Θ ⋈ Ψ ⋈ Φ) β :=
-          fun {Λ} i => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ Λ) (args i)
-        trans Subst.act (Ξ := Ω)
-          (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
-          (.ap (C.inl (C.inr z)) shiftedArgs)
-        · apply congrArg
-          convert act_ap_depth σ Θ Ψ Φ z args using 2
-        · rw [act_middle]
-          congr 1
-          funext Λ i
-          dsimp [shiftedArgs, instantiatedArgs, pushforward]
-          simpa using (act_interchange.aux σ κ (Φ ⋈ Λ) (args i)).symm
+      trans Subst.act (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
+          (.ap (C.inl (C.inr z)) (fun {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
+      · apply congrArg
+        apply act_ap_depth
+      · rw [act_middle]
+        congr 1
+        funext Λ i
+        symm
+        exact act_interchange.aux σ κ (Φ ⋈ Λ) (args i)
     case left =>
       head_cases z with w
       case right =>
+        have headΩ := act_renamed_head σ (C.inl (C.inl (C.inr w))) instantiatedArgs
+        have headΨ := act_renamed_head σ (C.inl (C.inl (C.inr w))) args
+        simp only [Renaming.extend_inl, Renaming.extend_inr] at headΩ headΨ
         rw [act_left]
-        have headΩ := act_renamed_head σ (C.inl (C.inl (C.inr w)))
-          (fun {Λ} i => κ.act (Φ ⋈ Λ) (args i))
-        simp only [Renaming.extend_inl, Renaming.extend_inr] at headΩ
         apply Eq.trans headΩ
         symm
-        trans Subst.act (Ξ := Ω)
-            (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
-            (.ap (C.inl (C.inl (C.inr w)))
-              (fun {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
-        · congr 1
-          have headΨ := act_renamed_head σ (C.inl (C.inl (C.inr w))) args
-          simp only [Renaming.extend_inl, Renaming.extend_inr] at headΨ
-          apply headΨ
-        · rw [act_left (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω)
-              (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (C.inr w)]
+        trans Subst.act (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
+            (.ap (C.inl (C.inl (C.inr w))) (fun {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
+        · apply congrArg _ headΨ
+        · rw [act_left (Γ := Γ ⋈ Ξ ⋈ Θ) (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (C.inr w)]
           congr 1
           funext Λ i
-          simpa using (act_interchange.aux σ κ (Φ ⋈ Λ) (args i)).symm
+          symm
+          exact act_interchange.aux σ κ (Φ ⋈ Λ) (args i)
       case middle =>
         rw [act_left]
         let shiftedArgs : Subst β ((Γ ⋈ Ξ) ⋈ (Θ ⋈ Ψ ⋈ Φ)) :=
           fun {Λ} i => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ Λ) (args i)
         trans σ.act (Θ ⋈ Ω ⋈ Φ) (.ap (C.inl (C.inr w)) instantiatedArgs)
         · congr 2
-          simp only [← C.inl_inl]
-          exact (C.inl_inl (Γ ⋈ Δ) (Θ ⋈ Ω) Φ (C.inr w)).symm
+          rw [← C.inl_inl, ← C.inl_inl]
+          rfl
         · rw [act_middle]
           symm
-          trans Subst.act (Ξ := Ω)
-              (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
-              (shiftedArgs.act 1 (σ w))
+          trans Subst.act (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (shiftedArgs.act 1 (σ w))
           · apply congrArg
             trans σ.act (Θ ⋈ Ψ ⋈ Φ) (.ap (C.inl (C.inr w)) args)
             · congr 2
-              simp only [← C.inl_inl]
-              exact (C.inl_inl (Γ ⋈ Δ) (Θ ⋈ Ψ) Φ (C.inr w)).symm
+              rw [← C.inl_inl, ← C.inl_inl]
+              rfl
             · apply act_middle
-          · convert act_interchange.subst (Γ := Γ ⋈ Ξ) (Λ := β)
-              (Θ := Θ) (Ψ := Ψ) (Ω := Ω) (Φ := Φ) (Χ := 1)
+          · convert act_interchange.subst (Γ := Γ ⋈ Ξ) (Θ := Θ) (Ω := Ω) (Φ := Φ) (Χ := 1)
               (pushforward (Ω := Θ ⋈ Ω) σ κ) shiftedArgs (σ w) using 2
-            · congr 1
-              funext Λ i
-              dsimp [shiftedArgs, instantiatedArgs, pushforward]
-              simpa using act_interchange.aux σ κ (Φ ⋈ Λ) (args i)
+            congr 1
+            funext Λ i
+            exact act_interchange.aux σ κ (Φ ⋈ Λ) (args i)
       case left =>
+        have headΩ := act_renamed_head σ (C.inl (C.inl (C.inl w))) instantiatedArgs
+        have headΨ := act_renamed_head σ (C.inl (C.inl (C.inl w))) args
+        simp only [Renaming.extend_inl] at headΩ headΨ
         rw [act_left]
-        have headΩ := act_renamed_head σ (C.inl (C.inl (C.inl w)))
-          (fun {Λ} i => κ.act (Φ ⋈ Λ) (args i))
-        simp only [Renaming.extend_inl] at headΩ
         apply Eq.trans headΩ
         symm
-        trans Subst.act (Ξ := Ω)
-            (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
-            (.ap (C.inl (C.inl (C.inl (C.inl w))))
-              (fun {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
-        · congr 1
-          have headΨ := act_renamed_head σ (C.inl (C.inl (C.inl w))) args
-          simp only [Renaming.extend_inl] at headΨ
-          apply headΨ
+        trans Subst.act (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ
+            (.ap (C.inl (C.inl (C.inl (C.inl w)))) (fun {_} j => σ.act (Θ ⋈ Ψ ⋈ Φ ⋈ _) (args j)))
+        · apply congrArg _ headΨ
         · rw [act_left (Ξ := Ω) (pushforward (Ω := Θ ⋈ Ω) σ κ) Φ (C.inl (C.inl w))]
           congr 1
           funext Λ i
-          simpa using (act_interchange.aux σ κ (Φ ⋈ Λ) (args i)).symm
+          symm
+          exact act_interchange.aux σ κ (Φ ⋈ Λ) (args i)
 termination_by (s(Δ, Ψ), (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ))
 decreasing_by
-  all_goals
-    first
-    | apply Prod.Lex.right
-      exact Expr.Subterm.of_arg x args _
-    | apply Prod.Lex.left
-      apply Sym2.GameAdd.snd
-      exact ⟨z⟩
-    | apply Prod.Lex.left
-      apply Sym2.GameAdd.snd_fst
-      exact ⟨w⟩
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact Prod.Lex.left _ _ (Sym2.GameAdd.snd ⟨z⟩)
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
+  · exact Prod.Lex.left _ _ (Sym2.GameAdd.snd_fst ⟨w⟩)
+  · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
 
 end
 
 end
 
-
-/-- Acting by `θ` commutes with instantiating `κ`: substituting `κ` then acting
-by `θ` equals acting by `θ` then substituting the pushed-forward `κ`. -/
+/-- Acting by `κ` at depth `1` and then by `θ` equals acting by `θ` and then by
+`pushforward θ κ` at depth `1`. -/
 theorem act_interchange
     {Γ Θ Ξ Ψ Ω : C.Arity} (θ : Subst Θ (Γ ⋈ Ξ))
     (κ : Subst Ψ (Γ ⋈ Θ ⋈ Ω)) (e : Expr (Γ ⋈ Θ ⋈ Ψ)) :

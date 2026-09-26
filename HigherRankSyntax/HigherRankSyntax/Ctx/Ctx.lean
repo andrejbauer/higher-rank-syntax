@@ -4,16 +4,17 @@ import HigherRankSyntax.Typing.Equivalence
 /-!
 # The category of contexts
 
-A context is an arity together with a well-formed ambient over it, `Ctx.Tele Γ`
-the well-formed telescopes over it, and `Ctx.Rel` their equality by 7.4 at the
-empty context.  `Ob` is the contexts modulo that, and `X ⟶ Y` the fillings of `Y`
-weakened into `X` modulo 9.2, with identity `Subst.id` and composition
-`Subst.comp`.
+A context is an arity with a well-formed ambient whose slots form it.  Two
+contexts are equal when they declare the same arity and their ambients are equal
+telescopes over the empty ambient; `Ob` is the contexts modulo this equality.  A
+morphism `X ⟶ Y` is a filling over the ambient of `X` of the ambient of `Y`
+renamed into the arity of `X`, modulo agreement of fillings.  The identity is
+`Subst.id`, and `f ≫ g` substitutes `f` into every filler of `g`.
 -/
 
 open CategoryTheory
 
-/-- An arity with a well-formed ambient over it. -/
+/-- An arity with a well-formed ambient whose slots form it. -/
 structure Ctx where
   /-- The arity whose slots the ambient declares. -/
   arity : C.Arity
@@ -35,92 +36,109 @@ def empty : Ctx := ⟨1, .nil, Wf_t.nil⟩
 def toTele : Ctx → empty.Tele
   | ⟨Ω, A, hA⟩ => ⟨Ω, A, hA⟩
 
-/-- 7.4: two telescopes over a context declare the same arity and are equal. -/
+/-- Two telescopes over a context declare the same arity and are equal over its
+ambient. -/
 def Tele.Rel {Γ : Ctx} : Γ.Tele → Γ.Tele → Prop
   | ⟨Ω, Θ, _⟩, ⟨Ω', Θ', _⟩ => ∃ h : Ω = Ω', Eq_t Γ.ambient (h ▸ Θ) Θ'
 
-theorem Tele.Rel.refl {Γ : Ctx} : ∀ Θ : Γ.Tele, Tele.Rel Θ Θ
+theorem Tele.Rel.refl {Γ : Ctx} :
+  ∀ Θ : Γ.Tele, Tele.Rel Θ Θ
   | ⟨_, _, hΘ⟩ => ⟨rfl, Wf_t.refl hΘ⟩
 
 theorem Tele.Rel.symm {Γ : Ctx} {Θ Θ' : Γ.Tele} (h : Tele.Rel Θ Θ') :
-    Tele.Rel Θ' Θ := by
+  Tele.Rel Θ' Θ
+  := by
   obtain ⟨_, _, _⟩ := Θ
   obtain ⟨_, _, _⟩ := Θ'
-  obtain ⟨rfl, heq⟩ := h
-  exact ⟨rfl, Eq_t.symm Γ.wf heq⟩
+  obtain ⟨rfl, h⟩ := h
+  exact ⟨rfl, Eq_t.symm Γ.wf h⟩
 
-theorem Tele.Rel.trans {Γ : Ctx} {Θ Θ' Θ'' : Γ.Tele} (h : Tele.Rel Θ Θ')
-    (h' : Tele.Rel Θ' Θ'') : Tele.Rel Θ Θ'' := by
+theorem Tele.Rel.trans
+    {Γ : Ctx} {Θ Θ' Θ'' : Γ.Tele}
+    (h : Tele.Rel Θ Θ') (h' : Tele.Rel Θ' Θ'') :
+  Tele.Rel Θ Θ''
+  := by
   obtain ⟨_, _, hΘ⟩ := Θ
   obtain ⟨_, _, _⟩ := Θ'
   obtain ⟨_, _, _⟩ := Θ''
-  obtain ⟨rfl, heq⟩ := h
-  obtain ⟨rfl, heq'⟩ := h'
-  exact ⟨rfl, Eq_t.trans Γ.wf hΘ heq heq'⟩
+  obtain ⟨rfl, h⟩ := h
+  obtain ⟨rfl, h'⟩ := h'
+  exact ⟨rfl, Eq_t.trans Γ.wf hΘ h h'⟩
 
 /-- Two contexts are equal as telescopes over the empty context. -/
 def Rel (Γ Γ' : Ctx) : Prop := Tele.Rel Γ.toTele Γ'.toTele
 
-/-- 7.4 as a setoid on contexts. -/
+/-- The setoid of contexts under `Rel`. -/
 def setoid : Setoid Ctx where
   r := Rel
   iseqv := ⟨fun Γ => Tele.Rel.refl Γ.toTele, Tele.Rel.symm, Tele.Rel.trans⟩
 
-/-- The arities of equal contexts agree. -/
-theorem Rel.arity {Γ Γ' : Ctx} (h : Ctx.Rel Γ Γ') : Γ.arity = Γ'.arity := by
-  obtain ⟨e, _⟩ := h
-  exact e
+/-- Equal contexts declare the same arity. -/
+theorem Rel.arity {Γ Γ' : Ctx} (h : Rel Γ Γ') :
+  Γ.arity = Γ'.arity
+  := h.1
 
-/-- Filling the weakening of an equal ambient over an equal ambient. -/
-theorem wf_hom_iff {Ω Λ : C.Arity} {A A' : Ambient Ω} {B B' : Ambient Λ}
+/-- For equal ambients `A`, `A'` and equal ambients `B`, `B'`, `σ` fills over `A`
+the renaming of `B` into the arity of `A` exactly when it fills over `A'` the
+renaming of `B'`. -/
+theorem wf_hom_iff
+    {Ω Λ : C.Arity} {A A' : Ambient Ω} {B B' : Ambient Λ}
     (hA : Eq_t (.nil : Ambient 1) A A') (hB : Eq_t (.nil : Ambient 1) B B')
     (σ : _root_.Subst Λ Ω) :
-    Wf_s A (dTel.rename (Renaming.fromUnit Ω) B) σ
-      ↔ Wf_s A' (dTel.rename (Renaming.fromUnit Ω) B') σ := by
-  refine ⟨fun h => Wf_s.ofEq hA h (Eq_t.weaken (Ambient.Renaming.fromEmpty A) hB),
-    fun h => ?_⟩
-  exact Wf_s.ofEq (Eq_t.symm Wf_t.nil hA) h
-    (Eq_t.weaken (Ambient.Renaming.fromEmpty A') (Eq_t.symm Wf_t.nil hB))
+  Wf_s A (dTel.rename (Renaming.fromUnit Ω) B) σ
+    ↔ Wf_s A' (dTel.rename (Renaming.fromUnit Ω) B') σ
+  := by
+  constructor
+  · intro h
+    apply Wf_s.ofEq hA h
+    apply Eq_t.weaken (Ambient.Renaming.fromEmpty A) hB
+  · intro h
+    apply Wf_s.ofEq (Eq_t.symm Wf_t.nil hA) h
+    apply Eq_t.weaken (Ambient.Renaming.fromEmpty A') (Eq_t.symm Wf_t.nil hB)
 
-/-- Agreement of fillings of the weakening of an equal ambient over an equal
-ambient. -/
-theorem eq_hom_iff {Ω Λ : C.Arity} {A A' : Ambient Ω} {B B' : Ambient Λ}
+/-- For equal ambients `A`, `A'` and equal ambients `B`, `B'`, and `σ` filling over
+`A` the renaming of `B` into the arity of `A`, `σ` and `θ` agree as such fillings
+exactly when they agree as fillings over `A'` of the renaming of `B'`. -/
+theorem eq_hom_iff
+    {Ω Λ : C.Arity} {A A' : Ambient Ω} {B B' : Ambient Λ}
     (hA : Eq_t (.nil : Ambient 1) A A') (hB : Eq_t (.nil : Ambient 1) B B')
     {σ θ : _root_.Subst Λ Ω}
     (hσ : Wf_s A (dTel.rename (Renaming.fromUnit Ω) B) σ) :
-    Eq_s A (dTel.rename (Renaming.fromUnit Ω) B) σ θ
-      ↔ Eq_s A' (dTel.rename (Renaming.fromUnit Ω) B') σ θ := by
-  have hbase := Eq_t.toBoth Eq_t.Both.nil hA
-  refine ⟨fun h => Eq_s.ofBoth hbase h
-      (Eq_t.toBoth hbase (Eq_t.weaken (Ambient.Renaming.fromEmpty A) hB)) hσ
-      ((wf_hom_iff hA hB σ).mp hσ), fun h => ?_⟩
-  have hbase' := Eq_t.toBoth Eq_t.Both.nil (Eq_t.symm Wf_t.nil hA)
-  exact Eq_s.ofBoth hbase' h
-    (Eq_t.toBoth hbase' (Eq_t.weaken (Ambient.Renaming.fromEmpty A')
-      (Eq_t.symm Wf_t.nil hB))) ((wf_hom_iff hA hB σ).mp hσ) hσ
+  Eq_s A (dTel.rename (Renaming.fromUnit Ω) B) σ θ
+    ↔ Eq_s A' (dTel.rename (Renaming.fromUnit Ω) B') σ θ
+  := by
+  have hσ' := (wf_hom_iff hA hB σ).mp hσ
+  constructor
+  · intro h
+    have hbase := Eq_t.toBoth Eq_t.Both.nil hA
+    apply Eq_s.ofBoth hbase h _ hσ hσ'
+    apply Eq_t.toBoth hbase (Eq_t.weaken (Ambient.Renaming.fromEmpty A) hB)
+  · intro h
+    have hbase := Eq_t.toBoth Eq_t.Both.nil (Eq_t.symm Wf_t.nil hA)
+    apply Eq_s.ofBoth hbase h _ hσ' hσ
+    apply Eq_t.toBoth hbase
+    apply Eq_t.weaken (Ambient.Renaming.fromEmpty A') (Eq_t.symm Wf_t.nil hB)
 
-/-- The contexts modulo 7.4. -/
-def Ob : Type := Quotient Ctx.setoid
+/-- Contexts modulo `Rel`. -/
+def Ob : Type := Quotient setoid
 
 /-- The arity a context class declares. -/
 def Ob.arity (X : Ob) : C.Arity :=
   Quotient.liftOn X Ctx.arity (fun _ _ h => Rel.arity h)
 
-/-- A filling of the weakened target over the source. -/
+/-- `σ` fills, over the ambient of `X`, the ambient of `Y` renamed into the arity
+of `X`. -/
 def Ob.Subst.Wf (X Y : Ob) : _root_.Subst Y.arity X.arity → Prop :=
   Quotient.hrecOn₂ (φ := fun X Y => _root_.Subst (Ob.arity Y) (Ob.arity X) → Prop)
     X Y (fun Γ Δ => Wf_s Γ.ambient (dTel.rename (Renaming.fromUnit Γ.arity) Δ.ambient))
     (by
-      intro Γ Δ Γ' Δ' hΓ hΔ
-      obtain ⟨_, _, _⟩ := Γ
-      obtain ⟨_, _, _⟩ := Γ'
-      obtain ⟨_, _, _⟩ := Δ
-      obtain ⟨_, _, _⟩ := Δ'
-      obtain ⟨rfl, hA⟩ := hΓ
-      obtain ⟨rfl, hB⟩ := hΔ
-      exact heq_of_eq (funext fun σ => propext (wf_hom_iff hA hB σ)))
+      rintro ⟨_, _, _⟩ ⟨_, _, _⟩ ⟨_, _, _⟩ ⟨_, _, _⟩ ⟨rfl, hA⟩ ⟨rfl, hB⟩
+      apply heq_of_eq
+      funext σ
+      apply propext (wf_hom_iff hA hB σ))
 
-/-- Two fillings of the weakened target are well formed and agree. -/
+/-- `σ` fills, over the ambient of `X`, the ambient of `Y` renamed into the arity
+of `X`, and agrees with `θ` as such a filling. -/
 def Ob.Subst.Rel (X Y : Ob) :
     _root_.Subst Y.arity X.arity → _root_.Subst Y.arity X.arity → Prop :=
   Quotient.hrecOn₂ (φ := fun X Y => _root_.Subst (Ob.arity Y) (Ob.arity X) →
@@ -129,108 +147,119 @@ def Ob.Subst.Rel (X Y : Ob) :
       Wf_s Γ.ambient (dTel.rename (Renaming.fromUnit Γ.arity) Δ.ambient) σ ∧
         Eq_s Γ.ambient (dTel.rename (Renaming.fromUnit Γ.arity) Δ.ambient) σ θ)
     (by
-      intro Γ Δ Γ' Δ' hΓ hΔ
-      obtain ⟨_, _, _⟩ := Γ
-      obtain ⟨_, _, _⟩ := Γ'
-      obtain ⟨_, _, _⟩ := Δ
-      obtain ⟨_, _, _⟩ := Δ'
-      obtain ⟨rfl, hA⟩ := hΓ
-      obtain ⟨rfl, hB⟩ := hΔ
-      refine heq_of_eq (funext fun σ => funext fun θ => propext ⟨?_, ?_⟩)
+      rintro ⟨_, _, _⟩ ⟨_, _, _⟩ ⟨_, _, _⟩ ⟨_, _, _⟩ ⟨rfl, hA⟩ ⟨rfl, hB⟩
+      apply heq_of_eq
+      funext σ θ
+      apply propext
+      constructor
       · rintro ⟨hσ, hst⟩
         exact ⟨(wf_hom_iff hA hB σ).mp hσ, (eq_hom_iff hA hB hσ).mp hst⟩
       · rintro ⟨hσ, hst⟩
         have hσ' := (wf_hom_iff hA hB σ).mpr hσ
         exact ⟨hσ', (eq_hom_iff hA hB hσ').mpr hst⟩)
 
-/-- A filling of the weakened target over the source. -/
+/-- The fillings, over the ambient of `X`, of the ambient of `Y` renamed into the
+arity of `X`. -/
 def Ob.Subst (X Y : Ob) : Type := { σ : _root_.Subst Y.arity X.arity // Ob.Subst.Wf X Y σ }
 
-theorem Ob.Subst.Rel.refl {X Y : Ob} (σ : Ob.Subst X Y) : Ob.Subst.Rel X Y σ.1 σ.1 := by
-  refine Quotient.inductionOn₂ (motive := fun X Y => ∀ σ : Ob.Subst X Y,
-    Ob.Subst.Rel X Y σ.1 σ.1) X Y ?_ σ
-  intro _ _ σ
+theorem Ob.Subst.Rel.refl {X Y : Ob} (σ : Ob.Subst X Y) :
+  Ob.Subst.Rel X Y σ.1 σ.1
+  := by
+  obtain ⟨_⟩ := X
+  obtain ⟨_⟩ := Y
   exact ⟨σ.2, Eq_s.refl σ.2⟩
 
-theorem Ob.Subst.Rel.symm {X Y : Ob} {σ θ : Ob.Subst X Y} (h : Ob.Subst.Rel X Y σ.1 θ.1) :
-    Ob.Subst.Rel X Y θ.1 σ.1 := by
-  refine Quotient.inductionOn₂ (motive := fun X Y => ∀ σ θ : Ob.Subst X Y,
-    Ob.Subst.Rel X Y σ.1 θ.1 → Ob.Subst.Rel X Y θ.1 σ.1) X Y ?_ σ θ h
-  intro Γ Δ _ θ h
-  exact ⟨θ.2, Eq_s.symm Γ.wf h.2 (Ambient.Wf.weaken Δ.wf Γ.ambient) h.1 θ.2⟩
+theorem Ob.Subst.Rel.symm
+    {X Y : Ob} {σ θ : Ob.Subst X Y}
+    (h : Ob.Subst.Rel X Y σ.1 θ.1) :
+  Ob.Subst.Rel X Y θ.1 σ.1
+  := by
+  obtain ⟨Γ⟩ := X
+  obtain ⟨Δ⟩ := Y
+  constructor
+  · apply θ.2
+  · apply Eq_s.symm Γ.wf h.2 (Ambient.Wf.weaken Δ.wf Γ.ambient) h.1 θ.2
 
-theorem Ob.Subst.Rel.trans {X Y : Ob} {σ θ κ : Ob.Subst X Y} (h : Ob.Subst.Rel X Y σ.1 θ.1)
-    (h' : Ob.Subst.Rel X Y θ.1 κ.1) : Ob.Subst.Rel X Y σ.1 κ.1 := by
-  refine Quotient.inductionOn₂ (motive := fun X Y => ∀ σ θ κ : Ob.Subst X Y,
-    Ob.Subst.Rel X Y σ.1 θ.1 → Ob.Subst.Rel X Y θ.1 κ.1 → Ob.Subst.Rel X Y σ.1 κ.1) X Y ?_ σ θ κ h h'
-  intro Γ Δ _ θ _ h h'
-  exact ⟨h.1, Eq_s.trans Γ.wf h.2 h'.2 (Ambient.Wf.weaken Δ.wf Γ.ambient) h.1 θ.2⟩
+theorem Ob.Subst.Rel.trans
+    {X Y : Ob} {σ θ κ : Ob.Subst X Y}
+    (h : Ob.Subst.Rel X Y σ.1 θ.1) (h' : Ob.Subst.Rel X Y θ.1 κ.1) :
+  Ob.Subst.Rel X Y σ.1 κ.1
+  := by
+  obtain ⟨Γ⟩ := X
+  obtain ⟨Δ⟩ := Y
+  constructor
+  · apply h.1
+  · apply Eq_s.trans Γ.wf h.2 h'.2 (Ambient.Wf.weaken Δ.wf Γ.ambient) h.1 θ.2
 
-/-- 9.2 as a setoid on the fillings between context classes. -/
+/-- The setoid of fillings from `X` to `Y` under `Ob.Subst.Rel`. -/
 def Ob.Subst.setoid (X Y : Ob) : Setoid (Ob.Subst X Y) where
   r σ θ := Ob.Subst.Rel X Y σ.1 θ.1
   iseqv := ⟨Ob.Subst.Rel.refl, Ob.Subst.Rel.symm, Ob.Subst.Rel.trans⟩
 
-theorem Ob.Subst.Wf.id (X : Ob) : Ob.Subst.Wf X X (_root_.Subst.id X.arity) := by
-  refine Quotient.inductionOn
-    (motive := fun X => Ob.Subst.Wf X X (_root_.Subst.id (Ob.arity X))) X ?_
-  intro Γ
-  exact (Wf_sub.id Γ.wf).toFilling
+theorem Ob.Subst.Wf.id (X : Ob) :
+  Ob.Subst.Wf X X (_root_.Subst.id X.arity)
+  := by
+  obtain ⟨Γ⟩ := X
+  apply (Wf_sub.id Γ.wf).toFilling
 
 /-- The identity filling. -/
 def Ob.Subst.id (X : Ob) : Ob.Subst X X :=
   ⟨_root_.Subst.id X.arity, Ob.Subst.Wf.id X⟩
 
 theorem Ob.Subst.Wf.comp {X Y Z : Ob} (f : Ob.Subst X Y) (g : Ob.Subst Y Z) :
-    Ob.Subst.Wf X Z (_root_.Subst.comp (Γ := 1) g.1 f.1) := by
-  refine Quotient.inductionOn₃ (motive := fun X Y Z =>
-    ∀ (f : Ob.Subst X Y) (g : Ob.Subst Y Z),
-      Ob.Subst.Wf X Z (_root_.Subst.comp (Γ := 1) g.1 f.1)) X Y Z ?_ f g
-  intro _ _ _ f g
-  exact (g.2.toWf_sub.comp f.2.toWf_sub).toFilling
+  Ob.Subst.Wf X Z (_root_.Subst.comp (Γ := 1) g.1 f.1)
+  := by
+  obtain ⟨_⟩ := X
+  obtain ⟨_⟩ := Y
+  obtain ⟨_⟩ := Z
+  apply (g.2.toWf_sub.comp f.2.toWf_sub).toFilling
 
-/-- Composition of fillings. -/
+/-- Composition of fillings: `f` substituted into every filler of `g`. -/
 def Ob.Subst.comp {X Y Z : Ob} (f : Ob.Subst X Y) (g : Ob.Subst Y Z) :
     Ob.Subst X Z :=
   ⟨_root_.Subst.comp (Γ := 1) g.1 f.1, Ob.Subst.Wf.comp f g⟩
 
-theorem Ob.Subst.Rel.comp {X Y Z : Ob} {f f' : Ob.Subst X Y} {g g' : Ob.Subst Y Z}
+theorem Ob.Subst.Rel.comp
+    {X Y Z : Ob} {f f' : Ob.Subst X Y} {g g' : Ob.Subst Y Z}
     (hf : Ob.Subst.Rel X Y f.1 f'.1) (hg : Ob.Subst.Rel Y Z g.1 g'.1) :
-    Ob.Subst.Rel X Z (Ob.Subst.comp f g).1 (Ob.Subst.comp f' g').1 := by
-  refine Quotient.inductionOn₃ (motive := fun X Y Z =>
-    ∀ (f f' : Ob.Subst X Y) (g g' : Ob.Subst Y Z), Ob.Subst.Rel X Y f.1 f'.1 →
-      Ob.Subst.Rel Y Z g.1 g'.1 →
-        Ob.Subst.Rel X Z (Ob.Subst.comp f g).1 (Ob.Subst.comp f' g').1)
-    X Y Z ?_ f f' g g' hf hg
-  intro Γ Δ Ξ f f' g g' hf hg
-  refine ⟨(g.2.toWf_sub.comp f.2.toWf_sub).toFilling, ?_⟩
-  exact Eq_sub.toAgreement (Eq_sub.comp Ξ.wf Δ.wf Γ.wf g.2.toWf_sub g'.2.toWf_sub
-    f.2.toWf_sub f'.2.toWf_sub hg.2.toEq_sub hf.2.toEq_sub)
+  Ob.Subst.Rel X Z (Ob.Subst.comp f g).1 (Ob.Subst.comp f' g').1
+  := by
+  obtain ⟨Γ⟩ := X
+  obtain ⟨Δ⟩ := Y
+  obtain ⟨Ξ⟩ := Z
+  constructor
+  · apply Ob.Subst.Wf.comp f g
+  · apply Eq_sub.toAgreement
+    apply Eq_sub.comp Ξ.wf Δ.wf Γ.wf g.2.toWf_sub g'.2.toWf_sub f.2.toWf_sub f'.2.toWf_sub
+    · apply hg.2.toEq_sub
+    · apply hf.2.toEq_sub
 
-/-- 9.3: contexts and fillings, both modulo their equivalences. -/
+/-- The category of context classes, with the classes of fillings as morphisms. -/
 instance : Category Ob where
   Hom X Y := Quotient (Ob.Subst.setoid X Y)
   id X := Quotient.mk (Ob.Subst.setoid X X) (Ob.Subst.id X)
   comp {X Y Z} f g :=
-    Quotient.map₂ (sa := Ob.Subst.setoid X Y) (sb := Ob.Subst.setoid Y Z) (sc := Ob.Subst.setoid X Z)
-      Ob.Subst.comp (fun _ _ hf _ _ hg => Ob.Subst.Rel.comp hf hg) f g
-  id_comp {X Y} f := by
-    refine Quotient.inductionOn f ?_
-    intro σ
-    refine congrArg (Quotient.mk (Ob.Subst.setoid X Y)) (Subtype.ext ?_)
+    Quotient.map₂ (sa := Ob.Subst.setoid X Y) (sb := Ob.Subst.setoid Y Z)
+      (sc := Ob.Subst.setoid X Z) Ob.Subst.comp (fun _ _ hf _ _ hg => Ob.Subst.Rel.comp hf hg) f g
+  id_comp f := by
+    obtain ⟨σ⟩ := f
+    apply congrArg (Quotient.mk _)
+    apply Subtype.ext
     funext Λ i
-    exact act_id (Ob.arity X) Λ (σ.1 i)
-  comp_id {X Y} f := by
-    refine Quotient.inductionOn f ?_
-    intro σ
-    refine congrArg (Quotient.mk (Ob.Subst.setoid X Y)) (Subtype.ext ?_)
+    apply act_id
+  comp_id f := by
+    obtain ⟨σ⟩ := f
+    apply congrArg (Quotient.mk _)
+    apply Subtype.ext
     funext Λ i
-    exact act_η σ.1 Λ i
-  assoc {W X Y Z} f g h := by
-    refine Quotient.inductionOn₃ f g h ?_
-    intro σ θ κ
-    refine congrArg (Quotient.mk (Ob.Subst.setoid W Z)) (Subtype.ext ?_)
+    apply act_η
+  assoc f g h := by
+    obtain ⟨σ⟩ := f
+    obtain ⟨θ⟩ := g
+    obtain ⟨κ⟩ := h
+    apply congrArg (Quotient.mk _)
+    apply Subtype.ext
     funext Λ i
-    exact act_comp (Γ := 1) θ.1 σ.1 Λ (κ.1 i)
+    apply act_comp (Γ := 1)
 
 end Ctx

@@ -3,20 +3,27 @@ import HigherRankSyntax.Interchange
 import Batteries.Tactic.Trans
 
 /-!
-# The three relative-monad laws for `Subst.act`
+# Monad laws for substitution
 
-* `act_id` — the identity substitution acts as the identity (unit_right).
-* `act_η` — acting on an η-expansion applies the substitution (unit_left).
-* `act_comp` — action by a composite factors (comp_lift).
+* `act_id`: the identity substitution acts as the identity.
+* `act_η`: acting by `σ` on the η-expansion of a slot `x` gives `σ x`.
+* `act_comp`: acting by `Subst.comp σ θ` is acting by `σ` and then by `θ`.
+* `act_ofRenaming`: acting by `Subst.ofRenaming ρ` is renaming along `ρ`.
+
+`Subst.lift σ Φ` extends `σ : Subst Γ Δ` to `Subst (Γ ⋈ Φ) (Δ ⋈ Φ)`, fixing the
+slots of `Φ`.
 -/
 
-/-- **`act_id`** — the identity substitution acts as the identity (unit_right). -/
+/-- The identity substitution acts as the identity. -/
 theorem act_id (Γ Φ : C.Arity) (e : Expr (Γ ⋈ Φ)) :
   Subst.act (Subst.id Γ) (Γ := 1) Φ e = e
-  := act_idOfη (Γ := 1) (Subst.id Γ)
-       (fun z => by rw [C.unit_left Γ z]; rfl) Φ e
+  := by
+  apply act_idOfη (Γ := 1)
+  intro β z
+  rw [C.unit_left]
+  rfl
 
-/-- **`act_η`** — acting on an η-expansion reduces to applying `σ` (unit_left). -/
+/-- `σ` acting at depth `Θ` on the η-expansion of `x : Δ ∋ Θ` is `σ x`. -/
 theorem act_η
     {Δ Ξ : C.Arity}
     (σ : Subst Δ Ξ) (Θ : C.Arity) (x : Δ ∋ Θ) :
@@ -25,141 +32,85 @@ theorem act_η
   rw [Expr.η.eq_1]
   trans
   · convert act_middle (Γ := 1) σ Θ x (fun {_} i => Expr.η (C.inr i)) using 2
-    · congr 1
-      rw [C.unit_left Δ x]
-  · calc
-      _ = Subst.act (Subst.instId Ξ Θ) 1 (σ x) := by
-            congr 1
-            funext Ω i
-            apply act_η_right
+    rw [C.unit_left]
+  · calc _
+        = Subst.act (Subst.instId Ξ Θ) 1 (σ x) := by
+          congr 1
+          funext Ω i
+          apply act_η_right
       _ = σ x := by apply act_inst_id
 
-/-- An application is the substitution instance of an η-expansion by its own
-arguments. -/
-theorem ap_eq_act_η {Γ α : C.Arity} (x : Γ ∋ α) (args : Subst α Γ) :
-  Expr.ap x args
-    = Subst.act (Γ := Γ) (Δ := α) (Ξ := 1) args 1 ((Expr.η x : Expr (Γ ⋈ α)))
+/-- `s` acting on `Expr.ap x args` is `s x` with its `α`-slots substituted by the
+arguments acted on by `s`. -/
+theorem act_ap
+    {Γ Γ' : C.Arity} (s : Subst Γ Γ')
+    {α : C.Arity} (x : Γ ∋ α) (args : Subst α Γ) :
+  Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s 1 (Expr.ap x args)
+    = Subst.act (Γ := Γ') (Δ := α) (Ξ := 1)
+        (fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (args i)) 1 (s x)
   := by
-  rw [act_inst_η]
-  congr 1
-  exact (C.unit_right Γ x).symm
-
-/-- Acting on an application substitutes the head's filler by the acted
-arguments. -/
-theorem act_ap {Γ Γ' : C.Arity} (s : Subst Γ Γ') {α : C.Arity} (x : Γ ∋ α)
-    (args : Subst α Γ) :
-    Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s 1 (Expr.ap x args)
-      = Subst.act (Γ := Γ') (Δ := α) (Ξ := 1)
-          (fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (args i)) 1 (s x) := by
   convert act_middle (Γ := 1) s 1 x args using 2
-  exact congrArg (fun w => Expr.ap w args)
-    ((C.unit_left Γ x).symm.trans (C.unit_right (1 ⋈ Γ) (C.inr x)).symm)
+  rw [C.unit_right, C.unit_left]
 
-/-- Acting on an application whose head goes to an η-expansion rebuilds the
-head. -/
-theorem act_ap_eta {Γ Γ' : C.Arity} (s : Subst Γ Γ') {α : C.Arity} (x : Γ ∋ α)
-    (y : Γ' ∋ α) (h : s x = Expr.η y) (args : Subst α Γ) :
-    Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s 1 (Expr.ap x args)
-      = Expr.ap y (fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (args i)) := by
-  refine Eq.trans (act_ap s x args) ?_
-  refine Eq.trans (congrArg (Subst.act (Γ := Γ') (Δ := α) (Ξ := 1)
-    (fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (args i)) 1) h) ?_
-  refine Eq.trans (act_inst_η _ y) ?_
-  exact congrArg (fun w => Expr.ap w
-    (fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (args i)))
-    (C.unit_right Γ' y)
+/-- If `s x` is the η-expansion of `y`, then `s` acting on `Expr.ap x args` is the
+application of `y` to the arguments acted on by `s`. -/
+theorem act_ap_eta
+    {Γ Γ' : C.Arity} (s : Subst Γ Γ')
+    {α : C.Arity} (x : Γ ∋ α) (y : Γ' ∋ α) (h : s x = Expr.η y) (args : Subst α Γ) :
+  Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s 1 (Expr.ap x args)
+    = Expr.ap y (fun ⦃Λ⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ (args i))
+  := by
+  rw [act_ap, h, act_inst_η, C.unit_right]
+  rfl
 
-/-- Acting by `Subst.copair (Subst.id Δ) σ` is acting by `σ` below the fixed
-prefix `Δ`. -/
+/-- On `Expr ((Δ ⋈ Ω) ⋈ Φ)`, acting at depth `Φ` by `Subst.copair (Subst.id Δ) σ`
+equals acting at depth `Φ` by `σ` with prefix `Δ`. -/
 theorem act_copair_prefix {Δ Ω : C.Arity} (σ : Subst Ω Δ) (Φ : C.Arity) :
-    ∀ e : Expr ((Δ ⋈ Ω) ⋈ Φ),
-      Subst.act (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ) (Subst.copair (Subst.id Δ) σ) Φ e
-        = Subst.act (Γ := Δ) (Δ := Ω) (Ξ := 1) σ Φ e
+  ∀ e : Expr ((Δ ⋈ Ω) ⋈ Φ),
+    Subst.act (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ) (Subst.copair (Subst.id Δ) σ) Φ e
+      = Subst.act (Γ := Δ) (Δ := Ω) (Ξ := 1) σ Φ e
   | .ap x args => by
       head_cases x with z
       case right =>
-        refine Eq.trans (act_right (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ)
-          (Subst.copair (Subst.id Δ) σ) Φ z args) ?_
-        refine Eq.trans ?_ (act_right (Γ := Δ) (Δ := Ω) (Ξ := 1) σ Φ z args).symm
-        congr 1
-        funext Λ i
-        exact act_copair_prefix σ (Φ ⋈ Λ) (args i)
+        rw [act_right]
+        trans
+        · apply act_right (Γ := 1)
+        · congr 1
+          funext Λ i
+          apply act_copair_prefix
       case middle =>
-        refine Eq.trans ?_ (act_middle (Γ := Δ) (Δ := Ω) (Ξ := 1) σ Φ z args).symm
-        convert act_middle (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ)
-          (Subst.copair (Subst.id Δ) σ) Φ (C.inr z) args using 2
-        · exact congrArg (fun w => Expr.ap w args)
-            (congrArg C.inl (C.unit_left (Δ ⋈ Ω) (C.inr z)).symm)
-        refine Eq.trans ?_ (congrArg
-          (Subst.act (Γ := Δ) (fun ⦃Λ⦄ (i : _) =>
-            Subst.act (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ)
-              (Subst.copair (Subst.id Δ) σ) (Φ ⋈ Λ) (args i)) 1)
-          (Subst.copair_inr (Subst.id Δ) σ z).symm)
-        congr 1
-        funext Λ i
-        exact (act_copair_prefix σ (Φ ⋈ Λ) (args i)).symm
+        rw [act_middle (Γ := Δ)]
+        convert act_middle (Γ := 1) (Subst.copair (Subst.id Δ) σ) Φ (C.inr z) args using 2
+        · rw [C.unit_left]
+          rfl
+        · rw [Subst.copair_inr]
+          congr 1
+          funext Λ i
+          symm
+          apply act_copair_prefix
       case left =>
-        refine Eq.trans ?_ (act_left (Γ := Δ) (Δ := Ω) (Ξ := 1) σ Φ z args).symm
-        refine Eq.trans (congrArg
-          (Subst.act (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ) (Subst.copair (Subst.id Δ) σ) Φ)
-          (congrArg (fun w => Expr.ap w args)
-            (congrArg C.inl (C.unit_left (Δ ⋈ Ω) (C.inl z)).symm))) ?_
-        refine Eq.trans (act_middle (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ)
-          (Subst.copair (Subst.id Δ) σ) Φ (C.inl z) args) ?_
-        refine Eq.trans (congrArg
-          (Subst.act (Γ := Δ) (fun ⦃Λ⦄ (i : _) =>
-            Subst.act (Γ := 1) (Δ := Δ ⋈ Ω) (Ξ := Δ)
-              (Subst.copair (Subst.id Δ) σ) (Φ ⋈ Λ) (args i)) 1)
-          (Subst.copair_inl (Subst.id Δ) σ z)) ?_
-        refine Eq.trans (act_inst_η _ z) ?_
-        refine congrArg₂ Expr.ap (congrArg C.inl (C.unit_right Δ z).symm) ?_
-        funext Λ i
-        exact act_copair_prefix σ (Φ ⋈ Λ) (args i)
+        rw [act_left (Γ := Δ)]
+        convert act_middle (Γ := 1) (Subst.copair (Subst.id Δ) σ) Φ (C.inl z) args using 2
+        · rw [C.unit_left]
+          rfl
+        · rw [Subst.copair_inl, Subst.id]
+          symm
+          trans
+          · apply act_inst_η
+          · rw [C.unit_right]
+            congr 1
+            funext Λ i
+            apply act_copair_prefix
 termination_by e => (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg x args i
 
-/-- Acting by `Subst.copair (Subst.id Γ) args` on an expression weakened by a
-`Γ`-prefix is acting by `args`. -/
-theorem act_copair_id {Γ α : C.Arity} (args : Subst α Γ) (Φ : C.Arity) :
-    ∀ e : Expr (Γ ⋈ α ⋈ Φ),
-      Subst.act (Γ := Γ) (Δ := Γ ⋈ α) (Ξ := 1)
-          (Subst.copair (Subst.id Γ) args) Φ
-          (⟦ (fun ⦃_⦄ y => C.inr y : (Γ ⋈ α) →ʳ Γ ⋈ (Γ ⋈ α)) ⇑ʳ Φ ⟧ʳ e)
-        = Subst.act (Γ := Γ) (Δ := α) (Ξ := 1) args Φ e
-  | .ap (α := β) x args' => by
-    head_cases x with z
-    case right =>
-      rw [Renaming.act_ap, Renaming.extend_inr, act_right, act_right]
-      congr 1
-      funext Ω i
-      rw [← Renaming.extend_assoc]
-      exact act_copair_id args (Φ ⋈ Ω) (args' i)
-    case middle =>
-      rw [Renaming.act_ap, Renaming.extend_inl, act_middle, act_middle,
-        Subst.copair_inr]
-      congr 1
-      funext Ω i
-      rw [← Renaming.extend_assoc]
-      exact act_copair_id args (Φ ⋈ Ω) (args' i)
-    case left =>
-      rw [Renaming.act_ap, Renaming.extend_inl, act_middle, act_left,
-        Subst.copair_inl, Subst.id]
-      trans
-      · apply act_inst_η
-      · congr 1
-        · rw [C.unit_right]
-        · funext Ω i
-          rw [← Renaming.extend_assoc]
-          exact act_copair_id args (Φ ⋈ Ω) (args' i)
-termination_by e => (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
-decreasing_by all_goals exact Expr.Subterm.of_arg x args' i
-
-/-- Substituting the fresh block of a weakened expression by the slots it came
-from returns the expression. -/
+/-- `Subst.instId Γ α` acting at depth `Φ` on `e` renamed along
+`(Renaming.inl Γ α ⇑ʳ α) ⇑ʳ Φ` gives back `e`. -/
 theorem act_instId_weaken (Γ α : C.Arity) :
-    ∀ {Φ : C.Arity} (e : Expr (Γ ⋈ α ⋈ Φ)),
-      Subst.act (Γ := Γ ⋈ α) (Δ := α) (Ξ := 1) (Subst.instId Γ α) Φ
-          (⟦ (Renaming.inl Γ α ⇑ʳ α) ⇑ʳ Φ ⟧ʳ e) = e
+  ∀ {Φ : C.Arity} (e : Expr (Γ ⋈ α ⋈ Φ)),
+    Subst.act (Γ := Γ ⋈ α) (Δ := α) (Ξ := 1) (Subst.instId Γ α) Φ
+        (⟦ (Renaming.inl Γ α ⇑ʳ α) ⇑ʳ Φ ⟧ʳ e)
+      = e
   | Φ, .ap (α := β) x args => by
       head_cases x with z
       case right =>
@@ -167,7 +118,7 @@ theorem act_instId_weaken (Γ α : C.Arity) :
         congr 1
         funext Ω i
         rw [← Renaming.extend_assoc]
-        exact act_instId_weaken Γ α (Φ := Φ ⋈ Ω) (args i)
+        apply act_instId_weaken
       case middle =>
         rw [Renaming.act_ap, Renaming.extend_inl, Renaming.extend_inr, act_middle,
           Subst.instId]
@@ -176,7 +127,7 @@ theorem act_instId_weaken (Γ α : C.Arity) :
         · congr 1
           funext Ω i
           rw [← Renaming.extend_assoc]
-          exact act_instId_weaken Γ α (Φ := Φ ⋈ Ω) (args i)
+          apply act_instId_weaken
       case left =>
         rw [Renaming.act_ap, Renaming.extend_inl, Renaming.extend_inl, act_left]
         congr 1
@@ -184,132 +135,116 @@ theorem act_instId_weaken (Γ α : C.Arity) :
           rfl
         · funext Ω i
           rw [← Renaming.extend_assoc]
-          exact act_instId_weaken Γ α (Φ := Φ ⋈ Ω) (args i)
+          apply act_instId_weaken
 termination_by Φ e => (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg x args i
 
-/-- Acting by the eta-substitution of a renaming is the renaming action. -/
-theorem act_ofRenaming
-    {Γ Δ Φ : C.Arity} (ρ : Γ →ʳ Δ) :
-    ∀ e : Expr (Γ ⋈ Φ),
-      Subst.act (Subst.ofRenaming ρ) (Γ := 1) Φ e =
-        Renaming.act (ρ ⇑ʳ Φ) e
+/-- Acting by `Subst.ofRenaming ρ` at depth `Φ` is renaming along `ρ ⇑ʳ Φ`. -/
+theorem act_ofRenaming {Γ Δ Φ : C.Arity} (ρ : Γ →ʳ Δ) :
+  ∀ e : Expr (Γ ⋈ Φ),
+    Subst.act (Subst.ofRenaming ρ) (Γ := 1) Φ e = Renaming.act (ρ ⇑ʳ Φ) e
   | .ap (α := β) x args => by
       rcases C.cover Γ Φ x with ⟨z, rfl⟩ | ⟨z, rfl⟩
-      · have hz :
-          (C.inl z : Γ ⋈ Φ ∋ β) =
-            C.inl (C.inr z : 1 ⋈ Γ ∋ β) := by
-            congr 1
-            exact (C.unit_left Γ z).symm
-        conv_lhs => rw [hz]
-        rw [Renaming.act_ap]
-        conv_lhs => unfold Subst.act
-        simp only [Subst.threeway_middle]
-        rw [Subst.ofRenaming, act_inst_η]
-        congr 1
-        · exact (Renaming.extend_inl ρ z).symm
-        · funext Ω i
+      · rw [Renaming.act_ap, Renaming.extend_inl]
+        trans
+        · convert act_middle (Γ := 1) (Subst.ofRenaming ρ) Φ z args using 2
+          rw [C.unit_left]
+          rfl
+        · rw [Subst.ofRenaming, act_inst_η]
+          congr 1
+          funext Ω i
           rw [← Renaming.extend_assoc]
-          exact act_ofRenaming (Φ := Φ ⋈ Ω) ρ (args i)
-      · rw [Renaming.act_ap]
-        trans .ap (C.inr z : Δ ⋈ Φ ∋ β)
-          (fun {_} i =>
-            Subst.act (Subst.ofRenaming ρ) (Γ := 1) (Φ ⋈ _) (args i))
-        · convert act_right (Γ := 1) (Subst.ofRenaming ρ) Φ z args using 1
+          apply act_ofRenaming
+      · rw [Renaming.act_ap, Renaming.extend_inr]
+        trans
+        · apply act_right (Γ := 1)
         · congr 1
-          · exact (Renaming.extend_inr ρ z).symm
-          · funext Ω i
-            rw [← Renaming.extend_assoc]
-            exact act_ofRenaming (Φ := Φ ⋈ Ω) ρ (args i)
-termination_by e =>
-  (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
+          funext Ω i
+          rw [← Renaming.extend_assoc]
+          apply act_ofRenaming
+termination_by e => (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg x args i
 
-/-- Eta-substitution below a fixed prefix is the corresponding prefixed
-renaming action. -/
-theorem act_ofRenaming_prefixed
-    {S Γ Δ Φ : C.Arity} (ρ : Γ →ʳ Δ) :
-    ∀ e : Expr (S ⋈ Γ ⋈ Φ),
-      Subst.act (Γ := S)
-          (fun ⦃_⦄ x => Expr.η (C.inr (ρ x))) Φ e =
-        Renaming.act ((Renaming.prefixed S ρ) ⇑ʳ Φ) e
+/-- With prefix `S`, the substitution `x ↦ Expr.η (C.inr (ρ x))` acting at depth
+`Φ` is renaming along `Renaming.prefixed S ρ ⇑ʳ Φ`. -/
+theorem act_ofRenaming_prefixed {S Γ Δ Φ : C.Arity} (ρ : Γ →ʳ Δ) :
+  ∀ e : Expr (S ⋈ Γ ⋈ Φ),
+    Subst.act (Γ := S) (fun ⦃_⦄ x => Expr.η (C.inr (ρ x))) Φ e
+      = Renaming.act ((Renaming.prefixed S ρ) ⇑ʳ Φ) e
   | .ap x args => by
       head_cases x with z
       case right =>
-        rw [act_right, Renaming.act_ap]
+        rw [act_right, Renaming.act_ap, Renaming.extend_inr]
         congr 1
-        · exact (Renaming.extend_inr (Renaming.prefixed S ρ) z).symm
-        · funext Ω i
-          rw [← Renaming.extend_assoc]
-          exact act_ofRenaming_prefixed (S := S) (Φ := Φ ⋈ Ω) ρ (args i)
+        funext Ω i
+        rw [← Renaming.extend_assoc]
+        apply act_ofRenaming_prefixed
       case middle =>
-        rw [act_middle, Renaming.act_ap]
-        rw [Renaming.extend_inl, Renaming.prefixed_inr]
-        rw [act_inst_η]
+        rw [act_middle, Renaming.act_ap, Renaming.extend_inl, Renaming.prefixed_inr, act_inst_η]
         congr 1
         funext Ω i
         rw [← Renaming.extend_assoc]
-        exact act_ofRenaming_prefixed (S := S) (Φ := Φ ⋈ Ω) ρ (args i)
+        apply act_ofRenaming_prefixed
       case left =>
-        rw [act_left, Renaming.act_ap]
-        rw [Renaming.extend_inl, Renaming.prefixed_inl]
+        rw [act_left, Renaming.act_ap, Renaming.extend_inl, Renaming.prefixed_inl]
         congr 1
         funext Ω i
         rw [← Renaming.extend_assoc]
-        exact act_ofRenaming_prefixed (S := S) (Φ := Φ ⋈ Ω) ρ (args i)
-termination_by e =>
-  (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
+        apply act_ofRenaming_prefixed
+termination_by e => (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg x args i
 
-/-- Instantiating a block commutes with a renaming of the base, when the fillers
-are renamed as well. -/
-theorem act_rename (Γ Δ Θ : C.Arity) (ρ : Γ →ʳ Δ) (σ : Subst Θ Γ) (e : Expr (Γ ⋈ Θ)) :
-    Subst.act (Γ := Δ) (Δ := Θ) (Ξ := 1)
-        (fun ⦃Λ⦄ i => ⟦ ρ ⇑ʳ Λ ⟧ʳ (σ i)) 1 ((⟦ ρ ⇑ʳ Θ ⟧ʳ e : Expr (Δ ⋈ Θ)))
-      = ⟦ ρ ⟧ʳ (Subst.act (Γ := Γ) (Δ := Θ) (Ξ := 1) σ 1 e) := by
-  let θ : Subst Γ (1 ⋈ Δ) := Subst.ofRenaming ρ
-  have key := act_interchange (Γ := 1) (Θ := Γ) (Ξ := Δ) (Ψ := Θ) (Ω := 1) θ σ e
-  have hpush : (fun ⦃Λ⦄ (i : Θ ∋ Λ) => ⟦ ρ ⇑ʳ Λ ⟧ʳ (σ i))
-      = pushforward (Γ := 1) (Ω := 1) θ σ := by
-    funext Λ i
-    exact (act_ofRenaming ρ (σ i)).symm
-  have he : (⟦ ρ ⇑ʳ Θ ⟧ʳ e : Expr (Δ ⋈ Θ)) = θ.act Θ e :=
-    (act_ofRenaming (Φ := Θ) ρ e).symm
-  have hout : ⟦ ρ ⟧ʳ (Subst.act (Γ := Γ) (Δ := Θ) (Ξ := 1) σ 1 e)
-      = θ.act 1 (Subst.act (Γ := Γ) (Δ := Θ) (Ξ := 1) σ 1 e) := by
-    refine Eq.trans ?_ (act_ofRenaming (Φ := 1) ρ _).symm
-    exact congrArg (fun κ => Renaming.act κ (Subst.act (Γ := Γ) (Δ := Θ) (Ξ := 1) σ 1 e))
-      (Renaming.extend_unit ρ).symm
-  rw [he]
-  refine Eq.trans ?_ hout.symm
-  refine Eq.trans ?_ key.symm
-  exact congrArg (fun s => Subst.act (Γ := Δ) s 1 (θ.act Θ e)) hpush
+/-- The substitution `i ↦ ⟦ ρ ⇑ʳ Λ ⟧ʳ (σ i)` acting at depth `1` on
+`⟦ ρ ⇑ʳ Θ ⟧ʳ e` is `σ` acting at depth `1` on `e`, renamed along `ρ`. -/
+theorem act_rename
+    (Γ Δ Θ : C.Arity) (ρ : Γ →ʳ Δ) (σ : Subst Θ Γ) (e : Expr (Γ ⋈ Θ)) :
+  Subst.act (Γ := Δ) (Δ := Θ) (Ξ := 1)
+      (fun ⦃Λ⦄ i => ⟦ ρ ⇑ʳ Λ ⟧ʳ (σ i)) 1 (⟦ ρ ⇑ʳ Θ ⟧ʳ e : Expr (Δ ⋈ Θ))
+    = ⟦ ρ ⟧ʳ (Subst.act (Γ := Γ) (Δ := Θ) (Ξ := 1) σ 1 e)
+  := by
+  calc _
+      = Subst.act (Γ := Δ) (pushforward (Γ := 1) (Ω := 1) (Subst.ofRenaming ρ) σ) 1
+          ((Subst.ofRenaming ρ).act (Γ := 1) Θ e) := by
+        congr 1
+        · funext Λ i
+          symm
+          apply act_ofRenaming
+        · symm
+          apply act_ofRenaming
+    _ = (Subst.ofRenaming ρ).act (Γ := 1) 1 (Subst.act (Γ := Γ) (Ξ := 1) σ 1 e) := by
+        symm
+        exact act_interchange (Γ := 1) (Ω := 1) _ σ e
+    _ = _ := by
+        convert act_ofRenaming (Φ := 1) ρ _ using 2
+        rw [Renaming.extend_unit]
+        rfl
 
-/-- Instantiating a block under a suffix commutes with a renaming of the base. -/
-theorem act_rename_suffix (Γ Δ Θ : C.Arity) (ρ : Γ →ʳ Δ) (σ : Subst Θ Γ) (Φ : C.Arity)
+/-- The substitution `i ↦ ⟦ ρ ⇑ʳ Λ ⟧ʳ (σ i)` acting at depth `Φ` on
+`⟦ (ρ ⇑ʳ Θ) ⇑ʳ Φ ⟧ʳ e` is `σ` acting at depth `Φ` on `e`, renamed along
+`ρ ⇑ʳ Φ`. -/
+theorem act_rename_suffix
+    (Γ Δ Θ : C.Arity) (ρ : Γ →ʳ Δ) (σ : Subst Θ Γ) (Φ : C.Arity)
     (e : Expr (Γ ⋈ Θ ⋈ Φ)) :
-    Subst.act (Γ := Δ) (Δ := Θ) (Ξ := 1)
-        (fun ⦃Λ⦄ i => ⟦ ρ ⇑ʳ Λ ⟧ʳ (σ i)) Φ ((⟦ (ρ ⇑ʳ Θ) ⇑ʳ Φ ⟧ʳ e : Expr (Δ ⋈ Θ ⋈ Φ)))
-      = ⟦ ρ ⇑ʳ Φ ⟧ʳ (Subst.act (Γ := Γ) (Δ := Θ) (Ξ := 1) σ Φ e) := by
-  let θ : Subst Γ (1 ⋈ Δ) := Subst.ofRenaming ρ
-  have key := act_interchange.aux (Γ := 1) (Δ := Γ) (Ξ := Δ) (Θ := 1) (Ω := 1) (Ψ := Θ)
-    θ σ Φ e
-  have hpush : (fun ⦃Λ⦄ (i : Θ ∋ Λ) => ⟦ ρ ⇑ʳ Λ ⟧ʳ (σ i))
-      = pushforward (Γ := 1) (Ω := 1) θ σ := by
-    funext Λ i
-    exact (act_ofRenaming ρ (σ i)).symm
-  have he : (⟦ (ρ ⇑ʳ Θ) ⇑ʳ Φ ⟧ʳ e : Expr (Δ ⋈ Θ ⋈ Φ)) = θ.act (Θ ⋈ Φ) e := by
-    refine Eq.trans ?_ (act_ofRenaming (Φ := Θ ⋈ Φ) ρ e).symm
-    exact congrArg (fun κ => Renaming.act κ e) (Renaming.extend_assoc ρ Θ Φ).symm
-  have hout : ⟦ ρ ⇑ʳ Φ ⟧ʳ (Subst.act (Γ := Γ) (Δ := Θ) (Ξ := 1) σ Φ e)
-      = θ.act Φ (Subst.act (Γ := Γ) (Δ := Θ) (Ξ := 1) σ Φ e) :=
-    (act_ofRenaming (Φ := Φ) ρ _).symm
-  rw [he]
-  refine Eq.trans ?_ hout.symm
-  refine Eq.trans ?_ key.symm
-  exact congrArg (fun s => Subst.act (Γ := Δ) s Φ (θ.act (Θ ⋈ Φ) e)) hpush
+  Subst.act (Γ := Δ) (Δ := Θ) (Ξ := 1)
+      (fun ⦃Λ⦄ i => ⟦ ρ ⇑ʳ Λ ⟧ʳ (σ i)) Φ (⟦ (ρ ⇑ʳ Θ) ⇑ʳ Φ ⟧ʳ e : Expr (Δ ⋈ Θ ⋈ Φ))
+    = ⟦ ρ ⇑ʳ Φ ⟧ʳ (Subst.act (Γ := Γ) (Δ := Θ) (Ξ := 1) σ Φ e)
+  := by
+  calc _
+      = Subst.act (Γ := Δ) (pushforward (Γ := 1) (Ω := 1) (Subst.ofRenaming ρ) σ) Φ
+          ((Subst.ofRenaming ρ).act (Γ := 1) (Θ ⋈ Φ) e) := by
+        congr 1
+        · funext Λ i
+          symm
+          apply act_ofRenaming
+        · rw [← Renaming.extend_assoc]
+          symm
+          apply act_ofRenaming
+    _ = (Subst.ofRenaming ρ).act (Γ := 1) Φ (Subst.act (Γ := Γ) (Ξ := 1) σ Φ e) := by
+        symm
+        exact act_interchange.aux (Γ := 1) (Θ := 1) (Ω := 1) _ σ Φ e
+    _ = _ := by apply act_ofRenaming
 
-/-- **`act_comp`** — action by a composite factors (comp_lift). -/
+/-- Acting at depth `Φ` by `Subst.comp σ θ` is acting by `σ` and then by `θ`. -/
 theorem act_comp
     {Γ Δ Θ Ξ : C.Arity}
     (σ : Subst Δ (Γ ⋈ Θ)) (θ : Subst Θ (Γ ⋈ Ξ))
@@ -323,331 +258,259 @@ theorem act_comp
       rw [act_right, act_right, act_right]
       congr 1
       funext Ω i
-      apply act_comp σ θ (Φ ⋈ Ω) (args i)
+      apply act_comp
     case middle =>
       rw [act_middle, act_middle, act_interchange]
       congr 1
       funext Ω i
-      apply act_comp σ θ (Φ ⋈ Ω) (args i)
+      apply act_comp
     case left =>
       rw [act_left, act_left, act_left]
       congr 1
       funext Ω i
-      apply act_comp σ θ (Φ ⋈ Ω) (args i)
+      apply act_comp
 termination_by (⟨_, e⟩ : Σ Γ : C.Arity, Expr Γ)
 decreasing_by all_goals exact Expr.Subterm.of_arg x args _
 
-/-- Renaming an η-expansion renames the slot. -/
-theorem Renaming.act_eta : ∀ {Γ Δ α : C.Arity} (ρ : Γ →ʳ Δ) (x : Γ ∋ α),
+/-- Renaming the η-expansion of `x` along `ρ ⇑ʳ α` gives the η-expansion of
+`ρ x`. -/
+theorem Renaming.act_eta :
+  ∀ {Γ Δ α : C.Arity} (ρ : Γ →ʳ Δ) (x : Γ ∋ α),
     (⟦ ρ ⇑ʳ α ⟧ʳ (Expr.η x) : Expr (Δ ⋈ α)) = Expr.η (ρ x)
   | _, _, α, ρ, x => by
-      rw [Expr.η.eq_1, Renaming.act_ap, Expr.η.eq_1]
-      refine congrArg₂ Expr.ap (Renaming.extend_inl ρ x) ?_
+      rw [Expr.η.eq_1, Renaming.act_ap, Expr.η.eq_1, extend_inl]
+      congr 1
       funext Ω i
-      exact (Renaming.act_eta (ρ ⇑ʳ α) (C.inr i)).trans
-        (congrArg Expr.η (Renaming.extend_inr ρ i))
+      rw [act_eta, extend_inr]
 termination_by Γ Δ α _ _ => α
 decreasing_by exact ⟨i⟩
 
-/-- A square of substitutions and renamings, from associativity. -/
-theorem act_square {Γ Γ' Δ Δ' : C.Arity} (ρ : Γ →ʳ Γ') (ρ' : Δ →ʳ Δ')
+/-- If `κ (ρ x)` is `κ' x` renamed along `ρ'` for every slot `x`, then `κ` acting
+at depth `Φ` after renaming along `ρ ⇑ʳ Φ` is `κ'` acting at depth `Φ` followed by
+renaming along `ρ' ⇑ʳ Φ`. -/
+theorem act_square
+    {Γ Γ' Δ Δ' : C.Arity} (ρ : Γ →ʳ Γ') (ρ' : Δ →ʳ Δ')
     (κ : Subst Γ' Δ') (κ' : Subst Γ Δ)
     (h : ∀ ⦃α : C.Arity⦄ (x : Γ ∋ α), κ (ρ x) = ⟦ ρ' ⇑ʳ α ⟧ʳ (κ' x))
     (Φ : C.Arity) (e : Expr (Γ ⋈ Φ)) :
-    Subst.act (Γ := 1) κ Φ (⟦ ρ ⇑ʳ Φ ⟧ʳ e) = ⟦ ρ' ⇑ʳ Φ ⟧ʳ (Subst.act (Γ := 1) κ' Φ e) := by
-  have hl : Subst.act (Γ := 1) κ Φ (⟦ ρ ⇑ʳ Φ ⟧ʳ e)
-      = Subst.act (Γ := 1) (Subst.comp (Subst.ofRenaming ρ) κ) Φ e := by
-    refine Eq.trans (congrArg (Subst.act (Γ := 1) κ Φ)
-      (act_ofRenaming (Φ := Φ) ρ e).symm) ?_
-    exact (act_comp (Γ := 1) (Subst.ofRenaming ρ) κ Φ e).symm
-  have hr : ⟦ ρ' ⇑ʳ Φ ⟧ʳ (Subst.act (Γ := 1) κ' Φ e)
-      = Subst.act (Γ := 1) (Subst.comp κ' (Subst.ofRenaming ρ')) Φ e := by
-    refine Eq.trans (act_ofRenaming (Φ := Φ) ρ' _).symm ?_
-    exact (act_comp (Γ := 1) κ' (Subst.ofRenaming ρ') Φ e).symm
-  refine hl.trans (Eq.trans ?_ hr.symm)
-  refine congrArg (fun s => Subst.act (Γ := 1) s Φ e) ?_
-  funext α x
-  exact ((act_η κ α (ρ x)).trans (h x)).trans (act_ofRenaming (Φ := α) ρ' (κ' x)).symm
-
-/-- Changing only the current-depth arity commutes with raw substitution. -/
-theorem act_cast_suffix {Γ Δ Ξ Φ Ψ : C.Arity}
-    (σ : Subst Δ (Γ ⋈ Ξ)) (h : Φ = Ψ)
-    (e : Expr (Γ ⋈ Δ ⋈ Φ)) :
-    cast (congrArg (fun Λ => Expr (Γ ⋈ Ξ ⋈ Λ)) h)
-      (Subst.act σ Φ e) =
-      Subst.act σ Ψ
-        (cast (congrArg (fun Λ => Expr (Γ ⋈ Δ ⋈ Λ)) h) e) := by
-  subst Ψ
-  rfl
+  Subst.act (Γ := 1) κ Φ (⟦ ρ ⇑ʳ Φ ⟧ʳ e) = ⟦ ρ' ⇑ʳ Φ ⟧ʳ (Subst.act (Γ := 1) κ' Φ e)
+  := by
+  calc _
+      = Subst.act (Γ := 1) κ Φ (Subst.act (Γ := 1) (Subst.ofRenaming ρ) Φ e) := by
+        rw [act_ofRenaming]
+        rfl
+    _ = Subst.act (Γ := 1) (Subst.comp (Subst.ofRenaming ρ) κ) Φ e := by
+        rw [act_comp]
+    _ = Subst.act (Γ := 1) (Subst.comp κ' (Subst.ofRenaming ρ')) Φ e := by
+        congr 1
+        funext α x
+        rw [Subst.comp, Subst.comp, Subst.ofRenaming, act_η, h, act_ofRenaming]
+    _ = _ := by rw [act_comp, act_ofRenaming]
 
 namespace Subst
 
-private theorem cast_mul_assoc (Γ Φ Ψ : C.Arity)
-    (e : Expr ((Γ ⋈ Φ) ⋈ Ψ)) :
-    cast (congrArg (fun Ω => Expr Ω) (mul_assoc Γ Φ Ψ)) e = e := by
-  have hp : congrArg (fun Ω => Expr Ω) (mul_assoc Γ Φ Ψ) = rfl :=
-    Subsingleton.elim _ _
-  cases hp
-  rfl
-
-/-- Extend a substitution by identity fillers for a fixed suffix.  This is the
-special case of `pushforward` used by dependent telescope concatenation. -/
+/-- The substitution `Subst (Γ ⋈ Φ) (Δ ⋈ Φ)` sending `x : Γ ⋈ Φ ∋ β` to `σ` acting
+at depth `Φ ⋈ β` on the η-expansion of `x`. -/
 def lift {Γ Δ : C.Arity} (σ : Subst Γ Δ) (Φ : C.Arity) :
     Subst (Γ ⋈ Φ) (Δ ⋈ Φ) :=
-  pushforward (Γ := 1) (Ω := Φ) σ (Subst.id (Γ ⋈ Φ))
+  pushforward (Γ := 1) (Ω := Φ) σ (id (Γ ⋈ Φ))
 
-/-- Extend a substitution below a fixed prefix by identity fillers for a fixed
-suffix. -/
-def liftPrefixed {S Γ Δ : C.Arity} (σ : Subst Γ (S ⋈ Δ))
-    (Φ : C.Arity) : Subst (Γ ⋈ Φ) (S ⋈ (Δ ⋈ Φ)) :=
-  pushforward (Γ := S) (Ω := Φ) σ
-    (fun ⦃Λ⦄ x => Expr.η
-      (cast (congrArg (fun Ω => Ω ∋ Λ) (mul_assoc S Γ Φ).symm)
-        (C.inr x)))
-
-/-- Acting by a fixed-prefix lift is action below its fixed suffix. -/
-theorem act_liftPrefixed {S Γ Δ Φ Ψ : C.Arity}
-    (σ : Subst Γ (S ⋈ Δ))
-    (e : Expr (S ⋈ (Γ ⋈ Φ) ⋈ Ψ)) :
-    Subst.act (Γ := S) (liftPrefixed σ Φ) Ψ e =
-      Subst.act (Γ := S) σ (Φ ⋈ Ψ) e := by
-  let κ : Subst (Γ ⋈ Φ) (S ⋈ Γ ⋈ Φ) :=
-    fun ⦃Λ⦄ x => Expr.η
-      (cast (congrArg (fun Ω => Ω ∋ Λ) (mul_assoc S Γ Φ).symm)
-        (C.inr x))
-  have h := act_interchange.subst (Γ := S) (Θ := 1) (Ω := Δ)
-    (Φ := Φ) (Χ := Ψ) σ κ e
-  have hκ : ∀ {Λ : C.Arity} (x : Γ ⋈ Φ ∋ Λ),
-      κ x = Expr.η (C.inr x) := by
-    intro Λ x
-    rcases C.cover Γ Φ x with ⟨x, rfl⟩ | ⟨x, rfl⟩
-    · unfold κ
-      have hProof :
-          congrArg (fun Ω => Ω ∋ Λ) (mul_assoc S Γ Φ).symm =
-            Eq.refl _ := Subsingleton.elim _ _
-      rw [hProof]
-      congr 1
-    · unfold κ
-      have hProof :
-          congrArg (fun Ω => Ω ∋ Λ) (mul_assoc S Γ Φ).symm =
-            Eq.refl _ := Subsingleton.elim _ _
-      rw [hProof]
-      congr 1
-  have hIdentity := act_idOfη (Γ := S) κ hκ Ψ e
-  unfold liftPrefixed
-  unfold κ at h
-  exact h.symm.trans (congrArg (Subst.act σ (Φ ⋈ Ψ)) hIdentity)
-
-/-- Acting by a lifted substitution is action below its fixed suffix. -/
-theorem act_lift {Γ Δ : C.Arity} (σ : Subst Γ Δ) (Φ Ψ : C.Arity)
+/-- Acting by `lift σ Φ` at depth `Ψ` is acting by `σ` at depth `Φ ⋈ Ψ`. -/
+theorem act_lift
+    {Γ Δ : C.Arity} (σ : Subst Γ Δ) (Φ Ψ : C.Arity)
     (e : Expr (Γ ⋈ Φ ⋈ Ψ)) :
-    cast (congrArg (fun Ω => Expr Ω) (mul_assoc Δ Φ Ψ))
-        (Subst.act (Γ := 1) (Ξ := Δ ⋈ Φ) (lift σ Φ) Ψ e) =
-      Subst.act (Γ := 1) σ (Φ ⋈ Ψ) e := by
-  convert (act_interchange.subst (Γ := 1) (Θ := 1) (Φ := Φ)
-    σ (Subst.id (Γ ⋈ Φ)) e).symm using 1
-  · congr 1
-    exact (act_id (Γ ⋈ Φ) Ψ e).symm
-
-/-- Acting by the lift of `Subst.copair (Subst.id Δ) σ` past `Φ` is acting by
-`σ` below the prefix `Δ` at depth `Φ ⋈ Ψ`. -/
-theorem act_lift_copair {Δ Ω : C.Arity} (σ : Subst Ω Δ) (Φ Ψ : C.Arity)
-    (e : Expr (((Δ ⋈ Ω) ⋈ Φ) ⋈ Ψ)) :
-    Subst.act (Γ := 1) (Δ := (Δ ⋈ Ω) ⋈ Φ) (Ξ := Δ ⋈ Φ)
-        (Subst.lift (Subst.copair (Subst.id Δ) σ) Φ) Ψ e
-      = Subst.act (Γ := Δ) (Δ := Ω) (Ξ := 1) σ (Φ ⋈ Ψ) e := by
-  refine Eq.trans ?_ (act_copair_prefix σ (Φ ⋈ Ψ) e)
-  refine Eq.trans ?_ (act_lift (Subst.copair (Subst.id Δ) σ) Φ Ψ e)
-  exact (cast_mul_assoc Δ Φ Ψ _).symm
-
-/-- Acting by a lift with no further depth is acting at the lifted depth. -/
-theorem act_lift_depth {Γ Δ Φ : C.Arity} (σ : Subst Γ Δ) (e : Expr (Γ ⋈ Φ)) :
-    Subst.act (Γ := 1) (Δ := Γ ⋈ Φ) (Ξ := Δ ⋈ Φ) (Subst.lift σ Φ) 1 e
-      = Subst.act (Γ := 1) (Δ := Γ) (Ξ := Δ) σ Φ e :=
-  (cast_mul_assoc Δ Φ 1 _).symm.trans (act_lift σ Φ 1 e)
-
-/-- Acting by a lifted substitution and then by the acted fillers is acting by
-the fillers and then by the substitution. -/
-theorem act_lift_fillers {Γ Γ' Χ Λ : C.Arity} (s : Subst Γ Γ') (τ : Subst Χ Γ)
-    (e : Expr (Γ ⋈ Χ ⋈ Λ)) :
-    Subst.act (Γ := Γ') (Δ := Χ) (Ξ := 1)
-        (fun ⦃Λ'⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ' (τ i)) Λ
-        (Subst.act (Γ := 1) (Δ := Γ ⋈ Χ) (Ξ := Γ' ⋈ Χ) (Subst.lift s Χ) Λ e)
-      = Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ
-          (Subst.act (Γ := Γ) (Δ := Χ) (Ξ := 1) τ Λ e) := by
-  refine Eq.trans ?_ (act_interchange.aux (Γ := 1) (Ξ := Γ') (Θ := 1) (Ω := 1)
-    s τ Λ e).symm
-  refine congrArg (Subst.act (Γ := Γ') (Δ := Χ) (Ξ := 1)
-    (fun ⦃Λ'⦄ i => Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ' (τ i)) Λ) ?_
-  exact (cast_mul_assoc Γ' Χ Λ _).symm.trans (act_lift s Χ Λ e)
-
-/-- Lifting the identity substitution is the identity on the extended base. -/
-theorem lift_id (Γ Φ : C.Arity) :
-    lift (Subst.id Γ) Φ = Subst.id (Γ ⋈ Φ) := by
-  funext Λ x
-  unfold lift pushforward Subst.id
+  cast (congrArg (fun Ω => Expr Ω) (mul_assoc Δ Φ Ψ))
+      (act (Γ := 1) (Ξ := Δ ⋈ Φ) (lift σ Φ) Ψ e)
+    = act (Γ := 1) σ (Φ ⋈ Ψ) e
+  := by
+  symm
+  convert act_interchange.subst (Γ := 1) (Θ := 1) (Φ := Φ) σ (id (Γ ⋈ Φ)) e using 2
+  congr 1
+  symm
   apply act_id
 
-/-- The value of a lifted substitution is the original substitution acting
-on the eta-expansion of the extended slot. -/
-theorem lift_apply {Γ Δ : C.Arity} (σ : Subst Γ Δ) (Φ : C.Arity)
+/-- Acting by `lift σ Φ` at depth `1` is acting by `σ` at depth `Φ`. -/
+theorem act_lift_depth {Γ Δ Φ : C.Arity} (σ : Subst Γ Δ) (e : Expr (Γ ⋈ Φ)) :
+  act (Γ := 1) (Δ := Γ ⋈ Φ) (Ξ := Δ ⋈ Φ) (lift σ Φ) 1 e
+    = act (Γ := 1) (Δ := Γ) (Ξ := Δ) σ Φ e
+  := by
+  exact act_lift σ Φ 1 e
+
+/-- Acting at depth `Λ` by `lift s Χ` and then by the substitution
+`i ↦ s.act Λ' (τ i)` equals acting at depth `Λ` by `τ` and then by `s`. -/
+theorem act_lift_fillers
+    {Γ Γ' Χ Λ : C.Arity} (s : Subst Γ Γ') (τ : Subst Χ Γ)
+    (e : Expr (Γ ⋈ Χ ⋈ Λ)) :
+  act (Γ := Γ') (Δ := Χ) (Ξ := 1)
+      (fun ⦃Λ'⦄ i => act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ' (τ i)) Λ
+      (act (Γ := 1) (Δ := Γ ⋈ Χ) (Ξ := Γ' ⋈ Χ) (lift s Χ) Λ e)
+    = act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Λ
+        (act (Γ := Γ) (Δ := Χ) (Ξ := 1) τ Λ e)
+  := by
+  symm
+  convert act_interchange.aux (Γ := 1) (Θ := 1) (Ω := 1) s τ Λ e using 2
+  congr 1
+  exact act_lift s Χ Λ e
+
+/-- `lift (Subst.id Γ) Φ` is the identity substitution on `Γ ⋈ Φ`. -/
+theorem lift_id (Γ Φ : C.Arity) :
+  lift (id Γ) Φ = id (Γ ⋈ Φ)
+  := by
+  funext Λ x
+  apply act_id
+
+/-- `lift σ Φ x` is `σ` acting at depth `Φ ⋈ Λ` on the η-expansion of
+`x : Γ ⋈ Φ ∋ Λ`. -/
+theorem lift_apply
+    {Γ Δ : C.Arity} (σ : Subst Γ Δ) (Φ : C.Arity)
     {Λ : C.Arity} (x : Γ ⋈ Φ ∋ Λ) :
-    cast (congrArg (fun Ω => Expr Ω) (mul_assoc Δ Φ Λ)) (lift σ Φ x) =
-      Subst.act (Γ := 1) σ (Φ ⋈ Λ)
-        (Expr.η x : Expr (Γ ⋈ Φ ⋈ Λ)) := by
-  rw [← act_η (lift σ Φ) Λ x]
-  apply act_lift
+  cast (congrArg (fun Ω => Expr Ω) (mul_assoc Δ Φ Λ)) (lift σ Φ x)
+    = act (Γ := 1) σ (Φ ⋈ Λ) (Expr.η x : Expr (Γ ⋈ Φ ⋈ Λ))
+  := by
+  rfl
 
-/-- A lifted substitution is the identity on the fixed suffix. -/
+/-- `lift τ Φ` sends a slot `v` of `Φ` to the η-expansion of `C.inr v`. -/
 theorem lift_inr {Γ Δ Φ : C.Arity} (τ : Subst Γ Δ) {β : C.Arity} (v : Φ ∋ β) :
-    lift τ Φ (C.inr v) = Expr.η (C.inr v) := by
-  unfold lift pushforward
-  exact act_η_right (Γ := 1) τ Φ v
+  lift τ Φ (C.inr v) = Expr.η (C.inr v)
+  := by
+  apply act_η_right (Γ := 1)
 
-/-- A lifted substitution is the original substitution weakened by the fixed
-suffix. -/
+/-- `lift τ Φ` sends `C.inl u` to `τ u` renamed along `Renaming.inl Δ Φ ⇑ʳ β`. -/
 theorem lift_inl {Γ Δ Φ : C.Arity} (τ : Subst Γ Δ) {β : C.Arity} (u : Γ ∋ β) :
-    lift τ Φ (C.inl u) = ⟦ Renaming.inl Δ Φ ⇑ʳ β ⟧ʳ (τ u) := by
-  unfold lift pushforward
-  rw [Subst.id, Expr.η.eq_1]
+  lift τ Φ (C.inl u) = ⟦ Renaming.inl Δ Φ ⇑ʳ β ⟧ʳ (τ u)
+  := by
+  apply Eq.trans (lift_apply τ Φ (C.inl u))
+  rw [Expr.η.eq_1]
   trans
-  · convert act_middle (Γ := 1) τ (Φ ⋈ β) u
-      (fun {_} i => Expr.η (C.inr (C.inr i))) using 2
-    · rw [← C.inl_inl]
-      congr 1
-      · exact congrArg C.inl (C.unit_left Γ u).symm
-      · funext Λ i
-        exact congrArg Expr.η (C.inr_inr (1 ⋈ Γ) Φ β i).symm
-  · refine Eq.trans (b := Subst.act (Γ := Δ) (Δ := β) (Ξ := Φ ⋈ β)
-        (fun ⦃Λ⦄ (i : β ∋ Λ) => Expr.η (C.inr (C.inr i))) 1 (τ u)) ?_ ?_
-    · congr 1
-      funext Λ i
-      exact act_η_right (Γ := 1) τ (Φ ⋈ β) (C.inr i)
-    · refine Eq.trans (act_ofRenaming_prefixed (S := Δ) (Φ := 1)
-        (fun ⦃_⦄ j => C.inr j) (τ u)) ?_
-      have hρ : (Renaming.prefixed Δ (fun ⦃_⦄ (j : β ∋ _) => C.inr j) ⇑ʳ 1)
-          = (Renaming.inl Δ Φ ⇑ʳ β) := by
-        rw [Renaming.extend_unit]
-        funext Λ y
-        rcases C.cover Δ β y with ⟨z, rfl⟩ | ⟨z, rfl⟩
-        · rw [Renaming.prefixed_inl, Renaming.extend_inl, Renaming.inl,
-            C.inl_inl Δ Φ β z]
-        · rw [Renaming.prefixed_inr, Renaming.extend_inr, C.inr_inr Δ Φ β z]
-      exact congrArg (fun ρ => Renaming.act ρ (τ u)) hρ
+  · convert act_middle (Γ := 1) τ (Φ ⋈ β) u (fun {_} i => Expr.η (C.inr (C.inr i))) using 2
+    rw [← C.inl_inl]
+    congr 1
+    · rw [C.unit_left]
+      rfl
+    · funext Λ i
+      rw [C.inr_inr]
+      rfl
+  · calc _
+        = act (Γ := Δ) (Ξ := Φ ⋈ β) (fun ⦃Λ⦄ (i : β ∋ Λ) => Expr.η (C.inr (C.inr i))) 1
+            (τ u) := by
+          congr 1
+          funext Λ i
+          apply act_η_right
+      _ = ⟦ Renaming.prefixed Δ (fun ⦃_⦄ (j : β ∋ _) => C.inr j) ⇑ʳ 1 ⟧ʳ (τ u) := by
+          apply act_ofRenaming_prefixed
+      _ = _ := by
+          rw [Renaming.extend_unit]
+          congr 1
+          funext Λ y
+          rcases C.cover Δ β y with ⟨z, rfl⟩ | ⟨z, rfl⟩
+          · rw [Renaming.prefixed_inl, Renaming.extend_inl, Renaming.inl, C.inl_inl Δ Φ β z]
+          · rw [Renaming.prefixed_inr, Renaming.extend_inr, C.inr_inr Δ Φ β z]
 
-/-- Lifting the eta-substitution of a renaming is the eta-substitution of the
-extended renaming. -/
+/-- `lift (Subst.ofRenaming ρ) Φ` is `Subst.ofRenaming (ρ ⇑ʳ Φ)`. -/
 theorem lift_ofRenaming {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) (Φ : C.Arity) :
-    lift (Subst.ofRenaming ρ) Φ = Subst.ofRenaming (ρ ⇑ʳ Φ) := by
+  lift (ofRenaming ρ) Φ = ofRenaming (ρ ⇑ʳ Φ)
+  := by
   funext β x
   rcases C.cover Γ Φ x with ⟨u, rfl⟩ | ⟨v, rfl⟩
-  · refine (lift_inl (Subst.ofRenaming ρ) u).trans ?_
-    refine (Renaming.act_eta (Renaming.inl Δ Φ) (ρ u)).trans ?_
-    exact congrArg Expr.η (Renaming.extend_inl ρ u).symm
-  · refine (lift_inr (Subst.ofRenaming ρ) v).trans ?_
-    exact congrArg Expr.η (Renaming.extend_inr ρ v).symm
+  · rw [lift_inl, ofRenaming, ofRenaming, Renaming.act_eta, Renaming.inl,
+      Renaming.extend_inl]
+  · rw [lift_inr, ofRenaming, Renaming.extend_inr]
 
-/-- The lift of `Subst.copair (Subst.id Δ) σ` is the identity on `Δ`-slots. -/
-theorem lift_copair_inl_inl {Δ Ω Φ : C.Arity} (σ : Subst Ω Δ)
+/-- `lift (Subst.copair (Subst.id Δ) σ) Φ` sends `C.inl (C.inl w)`, for
+`w : Δ ∋ β`, to the η-expansion of `C.inl w`. -/
+theorem lift_copair_inl_inl
+    {Δ Ω Φ : C.Arity} (σ : Subst Ω Δ)
     {β : C.Arity} (w : Δ ∋ β) :
-    lift (Subst.copair (Subst.id Δ) σ) Φ (C.inl (C.inl w)) = Expr.η (C.inl w) := by
-  refine Eq.trans (lift_inl (Φ := Φ) (Subst.copair (Subst.id Δ) σ) (C.inl w)) ?_
-  rw [Subst.copair_inl, Subst.id]
-  exact Renaming.act_eta (Renaming.inl Δ Φ) w
+  lift (copair (id Δ) σ) Φ (C.inl (C.inl w)) = Expr.η (C.inl w)
+  := by
+  rw [lift_inl, copair_inl, id, Renaming.act_eta, Renaming.inl]
 
-/-- The lift of `Subst.copair (Subst.id Δ) σ` is `σ` weakened by `Φ` on
-`Ω`-slots. -/
-theorem lift_copair_inl_inr {Δ Ω Φ : C.Arity} (σ : Subst Ω Δ)
+/-- `lift (Subst.copair (Subst.id Δ) σ) Φ` sends `C.inl (C.inr y)`, for
+`y : Ω ∋ β`, to `σ y` renamed along `Renaming.inl Δ Φ ⇑ʳ β`. -/
+theorem lift_copair_inl_inr
+    {Δ Ω Φ : C.Arity} (σ : Subst Ω Δ)
     {β : C.Arity} (y : Ω ∋ β) :
-    lift (Subst.copair (Subst.id Δ) σ) Φ (C.inl (C.inr y))
-      = ⟦ Renaming.inl Δ Φ ⇑ʳ β ⟧ʳ (σ y) := by
-  refine Eq.trans (lift_inl (Φ := Φ) (Subst.copair (Subst.id Δ) σ) (C.inr y)) ?_
-  rw [Subst.copair_inr]
+  lift (copair (id Δ) σ) Φ (C.inl (C.inr y))
+    = ⟦ Renaming.inl Δ Φ ⇑ʳ β ⟧ʳ (σ y)
+  := by
+  rw [lift_inl, copair_inr]
 
-/-- Extending by the empty suffix does not change a substitution. -/
+/-- `lift σ 1` is `σ`. -/
 theorem lift_one {Γ Δ : C.Arity} (σ : Subst Γ Δ) :
-    lift σ 1 = σ := by
+  lift σ 1 = σ
+  := by
   funext α x
-  have h := lift_apply σ 1 x
-  simp only [cast_mul_assoc] at h
-  exact h.trans (act_η σ α x)
+  apply Eq.trans (lift_apply σ 1 x)
+  apply act_η
 
-/-- Successive fixed-suffix extensions agree with extension by their product. -/
+/-- Lifting by `Φ ⋈ Ψ` is lifting by `Φ` and then by `Ψ`. -/
 theorem lift_assoc {Γ Δ : C.Arity} (σ : Subst Γ Δ) (Φ Ψ : C.Arity) :
-    lift σ (Φ ⋈ Ψ) = lift (lift σ Φ) Ψ := by
+  lift σ (Φ ⋈ Ψ) = lift (lift σ Φ) Ψ
+  := by
   funext α x
-  let e : Expr ((Γ ⋈ Φ) ⋈ (Ψ ⋈ α)) :=
-    cast (congrArg (fun Ω => Expr Ω) (mul_assoc (Γ ⋈ Φ) Ψ α))
-      (Expr.η x : Expr (((Γ ⋈ Φ) ⋈ Ψ) ⋈ α))
-  have hd := lift_apply σ (Φ ⋈ Ψ) x
-  have ho := lift_apply (lift σ Φ) Ψ x
-  have ha := act_lift σ Φ (Ψ ⋈ α) e
-  simp only [cast_mul_assoc] at hd ho ha
-  simp only [e, cast_mul_assoc] at ha
-  exact hd.symm.trans (ha.symm.trans ho)
+  apply Eq.trans (lift_apply σ (Φ ⋈ Ψ) x)
+  symm
+  apply Eq.trans (lift_apply (lift σ Φ) Ψ x)
+  exact act_lift σ Φ (Ψ ⋈ α) _
 
-/-- Lifting preserves Kleisli composition. -/
-theorem lift_comp {Γ Δ Ξ : C.Arity} (σ : Subst Γ Δ)
+/-- `lift (Subst.comp σ θ) Φ` is `Subst.comp (lift σ Φ) (lift θ Φ)`. -/
+theorem lift_comp
+    {Γ Δ Ξ : C.Arity} (σ : Subst Γ Δ)
     (θ : Subst Δ Ξ) (Φ : C.Arity) :
-    lift (Subst.comp (Γ := 1) (Ξ := Ξ) σ θ) Φ =
-      Subst.comp (Γ := 1) (Θ := Δ ⋈ Φ) (Ξ := Ξ ⋈ Φ)
-        (lift σ Φ) (lift θ Φ) := by
+  lift (comp (Γ := 1) (Ξ := Ξ) σ θ) Φ
+    = comp (Γ := 1) (Θ := Δ ⋈ Φ) (Ξ := Ξ ⋈ Φ) (lift σ Φ) (lift θ Φ)
+  := by
   funext Λ x
-  apply (Equiv.cast
-    (congrArg (fun Ω => Expr Ω) (mul_assoc Ξ Φ Λ))).injective
-  simp only [Equiv.cast_apply]
-  have hleft := lift_apply
-    (Subst.comp (Γ := 1) (Ξ := Ξ) σ θ : Subst Γ Ξ) Φ x
-  apply Eq.trans hleft
-  unfold Subst.comp
-  rw [act_lift]
-  trans Subst.act θ (Φ ⋈ Λ)
-    (Subst.act σ (Φ ⋈ Λ) (Expr.η x : Expr (Γ ⋈ Φ ⋈ Λ)))
-  · apply act_comp
-  · apply congrArg (fun e : Expr (Δ ⋈ (Φ ⋈ Λ)) =>
-      Subst.act (Γ := 1) θ (Φ ⋈ Λ) e)
-    exact (lift_apply σ Φ x).symm
+  apply Eq.trans (lift_apply (comp (Γ := 1) σ θ) Φ x)
+  apply Eq.trans (act_comp (Γ := 1) σ θ (Φ ⋈ Λ) _)
+  symm
+  exact act_lift θ Φ Λ (lift σ Φ x)
 
 end Subst
 
-/-- The square is preserved by lifting. -/
-theorem lift_square {Γ Γ' Δ Δ' : C.Arity} (ρ : Γ →ʳ Γ') (ρ' : Δ →ʳ Δ')
+/-- If `κ (ρ x)` is `κ' x` renamed along `ρ'` for every slot `x`, then
+`Subst.lift κ S ((ρ ⇑ʳ S) x)` is `Subst.lift κ' S x` renamed along
+`(ρ' ⇑ʳ S) ⇑ʳ γ`. -/
+theorem lift_square
+    {Γ Γ' Δ Δ' : C.Arity} (ρ : Γ →ʳ Γ') (ρ' : Δ →ʳ Δ')
     (κ : Subst Γ' Δ') (κ' : Subst Γ Δ)
     (h : ∀ ⦃α : C.Arity⦄ (x : Γ ∋ α), κ (ρ x) = ⟦ ρ' ⇑ʳ α ⟧ʳ (κ' x)) (S : C.Arity) :
-    ∀ ⦃γ : C.Arity⦄ (x : (Γ ⋈ S) ∋ γ),
-      Subst.lift κ S ((ρ ⇑ʳ S) x) = ⟦ (ρ' ⇑ʳ S) ⇑ʳ γ ⟧ʳ (Subst.lift κ' S x) := by
+  ∀ ⦃γ : C.Arity⦄ (x : (Γ ⋈ S) ∋ γ),
+    Subst.lift κ S ((ρ ⇑ʳ S) x) = ⟦ (ρ' ⇑ʳ S) ⇑ʳ γ ⟧ʳ (Subst.lift κ' S x)
+  := by
   intro γ x
-  refine Eq.trans (congrArg (Subst.act (Γ := 1) κ (S ⋈ γ))
-    (Renaming.act_eta (ρ ⇑ʳ S) x).symm) ?_
-  refine Eq.trans (congrArg (fun s => Subst.act (Γ := 1) κ (S ⋈ γ) (Renaming.act s (Expr.η x)))
-    (Renaming.extend_assoc ρ S γ).symm) ?_
-  refine Eq.trans (act_square ρ ρ' κ κ' h (S ⋈ γ) ((Expr.η x : Expr ((Γ ⋈ S) ⋈ γ)))) ?_
-  exact congrArg (fun s => Renaming.act s (Subst.act (Γ := 1) κ' (S ⋈ γ) ((Expr.η x : Expr ((Γ ⋈ S) ⋈ γ)))))
-    (Renaming.extend_assoc ρ' S γ)
+  calc _
+      = Subst.act (Γ := 1) κ (S ⋈ γ) (⟦ (ρ ⇑ʳ S) ⇑ʳ γ ⟧ʳ (Expr.η x)) := by
+        symm
+        apply congrArg
+        apply Renaming.act_eta
+    _ = _ := by
+        rw [← Renaming.extend_assoc, ← Renaming.extend_assoc]
+        apply act_square ρ ρ' κ κ' h
 
-/-- Substituting into a renamed expression whose slots the substitution merely
-relabels is that relabelling. -/
-theorem act_rename_cancel {Γ Δ' Γ' : C.Arity} (ρ : Γ →ʳ Δ') (ρ' : Γ →ʳ Γ')
+/-- If `κ (ρ x)` is the η-expansion of `ρ' x` for every slot `x`, then `κ` acting
+at depth `Φ` after renaming along `ρ ⇑ʳ Φ` is renaming along `ρ' ⇑ʳ Φ`. -/
+theorem act_rename_cancel
+    {Γ Δ' Γ' : C.Arity} (ρ : Γ →ʳ Δ') (ρ' : Γ →ʳ Γ')
     (κ : Subst Δ' Γ') (h : ∀ ⦃α : C.Arity⦄ (x : Γ ∋ α), κ (ρ x) = Expr.η (ρ' x))
     (Φ : C.Arity) (e : Expr (Γ ⋈ Φ)) :
-    Subst.act (Γ := 1) κ Φ (⟦ ρ ⇑ʳ Φ ⟧ʳ e) = ⟦ ρ' ⇑ʳ Φ ⟧ʳ e := by
-  refine Eq.trans (act_square ρ ρ' κ (Subst.id Γ) ?_ Φ e) ?_
-  · intro α x
-    exact (h x).trans (Renaming.act_eta ρ' x).symm
-  · exact congrArg (Renaming.act (ρ' ⇑ʳ Φ)) (act_id Γ Φ e)
+  Subst.act (Γ := 1) κ Φ (⟦ ρ ⇑ʳ Φ ⟧ʳ e) = ⟦ ρ' ⇑ʳ Φ ⟧ʳ e
+  := by
+  rw [act_square ρ ρ' κ (Subst.id Γ), act_id]
+  intro α x
+  rw [h, Subst.id, Renaming.act_eta]
 
-/-- Acting by `Subst.copair (Subst.id Γ') s` on an expression weakened into the
-prefix is acting by `s`. -/
-theorem act_copair_inr {Γ Γ' : C.Arity} (s : Subst Γ Γ') (Φ : C.Arity)
+/-- Acting at depth `Φ` by `Subst.copair (Subst.id Γ') s` on `e` renamed along
+`Renaming.inr Γ' Γ ⇑ʳ Φ` is acting at depth `Φ` by `s` on `e`. -/
+theorem act_copair_inr
+    {Γ Γ' : C.Arity} (s : Subst Γ Γ') (Φ : C.Arity)
     (e : Expr (Γ ⋈ Φ)) :
-    Subst.act (Γ := 1) (Δ := Γ' ⋈ Γ) (Ξ := Γ') (Subst.copair (Subst.id Γ') s) Φ
-        (⟦ Renaming.inr Γ' Γ ⇑ʳ Φ ⟧ʳ e)
-      = Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Φ e := by
-  refine Eq.trans (act_square (Renaming.inr Γ' Γ) (𝟙ʳ Γ')
-    (Subst.copair (Subst.id Γ') s) s ?_ Φ e) ?_
+  Subst.act (Γ := 1) (Δ := Γ' ⋈ Γ) (Ξ := Γ') (Subst.copair (Subst.id Γ') s) Φ
+      (⟦ Renaming.inr Γ' Γ ⇑ʳ Φ ⟧ʳ e)
+    = Subst.act (Γ := 1) (Δ := Γ) (Ξ := Γ') s Φ e
+  := by
+  apply Eq.trans
+    (act_square (Renaming.inr Γ' Γ) (𝟙ʳ Γ') (Subst.copair (Subst.id Γ') s) s ?_ Φ e)
+  · rw [Renaming.extend_id, Renaming.act_id]
   · intro α x
-    refine (Subst.copair_inr _ _ x).trans ?_
-    exact ((congrArg (fun ρ => Renaming.act ρ (s x)) (Renaming.extend_id Γ' α)).trans
-      (Renaming.act_id _)).symm
-  · exact (congrArg (fun ρ => Renaming.act ρ (Subst.act (Γ := 1) s Φ e))
-      (Renaming.extend_id Γ' Φ)).trans (Renaming.act_id _)
+    rw [Renaming.inr, Subst.copair_inr, Renaming.extend_id, Renaming.act_id]

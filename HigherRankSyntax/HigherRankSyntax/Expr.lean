@@ -4,24 +4,23 @@ import HigherRankSyntax.Renaming
 /-!
 # Expressions of a higher-rank binding signature
 
-`Expr Γ` is the type of expressions in arity `Γ` over a carrier `C`.  The
-constructor `ap` takes a head slot `p : Γ ∋ α` and a dependent family of
-children indexed by the slots of `α`, each child living in `Γ` extended by that
-slot's arity.
+`Expr Γ` is the type of expressions in arity `Γ`.  The constructor `ap` takes a
+head slot `x : Γ ∋ α` and, for each slot `i : α ∋ Δ`, an argument in `Expr (Γ ⋈ Δ)`.
 -/
 
-/-- Expressions in arity `Γ` over a carrier `C`. -/
+/-- Expressions in arity `Γ`. -/
 inductive Expr : C.Arity → Type where
-  /-- An application with a head slot and one child for each position of the head arity. -/
+  /-- The application of a head slot `x : Γ ∋ α` to one argument in `Expr (Γ ⋈ Δ)` for
+  each slot of `α` of arity `Δ`. -/
   | ap : {Γ α : C.Arity} → (x : Γ ∋ α) →
       (∀ ⦃Δ⦄ (_i : α ∋ Δ), Expr (Γ ⋈ Δ)) →
       Expr Γ
 
-/-- The argument family of an application headed by an `α`-slot in context `Γ`. -/
+/-- The arguments of an application in arity `Γ` headed by a slot of arity `α`. -/
 abbrev Expr.Args (Γ α : C.Arity) :=
   ∀ ⦃Δ⦄ (_i : α ∋ Δ), Expr (Γ ⋈ Δ)
 
-/-- `Expr.Subterm e' e` holds when `e = ap p args` and `e'` is one of its arguments
+/-- `Expr.Subterm e' e` holds when `e = ap x args` and `e'` is one of its arguments
 `args j`. -/
 inductive Expr.Subterm :
     (Σ Γ : C.Arity, Expr Γ) →
@@ -30,12 +29,12 @@ inductive Expr.Subterm :
       {Δ} (j : α ∋ Δ) : Subterm ⟨Γ ⋈ Δ, args j⟩ ⟨Γ, ap x args⟩
 
 theorem Expr.Subterm.wf :
-    WellFounded (@Expr.Subterm)
+  WellFounded (@Expr.Subterm)
   := by
   constructor
   intro ⟨Γ, e⟩
   induction e with
-  | ap p args ih =>
+  | ap x args ih =>
     apply Acc.intro
     rintro ⟨_, _⟩ h
     cases h
@@ -46,40 +45,40 @@ instance Expr.Subterm.wellFoundedRelation :
   rel := @Expr.Subterm
   wf := Expr.Subterm.wf
 
-/-- η-expansion: a variable `p : Γ ∋ α` becomes the fully-applied tree
-`ap (C.inl p) (fun i => η (C.inr i))`. -/
+/-- The η-expansion of a slot `x : Γ ∋ α`: the expression
+`ap (C.inl x) (fun i => η (C.inr i))` in `Expr (Γ ⋈ α)`. -/
 def Expr.η {Γ α : C.Arity} : Γ ∋ α → Expr (Γ ⋈ α)
   | x => .ap (C.inl x) (fun ⦃_⦄ i => η (C.inr i))
 termination_by _ => α
 decreasing_by exact ⟨i⟩
 
-/-- Action of a renaming on an expression. -/
+/-- The action of a renaming on expressions: `ρ` renames the head, and `ρ ⇑ʳ Ω` acts on
+each argument over `Γ ⋈ Ω`. -/
 def Renaming.act {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) : Expr Γ → Expr Δ
   | .ap x args => .ap (ρ x) (fun {Ω} i => act (ρ ⇑ʳ Ω) (args i))
 
 @[inherit_doc Renaming.act]
 notation:60 "⟦" ρ "⟧ʳ " e:61 => Renaming.act ρ e
 
-theorem Renaming.act_ap {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ)
-    {α : C.Arity} (x : Γ ∋ α)
-    (args : Expr.Args Γ α) :
+theorem Renaming.act_ap
+    {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) {α : C.Arity} (x : Γ ∋ α) (args : Expr.Args Γ α) :
   ⟦ ρ ⟧ʳ (.ap x args) = .ap (ρ x) (fun {Ω} i => ⟦ ρ ⇑ʳ Ω ⟧ʳ (args i))
   := rfl
 
 theorem Renaming.act_id {Γ : C.Arity} :
   ∀ (e : Expr Γ), ⟦ 𝟙ʳ Γ ⟧ʳ e = e
   | .ap x args => by
-    simp [act_ap, Renaming.id]
-    funext
+    simp only [act_ap, extend_id]
+    congr 1
+    funext Δ i
     apply act_id
 
 theorem Renaming.act_comp
-    {Γ Δ Ξ : C.Arity}
-    (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ξ) :
+    {Γ Δ Ξ : C.Arity} (ρ : Γ →ʳ Δ) (σ : Δ →ʳ Ξ) :
   ∀ (e : Expr Γ), ⟦ σ ∘ʳ ρ ⟧ʳ e = ⟦ σ ⟧ʳ (⟦ ρ ⟧ʳ e)
   | .ap x args => by
     rw [act_ap]
     congr 1
-    funext
-    rw [Renaming.extend_comp]
+    funext Ω i
+    rw [extend_comp]
     apply act_comp
