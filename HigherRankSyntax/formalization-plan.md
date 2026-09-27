@@ -70,7 +70,7 @@ Soundness cannot be interleaved by stratifying on the ambient, because
 needed equation is asserted, not proved:
 
 ```text
-eqClause ⟨of S, tl⟩ ⟨of S', tr⟩ = Part.assert (S' = S) fun h => some (eqEl S tl (h ▸ tr))
+eqClause ⟨of S, tl⟩ ⟨of S', tr⟩ = Part.assert (S' = S) fun h => some (eqElement S tl (h ▸ tr))
 equational entry               = Part.assert (tl = tr) fun h => some (h ▸ IdX_refl tl)
 ```
 
@@ -86,32 +86,33 @@ decidability of semantic equality is needed, and the value is recovered by
 ### 3.2 Models are not contextual, and slots have higher rank
 
 A model has no way to read a variable off an object, so the interpretation is
-relative to an **environment** `E : Env M Δ Γ` assigning a value to every slot
+relative to an **environment** `E : Environment M Γ Δ` assigning a value to every slot
 of `Δ` over the object `Γ` — Lumsdaine–Mörtberg's `environment`, the Initiality
 Project's `Tm^V`, Uemura's `term^γ`. At higher rank a slot's value must carry
 its semantic binding telescope:
 
 ```text
-Value Γ α = (binding chain over Γ of arity α, its decoration, a tagged boundary
-             at its end, a term of that boundary's type OVER THE END of the chain)
+Value Γ α = (binding telescope over Γ of arity α: a chain and its decoration;
+             a filler, a tagged boundary with a term of its type, OVER THE END
+             of the chain)
 ```
 
 The value is **open**: its term lives over the end of its binding chain rather
-than being closed under `Bind`. Then `⟦ap x args⟧ = (E x).atom[s]` for the section
+than being closed under `Bind`. Then `⟦ap x args⟧ = (E x).filler[s]` for the section
 `s` that the arguments build, and the interpretation of expressions never uses
 `unlam`; `unlam` appears once, in the generic value of an entry, when an
 environment is extended.
 
-The syntactic ambient enters only through a predicate `Env.Typed Ξ E` (each
+The syntactic ambient enters only through a predicate `Environment.Typed Ξ E` (each
 slot's value lies in the interpretation of its syntactic binding and
 declaration) — UniMath's `typed_environment`. Being a predicate, it involves no
 induction–recursion.
 
 **Semantic telescopes without induction–recursion.** A chain carrying each
 entry's binding telescope in its type would be induction–recursion. Instead: a
-bare `Chain` of types, `Chain.Bind` by recursion on it, then a decoration
-`Tele` *indexed by* the bare chain whose constructor records
-`hA : A = Chain.Bind c_b B` `[probed]`. Its arity index is the syntactic arity,
+bare `Chain` of types, `Chain.Bind` by recursion on it, then a `Decoration`
+*indexed by* the bare chain whose constructor records `hA : A = b.Bind B.ty`
+`[proved]`. Its arity index is the syntactic arity,
 so slot lookup follows `dTel.declaration` by `C.split`.
 
 ### 3.3 "Sort or element" cannot be read off a semantic type
@@ -121,8 +122,8 @@ dispatch between `IdSort` and `IdElement` in an equation `eq l r` must use
 **data tags** on semantic boundaries:
 
 ```lean
-inductive SemBd (M) (Γ : M.Ob) | sort | of (S : M.Tm Γ (M.U Γ))
-  | eqSort (l r : M.Tm Γ (M.U Γ)) | eqEl (S) (l r : M.Tm Γ (M.El S))
+inductive Boundary (M) (Γ : M.Ob) | sort | of (S : M.Tm Γ (M.U Γ))
+  | eqSort (S S' : M.Tm Γ (M.U Γ)) | eqElement (S) (l r : M.Tm Γ (M.El S))
 ```
 
 This is the role annotations play in Hofmann (his exercise E3.40 shows the
@@ -244,7 +245,7 @@ each.
 ### 3.8 Computability
 
 The final maps are `(…).get h` with `h` a proof; `Part.get` reduces through
-`bind` and `assert`; tag dispatch matches on `SemBd` constructors, which are
+`bind` and `assert`; tag dispatch matches on `Boundary` constructors, which are
 data; transports go along Prop equations; `Quotient.hrecOn` is computable. No
 definition uses choice. (`#print axioms` still lists `Classical.choice`, which
 enters through Mathlib proof terms already present in the carrier; an
@@ -267,33 +268,41 @@ axiom-clean development would be a separate audit.)
 
 ## 5. Central definitions
 
-All in pure `M`, except where syntax is named. Signatures are as probed; the
-names are proposals.
+All in pure `M`, except where syntax is named. Pass 1 is built; the signatures
+from pass 2 on are as probed, and their names are proposals.
 
 ```lean
-inductive Chain (M) : M.Ob → C.Arity → M.Ob → Type u
-  | nil  {Γ} : Chain Γ 1 Γ
-  | cons {Γ α Δ Γ'} (A : M.Ty Γ) (c : Chain (M.extend Γ A) Δ Γ') : Chain Γ (C.single α ⋈ Δ) Γ'
-def Chain.Bind : Chain Γ Ω Γ' → M.Ty Γ' → M.Ty Γ          -- with Chain.lam, Chain.unlam
+-- pass 1: Initiality/Chain.lean, Initiality/Environment.lean
+inductive Chain (M) : M.Ob → C.Arity → Type u
+  | nil  {Γ} : Chain Γ 1
+  | cons {Γ α Ω} (A : M.Ty Γ) (c : Chain (M.extend Γ A) Ω) : Chain Γ (C.single α ⋈ Ω)
+def Chain.last : Chain M Γ Ω → M.Ob                        -- the end object, computed
+def Chain.Bind : (c : Chain M Γ Ω) → M.Ty c.last → M.Ty Γ  -- with Chain.lam, Chain.unlam
+def Chain.subst : Chain M Γ Ω → M.Sub Δ Γ → Chain M Δ Ω    -- with Chain.lift
 
-inductive SemBd (M) (Γ : M.Ob)   -- sort | of S | eqSort l r | eqEl S l r ; SemBd.ty, SemBd.subst
+inductive Boundary (M) (Γ : M.Ob)  -- sort | of S | eqSort S S' | eqElement S l r ; ty, subst
 
-inductive Tele (M) : Chain M Γ Ω Γ' → Type u   -- decoration indexed by the bare chain
-  | nil  : Tele .nil
-  | cons (d_b : Tele c_b) (B : SemBd M Γ_b) (A : M.Ty Γ) (hA : A = c_b.Bind B.ty)
-         (d : Tele c) : Tele (.cons A c)
+inductive Decoration (M) : Chain M Γ Ω → Type u  -- indexed by the bare chain
+  | nil  : Decoration .nil
+  | cons (db : Decoration b) (B : Boundary M b.last) (A : M.Ty Γ) (hA : A = b.Bind B.ty)
+         (d : Decoration c) : Decoration (.cons A c)
 
-structure Value (M) (Γ : M.Ob) (α : C.Arity)   -- chain, decoration, boundary, term
-structure Env (M) (Δ : C.Arity) (Γ : M.Ob) where slot : ∀ ⦃α⦄, Δ ∋ α → Value M Γ α
-abbrev Atom (Γ) := Σ b : SemBd M Γ, M.Tm Γ b.ty            -- what an expression synthesizes
+structure Telescope (M) (Γ) (Ω)  -- chain : Chain M Γ Ω, decoration : Decoration M chain
+structure Filler (M) (Γ)         -- boundary : Boundary M Γ, tm : M.Tm Γ boundary.ty
+structure Value (M) (Γ) (α)      -- binding : Telescope M Γ α, filler : Filler M binding.chain.last
+def Environment (M) (Γ : M.Ob) (Δ : C.Arity) := ∀ ⦃α⦄, Δ ∋ α → Value M Γ α
+def Environment.extend : Environment M Γ Δ → Decoration M c → Environment M c.last (Δ ⋈ Ω)
 
-def walk : Env M Δ Γ → Tele M c → M.Sub Γ Γ_c → (argument interpretation) → Part (M.Sub Γ Γ')
-def interp : Env M Δ Γ → Expr Δ → Part (Atom M Γ)          -- structural on Expr [probed]
-def interpBd : Env M Δ Γ → Bd Δ → Part (SemBd M Γ)         -- eqClause with its assert
-def interpTele : Env M Δ Γ → dTel Δ Ω → Part (Σ Γ' (c : Chain M Γ Ω Γ'), Tele M c)
-def Env.Typed (Ξ : Ambient Δ) (E : Env M Δ Γ) : Prop
-def SemFilling (Ω) (E' : Env M Δ' Γ) (E : Env M Δ Γ) : Prop -- slots renamed, or filled below Ω
-def envOf (X : Ctx.Ob) : Σ Γ : M.Ob, Env M X.arity Γ       -- the one data-level hrecOn [probed]
+-- pass 2 onwards
+def walk : Environment M Γ Δ → Decoration M c → M.Sub Γ Γ_c → (argument interpretation)
+    → Part (M.Sub Γ c.last)
+def interp : Environment M Γ Δ → Expr Δ → Part (Filler M Γ)       -- structural on Expr [probed]
+def interpBd : Environment M Γ Δ → Bd Δ → Part (Boundary M Γ)     -- eqClause with its assert
+def interpTele : Environment M Γ Δ → dTel Δ Ω → Part (Telescope M Γ Ω)
+def Environment.Typed (Ξ : Ambient Δ) (E : Environment M Γ Δ) : Prop
+def SemFilling (Ω) (E' : Environment M Γ Δ') (E : Environment M Γ Δ) : Prop
+    -- slots renamed, or filled below Ω
+def envOf (X : Ctx.Ob) : Σ Γ : M.Ob, Environment M Γ X.arity  -- the one data-level hrecOn [probed]
 ```
 
 `walk` checks a slot's arguments against its decoration and accumulates the
@@ -309,8 +318,8 @@ Each pass: declarations proposed to the user before writing, then a report.
 | pass | content | depends on | lines (est.) | risk |
 |---|---|---|---|---|
 | 0 | `pair_comp` in `HrS.Structure` and its proof for `Ctx.model`; lifting fields dropped; `HrS.Morphism` over two universes | — | done | `[proved]` |
-| 1 | `HrS/Chain.lean`, `HrS/Environment.lean`: chains with `Bind`/`lam`/`unlam` and their laws (incl. unlam commuting with reindexing), `SemBd`, `Tele` and its reindexing, open `Value`s, `Env`, extension and reindexing of environments with their functoriality, the β read-back lemma | 0 | 750–1000 | medium-high: equations between Σ-data over propositionally equal objects; functoriality and β read-back `[probed]` |
-| 2 | the interpretation: `walk`, `interp`, `interpBd`, `interpTele`, `Env.Typed`, and one membership lemma per syntactic rule (the graph as an API); afterwards nothing unfolds `Part` | 1 | 400 | low `[probed]` |
+| 1 | `Initiality/Chain.lean`, `Initiality/Environment.lean`, and the derived laws at the end of `HrS/Structure.lean`: lifting; chains with `Bind`/`lam`/`unlam`, reindexing and lift, and their laws (incl. `unlam` commuting with reindexing); `Boundary`, `Decoration`, `Telescope`, `Filler`, open `Value`s, `Environment`, their reindexing and its functoriality; extension of environments and its reindexing; the generic value along a pair (`headValue_subst_pair`) | 0 | done (≈880) | `[proved]` |
+| 2 | the interpretation: `walk`, `interp`, `interpBd`, `interpTele`, `Environment.Typed`, and one membership lemma per syntactic rule (the graph as an API); afterwards nothing unfolds `Part` | 1 | 400 | low `[probed]` |
 | 3 | renaming (=), reindexing (≤), typedness of extended environments, the slot lemma, weakening along ambient renamings; twin of `Typing/Weakening.lean` | 2 | 600 | medium |
 | 4 | `SemFilling` and `interp_fill` (well-founded on the block arity, like `substitutionAt`); its boundary, telescope and walk forms; the η lemma; twin of `Typing/SubstitutionLemma.lean` | 3 | 450–1300 | **high**: extending `SemFilling` under binders; may need several passes |
 | 5 | totality and soundness: the mutual theorem of §3.5, `Eq_t` soundness, totality at `Ambient.Wf` | 4 | 500 | medium: the `Wf_s`/`Eq_s` tail, the one case that is not a congruence |
@@ -330,8 +339,11 @@ parallel with the substitution lemma.
 **Tactic friction seen in every probe.** Objects computed by a chain's end
 (`Chain.last`) and arities that come out as unfolded `Subtype.mk` defeat `rw`;
 equation lemmas must be stated at the elaborated arities, and some steps needed
-`erw`. Keep `interp`, `walk` and `interpTele` irreducible behind their
-membership lemmas, both for this and for elaboration cost.
+`erw`. In pass 1, `simp only` with the equation lemmas of `Chain.last`,
+`Chain.subst` and `Chain.lift` brings computed objects in implicit arguments into
+the form `rw` matches; `apply` and `congr 1` see through them without it. Keep
+`interp`, `walk` and `interpTele` irreducible behind their membership lemmas, both
+for this and for elaboration cost.
 
 Pass 1 gates everything: a wrong shape for chains, decorations or environments
 is paid for in every later clause, so its interface is settled against probes
@@ -346,6 +358,11 @@ of passes 2 and 4 before it is written out. Pass 4 carries the risk.
    with the generic term.
 3. `HrS.Morphism` generalized over two universes.
 4. The `rfl` computation rules of `Ctx.model` are restored in pass 7.
+5. Chains compute their end object (`Chain.last`) instead of carrying it as an
+   index.
+6. Pass 1 lives in `Initiality/`, with the names of §5; the term-reindexing laws up
+   to transport (`substTm_comp_heq`, `substTm_identity_heq`) and lifting are
+   derived at the end of `HrS/Structure.lean`.
 
 ---
 

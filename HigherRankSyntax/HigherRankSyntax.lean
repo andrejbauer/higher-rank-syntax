@@ -27,3 +27,5 @@ import HigherRankSyntax.Ctx.Universe
 import HigherRankSyntax.Ctx.Binding
 import HigherRankSyntax.Ctx.Identity
 import HigherRankSyntax.Ctx.Model
+import HigherRankSyntax.Initiality.Chain
+import HigherRankSyntax.Initiality.Environment

@@ -8,6 +8,11 @@ object, reindexing and context extension; a universe of sorts with its decoding
 into types of elements; binding, a type over an extension read as a type over
 the base, with a bijection on terms; and extensional equality types of sorts
 and of elements of a sort.
+
+Lifting a substitution through an extension is not an operation of its own: it is
+derived from pairing, at the end of the file, together with its laws. The end of the
+file also restates the reindexing laws of terms for reindexed terms transported along
+equations of types.
 -/
 
 universe u
@@ -161,5 +166,113 @@ structure Structure where
   /-- A term of `IdElement l r` gives `l = r`. -/
   IdElement_reflect : ∀ {Γ : Ob} {S : Tm Γ (U Γ)} {l r : Tm Γ (El S)},
     Tm Γ (IdElement l r) → l = r
+
+namespace Structure
+
+variable {M : Structure.{u}}
+
+/-- Reindexing a term along `comp σ θ` and reindexing it along `σ` and then along `θ`
+give heterogeneously equal terms, whatever equations of types the reindexed terms are
+transported along. -/
+theorem substTm_comp_heq
+    {Γ Δ Ξ : M.Ob} {a : M.Ty Γ} {b : M.Ty Δ} {c e : M.Ty Ξ} (t : M.Tm Γ a)
+    (σ : M.Sub Δ Γ) (θ : M.Sub Ξ Δ) (h : M.substTy a σ = b) (h' : M.substTy b θ = c)
+    (h'' : M.substTy a (M.comp σ θ) = e) :
+  HEq (h'' ▸ M.substTm t (M.comp σ θ)) (h' ▸ M.substTm (h ▸ M.substTm t σ) θ)
+  := by
+  subst h h' h''
+  apply HEq.trans _ (heq_of_eq (M.substTm_comp t σ θ))
+  symm
+  apply eqRec_heq
+
+/-- A term reindexed along the identity is heterogeneously equal to the term, whatever
+equation of types the reindexed term is transported along. -/
+theorem substTm_identity_heq
+    {Γ : M.Ob} {a b : M.Ty Γ} (t : M.Tm Γ a) (h : M.substTy a (M.identity Γ) = b) :
+  HEq (h ▸ M.substTm t (M.identity Γ)) t
+  := by
+  subst h
+  apply HEq.trans _ (heq_of_eq (M.substTm_identity t))
+  symm
+  apply eqRec_heq
+
+/-- The substitution `σ` carried through the extension by `a`. It goes from `Δ`
+extended by `a` reindexed along `σ` to `Γ` extended by `a`, and is `σ` after the
+projection, paired with the generic term: on the base it acts as `σ`, and it sends
+the generic term to the generic term. `Bind_subst` and `lam_subst` reindex the type
+and the term over the extension along exactly this substitution. -/
+def lift {Γ Δ : M.Ob} (a : M.Ty Γ) (σ : M.Sub Δ Γ) :
+    M.Sub (M.extend Δ (M.substTy a σ)) (M.extend Γ a) :=
+  M.pair (M.comp σ (M.projection (M.substTy a σ)))
+    (M.substTy_comp a σ (M.projection (M.substTy a σ)) ▸ M.generic (M.substTy a σ))
+
+/-- Lifting `σ` and then projecting is projecting and then applying `σ`. -/
+theorem projection_lift
+    {Γ Δ : M.Ob} (a : M.Ty Γ) (σ : M.Sub Δ Γ) :
+  M.comp (M.projection a) (M.lift a σ) = M.comp σ (M.projection (M.substTy a σ))
+  := by
+  apply M.projection_pair
+
+/-- The generic term reindexed along the lift of `σ` is the generic term of the
+reindexed type. -/
+theorem generic_lift
+    {Γ Δ : M.Ob} (a : M.Ty Γ) (σ : M.Sub Δ Γ) :
+  HEq (M.substTm (M.generic a) (M.lift a σ)) (M.generic (M.substTy a σ))
+  := by
+  apply HEq.trans (M.generic_pair _ _)
+  apply eqRec_heq
+
+/-- A substitution into an extension is the pair of its two components: its
+composite with the projection, and the generic term reindexed along it. -/
+theorem pair_components
+    {Γ Δ : M.Ob} {a : M.Ty Γ} (τ : M.Sub Δ (M.extend Γ a)) :
+  M.pair (M.comp (M.projection a) τ)
+      (M.substTy_comp a (M.projection a) τ ▸ M.substTm (M.generic a) τ)
+    = τ
+  := by
+  rw [← M.pair_comp, M.pair_eta, M.identity_comp]
+
+/-- Lifting the identity is the identity. The two sides have domains that are equal
+by `substTy_identity`. -/
+theorem lift_identity
+    {Γ : M.Ob} (a : M.Ty Γ) :
+  HEq (M.lift a (M.identity Γ)) (M.identity (M.extend Γ a))
+  := by
+  rw [← M.pair_eta a, lift]
+  congr 1
+  · rw [M.substTy_identity]
+  · rw [M.identity_comp, M.substTy_identity]
+  · apply HEq.trans (eqRec_heq _ _)
+    rw [M.substTy_identity]
+
+/-- Lifting along a composite is lifting along each factor in turn. The two sides
+have domains that are equal by `substTy_comp`. -/
+theorem lift_comp
+    {Γ Δ Ξ : M.Ob} (a : M.Ty Γ) (σ : M.Sub Δ Γ) (θ : M.Sub Ξ Δ) :
+  HEq (M.lift a (M.comp σ θ)) (M.comp (M.lift a σ) (M.lift (M.substTy a σ) θ))
+  := by
+  rw [← M.pair_components (M.comp (M.lift a σ) (M.lift (M.substTy a σ) θ)), lift]
+  congr 1
+  · rw [M.substTy_comp]
+  · conv =>
+      rhs
+      rw [← M.comp_assoc, projection_lift, M.comp_assoc, projection_lift, ← M.comp_assoc]
+    rw [M.substTy_comp]
+  · apply HEq.trans (eqRec_heq _ _)
+    symm
+    apply HEq.trans (eqRec_heq _ _)
+    apply HEq.trans
+      (b := M.substTm (M.substTm (M.generic a) (M.lift a σ)) (M.lift (M.substTy a σ) θ))
+    · apply HEq.trans _ (heq_of_eq (M.substTm_comp _ _ _))
+      symm
+      apply eqRec_heq
+    · apply HEq.trans (b := M.substTm (M.generic (M.substTy a σ)) (M.lift (M.substTy a σ) θ))
+      · congr 1
+        · rw [← M.substTy_comp, projection_lift, M.substTy_comp]
+        · apply generic_lift
+      · apply HEq.trans (generic_lift _ _)
+        rw [M.substTy_comp]
+
+end Structure
 
 end HrS
