@@ -153,6 +153,17 @@ theorem unlam_subst :
           apply eqRec_heq
       · rw [M.unlam_lam]
 
+/-- `lam` along a chain commutes with reindexing: reindexing the bound term along `σ`
+is binding the term reindexed along the lift of `σ`. -/
+theorem lam_subst
+    {Γ Δ : M.Ob} {Ω : C.Arity} (c : Chain M Γ Ω) {B : M.Ty c.last} (t : M.Tm c.last B)
+    (σ : M.Sub Δ Γ) :
+  c.Bind_subst B σ ▸ M.substTm (c.lam t) σ = (c.subst σ).lam (M.substTm t (c.lift σ))
+  := by
+  have h := unlam_subst c (c.lam t) σ
+  rw [unlam_lam] at h
+  rw [h, lam_unlam]
+
 /-- Reindexing a chain along a composite is reindexing it along each factor in
 turn. -/
 theorem subst_comp :

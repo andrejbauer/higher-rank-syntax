@@ -1,7 +1,8 @@
 # Initiality of `Ctx.model`: strategy and formalization plan
 
 Goal: for every `M : HrS.Structure`, exactly one `HrS.Morphism Ctx.model M`,
-with the morphism an honest `def` (no choice in any definition).
+with the morphism an honest `def` (no choice in any definition). `[proved]`:
+`HrS.initial` (`Initiality/Initial.lean`).
 
 Marks: `[probed]` a Lean probe compiles; `[open]` not yet attempted.
 
@@ -139,11 +140,13 @@ model has only `lam`/`unlam` and strict reindexing. So the semantic
 substitution lemma must absorb β.
 
 **Shape: the semantic twin of `Ambient.Filling` / `substitutionAt`.** A relation
-`SemFilling Ω E' E` marks each slot of the environment as renamed (same value) or
-filled (by the interpretation of an expression, at an arity below the bound
-`Ω`). One lemma, `interp_fill`, then covers instantiation and every `Subst.act`.
-It is proved like `substitutionAt`: well-founded recursion on `Ω` along
-`Carrier.Sub`, structural recursion on the expression inside. This is the
+`Environment.Filling E E' fill Ω` marks each slot of the environment as renamed
+(same value) or filled (by the interpretation of an expression, at an arity below
+the bound `Ω`). One lemma, `interpret_fill`, then covers instantiation and every
+`Subst.act` `[proved]`. It is proved like `substitutionAt`: well-founded induction on
+`Ω` along `Carrier.Sub` (`C.subWf`), structural recursion on the expression inside.
+It needs `interpret` to be undefined at a head whose value is an equation: the
+filler of an equational slot is unconstrained by `Wf_s`. This is the
 lexicographic scheme of Keller–Altenkirch for hereditary substitution. Stating
 it directly along `Subst.act.induct` (the principle Lean generates for
 `Subst.act`) fails at the real call site: after the induction the head's arity
@@ -182,18 +185,21 @@ For every environment typed by `Ξ`:
 Wf_e  Ξ e      → ⟦e⟧ defined, and its boundary lies in ⟦boundaryOf e⟧
 Eq_e  Ξ e e'   → ∃ v, v ∈ ⟦e⟧ ∧ v ∈ ⟦e'⟧
 Eq_bd Ξ β β'   → ⟦β⟧ = ⟦β'⟧
-Wf_s  Ξ Θ σ    → for every d ∈ ⟦Θ⟧, the walk of σ along d is defined
-Eq_s  Ξ Θ σ θ  → for every d ∈ ⟦Θ⟧, the two walks agree
+Wf_s  Ξ Θ σ    → for every T ∈ ⟦Θ⟧, σ is interpreted as a filling along T from the identity
+Eq_s  Ξ Θ σ θ  → for every T ∈ ⟦Θ⟧, the two fillings agree
 Wf_bd Ξ Θ β    → for every d ∈ ⟦Θ⟧, ⟦β⟧ over the extension is defined
 Wf_t  Ξ Θ      → ⟦Θ⟧ defined
 ```
 
-This is UniMath's `is_interpretable` shape. For fillings, state it in
-accumulator form — for every partial section `g` whose reindexed decoration lies
-in `⟦Θ⟧`, the walk of `σ` from `g` is defined — so the instantiated tail of
-`Wf_s.cons` and `Eq_s.cons` needs no separate bridge lemma, only functoriality of
-reindexing decorations and `lift ∘ pair = pair`. The same form gives `onSub`, as
-a walk from the map into the empty object. The strong form for `Eq_e` (a
+This is UniMath's `is_interpretable` shape `[proved]`. Fillings are interpreted from
+the identity along an interpretation `T` of the telescope, which the membership
+lemmas present as a syntactic `cons`; an accumulator form over arbitrary
+decorations would need case analysis on a decoration at the arity
+`C.single α ⋈ Ω`, which fails dependent elimination. The instantiated tail of
+`Wf_s.cons` and `Eq_s.cons` is the rest of `T` reindexed along the pairing of the
+identity with the head term (`interpretTelescope_pair`), and `pairFillers_comp`
+moves the tail's accumulator back to the identity. The same form gives `onSub`, as
+a filling from the identity. The strong form for `Eq_e` (a
 common value, rather than "equal if both defined") is forced by `Eq_e.congr`,
 which has no well-formedness premises for its two expressions: hereditary
 substitution can erase an ill-typed argument, so definedness of `σ ⋆ e` does
@@ -228,26 +234,40 @@ Uniqueness needs no interpretation at all. Two independent facts:
   `F` and `G` agree is closed under every operation, by the preservation fields
   alone; equational terms by `IdX_irrelevant`.
 
-Hence any two morphisms agree `[probed: the reduction to these two facts]`.
+Hence any two morphisms agree `[proved]`.
 Alternatives: membership of `F`'s values in the interpretation, closed by
 `Part.mem_unique` (Brunerie–de Boer's route); or naturality of the
 interpretation along morphisms plus "interpreting into `Ctx.model` is the
 identity" (the Initiality Project's route, whose second half Lumsdaine–Mörtberg
-left unfinished). Generation requires decomposing a context at a middle slot
-(prefix, entry, suffix); the existing `Ctx` files do this only for the last
-entry, so that decomposition is the real work of the pass.
+left unfinished).
 
-The `rfl` computation rules of `Ctx.model` removed as unused in the cleanup
-(`Bind_mk`, `lam_mk`, `El_ofFill`, `Ob.pair_mk`, `Tm₁.subst_ofFill`, …) are
-exactly what the generation induction consumes; they come back here, one line
-each.
+Generation is one mutual structural recursion over the derivations `Wf_t`,
+`Wf_bd`, `Wf_e`, `Wf_s`. Its invariants are predicates on raw ambients,
+telescopes, declarations and expressions, with the well-formedness proofs
+quantified at their leaves, so that reassociating an ambient
+(`dTel.concatenate_assoc`) is a rewrite. A context carries, for every slot, the
+facts an application headed by it needs (`SlotGood`): its binding telescope and
+declaration satisfy the family, and so does the term of its entry filled by its
+η-expansion. These are propagated along each extension of a context by weakening
+along the projection (`CtxGood.extend`), so no context is decomposed at a middle
+slot. An application `x args` is the term of `x` unlamped along its binding and
+reindexed along the section of `args`; the section of a filling is its first
+filler paired with the identity, followed by the lift past the rest
+(`Subst.copair_split`); a substitution is its section followed by the lift of the
+substitution into the empty context.
+
+The `rfl` computation rules of `Ctx.model` on representatives (`extend`, `Bind`,
+`lam`, `unlam`, `substTy`, `substTm`, `pair`, `toEmpty`, `El`, `IdSort`,
+`IdElement`) hold by `rfl` `[probed]`; the generation proof uses them as
+definitional unfoldings, so none is restored as a named lemma.
 
 ### 3.8 Computability
 
 The final maps are `(…).get h` with `h` a proof; `Part.get` reduces through
 `bind` and `assert`; tag dispatch matches on `Boundary` constructors, which are
 data; transports go along Prop equations; `Quotient.hrecOn` is computable. No
-definition uses choice. (`#print axioms` still lists `Classical.choice`, which
+definition uses choice: `initialMorphism` and `HrS.initial` compile as `def`s.
+(`#print axioms` still lists `Classical.choice`, which
 enters through Mathlib proof terms already present in the carrier; an
 axiom-clean development would be a separate audit.)
 
@@ -268,8 +288,7 @@ axiom-clean development would be a separate audit.)
 
 ## 5. Central definitions
 
-All in pure `M`, except where syntax is named. Pass 1 is built; the signatures
-from pass 2 on are as probed, and their names are proposals.
+All in pure `M`, except where syntax is named. Passes 1–8 are built.
 
 ```lean
 -- pass 1: Initiality/Chain.lean, Initiality/Environment.lean
@@ -293,21 +312,128 @@ structure Value (M) (Γ) (α)      -- binding : Telescope M Γ α, filler : Fill
 def Environment (M) (Γ : M.Ob) (Δ : C.Arity) := ∀ ⦃α⦄, Δ ∋ α → Value M Γ α
 def Environment.extend : Environment M Γ Δ → Decoration M c → Environment M c.last (Δ ⋈ Ω)
 
--- pass 2 onwards
-def walk : Environment M Γ Δ → Decoration M c → M.Sub Γ Γ_c → (argument interpretation)
+-- pass 2: Initiality/Interpretation.lean
+def Filler.asSort : Filler M Γ → Part (M.Tm Γ (M.U Γ))               -- boundary `sort`
+def Filler.asElement : Filler M Γ → (S : M.Tm Γ (M.U Γ)) → Part (M.Tm Γ (M.El S))
+def Chain.entryTerm (b : Chain M Γ α) :
+    (B : Boundary M b.last) → Part (Filler M b.last) → Part (M.Tm Γ (b.Bind B.ty))
+def Environment.pairFillers : Environment M Γ Δ → Decoration M c → M.Sub Γ Y
+    → (filler interpretations) → Part (M.Sub Γ c.last)
+def Environment.interpret : Environment M Γ Δ → Expr Δ → Part (Filler M Γ)
+def Environment.interpretFilling : Environment M Γ Δ → Subst Ω Δ → Decoration M c → M.Sub Γ Y
     → Part (M.Sub Γ c.last)
-def interp : Environment M Γ Δ → Expr Δ → Part (Filler M Γ)       -- structural on Expr [probed]
-def interpBd : Environment M Γ Δ → Bd Δ → Part (Boundary M Γ)     -- eqClause with its assert
-def interpTele : Environment M Γ Δ → dTel Δ Ω → Part (Telescope M Γ Ω)
-def Environment.Typed (Ξ : Ambient Δ) (E : Environment M Γ Δ) : Prop
-def SemFilling (Ω) (E' : Environment M Γ Δ') (E : Environment M Γ Δ) : Prop
-    -- slots renamed, or filled below Ω
-def envOf (X : Ctx.Ob) : Σ Γ : M.Ob, Environment M Γ X.arity  -- the one data-level hrecOn [probed]
+def Environment.interpretBoundary : Environment M Γ Δ → Bd Δ → Part (Boundary M Γ)
+def Environment.interpretTelescope : Environment M Γ Δ → dTel Δ Ω → Part (Telescope M Γ Ω)
+def Environment.Typed (E : Environment M Γ Δ) (Ξ : Ambient Δ) : Prop
+
+-- pass 3: Initiality/Naturality.lean
+def Environment.rename (E : Environment M Γ Δ) (ρ : Φ →ʳ Δ) : Environment M Γ Φ
+theorem interpret_rename   E.interpret (⟦ρ⟧ʳ e) = (E.rename ρ).interpret e      -- and fillings,
+                                                                     -- boundaries, telescopes
+theorem pairFillers_comp   E.pairFillers d (M.comp f g) = (E.pairFillers (d.subst f) g).map (M.comp (c.lift f))
+theorem interpret_subst    w ∈ E.interpret e → w.subst σ ∈ (E.subst σ).interpret e  -- and fillings,
+                                                                     -- boundaries, telescopes
+theorem interpretFilling_projection   s ∈ E.interpretFilling τ d g → M.comp c.projection s = g
+theorem interpretFilling_slot         ((d.slot z).subst s).filler ∈ … .interpret (τ z)
+theorem Typed.subst, Typed.rename, Typed.extend
+
+-- pass 4: Initiality/Substitution.lean
+def Environment.Filling (E : Environment M Γ Φ) (E' : Environment M Γ Δ) (fill : Subst Φ Δ)
+    (Ω : C.Arity) : Prop                                     -- slots renamed, or filled below Ω
+theorem Filling.extend, Filling.ofSection
+theorem interpret_fill   E.Filling E' fill Ω → w ∈ E.interpret e → w ∈ E'.interpret (fill ⋆ e)
+                                                  -- and boundaries, telescopes, fillings
+theorem interpret_instantiate   v ∈ (E.extend d).interpret g → s ∈ E.interpretFilling σ d id →
+                                  v.subst s ∈ E.interpret (σ ⋆ g)   -- and boundaries, telescopes
+
+-- pass 5: Initiality/Soundness.lean
+theorem Wf_e.sound, Eq_e.sound, Eq_bd.sound, Wf_s.sound, Eq_s.sound, Wf_bd.sound, Wf_t.sound
+theorem Eq_t.sound, Ambient.Wf.sound
+
+-- pass 6a: Initiality/Concatenation.lean
+def Chain.append : (c : Chain M Γ Φ) → Chain M c.last Λ → Chain M Γ (Φ ⋈ Λ)
+                                              -- with Decoration.append, Telescope.append
+theorem Chain.last_append         (c.append c').last = c'.last
+theorem Chain.projection_append   HEq (c.append c').projection (M.comp c.projection c'.projection)
+theorem extend_nil                E.extend .nil = E
+theorem extend_append             HEq (E.extend (d.append d')) ((E.extend d).extend d')
+theorem interpretTelescope_concatenate
+    T ∈ E.interpretTelescope Ξ → T' ∈ (E.extend T.decoration).interpretTelescope Θ →
+      T.append T' ∈ E.interpretTelescope (Ξ ⋈ Θ)
+theorem Chain.lam_mem_entryTerm   (¬ B.IsEq → ⟨B, u⟩ ∈ w) → b.lam u ∈ b.entryTerm B w
+theorem interpretFilling_ofRenaming
+    (∀ i, F (ι i) = (d.slot i).subst k) → (∀ i, the η lemma at F, ι i) →
+      k ∈ F.interpretFilling (Subst.ofRenaming ι) d (M.comp c.projection k)
+theorem interpret_eta   ¬ (E x).filler.boundary.IsEq →
+    (E x).filler ∈ (E.extend (E x).binding.decoration).interpret (Expr.η x)
+theorem interpretFilling_eta
+    ∃ s ∈ (E.extend d).interpretFilling (Subst.instId Δ Ω) (d.subst c.projection) (M.identity c.last),
+      M.comp (c.lift c.projection) s = M.identity c.last
+
+-- pass 6b: Initiality/Descent.lean
+def Environment.interpretEntry : Environment M Γ Δ → dTel Δ γ → Bd (Δ ⋈ γ)
+    → Part (Σ T : Telescope M Γ γ, Boundary M T.chain.last)
+instance : Subsingleton (Environment M Γ 1)
+theorem Environment.entryTerm_subst_identity    -- entry terms along the identity-reindexed entry
+def telescopeOf (X : Ctx.Ob) : Telescope M M.empty X.arity   -- the one data-level hrecOn
+def onOb X := (telescopeOf M X).chain.last
+def envOf X : Environment M (onOb M X) X.arity := (Environment.empty M.empty).extend (telescopeOf M X).decoration
+def entryOf (e : Ctx.Ob.Entry X) := ((envOf M X).interpretEntry e.binding e.declaration).get _
+def onTy (a : Ctx.Ty₁ X) : M.Ty (onOb M X)          -- ⟦e⟧ ↦ (entryOf e).1.chain.Bind (entryOf e).2.ty
+def termOf (τ : Ctx.Ob.Fill X e.toTele)                -- the entry term of τ's filler, a Part.get
+def onTm (t : Ctx.Tm₁ X a) : M.Tm (onOb M X) (onTy M a)
+def sectionOf (σ : Ctx.Ob.Subst X Y)                   -- (envOf X).interpretFilling σ.1 (… .subst toEmpty) id, a Part.get
+def onSub (f : X ⟶ Y) : M.Sub (onOb M X) (onOb M Y)  -- ⟦σ⟧ ↦ M.comp ((telescopeOf Y).chain.lift toEmpty) (sectionOf σ)
+theorem envOf_typed, entryOf_congr, termOf_heq, sectionOf_congr, onTy_mk, onTm_ofFill, onSub_mk
+theorem telescopeOf_extend, onOb_extend, envOf_extend
+theorem Environment.rename_inr_extend   (E.extend d).rename (Renaming.inr Δ Ω) = (Environment.empty Γ).extend d
+theorem envOf_substitution   ((((envOf X).extend D_Y).subst (sectionOf σ)).rename inr) = (envOf Y).subst (onSub ⟦σ⟧)
+
+-- pass 6c: Initiality/Morphism.lean   (ρ := onSub ⟦σ⟧ for σ : Ctx.Ob.Subst X Y)
+theorem onSub_mem   onSub ⟦σ⟧ ∈ (envOf X).interpretFilling σ.1 (telescopeOf Y).decoration (M.toEmpty _)
+theorem interpretTelescope_actBase, interpretBoundary_act, interpret_act, interpretFilling_applyEach
+    -- an interpretation over Y, reindexed along ρ (lifted through a chain), interprets
+    -- the syntax acted on by σ over X
+theorem entryOf_subst   entryOf (e.subst σ) = ⟨(entryOf e).1.subst ρ, (entryOf e).2.subst ((entryOf e).1.chain.lift ρ)⟩
+theorem Environment.pairFillers_append   -- along d.append d': along d, then along d' (HEq)
+theorem termOf_sort, termOf_of           -- terms of entries binding nothing, as interpreted fillers
+theorem Chain.mem_entryTerm_cons   t ∈ (cons A c).entryTerm B w ↔ ∃ u ∈ c.entryTerm B w, t = M.lam u
+theorem entryOf_extend, termOf_extend    -- over Ob.extend ⟦Γ⟧ ⟦e⟧.toTy, at (envOf ⟦Γ⟧).extend D_e (HEq)
+theorem entryOf_bind   entryOf (bind Γ e f) = ⟨⟨cons (onTy ⟦e⟧) p.1.chain, cons … p.1.decoration⟩, p.2⟩
+theorem onSub_identity, onSub_comp, onOb_empty, onTy_substTy, onTm_substTm, onSub_projection,
+  onTm_generic, onSub_pair, onTy_U, onTy_El, onTy_Bind, onTm_lam, onTy_IdSort, onTm_IdSort_refl,
+  onTy_IdElement, onTm_IdElement_refl
+def initialMorphism (M) : Morphism Ctx.model M
+
+-- pass 7: HrS/Closed.lean, Ctx/Generation.lean, Initiality/Uniqueness.lean
+structure HrS.Structure.Closed (S) (P_Ob P_Sub P_Ty P_Tm) : Prop  -- one field per operation,
+    -- and every term of an equation type satisfies P_Tm once its type satisfies P_Ty
+theorem HrS.Morphism.ext, HrS.Morphism.agree_closed   -- where F and G agree is closed
+theorem Wf_t.concatenate_inv, Wf_bd.split, Wf_t.atom, Wf_bd.nil_eq, Wf_bd.nil_of,
+  Wf_e.boundary, Wf_e.boundary_not_isEq, Bd.act_of_inv, Bd.eq_of_isEq, Eq_bd.sort_inv,
+  Eq_bd.of_inv, Wf_e.fill, Wf_t.sort_fill, Wf_s.eta_single, act_copair_eta,
+  Subst.single_restrict, Ctx.bind_wf_inv, Ctx.Ob.Entry.congr_declaration, Ctx.toOb_congr
+def Ctx.ObGood, SortGood, AtomGood, TelGood, AtomTermGood, SlotGood, CtxGood, ExprGood
+    -- over raw ambients, well-formedness proofs quantified at the leaves
+theorem Ctx.Tm₁.of_val, sub_of_heq, ty_of_heq, atom_val_eq, eq_term
+theorem Ctx.TelGood.entry, TelGood.ob, TelGood.unlam, lift_entry, TelGood.lift,
+  AtomGood.subst, TelGood.subst, CtxGood.extend, CtxGood.append
+theorem Ctx.Wf_t.good, Wf_bd.good, Wf_e.good, Wf_s.good   -- one mutual recursion
+theorem Ctx.CtxGood.of_wf, ofFill_good
+theorem Ctx.generated (h : Ctx.model.Closed P_Ob P_Sub P_Ty P_Tm) :
+  (∀ X, P_Ob X) ∧ (∀ f, P_Sub f) ∧ (∀ a, P_Ty a) ∧ (∀ t, P_Tm t)
+theorem HrS.Morphism.eq_of_ctx (F G : Morphism Ctx.model M) : F = G
+
+-- pass 8: Initiality/Initial.lean
+@[reducible] def HrS.initial (M : Structure.{v}) : Unique (Morphism Ctx.model M)
+    -- default := initialMorphism M; uniq by Morphism.eq_of_ctx
 ```
 
-`walk` checks a slot's arguments against its decoration and accumulates the
+`pairFillers` checks a slot's arguments against its decoration and accumulates the
 section with `pair`; it recurses on the semantic decoration, not on the
-instantiated syntactic tail, which fails structural recursion `[probed]`.
+instantiated syntactic tail, which fails structural recursion `[probed]`. It takes
+the arguments' interpretations as a function, so `interpret` recurses structurally
+on `Expr`; `interpretFilling` is its instance at a syntactic filling.
 
 ---
 
@@ -319,13 +445,15 @@ Each pass: declarations proposed to the user before writing, then a report.
 |---|---|---|---|---|
 | 0 | `pair_comp` in `HrS.Structure` and its proof for `Ctx.model`; lifting fields dropped; `HrS.Morphism` over two universes | — | done | `[proved]` |
 | 1 | `Initiality/Chain.lean`, `Initiality/Environment.lean`, and the derived laws at the end of `HrS/Structure.lean`: lifting; chains with `Bind`/`lam`/`unlam`, reindexing and lift, and their laws (incl. `unlam` commuting with reindexing); `Boundary`, `Decoration`, `Telescope`, `Filler`, open `Value`s, `Environment`, their reindexing and its functoriality; extension of environments and its reindexing; the generic value along a pair (`headValue_subst_pair`) | 0 | done (≈880) | `[proved]` |
-| 2 | the interpretation: `walk`, `interp`, `interpBd`, `interpTele`, `Environment.Typed`, and one membership lemma per syntactic rule (the graph as an API); afterwards nothing unfolds `Part` | 1 | 400 | low `[probed]` |
-| 3 | renaming (=), reindexing (≤), typedness of extended environments, the slot lemma, weakening along ambient renamings; twin of `Typing/Weakening.lean` | 2 | 600 | medium |
-| 4 | `SemFilling` and `interp_fill` (well-founded on the block arity, like `substitutionAt`); its boundary, telescope and walk forms; the η lemma; twin of `Typing/SubstitutionLemma.lean` | 3 | 450–1300 | **high**: extending `SemFilling` under binders; may need several passes |
-| 5 | totality and soundness: the mutual theorem of §3.5, `Eq_t` soundness, totality at `Ambient.Wf` | 4 | 500 | medium: the `Wf_s`/`Eq_s` tail, the one case that is not a congruence |
-| 6 | descent and the 22 morphism fields: `envOf`, `onOb`, `onTy`, `onTm`, `onSub` | 5 | 1000 | medium-high: heterogeneous equality through `Tm₁`'s quotient tower; `onSub` over the renamed ambient |
-| 7 | uniqueness (§3.7): `Ctx.model` is generated; the equalizer of two morphisms is closed; the restored computation rules of `Ctx.model` | 2 (independent of 3–6) | 700–1300 | medium-high: decomposing a context at a middle slot |
-| 8 | `def initial (M : HrS.Structure.{v}) : Unique (HrS.Morphism Ctx.model M)` | 6, 7 | 30 | low |
+| 2 | `Initiality/Interpretation.lean`: the interpretation `interpret`, `interpretFilling`, `interpretBoundary`, `interpretTelescope`, `Environment.Typed`, and one membership lemma per clause (the graph as an API); afterwards nothing unfolds `Part` | 1 | done (≈360) | `[proved]` |
+| 3 | `Initiality/Naturality.lean`: renaming (=), reindexing (≤) with the accumulator law `pairFillers_comp`, the section and slot lemmas, typedness under reindexing, ambient renamings and extension; twin of `Typing/Weakening.lean` | 2 | done (≈580) | `[proved]` |
+| 4 | `Initiality/Substitution.lean`: `Environment.Filling` and `interpret_fill` (well-founded on the block arity, like `substitutionAt`); its boundary, telescope and filling forms; instantiation; twin of `Typing/SubstitutionLemma.lean` | 3 | done (≈315) | `[proved]` |
+| 5 | `Initiality/Soundness.lean`: totality and soundness, the mutual theorem of §3.5, `Eq_t` soundness, totality at `Ambient.Wf` | 4 | done (≈400) | `[proved]` |
+| 6a | `Initiality/Concatenation.lean`: appending chains, decorations and telescopes; extension by the empty and by an appended decoration; the interpretation of a concatenation of telescopes; the η lemma (twin of `Wf_sub.id`, `Wf_s.eta`), well-founded on the slot's arity, through the filling by η-expansions of the slots of a renaming | 5 | done (≈250) | `[proved]` |
+| 6b | `Initiality/Descent.lean`: `interpretEntry`; `telescopeOf`, the one data-level `Quotient.hrecOn`; `envOf`; the four data fields `onOb`, `onTy`, `onTm`, `onSub`, each respecting its quotients by soundness and functionality; their values on representatives; `envOf` typed by the ambient; `envOf` of an extension; the environment of a substitution | 6a | done (≈460) | `[proved]` |
+| 6c | `Initiality/Morphism.lean`: the other 16 laws of `HrS.Morphism` (`onOb_extend` is in 6b) and `def initialMorphism : HrS.Morphism Ctx.model M` | 6b | done (≈670) | `[proved]` |
+| 7 | uniqueness (§3.7): `HrS/Closed.lean` (closed families; where two morphisms agree is closed), `Ctx/Generation.lean` (`Ctx.model` is generated), `Initiality/Uniqueness.lean` (`HrS.Morphism.eq_of_ctx`) | 2 (independent of 3–6) | done (≈1350) | `[proved]` |
+| 8 | `Initiality/Initial.lean`: `def initial (M : HrS.Structure.{v}) : Unique (HrS.Morphism Ctx.model M)` | 6c, 7 | done (≈20) | `[proved]` |
 
 Total ≈ 5–6.7k lines (the three independent designs estimated 5.2k, 5.4k and
 6.7k), calibrated on `Typing/Weakening.lean` (429 lines) and
@@ -333,17 +461,41 @@ Total ≈ 5–6.7k lines (the three independent designs estimated 5.2k, 5.4k and
 initiality chain (≈3.8k) and the Coq development (≈7k with quotients). These are
 estimates, not measurements.
 
-Pass 7 depends only on the definitions, not on passes 3–6, so it can run in
-parallel with the substitution lemma.
-
 **Tactic friction seen in every probe.** Objects computed by a chain's end
 (`Chain.last`) and arities that come out as unfolded `Subtype.mk` defeat `rw`;
 equation lemmas must be stated at the elaborated arities, and some steps needed
 `erw`. In pass 1, `simp only` with the equation lemmas of `Chain.last`,
 `Chain.subst` and `Chain.lift` brings computed objects in implicit arguments into
-the form `rw` matches; `apply` and `congr 1` see through them without it. Keep
-`interp`, `walk` and `interpTele` irreducible behind their membership lemmas, both
-for this and for elaboration cost.
+the form `rw` matches; `apply` and `congr 1` see through them without it. In
+pass 2, `Boundary.ty` of a constructor against its unfolded type (`M.U`, `M.El S`)
+defeats `rw` in the same way; the membership lemmas are used through `.mp`/`.mpr`
+and `apply` there. In pass 3, the unit and associativity of arities are definitional
+but not syntactic (`single α ⋈ 1` against `single α`, `1 ⋈ Δ` against `Δ`, the
+bases of ambients): `erw` rewrites across them, and `generalize` on a value before
+rewriting avoids motives whose occurrences differ in implicit arguments. In
+pass 6a, the end of an appended chain is only propositionally the end of the
+second chain, so the laws of appending are `HEq`s; after rewriting a projection of
+`cons A c`, the objects of `M.comp` stay at `(cons A c).last`, and equations
+stated at `c.last` rewrite there only with `erw`. In pass 6b, `induction X using
+Quotient.ind` produces `Quotient.mk _ Γ`, not `Γ.toOb`, so lemmas about representatives
+are stated with `Quotient.mk _ Γ`; the casts `h ▸` in `Ob.Term.Rel` come out as `Eq.ndrec`
+with large motives, which `rw` does not see through and `.mp` does. In pass 6c,
+`act_copair_prefix` elaborates the copair's target as `1 ⋈ Δ`, so rewriting with it
+needs `erw`; `convert` splits computed ends (`(cons A c).last` against `c.last`) into
+false goals, so fillers are rewritten under binders with `simp only` and the slot
+lemmas; `copair_inl`/`copair_inr` match only after unfolding `Ob.Tele.arity`,
+`Ob.Entry.toTele` and `Ob.Entry.subst`; `onOb (extend X a)` is generalized along
+`onOb_extend` only after every value whose type mentions it. In pass 7, the
+invariants quantify well-formedness proofs at their leaves, so equal ambients are
+exchanged by `rw` (with `erw` across `1 ⋈ Δ` and `Δ ⋈ 1` in implicit arities),
+and a predicate on raw syntax is rewritten before `intro`, since after it the
+binder types fix the old form; `apply` of a closure field cannot infer an argument
+the goal only determines through a computation (`Bind a ?c`), so that argument is
+given first; structural recursion over the mutual judgements fails when a recursive
+argument passes through a `have`; model values built from representatives compute
+through `Ob.Fill.ofRel`, which `simp` does not see through and `exact` does. Keep
+`interpret`, `pairFillers` and `interpretTelescope` irreducible behind their
+membership lemmas, both for this and for elaboration cost.
 
 Pass 1 gates everything: a wrong shape for chains, decorations or environments
 is paid for in every later clause, so its interface is settled against probes
@@ -357,12 +509,47 @@ of passes 2 and 4 before it is written out. Pass 4 carries the risk.
 2. The lifting fields dropped; lifting is the pair of `σ` after the projection
    with the generic term.
 3. `HrS.Morphism` generalized over two universes.
-4. The `rfl` computation rules of `Ctx.model` are restored in pass 7.
+4. The `rfl` computation rules of `Ctx.model` hold by `rfl`; pass 7 uses them as
+   definitional unfoldings, and none is restored as a named lemma.
 5. Chains compute their end object (`Chain.last`) instead of carrying it as an
    index.
 6. Pass 1 lives in `Initiality/`, with the names of §5; the term-reindexing laws up
    to transport (`substTm_comp_heq`, `substTm_identity_heq`) and lifting are
    derived at the end of `HrS/Structure.lean`.
+7. `mem_interpretTelescope_cons` takes the entry's type up to equality (`A` with
+   `hA : A = T₀.chain.Bind B.ty`), so that reindexed telescopes, whose entry types
+   come from `Decoration.subst`, match it.
+8. `interpret` is undefined at a head whose value is an equation (restored in pass 4).
+9. The η lemma moves to pass 6 (6a), where its uses are.
+10. The soundness of fillings is stated along interpretations of the telescope, from
+    the identity, not along arbitrary decorations from an accumulator.
+11. Pass 6 is split into 6a (concatenation and the η lemma), 6b (descent: the
+    data fields) and 6c (the laws and the morphism).
+12. The η lemma is proved through `interpretFilling_ofRenaming`, the filling of a
+    decoration by the η-expansions of the slots of an arbitrary renaming, from the
+    projection of an arbitrary `k`; `interpretFilling_eta` is its instance at
+    `Renaming.inr` and the identity. `Environment.extend_nil` is a standalone
+    lemma.
+13. The data-level `Quotient.hrecOn` is `telescopeOf X`, the interpretation of the
+    ambient, not a Σ of an object and an environment: `onOb` and `envOf` are defined
+    from it, and `onSub` uses the telescope of the codomain.
+14. `interpretEntry` returns the interpreted binding telescope and declaration, so that
+    `onTy` of the class of an entry is `Bind` of them by `rfl` and `onTm` needs no
+    cast; `termOf` takes the entry term at the interpreted entry itself, not along it
+    reindexed by the identity.
+15. `onSub_projection` and `onTm_generic` are derived from `onSub_pair` at the projection
+    and the generic term, through `Ctx.Ty₁.pair_eta` and `onSub_identity`.
+16. `entryOf_bind`, the interpreted entry of `bind Γ e f`, is a lemma shared by `onTy_Bind`
+    and `onTm_lam`.
+17. Generation is one mutual structural recursion over `Wf_t`, `Wf_bd`, `Wf_e`, `Wf_s`,
+    with invariants on raw ambients (`CtxGood` and the rest), well-formedness proofs
+    quantified at the leaves; every slot's facts are carried by `CtxGood` and
+    propagated along extensions (`CtxGood.extend`), instead of decomposing a context at
+    a middle slot.
+18. Uniqueness is `HrS.Morphism.eq_of_ctx` in `Initiality/Uniqueness.lean`; it depends
+    on `Ctx/Generation.lean` and `HrS/Closed.lean` only, not on the interpretation.
+19. `HrS.initial` lives in `Initiality/Initial.lean`, which imports both the morphism and
+    uniqueness; it is `@[reducible]`, as Lean requires of a definition of class type.
 
 ---
 

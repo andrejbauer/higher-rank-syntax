@@ -273,6 +273,24 @@ theorem lift_comp
       · apply HEq.trans (generic_lift _ _)
         rw [M.substTy_comp]
 
+/-- Lifting `σ` after pairing `g` with `t` is pairing `σ` after `g` with `t`. -/
+theorem lift_comp_pair
+    {Γ Δ Ξ : M.Ob} (a : M.Ty Γ) (σ : M.Sub Δ Γ) (g : M.Sub Ξ Δ)
+    (t : M.Tm Ξ (M.substTy (M.substTy a σ) g)) :
+  M.comp (M.lift a σ) (M.pair g t) = M.pair (M.comp σ g) (M.substTy_comp a σ g ▸ t)
+  := by
+  rw [lift, M.pair_comp]
+  congr 1
+  · rw [M.comp_assoc, M.projection_pair]
+  · apply HEq.trans (eqRec_heq _ _)
+    symm
+    apply HEq.trans (eqRec_heq _ _)
+    symm
+    apply HEq.trans _ (M.generic_pair g t)
+    congr 1
+    · apply M.substTy_comp
+    · apply eqRec_heq
+
 end Structure
 
 end HrS
