@@ -40,3 +40,9 @@ import HigherRankSyntax.Initiality.Descent
 import HigherRankSyntax.Initiality.Morphism
 import HigherRankSyntax.Initiality.Uniqueness
 import HigherRankSyntax.Initiality.Initial
+import HigherRankSyntax.HrS.Presheaf.Basic
+import HigherRankSyntax.HrS.Presheaf.Extension
+import HigherRankSyntax.HrS.Presheaf.Pi
+import HigherRankSyntax.HrS.Presheaf.Universe
+import HigherRankSyntax.HrS.Presheaf.Identity
+import HigherRankSyntax.HrS.Presheaf.Model
