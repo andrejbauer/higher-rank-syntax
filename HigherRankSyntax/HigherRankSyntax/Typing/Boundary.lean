@@ -58,9 +58,7 @@ theorem act_rename
   := by
   cases β with
   | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply act_rename_suffix
+  | of S => apply congrArg of (act_rename_suffix ..)
   | eq l r => apply congrArg₂ eq <;> apply act_rename_suffix
 
 /-- If `κ (ρ x) = ⟦ ρ' ⇑ʳ α ⟧ʳ (κ' x)` for every slot `x : Γ ∋ α`, then acting by
@@ -75,13 +73,11 @@ theorem act_square
   := by
   cases β with
   | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply _root_.act_square ρ ρ' κ κ' h
+  | of S => apply congrArg of (_root_.act_square ρ ρ' κ κ' h ..)
   | eq l r => apply congrArg₂ eq <;> apply _root_.act_square ρ ρ' κ κ' h
 
-/-- Acting by `Subst.copair (Subst.id Δ) σ` is acting by `σ` below the fixed
-prefix `Δ`. -/
+/-- Acting at depth `Φ` by `Subst.copair (Subst.id Δ) σ` is filling the block `Ω`
+by `σ`. -/
 theorem act_copair_prefix
     {Δ Ω : C.Arity}
     (σ : Subst Ω Δ) (Φ : C.Arity) (β : Bd ((Δ ⋈ Ω) ⋈ Φ)) :
@@ -90,20 +86,16 @@ theorem act_copair_prefix
   := by
   cases β with
   | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply _root_.act_copair_prefix
+  | of S => exact congrArg of (_root_.act_copair_prefix ..)
   | eq l r => apply congrArg₂ eq <;> apply _root_.act_copair_prefix
 
-/-- Acting by `Subst.ofRenaming ρ` at depth `Φ` is renaming by `ρ ⇑ʳ Φ`. -/
+/-- Acting by `Subst.ofRenaming ρ` at depth `Φ` is renaming along `ρ ⇑ʳ Φ`. -/
 theorem act_ofRenaming {Γ Δ Φ : C.Arity} (ρ : Γ →ʳ Δ) (β : Bd (Γ ⋈ Φ)) :
   act (Γ := 1) (Subst.ofRenaming ρ) Φ β = rename (ρ ⇑ʳ Φ) β
   := by
   cases β with
   | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply _root_.act_ofRenaming
+  | of S => apply congrArg of (_root_.act_ofRenaming ..)
   | eq l r => apply congrArg₂ eq <;> apply _root_.act_ofRenaming
 
 /-- Acting by `Subst.lift σ Φ` at depth `Ψ` is acting by `σ` at depth `Φ ⋈ Ψ`. -/
@@ -115,25 +107,18 @@ theorem act_lift
   := by
   cases β with
   | sort => rfl
-  | of S =>
-      apply congrArg of
-      exact Subst.act_lift σ Φ Ψ S
-  | eq l r => apply congrArg₂ eq <;> exact Subst.act_lift σ Φ Ψ _
+  | of S => apply congrArg of (Subst.act_lift σ Φ Ψ ..)
+  | eq l r => apply congrArg₂ eq <;> apply Subst.act_lift σ Φ Ψ
 
 /-- Acting by `Subst.lift σ Φ` at depth `1` is acting by `σ` at depth `Φ`. -/
 theorem act_lift_depth {Γ Δ Φ : C.Arity} (σ : Subst Γ Δ) (β : Bd (Γ ⋈ Φ)) :
   act (Γ := 1) (Δ := Γ ⋈ Φ) (Ξ := Δ ⋈ Φ) (Subst.lift σ Φ) 1 β
     = act (Γ := 1) (Δ := Γ) (Ξ := Δ) σ Φ β
   := by
-  cases β with
-  | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply Subst.act_lift_depth
-  | eq l r => apply congrArg₂ eq <;> apply Subst.act_lift_depth
+  apply act_lift σ Φ 1
 
-/-- Acting by `Subst.lift s Χ` and then filling `Χ` by the fillers of `τ` acted on
-by `s` is filling `Χ` by `τ` and then acting by `s`. -/
+/-- At depth `Λ`, acting by `Subst.lift s Χ` and then filling `Χ` by the fillers of
+`τ` acted on by `s` is filling `Χ` by `τ` and then acting by `s`. -/
 theorem act_lift_fillers
     {Γ Γ' Χ Λ : C.Arity}
     (s : Subst Γ Γ') (τ : Subst Χ Γ) (β : Bd (Γ ⋈ Χ ⋈ Λ)) :
@@ -144,9 +129,7 @@ theorem act_lift_fillers
   := by
   cases β with
   | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply Subst.act_lift_fillers
+  | of S => exact congrArg of (Subst.act_lift_fillers ..)
   | eq l r => apply congrArg₂ eq <;> apply Subst.act_lift_fillers
 
 /-- A renamed boundary is an equation iff the original is. -/
@@ -172,16 +155,13 @@ theorem act_instId_weaken (Γ α Φ : C.Arity) (β : Bd (Γ ⋈ α ⋈ Φ)) :
   := by
   cases β with
   | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply _root_.act_instId_weaken
+  | of S => apply congrArg of (_root_.act_instId_weaken ..)
   | eq l r => apply congrArg₂ eq <;> apply _root_.act_instId_weaken
 
 /-- Renaming along `Renaming.inl Γ α ⇑ʳ α` and then instantiating the second block
 `α` by `Subst.instId Γ α` returns the boundary. -/
 theorem instantiate_rename_inl (Γ α : C.Arity) (β : Bd (Γ ⋈ α)) :
-  instantiate (Subst.instId Γ α) ((rename (Renaming.inl Γ α ⇑ʳ α) β : Bd ((Γ ⋈ α) ⋈ α)))
-    = β
+  instantiate (Subst.instId Γ α) (rename (Renaming.inl Γ α ⇑ʳ α) β) = β
   := by
   simpa only [Renaming.extend_unit] using act_instId_weaken Γ α 1 β
 
@@ -210,9 +190,7 @@ theorem act_rename_cancel
   := by
   cases β with
   | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply _root_.act_rename_cancel ρ ρ' κ h
+  | of S => apply congrArg of (_root_.act_rename_cancel ρ ρ' κ h ..)
   | eq l r => apply congrArg₂ eq <;> apply _root_.act_rename_cancel ρ ρ' κ h
 
 /-! ### Functoriality -/
@@ -221,23 +199,13 @@ theorem act_rename_cancel
 theorem rename_id {Γ : C.Arity} (β : Bd Γ) :
   rename (𝟙ʳ Γ) β = β
   := by
-  cases β with
-  | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply Renaming.act_id
-  | eq l r => apply congrArg₂ eq <;> apply Renaming.act_id
+  cases β <;> simp only [rename, Renaming.act_id]
 
 /-- Renaming along `θ ∘ʳ ρ` is renaming along `ρ` and then along `θ`. -/
 theorem rename_comp {Γ Δ Ξ : C.Arity} (ρ : Γ →ʳ Δ) (θ : Δ →ʳ Ξ) (β : Bd Γ) :
   rename (θ ∘ʳ ρ) β = rename θ (rename ρ β)
   := by
-  cases β with
-  | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply Renaming.act_comp
-  | eq l r => apply congrArg₂ eq <;> apply Renaming.act_comp
+  cases β <;> simp only [rename, Renaming.act_comp]
 
 /-- The identity substitution acts as the identity. -/
 theorem act_id (Γ Φ : C.Arity) (β : Bd (Γ ⋈ Φ)) :
@@ -245,9 +213,7 @@ theorem act_id (Γ Φ : C.Arity) (β : Bd (Γ ⋈ Φ)) :
   := by
   cases β with
   | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply _root_.act_id
+  | of S => apply congrArg of (_root_.act_id ..)
   | eq l r => apply congrArg₂ eq <;> apply _root_.act_id
 
 /-- Acting by `Subst.comp σ θ` is acting by `σ` and then by `θ`. -/
@@ -256,11 +222,6 @@ theorem act_comp
     (σ : Subst Δ (Γ ⋈ Θ)) (θ : Subst Θ (Γ ⋈ Ξ)) (Φ : C.Arity) (β : Bd (Γ ⋈ Δ ⋈ Φ)) :
   act (Subst.comp σ θ) Φ β = act θ Φ (act σ Φ β)
   := by
-  cases β with
-  | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply _root_.act_comp
-  | eq l r => apply congrArg₂ eq <;> apply _root_.act_comp
+  cases β <;> simp only [act, _root_.act_comp]
 
 end Bd

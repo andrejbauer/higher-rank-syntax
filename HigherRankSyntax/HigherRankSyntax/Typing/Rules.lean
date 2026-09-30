@@ -155,15 +155,11 @@ theorem Wf_s.equation {Δ : C.Arity} {Ξ : Ambient Δ} :
   | _, _, _, .cons equation _ _ hrest, _, z => by
       induction z using slotCases with
       | head =>
-        intro l r h
-        rw [dTel.declaration_head_instantiate] at h
-        convert equation l r h using 2
-        apply dTel.binding_head_instantiate
+        erw [dTel.declaration_head_instantiate, dTel.binding_head_instantiate]
+        apply equation
       | tail y =>
-        intro l r h
-        rw [dTel.declaration_tail_instantiate] at h
-        convert Wf_s.equation hrest y l r h using 2
-        apply dTel.binding_tail_instantiate
+        erw [dTel.declaration_tail_instantiate, dTel.binding_tail_instantiate]
+        apply Wf_s.equation hrest y
 
 /-- If `σ` fills `Θ` and `σ ⋆ Θ.declaration z` is not an equation, then `σ z` is
 well formed over `Ξ ⋈ σ ⋆ Θ.binding z`. -/
@@ -175,15 +171,11 @@ theorem Wf_s.filler {Δ : C.Arity} {Ξ : Ambient Δ} :
   | _, _, _, .cons _ filler _ hrest, _, z => by
       induction z using slotCases with
       | head =>
-        intro hne
-        rw [dTel.declaration_head_instantiate] at hne
-        convert filler hne using 2
-        apply dTel.binding_head_instantiate
+        erw [dTel.declaration_head_instantiate, dTel.binding_head_instantiate]
+        apply filler
       | tail y =>
-        intro hne
-        rw [dTel.declaration_tail_instantiate] at hne
-        convert Wf_s.filler hrest y hne using 2
-        apply dTel.binding_tail_instantiate
+        erw [dTel.declaration_tail_instantiate, dTel.binding_tail_instantiate]
+        apply Wf_s.filler hrest y
 
 /-- If `σ` fills `Θ` and `σ ⋆ Θ.declaration z` is not an equation, then the
 computed boundary of `σ z` is equal to `σ ⋆ Θ.declaration z` over
@@ -197,17 +189,11 @@ theorem Wf_s.declared {Δ : C.Arity} {Ξ : Ambient Δ} :
   | _, _, _, .cons _ _ declared hrest, _, z => by
       induction z using slotCases with
       | head =>
-        intro hne
-        rw [dTel.declaration_head_instantiate] at hne ⊢
-        convert declared hne using 3 <;> apply dTel.binding_head_instantiate
+        erw [dTel.declaration_head_instantiate, dTel.binding_head_instantiate]
+        apply declared
       | tail y =>
-        intro hne
-        rw [dTel.declaration_tail_instantiate] at hne ⊢
-        convert Wf_s.declared hrest y hne using 1
-        · congr 1
-          apply dTel.binding_tail_instantiate
-        · congr 2
-          apply dTel.binding_tail_instantiate
+        erw [dTel.declaration_tail_instantiate, dTel.binding_tail_instantiate]
+        apply Wf_s.declared hrest y
 
 /-- `σ` fills `dTel.actBase κ Θ` when at every slot `z`, over `Ξ` extended by
 the entries `z` binds filled by `σ`, the declaration of `z` filled by `σ` has
@@ -215,81 +201,28 @@ equal sides if it is an equation, and otherwise `σ z` is well formed with
 computed boundary equal to that declaration. -/
 theorem Wf_s.slotwise_actBase {Δ : C.Arity} {Ξ : Ambient Δ} :
   ∀ {Γ Ω : C.Arity} (Θ : dTel Γ Ω) (κ : Subst Γ Δ) {σ : Subst Ω Δ},
-    (∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ) (l r : Expr (Δ ⋈ Λ)),
-        σ ⋆ (dTel.actBase κ Θ).declaration z = .eq l r →
-        Eq_e (Ξ ⋈ σ ⋆ (dTel.actBase κ Θ).binding z) l r) →
     (∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
-        ¬ (σ ⋆ (dTel.actBase κ Θ).declaration z).isEq →
-        Wf_e (Ξ ⋈ σ ⋆ (dTel.actBase κ Θ).binding z) (σ z)) →
-    (∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
-        ¬ (σ ⋆ (dTel.actBase κ Θ).declaration z).isEq →
-        Eq_bd (Ξ ⋈ σ ⋆ (dTel.actBase κ Θ).binding z)
-          ((Ξ ⋈ σ ⋆ (dTel.actBase κ Θ).binding z).boundaryOf (σ z))
-          (σ ⋆ (dTel.actBase κ Θ).declaration z)) →
+      (∀ l r : Expr (Δ ⋈ Λ), σ ⋆ (dTel.actBase κ Θ).declaration z = .eq l r →
+          Eq_e (Ξ ⋈ σ ⋆ (dTel.actBase κ Θ).binding z) l r) ∧
+        (¬ (σ ⋆ (dTel.actBase κ Θ).declaration z).isEq →
+          Wf_e (Ξ ⋈ σ ⋆ (dTel.actBase κ Θ).binding z) (σ z)) ∧
+        (¬ (σ ⋆ (dTel.actBase κ Θ).declaration z).isEq →
+          Eq_bd (Ξ ⋈ σ ⋆ (dTel.actBase κ Θ).binding z)
+            ((Ξ ⋈ σ ⋆ (dTel.actBase κ Θ).binding z).boundaryOf (σ z))
+            (σ ⋆ (dTel.actBase κ Θ).declaration z))) →
     Wf_s Ξ (dTel.actBase κ Θ) σ
-  | _, _, .nil, _, _, _, _, _ => .nil
-  | _, _, .cons (α := α) _ _ rest, κ, σ, equation, filler, declared => by
-      have hcat : dTel.actBase (Δ := Δ) (Subst.comp (Γ := 1) (Subst.lift κ (C.single α))
-            (Subst.copair (Subst.id Δ) (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)))) rest
-          = (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) ⋆
-              dTel.actBase (Subst.lift κ (C.single α)) rest :=
-        dTel.actBase_comp _ _ rest
-      apply Wf_s.cons
-      case equation =>
-        intro l r h
-        convert equation (C.inl (C.singleSlot α)) l r ?_ using 2
-        · symm
-          apply dTel.binding_head_instantiate
-        · rw [← h]
-          apply dTel.declaration_head_instantiate
-      case filler =>
-        intro hne
-        convert filler (C.inl (C.singleSlot α)) ?_ using 2
-        · symm
-          apply dTel.binding_head_instantiate
-        · convert hne using 2
-          apply dTel.declaration_head_instantiate
-      case declared =>
-        intro hne
-        convert declared (C.inl (C.singleSlot α)) ?_ using 3
-        · symm
-          apply dTel.binding_head_instantiate
-        · symm
-          apply dTel.binding_head_instantiate
-        · symm
-          apply dTel.declaration_head_instantiate
-        · convert hne using 2
-          apply dTel.declaration_head_instantiate
-      case hrest =>
-        rw [← hcat]
-        apply Wf_s.slotwise_actBase
-        · intro γ y l r h
-          rw [hcat] at h ⊢
-          convert equation (C.inr y) l r ?_ using 2
-          · symm
-            apply dTel.binding_tail_instantiate
-          · rw [← h]
-            apply dTel.declaration_tail_instantiate
-        · intro γ y hne
-          rw [hcat] at hne ⊢
-          convert filler (C.inr y) ?_ using 2
-          · symm
-            apply dTel.binding_tail_instantiate
-          · convert hne using 2
-            apply dTel.declaration_tail_instantiate
-        · intro γ y hne
-          rw [hcat] at hne ⊢
-          convert declared (C.inr y) ?_ using 1
-          · congr 1
-            symm
-            apply dTel.binding_tail_instantiate
-          · congr 2
-            symm
-            apply dTel.binding_tail_instantiate
-          · symm
-            apply dTel.declaration_tail_instantiate
-          · convert hne using 2
-            apply dTel.declaration_tail_instantiate
+  | _, _, .nil, _, _, _ => .nil
+  | _, _, .cons (α := α) _ _ rest, κ, σ, slot => by
+      have hhead := slot (C.inl (C.singleSlot α))
+      erw [dTel.declaration_head_instantiate, dTel.binding_head_instantiate] at hhead
+      apply Wf_s.cons hhead.1 hhead.2.1 hhead.2.2
+      rw [dTel.instantiate, ← dTel.actBase_comp]
+      apply Wf_s.slotwise_actBase
+      intro _ y
+      erw [dTel.actBase_comp]
+      have htail := slot (C.inr y)
+      erw [dTel.declaration_tail_instantiate, dTel.binding_tail_instantiate] at htail
+      exact htail
 
 /-- `σ` fills `Θ` when at every slot `z`, over `Ξ ⋈ σ ⋆ Θ.binding z`,
 `σ ⋆ Θ.declaration z` has equal sides if it is an equation, and otherwise `σ z`
@@ -305,14 +238,8 @@ theorem Wf_s.slotwise
           (σ ⋆ Θ.declaration z)) :
   Wf_s Ξ Θ σ
   := by
-  rw [← dTel.actBase_id Θ]
-  apply Wf_s.slotwise_actBase
-  · rw [dTel.actBase_id]
-    apply equation
-  · rw [dTel.actBase_id]
-    apply filler
-  · rw [dTel.actBase_id]
-    apply declared
+  rw [← dTel.actBase_id Θ] at equation filler declared ⊢
+  apply Wf_s.slotwise_actBase Θ _ (fun _ z => ⟨equation z, filler z, declared z⟩)
 
 /-- If `σ` and `θ` agree as fillings of `Θ` and `σ ⋆ Θ.declaration z` is not an
 equation, then `σ z` and `θ z` are equal over `Ξ ⋈ σ ⋆ Θ.binding z`. -/
@@ -324,15 +251,11 @@ theorem Eq_s.slot {Δ : C.Arity} {Ξ : Ambient Δ} :
   | _, _, _, _, .cons slot hrest, _, z => by
       induction z using slotCases with
       | head =>
-        intro hne
-        rw [dTel.declaration_head_instantiate] at hne
-        convert slot hne using 2
-        apply dTel.binding_head_instantiate
+        erw [dTel.declaration_head_instantiate, dTel.binding_head_instantiate]
+        apply slot
       | tail y =>
-        intro hne
-        rw [dTel.declaration_tail_instantiate] at hne
-        convert Eq_s.slot hrest y hne using 2
-        apply dTel.binding_tail_instantiate
+        erw [dTel.declaration_tail_instantiate, dTel.binding_tail_instantiate]
+        apply Eq_s.slot hrest y
 
 /-- `σ` and `θ` agree as fillings of `dTel.actBase κ Θ` when at every slot `z`
 whose declaration filled by `σ` is not an equation, `σ z` and `θ z` are equal
@@ -345,29 +268,17 @@ theorem Eq_s.slotwise_actBase {Δ : C.Arity} {Ξ : Ambient Δ} :
     Eq_s Ξ (dTel.actBase κ Θ) σ θ
   | _, _, .nil, _, _, _, _ => .nil
   | _, _, .cons (α := α) _ _ rest, κ, σ, θ, slot => by
-      have hcat : dTel.actBase (Δ := Δ) (Subst.comp (Γ := 1) (Subst.lift κ (C.single α))
-            (Subst.copair (Subst.id Δ) (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)))) rest
-          = (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) ⋆
-              dTel.actBase (Subst.lift κ (C.single α)) rest :=
-        dTel.actBase_comp _ _ rest
       apply Eq_s.cons
-      case slot =>
-        intro hne
-        convert slot (C.inl (C.singleSlot α)) ?_ using 2
-        · symm
-          apply dTel.binding_head_instantiate
-        · convert hne using 2
-          apply dTel.declaration_head_instantiate
-      case hrest =>
-        rw [← hcat]
+      · have hhead := slot (C.inl (C.singleSlot α))
+        erw [dTel.declaration_head_instantiate, dTel.binding_head_instantiate] at hhead
+        exact hhead
+      · rw [dTel.instantiate, ← dTel.actBase_comp]
         apply Eq_s.slotwise_actBase
-        intro γ y hne
-        rw [hcat] at hne ⊢
-        convert slot (C.inr y) ?_ using 2
-        · symm
-          apply dTel.binding_tail_instantiate
-        · convert hne using 2
-          apply dTel.declaration_tail_instantiate
+        intro _ y
+        erw [dTel.actBase_comp]
+        have htail := slot (C.inr y)
+        erw [dTel.declaration_tail_instantiate, dTel.binding_tail_instantiate] at htail
+        exact htail
 
 /-- `σ` and `θ` agree as fillings of `Θ` when at every slot `z` for which
 `σ ⋆ Θ.declaration z` is not an equation, `σ z` and `θ z` are equal over
@@ -378,17 +289,15 @@ theorem Eq_s.slotwise
         Eq_e (Ξ ⋈ σ ⋆ Θ.binding z) (σ z) (θ z)) :
   Eq_s Ξ Θ σ θ
   := by
-  rw [← dTel.actBase_id Θ]
-  apply Eq_s.slotwise_actBase
-  rw [dTel.actBase_id]
-  apply slot
+  rw [← dTel.actBase_id Θ] at slot ⊢
+  apply Eq_s.slotwise_actBase Θ _ slot
 
 /-- A well-formed filling agrees with itself. -/
 theorem Eq_s.refl
     {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω} {σ : Subst Ω Δ}
     (h : Wf_s Ξ Θ σ) :
   Eq_s Ξ Θ σ σ
-  := Eq_s.slotwise (fun ⦃_⦄ z hne => .refl (h.filler z hne))
+  := Eq_s.slotwise fun _ z hne => .refl (h.filler z hne)
 
 /-- A well-formed filling agrees with itself. -/
 theorem Wf_s.refl
@@ -408,27 +317,17 @@ theorem Wf_s.concatenate_left
   := by
   apply Wf_s.slotwise
   case equation =>
-    intro Λ w l r hlr
-    rw [← dTel.declaration_left_instantiate Θ X] at hlr
-    convert h.equation (C.inl w) l r hlr using 2
-    symm
-    apply dTel.binding_left_instantiate
+    intro Λ w
+    erw [← dTel.declaration_left_instantiate Θ X, ← dTel.binding_left_instantiate Θ X]
+    apply h.equation (C.inl w)
   case filler =>
-    intro Λ w hne
-    rw [← dTel.declaration_left_instantiate Θ X] at hne
-    convert h.filler (C.inl w) hne using 2
-    symm
-    apply dTel.binding_left_instantiate
+    intro Λ w
+    erw [← dTel.declaration_left_instantiate Θ X, ← dTel.binding_left_instantiate Θ X]
+    apply h.filler (C.inl w)
   case declared =>
-    intro Λ w hne
-    rw [← dTel.declaration_left_instantiate Θ X] at hne ⊢
-    convert h.declared (C.inl w) hne using 1
-    · congr 1
-      symm
-      apply dTel.binding_left_instantiate
-    · congr 2
-      symm
-      apply dTel.binding_left_instantiate
+    intro Λ w
+    erw [← dTel.declaration_left_instantiate Θ X, ← dTel.binding_left_instantiate Θ X]
+    apply h.declared (C.inl w)
 
 /-- If `κ` fills `dTel.concatenate Θ X`, its restriction to `Φ` fills `X`
 instantiated by its restriction to `Ω`. -/
@@ -441,23 +340,17 @@ theorem Wf_s.concatenate_right
   := by
   apply Wf_s.slotwise
   case equation =>
-    intro Λ z l r hlr
-    rw [dTel.declaration_right_instantiate Θ] at hlr
-    convert h.equation (C.inr z) l r hlr using 2
-    apply dTel.binding_right_instantiate
+    intro Λ z
+    erw [dTel.declaration_right_instantiate Θ, dTel.binding_right_instantiate Θ]
+    apply h.equation (C.inr z)
   case filler =>
-    intro Λ z hne
-    rw [dTel.declaration_right_instantiate Θ] at hne
-    convert h.filler (C.inr z) hne using 2
-    apply dTel.binding_right_instantiate
+    intro Λ z
+    erw [dTel.declaration_right_instantiate Θ, dTel.binding_right_instantiate Θ]
+    apply h.filler (C.inr z)
   case declared =>
-    intro Λ z hne
-    rw [dTel.declaration_right_instantiate Θ] at hne ⊢
-    convert h.declared (C.inr z) hne using 1
-    · congr 1
-      apply dTel.binding_right_instantiate
-    · congr 2
-      apply dTel.binding_right_instantiate
+    intro Λ z
+    erw [dTel.declaration_right_instantiate Θ, dTel.binding_right_instantiate Θ]
+    apply h.declared (C.inr z)
 
 /-- If `κ` and `κ'` agree as fillings of `dTel.concatenate Θ X`, their
 restrictions to `Ω` agree as fillings of `Θ`. -/
@@ -469,11 +362,9 @@ theorem Eq_s.concatenate_left
     (fun ⦃α⦄ (w : Ω ∋ α) => κ' (C.inl w))
   := by
   apply Eq_s.slotwise
-  intro Λ w hne
-  rw [← dTel.declaration_left_instantiate Θ X] at hne
-  convert h.slot (C.inl w) hne using 2
-  symm
-  apply dTel.binding_left_instantiate
+  intro Λ w
+  erw [← dTel.declaration_left_instantiate Θ X, ← dTel.binding_left_instantiate Θ X]
+  apply h.slot (C.inl w)
 
 /-- If `κ` and `κ'` agree as fillings of `dTel.concatenate Θ X`, their
 restrictions to `Φ` agree as fillings of `X` instantiated by the restriction of
@@ -487,10 +378,9 @@ theorem Eq_s.concatenate_right
     (fun ⦃α⦄ (z : Φ ∋ α) => κ' (C.inr z))
   := by
   apply Eq_s.slotwise
-  intro Λ z hne
-  rw [dTel.declaration_right_instantiate Θ] at hne
-  convert h.slot (C.inr z) hne using 2
-  apply dTel.binding_right_instantiate
+  intro Λ z
+  erw [dTel.declaration_right_instantiate Θ, dTel.binding_right_instantiate Θ]
+  apply h.slot (C.inr z)
 
 section
 
@@ -505,42 +395,26 @@ theorem Wf_s.concatenate
   := by
   apply Wf_s.slotwise
   case equation =>
-    intro Λ x l r hlr
+    intro Λ x
     rcases C.cover Ω Φ x with ⟨w, rfl⟩ | ⟨z, rfl⟩
-    · rw [dTel.declaration_left_copair] at hlr
-      convert hσ.equation w l r hlr using 2
-      apply dTel.binding_left_copair
-    · rw [dTel.declaration_right_copair] at hlr
-      convert hτ.equation z l r hlr using 2
-      apply dTel.binding_right_copair
+    · erw [dTel.declaration_left_copair, dTel.binding_left_copair]
+      apply hσ.equation w
+    · erw [dTel.declaration_right_copair, dTel.binding_right_copair]
+      apply hτ.equation z
   case filler =>
-    intro Λ x hne
+    intro Λ x
     rcases C.cover Ω Φ x with ⟨w, rfl⟩ | ⟨z, rfl⟩
-    · rw [dTel.declaration_left_copair] at hne
-      rw [Subst.copair_inl]
-      convert hσ.filler w hne using 2
-      apply dTel.binding_left_copair
-    · rw [dTel.declaration_right_copair] at hne
-      rw [Subst.copair_inr]
-      convert hτ.filler z hne using 2
-      apply dTel.binding_right_copair
+    · erw [dTel.declaration_left_copair, dTel.binding_left_copair, Subst.copair_inl]
+      apply hσ.filler w
+    · erw [dTel.declaration_right_copair, dTel.binding_right_copair, Subst.copair_inr]
+      apply hτ.filler z
   case declared =>
-    intro Λ x hne
+    intro Λ x
     rcases C.cover Ω Φ x with ⟨w, rfl⟩ | ⟨z, rfl⟩
-    · rw [dTel.declaration_left_copair] at hne ⊢
-      rw [Subst.copair_inl]
-      convert hσ.declared w hne using 1
-      · congr 1
-        apply dTel.binding_left_copair
-      · congr 2
-        apply dTel.binding_left_copair
-    · rw [dTel.declaration_right_copair] at hne ⊢
-      rw [Subst.copair_inr]
-      convert hτ.declared z hne using 1
-      · congr 1
-        apply dTel.binding_right_copair
-      · congr 2
-        apply dTel.binding_right_copair
+    · erw [dTel.declaration_left_copair, dTel.binding_left_copair, Subst.copair_inl]
+      apply hσ.declared w
+    · erw [dTel.declaration_right_copair, dTel.binding_right_copair, Subst.copair_inr]
+      apply hτ.declared z
 
 /-- If `σ` and `σ'` agree as fillings of `Θ`, and `τ` and `τ'` agree as fillings
 of `X` instantiated by `σ`, then `Subst.copair σ τ` and `Subst.copair σ' τ'`
@@ -550,16 +424,14 @@ theorem Eq_s.concatenate
   Eq_s Ξ (dTel.concatenate Θ X) (Subst.copair σ τ) (Subst.copair σ' τ')
   := by
   apply Eq_s.slotwise
-  intro Λ x hne
+  intro Λ x
   rcases C.cover Ω Φ x with ⟨w, rfl⟩ | ⟨z, rfl⟩
-  · rw [dTel.declaration_left_copair] at hne
-    rw [Subst.copair_inl, Subst.copair_inl]
-    convert hσ.slot w hne using 2
-    apply dTel.binding_left_copair
-  · rw [dTel.declaration_right_copair] at hne
-    rw [Subst.copair_inr, Subst.copair_inr]
-    convert hτ.slot z hne using 2
-    apply dTel.binding_right_copair
+  · erw [dTel.declaration_left_copair, dTel.binding_left_copair, Subst.copair_inl,
+      Subst.copair_inl]
+    apply hσ.slot w
+  · erw [dTel.declaration_right_copair, dTel.binding_right_copair, Subst.copair_inr,
+      Subst.copair_inr]
+    apply hτ.slot z
 
 end
 
@@ -608,32 +480,14 @@ theorem Wf_s.single_iff
   := by
   constructor
   · intro h
-    constructor
-    · intro l r he
-      convert h.equation (C.inl (C.singleSlot α)) l r ?_ using 2
-      · symm
-        apply dTel.binding_head_instantiate
-      · rw [← he]
-        apply dTel.declaration_head_instantiate
-    constructor
-    · intro hne
-      convert h.filler (C.inl (C.singleSlot α)) ?_ using 2
-      · symm
-        apply dTel.binding_head_instantiate
-      · convert hne using 2
-        apply dTel.declaration_head_instantiate
-    · intro hne
-      convert h.declared (C.inl (C.singleSlot α)) ?_ using 3
-      · symm
-        apply dTel.binding_head_instantiate
-      · symm
-        apply dTel.binding_head_instantiate
-      · symm
-        apply dTel.declaration_head_instantiate
-      · convert hne using 2
-        apply dTel.declaration_head_instantiate
-  · rintro ⟨heq, hfill, hdecl⟩
-    apply Wf_s.cons heq hfill hdecl
+    have hequation := h.equation (C.inl (C.singleSlot α))
+    have hfiller := h.filler (C.inl (C.singleSlot α))
+    have hdeclared := h.declared (C.inl (C.singleSlot α))
+    erw [dTel.declaration_head_instantiate, dTel.binding_head_instantiate]
+      at hequation hfiller hdeclared
+    exact ⟨hequation, hfiller, hdeclared⟩
+  · rintro ⟨hequation, hfiller, hdeclared⟩
+    apply Wf_s.cons hequation hfiller hdeclared
     apply Wf_s.nil
 
 /-- `Subst.single t` and `Subst.single t'` agree as fillings of
@@ -646,12 +500,10 @@ theorem Eq_s.single_iff
     ↔ (¬ β.isEq → Eq_e (Ξ ⋈ Θ) t t')
   := by
   constructor
-  · intro h hne
-    convert h.slot (C.inl (C.singleSlot α)) ?_ using 2
-    · symm
-      apply dTel.binding_head_instantiate
-    · convert hne using 2
-      apply dTel.declaration_head_instantiate
+  · intro h
+    have hslot := h.slot (C.inl (C.singleSlot α))
+    erw [dTel.declaration_head_instantiate, dTel.binding_head_instantiate] at hslot
+    exact hslot
   · intro h
     apply Eq_s.cons h
     apply Eq_s.nil
@@ -720,9 +572,8 @@ theorem Wf_t.concatenate {Δ : C.Arity} {Ξ : Ambient Δ} :
   ∀ {Ω Φ : C.Arity} {Θ : dTel Δ Ω} {X : dTel (Δ ⋈ Ω) Φ},
     Wf_t Ξ Θ → Wf_t (Ξ ⋈ Θ) X → Wf_t Ξ (dTel.concatenate Θ X)
   | _, _, _, _, .nil, hX => by
-      convert hX using 1
-      symm
-      apply dTel.concatenate_nil
+      erw [dTel.concatenate_nil] at hX
+      apply hX
   | _, _, _, _, .cons hbind hboundary hrest, hX => by
       apply Wf_t.cons hbind hboundary
       apply Wf_t.concatenate hrest
@@ -880,10 +731,10 @@ theorem Eq_t.Both.cons_inv
 theorem Eq_t.Both.toEq_t {Δ : C.Arity} {Ξ Ξ' : Ambient Δ} :
   ∀ {Ω : C.Arity} {Θ Θ' : dTel Δ Ω}, Eq_t.Both Ξ Ξ' Θ Θ' → Eq_t Ξ Θ Θ'
   | _, .nil, _, h => by
-      obtain rfl := Eq_t.Both.nil_inv h
+      obtain rfl := h.nil_inv
       apply Eq_t.nil
   | _, .cons _ _ _, _, h => by
-      obtain ⟨_, _, _, rfl, hbind, hboundary, _, hrest⟩ := Eq_t.Both.cons_inv h
+      obtain ⟨_, _, _, rfl, hbind, hboundary, _, hrest⟩ := h.cons_inv
       apply Eq_t.cons hbind.toEq_t hboundary hrest.toEq_t
 
 /-- An ambient is well formed when it is a well-formed telescope over the empty

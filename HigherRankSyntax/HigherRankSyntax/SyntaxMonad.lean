@@ -4,15 +4,12 @@ import HigherRankSyntax.RelativeMonad.Kleisli
 /-!
 # Syntax as a relative monad
 
-`SyntaxMonad` packages `Expr` as a relative monad over the slots functor
-`J : C.Arity ⥤ ArityFunc`, with
-`T Γ α = Expr (Γ ⋈ α)`.
-
-The base category has arities as objects and renamings as morphisms.  A Kleisli
-map `J.obj Γ ⟶ T.obj Δ` is a substitution `Subst Γ Δ`: it sends each slot of `Γ`
-of arity `α` to an expression over `Δ ⋈ α`.
+Arities form a category with renamings as morphisms.  `SyntaxMonad` is the relative monad
+over the slots functor `J : C.Arity ⥤ ArityFunc` sending `Γ` to the family
+`α ↦ Expr (Γ ⋈ α)`, with unit `Expr.η` and Kleisli extension `Subst.act`.  A Kleisli map
+`J.obj Γ ⟶ T.obj Δ` is a substitution `Subst Γ Δ`: it sends each slot of `Γ` of arity `α`
+to an expression over `Δ ⋈ α`.
 -/
-
 
 open CategoryTheory
 
@@ -42,16 +39,12 @@ def J : C.Arity ⥤ ArityFunc where
 
 /-- The functor sending `Γ` to `α ↦ Expr (Γ ⋈ α)` and `ρ` to renaming along `ρ ⇑ʳ α`. -/
 def T : C.Arity ⥤ ArityFunc where
-
   obj Γ := ⟨fun α => Expr (Γ ⋈ α)⟩
-
   map {Γ Δ} (ρ : Γ →ʳ Δ) := fun α e => ⟦ ρ ⇑ʳ α ⟧ʳ e
-
-  map_id Γ := by
+  map_id _ := by
     funext α e
     convert Renaming.act_id e
     apply Renaming.extend_id
-
   map_comp ρ σ := by
     funext α e
     convert Renaming.act_comp (ρ ⇑ʳ α) (σ ⇑ʳ α) e
@@ -60,23 +53,17 @@ def T : C.Arity ⥤ ArityFunc where
 /-- The relative monad over `J` sending `Γ` to `α ↦ Expr (Γ ⋈ α)`, with unit `Expr.η` and
 Kleisli extension the substitution action `Subst.act` at depth `α`. -/
 def SyntaxMonad : RelativeMonad J where
-
   map := T.obj
-
   η Γ _ := Expr.η
-
   lift {Γ Δ} f α e :=
     Subst.act @f (Γ := 1) α e
-
-  unit_right Γ := by
+  unit_right _ := by
     funext α e
     apply act_id
-
   unit_left f := by
     funext α x
     symm
     apply act_η
-
   comp_lift f g := by
     funext α e
     apply act_comp

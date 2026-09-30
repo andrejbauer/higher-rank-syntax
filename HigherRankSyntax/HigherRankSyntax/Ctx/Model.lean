@@ -55,12 +55,10 @@ def model : HrS.Structure where
     rw [Bind_subst, Ty₁.lift_eq_pair]
   lam_subst e σ := by
     apply Tm₁.cast_eq
-    have h : ((lam e).subst σ).1 = (lam (e.subst (Ty₁.lift _ σ))).1 := by
-      rw [← lam_subst e σ]
-      apply Tm₁.eq_of_heq (Bind_subst _ _ σ)
-      symm
-      apply eqRec_heq
-    rwa [Ty₁.lift_eq_pair] at h
+    rw [← Ty₁.lift_eq_pair, ← lam_subst e σ]
+    apply Tm₁.eq_of_heq (Bind_subst _ _ σ)
+    symm
+    apply eqRec_heq
   IdSort S S' := IdSort S S'
   IdSort_refl S := IdSort_refl S
   IdSort_subst S S' σ := IdSort_subst S S' σ

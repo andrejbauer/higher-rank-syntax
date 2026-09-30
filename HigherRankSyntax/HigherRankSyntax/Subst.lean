@@ -8,8 +8,7 @@ import HigherRankSyntax.Expr
 `Subst.act σ Φ` applies `σ : Subst Δ (Γ ⋈ Ξ)` to an expression in
 `Expr (Γ ⋈ Δ ⋈ Φ)`, producing an expression in `Expr (Γ ⋈ Ξ ⋈ Φ)`.
 
-`Subst.threeway` classifies a head slot of `Γ ⋈ Δ ⋈ Ξ` as coming from
-`Γ`, `Δ`, or `Ξ`.
+`Subst.threeway` classifies a slot of `Γ ⋈ Δ ⋈ Ξ` as coming from `Γ`, `Δ`, or `Ξ`.
 -/
 
 /-- A substitution from `Δ` into `Γ`: an expression over `Γ ⋈ α` for each slot
@@ -37,8 +36,7 @@ inductive LeftMiddleRight (Γ Δ Ξ α : C.Arity) : Type where
 
 /-- The origin of `p : Γ ⋈ Δ ⋈ Ξ ∋ α`: `.left x` for `p = C.inl (C.inl x)`,
 `.middle y` for `p = C.inl (C.inr y)`, `.right z` for `p = C.inr z`. -/
-def Subst.threeway {Γ Δ Ξ : C.Arity}
-    {α : C.Arity} (p : Γ ⋈ Δ ⋈ Ξ ∋ α) :
+def Subst.threeway {Γ Δ Ξ α : C.Arity} (p : Γ ⋈ Δ ⋈ Ξ ∋ α) :
     LeftMiddleRight Γ Δ Ξ α :=
   C.copair (Γ ⋈ Δ) Ξ _
     (fun q => C.copair Γ Δ _ (fun x => .left x) (fun y => .middle y) q)
@@ -46,15 +44,14 @@ def Subst.threeway {Γ Δ Ξ : C.Arity}
 
 /-- The slot of `Γ ⋈ Δ ⋈ Ξ` with a given origin: `C.inl (C.inl x)`,
 `C.inl (C.inr x)` or `C.inr x`. -/
-def Subst.reinject {Γ Δ Ξ : C.Arity} {α : C.Arity} :
-  LeftMiddleRight Γ Δ Ξ α → Γ ⋈ Δ ⋈ Ξ ∋ α
+def Subst.reinject {Γ Δ Ξ α : C.Arity} :
+    LeftMiddleRight Γ Δ Ξ α → Γ ⋈ Δ ⋈ Ξ ∋ α
   | .left x => C.inl (C.inl x)
   | .middle x => C.inl (C.inr x)
   | .right x => C.inr x
 
 /-- Every slot of `Γ ⋈ Δ ⋈ Ξ` is `Subst.reinject` of some origin. -/
-theorem Subst.isReinject {Γ Δ Ξ : C.Arity} {α : C.Arity}
-    (x : Γ ⋈ Δ ⋈ Ξ ∋ α) :
+theorem Subst.isReinject {Γ Δ Ξ α : C.Arity} (x : Γ ⋈ Δ ⋈ Ξ ∋ α) :
   ∃ y : LeftMiddleRight Γ Δ Ξ α, x = reinject y
   := by
   rcases C.cover (Γ ⋈ Δ) Ξ x with ⟨y, rfl⟩ | ⟨x, rfl⟩
@@ -64,22 +61,19 @@ theorem Subst.isReinject {Γ Δ Ξ : C.Arity} {α : C.Arity}
   · exists .right x
 
 /-- The origin of `C.inr x` with `x : Ξ ∋ α` is `.right x`. -/
-@[simp] theorem Subst.threeway_right {Γ Δ Ξ : C.Arity}
-    {α : C.Arity} (x : Ξ ∋ α) :
+@[simp] theorem Subst.threeway_right {Γ Δ Ξ α : C.Arity} (x : Ξ ∋ α) :
   threeway (Γ := Γ) (Δ := Δ) (C.inr x) = .right x
   := by
   rw [threeway, C.copair_apply_inr]
 
 /-- The origin of `C.inl (C.inr x)` with `x : Δ ∋ α` is `.middle x`. -/
-@[simp] theorem Subst.threeway_middle {Γ Δ Ξ : C.Arity}
-    {α : C.Arity} (x : Δ ∋ α) :
+@[simp] theorem Subst.threeway_middle {Γ Δ Ξ α : C.Arity} (x : Δ ∋ α) :
   threeway (Γ := Γ) (Ξ := Ξ) (C.inl (C.inr x)) = .middle x
   := by
   rw [threeway, C.copair_apply_inl, C.copair_apply_inr]
 
 /-- The origin of `C.inl (C.inl x)` with `x : Γ ∋ α` is `.left x`. -/
-@[simp] theorem Subst.threeway_left {Γ Δ Ξ : C.Arity}
-    {α : C.Arity} (x : Γ ∋ α) :
+@[simp] theorem Subst.threeway_left {Γ Δ Ξ α : C.Arity} (x : Γ ∋ α) :
   threeway (Δ := Δ) (Ξ := Ξ) (C.inl (C.inl x)) = .left x
   := by
   rw [threeway, C.copair_apply_inl, C.copair_apply_inl]
@@ -164,8 +158,7 @@ theorem Subst.single_eta {Δ α : C.Arity} (τ : Subst (C.single α ⋈ 1) Δ) :
 `Expr (Γ ⋈ Ξ ⋈ Φ)`: an application headed by `C.inl (C.inr z)` with `z : Δ ∋ α`
 becomes `σ z` with its `α`-slots substituted by the acted arguments; an
 application with any other head keeps the head and acts on the arguments. -/
-def Subst.act {Γ Δ Ξ : C.Arity}
-      (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity) :
+def Subst.act {Γ Δ Ξ : C.Arity} (σ : Subst Δ (Γ ⋈ Ξ)) (Φ : C.Arity) :
     Expr (Γ ⋈ Δ ⋈ Φ) → Expr (Γ ⋈ Ξ ⋈ Φ)
   | .ap (α := α) x args =>
       match threeway x with
@@ -185,8 +178,6 @@ decreasing_by
 
 /-- The composite of `σ` and `θ`, sending `x : Δ ∋ β` to `θ` acting at depth `β`
 on `σ x`. -/
-def Subst.comp {Γ Δ Θ Ξ : C.Arity}
-    (σ : Subst Δ (Γ ⋈ Θ))
-    (θ : Subst Θ (Γ ⋈ Ξ)) :
-  Subst Δ (Γ ⋈ Ξ) :=
+def Subst.comp {Γ Δ Θ Ξ : C.Arity} (σ : Subst Δ (Γ ⋈ Θ)) (θ : Subst Θ (Γ ⋈ Ξ)) :
+    Subst Δ (Γ ⋈ Ξ) :=
   (fun ⦃β⦄ x => θ.act β (σ x))

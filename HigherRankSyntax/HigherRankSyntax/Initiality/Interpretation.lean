@@ -9,22 +9,25 @@ The interpretation is partial and relative to an environment `E` over an object 
 of a model `M`, which gives every slot of the arity a value over `Γ`.
 
 * An expression `ap x args` is interpreted as the filler of the value of `x`,
-  reindexed along the substitution that pairs, entry by entry along the binding
-  decoration of `x`, the terms that the interpreted arguments give, provided the value
-  of `x` is not an equation.
+  reindexed along the substitution that pairs the identity, entry by entry along the
+  binding decoration of `x`, with the terms that the interpreted arguments give,
+  provided the boundary of that filler is not an equation.
 * A syntactic filling of a telescope is interpreted in the same way, as a
   substitution into the end of a decorated chain.
 * A boundary is interpreted as a semantic boundary: `sort` as `sort`, `of S` as `of`
   the sort `S` is interpreted as, and `eq l r` as the equation of two sorts or of two
   elements of one sort, according to what `l` and `r` are interpreted as.
-* A telescope is interpreted entry by entry, each entry's binding telescope and
-  boundary at the environment extended by the entries before it.
+* A telescope is interpreted entry by entry: each entry's binding telescope at the
+  environment extended by the entries before it, and its boundary at that environment
+  extended further by the interpreted binding decoration.
 
-An interpretation is undefined when a head's value is an equation, a filler does not
-fit the entry it fills, a sort is expected but not given, or an equation between terms
-of the model does not hold.
-An environment is typed by an ambient when the value of each slot has the
-interpretation of the slot's binding telescope and declaration.
+An interpretation is undefined when the boundary of a head's value is an equation, a
+filler does not fit the entry it fills, `S` in `of S` is not interpreted as a sort,
+`l` and `r` in `eq l r` are not interpreted as two sorts or as two elements of one
+sort, or an equation between terms of the model does not hold.
+An environment is typed by an ambient when the binding telescope and the boundary of
+the value of each slot are the interpretations of the slot's binding telescope and
+declaration.
 -/
 
 universe u
@@ -57,9 +60,7 @@ theorem Filler.mem_asSort
     obtain ⟨B, s⟩ := w
     cases B with
     | sort => rw [Part.mem_some_iff.mp h]
-    | of S => cases Part.notMem_none _ h
-    | eqSort S S' => cases Part.notMem_none _ h
-    | eqElement S l r => cases Part.notMem_none _ h
+    | _ => cases Part.notMem_none _ h
   · rintro rfl
     apply Part.mem_some
 
@@ -73,12 +74,10 @@ theorem Filler.mem_asElement
   · intro h
     obtain ⟨B, s⟩ := w
     cases B with
-    | sort => cases Part.notMem_none _ h
     | of S' =>
         obtain ⟨rfl, h'⟩ := Part.mem_assert_iff.mp h
         rw [Part.mem_some_iff.mp h']
-    | eqSort S₁ S₂ => cases Part.notMem_none _ h
-    | eqElement S₁ l r => cases Part.notMem_none _ h
+    | _ => cases Part.notMem_none _ h
   · rintro rfl
     apply Part.mem_assert_iff.mpr
     use rfl
@@ -87,10 +86,10 @@ theorem Filler.mem_asElement
 /-! ### Filling one entry -/
 
 /-- The term over `Γ` of the type `b.Bind B.ty` of an entry with binding chain `b` and
-boundary `B`, given by a filler `w` over the end of `b`. For `B` a sort or an element
-of a sort, it is `w` read over `Γ` by `lam`, defined when `w` is a sort or an element of
-that sort. For `B` an equation, `w` is not used: the term is reflexivity read over `Γ`
-by `lam`, defined when the two sides of the equation are equal. -/
+boundary `B`, given by a partial filler `w` over the end of `b`. For `B` = `sort` or
+`of S`, it is the term of `w` read over `Γ` by `lam`, defined when `w` is defined with
+boundary `B`. For `B` an equation, `w` is not used: the term is reflexivity read over
+`Γ` by `lam`, defined when the two sides of the equation are equal. -/
 def Chain.entryTerm {Γ : M.Ob} {α : C.Arity} (b : Chain M Γ α) :
     (B : Boundary M b.last) → Part (Filler M b.last) → Part (M.Tm Γ (b.Bind B.ty))
   | .sort, w => w.bind fun v => v.asSort.map b.lam
@@ -99,68 +98,57 @@ def Chain.entryTerm {Γ : M.Ob} {α : C.Arity} (b : Chain M Γ α) :
   | .eqElement _ l r, _ =>
       Part.assert (l = r) fun h => Part.some (b.lam (h ▸ M.IdElement_refl l))
 
-/-- The term an entry with boundary `sort` is given by a filler is a sort the filler
-is, read over the base by `lam`. -/
+/-- The entry with boundary `sort` is given the term `t` by `w` exactly when `w`
+contains the filler `⟨sort, s⟩` of a sort `s` with `t = b.lam s`. -/
 theorem Chain.mem_entryTerm_sort
     {Γ : M.Ob} {α : C.Arity} (b : Chain M Γ α) (w : Part (Filler M b.last))
     {t} :
   t ∈ b.entryTerm .sort w ↔ ∃ s, ⟨.sort, s⟩ ∈ w ∧ t = b.lam s
   := by
-  rw [entryTerm, Part.mem_bind_iff]
+  simp only [entryTerm, Part.mem_bind_iff, Part.mem_map_iff]
   constructor
-  · rintro ⟨v, hv, ht⟩
-    obtain ⟨s, hs, rfl⟩ := (Part.mem_map_iff _).mp ht
+  · rintro ⟨_, hv, s, hs, rfl⟩
     obtain rfl := (Filler.mem_asSort _ _).mp hs
     use s, hv
   · rintro ⟨s, hs, rfl⟩
-    use ⟨.sort, s⟩, hs
-    apply Part.mem_map
-    apply Part.mem_some
+    use ⟨.sort, s⟩, hs, s, Part.mem_some s
 
-/-- The term an entry with boundary `of S` is given by a filler is an element of `S`
-the filler is, read over the base by `lam`. -/
+/-- The entry with boundary `of S` is given the term `t` by `w` exactly when `w`
+contains the filler `⟨of S, e⟩` of an element `e` of `S` with `t = b.lam e`. -/
 theorem Chain.mem_entryTerm_of
     {Γ : M.Ob} {α : C.Arity} (b : Chain M Γ α) (S : M.Tm b.last (M.U b.last))
     (w : Part (Filler M b.last)) {t} :
   t ∈ b.entryTerm (.of S) w ↔ ∃ e, ⟨.of S, e⟩ ∈ w ∧ t = b.lam e
   := by
-  rw [entryTerm, Part.mem_bind_iff]
+  simp only [entryTerm, Part.mem_bind_iff, Part.mem_map_iff]
   constructor
-  · rintro ⟨v, hv, ht⟩
-    obtain ⟨e, he, rfl⟩ := (Part.mem_map_iff _).mp ht
+  · rintro ⟨_, hv, e, he, rfl⟩
     obtain rfl := (Filler.mem_asElement _ _ _).mp he
     use e, hv
   · rintro ⟨e, he, rfl⟩
-    use ⟨.of S, e⟩, he
-    apply Part.mem_map
-    apply (Filler.mem_asElement _ _ _).mpr rfl
+    use ⟨.of S, e⟩, he, e, (Filler.mem_asElement _ _ _).mpr rfl
 
-/-- An entry declaring the equation of the sorts `S` and `S'` has a term exactly when
-`S = S'`, and the term is reflexivity read over the base by `lam`. -/
+/-- The entry declaring the equation of the sorts `S` and `S'` is given the term `t` by
+`w` exactly when `S = S'` and `t` is reflexivity read over `Γ` by `lam`. -/
 theorem Chain.mem_entryTerm_eqSort
     {Γ : M.Ob} {α : C.Arity} (b : Chain M Γ α) (S S' : M.Tm b.last (M.U b.last))
     (w : Part (Filler M b.last)) {t} :
   t ∈ b.entryTerm (.eqSort S S') w ↔ ∃ h : S = S', t = b.lam (h ▸ M.IdSort_refl S)
   := by
-  rw [entryTerm, Part.mem_assert_iff]
-  apply exists_congr
-  intro h
-  apply Part.mem_some_iff
+  simp only [entryTerm, Part.mem_assert_iff, Part.mem_some_iff]
 
-/-- An entry declaring the equation of the elements `l` and `r` has a term exactly when
-`l = r`, and the term is reflexivity read over the base by `lam`. -/
+/-- The entry declaring the equation of the elements `l` and `r` is given the term `t`
+by `w` exactly when `l = r` and `t` is reflexivity read over `Γ` by `lam`. -/
 theorem Chain.mem_entryTerm_eqElement
     {Γ : M.Ob} {α : C.Arity} (b : Chain M Γ α) (S : M.Tm b.last (M.U b.last))
     (l r : M.Tm b.last (M.El S)) (w : Part (Filler M b.last)) {t} :
   t ∈ b.entryTerm (.eqElement S l r) w ↔ ∃ h : l = r, t = b.lam (h ▸ M.IdElement_refl l)
   := by
-  rw [entryTerm, Part.mem_assert_iff]
-  apply exists_congr
-  intro h
-  apply Part.mem_some_iff
+  simp only [entryTerm, Part.mem_assert_iff, Part.mem_some_iff]
 
-/-- Along equal chains, with heterogeneously equal boundaries and fillers, every term an
-entry is given by a filler corresponds to a heterogeneously equal term. -/
+/-- For equal chains `b₁ = b₂` and heterogeneously equal boundaries and partial fillers,
+every term in `b₁.entryTerm B₁ w₁` is heterogeneously equal to a term in
+`b₂.entryTerm B₂ w₂`. -/
 theorem Chain.entryTerm_congr
     {Γ : M.Ob} {α : C.Arity} {b₁ b₂ : Chain M Γ α} (hb : b₁ = b₂)
     {B₁ : Boundary M b₁.last} {B₂ : Boundary M b₂.last} (hB : HEq B₁ B₂)
@@ -193,11 +181,11 @@ def pairFillers {Γ : M.Ob} {Δ : C.Arity} (E : Environment M Γ Δ) :
           (fun _ j _ E' => fillers (C.inr j) E')
 
 /-- The interpretation of an expression at an environment. The expression `ap x args`
-is interpreted, when the value of `x` is not an equation, as the filler of that value,
-reindexed along the substitution that pairs, along the binding decoration of `x`, the
-terms the arguments give; each argument is interpreted at the environment extended by
-the binding decoration of the entry it fills, reindexed along the substitution paired
-before that entry. -/
+is interpreted, when the boundary of the value of `x` is not an equation, as the filler
+of that value, reindexed along the substitution that pairs the identity, along the
+binding decoration of `x`, with the terms the arguments give; each argument is
+interpreted at the environment extended by the binding decoration of the entry it fills,
+that decoration reindexed along the substitution paired before that entry. -/
 def interpret : {Γ : M.Ob} → {Δ : C.Arity} → Environment M Γ Δ → Expr Δ → Part (Filler M Γ)
   | Γ, _, E, .ap x args =>
       Part.assert (¬ (E x).filler.boundary.IsEq) fun _ =>
@@ -227,8 +215,8 @@ def interpretBoundary {Γ : M.Ob} {Δ : C.Arity} (E : Environment M Γ Δ) :
 
 /-- The interpretation of a telescope, entry by entry: the binding telescope of an
 entry, then its boundary at the environment extended by the interpreted binding
-decoration; the entry's type is `Bind` of the interpreted binding chain at the
-interpreted boundary, and the remaining entries are interpreted at the environment
+decoration; the entry's type is `Bind` of the interpreted binding chain at the type of
+the interpreted boundary, and the remaining entries are interpreted at the environment
 extended by that one entry. -/
 def interpretTelescope : {Γ : M.Ob} → {Δ Ω : C.Arity} → Environment M Γ Δ → dTel Δ Ω →
     Part (Telescope M Γ Ω)
@@ -252,9 +240,9 @@ def Typed {Γ : M.Ob} {Δ : C.Arity} (E : Environment M Γ Δ) (Ξ : Ambient Δ)
 
 /-! ### The interpretation, clause by clause -/
 
-/-- `ap x args` is interpreted, when the value of `x` is not an equation, as the filler
-of that value, reindexed along the interpretation of `args` as a filling along the
-binding decoration of `x`, from the identity. -/
+/-- `ap x args` is interpreted, when the boundary of the value of `x` is not an
+equation, as the filler of that value, reindexed along the interpretation of `args` as
+a filling along the binding decoration of `x`, from the identity. -/
 theorem interpret_ap
     {Γ : M.Ob} {Δ α : C.Arity} (E : Environment M Γ Δ) (x : Δ ∋ α) (args : Subst α Δ) :
   E.interpret (.ap x args)
@@ -301,16 +289,13 @@ theorem mem_interpretBoundary_of
     {Γ : M.Ob} {Δ : C.Arity} (E : Environment M Γ Δ) (S : Expr Δ) (B : Boundary M Γ) :
   B ∈ E.interpretBoundary (.of S) ↔ ∃ t, ⟨.sort, t⟩ ∈ E.interpret S ∧ B = .of t
   := by
-  rw [interpretBoundary, Part.mem_bind_iff]
+  simp only [interpretBoundary, Part.mem_bind_iff, Part.mem_map_iff]
   constructor
-  · rintro ⟨w, hw, hB⟩
-    obtain ⟨t, ht, rfl⟩ := (Part.mem_map_iff _).mp hB
+  · rintro ⟨_, hw, t, ht, rfl⟩
     obtain rfl := (Filler.mem_asSort _ _).mp ht
     use t, hw
   · rintro ⟨t, ht, rfl⟩
-    use ⟨.sort, t⟩, ht
-    apply Part.mem_map
-    apply Part.mem_some
+    use ⟨.sort, t⟩, ht, t, Part.mem_some t
 
 /-- `eq l r` is interpreted as the equation of two sorts that `l` and `r` are
 interpreted as, or as the equation of two elements of one sort that `l` and `r` are
@@ -323,10 +308,9 @@ theorem mem_interpretBoundary_eq
       ∨ ∃ S tl tr, ⟨.of S, tl⟩ ∈ E.interpret l ∧ ⟨.of S, tr⟩ ∈ E.interpret r
           ∧ B = .eqElement S tl tr
   := by
-  rw [interpretBoundary, Part.mem_bind_iff]
+  simp only [interpretBoundary, Part.mem_bind_iff]
   constructor
-  · rintro ⟨⟨Bl, tl⟩, hl, hB⟩
-    obtain ⟨wr, hr, hB⟩ := Part.mem_bind_iff.mp hB
+  · rintro ⟨⟨Bl, tl⟩, hl, wr, hr, hB⟩
     cases Bl with
     | sort =>
         left
@@ -338,17 +322,12 @@ theorem mem_interpretBoundary_eq
         obtain ⟨tr, htr, rfl⟩ := (Part.mem_map_iff _).mp hB
         obtain rfl := (Filler.mem_asElement _ _ _).mp htr
         use S, tl, tr
-    | eqSort S S' => cases Part.notMem_none _ hB
-    | eqElement S l' r' => cases Part.notMem_none _ hB
+    | _ => cases Part.notMem_none _ hB
   · rintro (⟨tl, tr, hl, hr, rfl⟩ | ⟨S, tl, tr, hl, hr, rfl⟩)
-    · use ⟨.sort, tl⟩, hl
-      apply Part.mem_bind_iff.mpr
-      use ⟨.sort, tr⟩, hr
+    · use ⟨.sort, tl⟩, hl, ⟨.sort, tr⟩, hr
       apply Part.mem_map
       apply Part.mem_some
-    · use ⟨.of S, tl⟩, hl
-      apply Part.mem_bind_iff.mpr
-      use ⟨.of S, tr⟩, hr
+    · use ⟨.of S, tl⟩, hl, ⟨.of S, tr⟩, hr
       apply Part.mem_map
       apply (Filler.mem_asElement _ _ _).mpr rfl
 
@@ -363,7 +342,7 @@ theorem mem_interpretTelescope_nil
 telescope, then its boundary at the environment extended by the interpreted binding
 decoration, then the remaining entries at the environment extended by the one
 interpreted entry, whose type is any type equal to `Bind` of the interpreted binding
-chain at the interpreted boundary. -/
+chain at the type of the interpreted boundary. -/
 theorem mem_interpretTelescope_cons
     {Γ : M.Ob} {Δ α Ω : C.Arity} (E : Environment M Γ Δ)
     (bind : dTel Δ α) (boundary : Bd (Δ ⋈ α)) (rest : dTel (Δ ⋈ C.single α) Ω)
@@ -375,8 +354,7 @@ theorem mem_interpretTelescope_cons
             ∃ R ∈ (E.extend (Decoration.cons T₀.decoration B A hA .nil)).interpretTelescope rest,
               T = ⟨.cons A R.chain, .cons T₀.decoration B A hA R.decoration⟩
   := by
-  rw [interpretTelescope]
-  simp only [Part.mem_bind_iff, Part.mem_map_iff]
+  simp only [interpretTelescope, Part.mem_bind_iff, Part.mem_map_iff]
   constructor
   · rintro ⟨T₀, hT₀, B, hB, R, hR, rfl⟩
     use T₀, hT₀, B, hB, T₀.chain.Bind B.ty, rfl, R, hR

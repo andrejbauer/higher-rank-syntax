@@ -23,10 +23,8 @@ theorem Wf_e.eta :
       rw [Expr.η.eq_1]
       apply Wf_e.ap
       case head =>
-        rw [dTel.declaration_concatenate_inl]
-        intro hEq
+        erw [dTel.declaration_concatenate_inl, Bd.isEq_rename]
         apply hx
-        apply (Bd.isEq_rename _ _).mp hEq
       case fill =>
         rw [dTel.binding_concatenate_inl]
         apply Wf_s.eta Ξ (Ξ.binding x) hb
@@ -49,54 +47,36 @@ theorem Wf_s.eta :
           apply dTel.act_declaration_instId
         have hbd := Wf_t.declaration hΘ z
         rw [hdecl] at hbd
-        have hcancel : ∀ e : Expr ((Δ ⋈ Ω) ⋈ Λ),
-            Subst.instId (Δ ⋈ Ω) Λ ⋆ (⟦ Renaming.inl (Δ ⋈ Ω) Λ ⇑ʳ Λ ⟧ʳ e) = e := by
-          intro e
-          rw [← Renaming.extend_unit (Renaming.inl (Δ ⋈ Ω) Λ ⇑ʳ Λ)]
-          apply act_instId_weaken
-        convert Eq_e.hyp (Ξ := Ξ ⋈ Θ ⋈ Θ.binding z) (C.inl (C.inr z))
-          (⟦ Renaming.inl (Δ ⋈ Ω) Λ ⇑ʳ Λ ⟧ʳ l) (⟦ Renaming.inl (Δ ⋈ Ω) Λ ⇑ʳ Λ ⟧ʳ r)
-          (Subst.instId (Δ ⋈ Ω) Λ) ?decl ?hl ?hr ?fill using 2
-        · apply dTel.instantiate_binding_instId
-        · rw [hcancel]
-        · rw [hcancel]
-        case decl =>
-          rw [dTel.declaration_concatenate_inl, dTel.declaration_concatenate_inr]
+        erw [dTel.instantiate_binding_instId]
+        obtain ⟨hl, hr⟩ := Bd.eq.inj (Bd.instantiate_rename_inl (Δ ⋈ Ω) Λ (.eq l r))
+        rw [← hl, ← hr]
+        apply Eq_e.hyp (C.inl (C.inr z))
+        · rw [dTel.declaration_concatenate_inl, dTel.declaration_concatenate_inr]
           apply congrArg (Bd.rename _) hdecl
-        case hl =>
-          rw [dTel.binding_concatenate_inl, dTel.binding_concatenate_inr]
+        · rw [dTel.binding_concatenate_inl, dTel.binding_concatenate_inr]
           apply Wf_e.weaken
             ((Ambient.Renaming.weaken (Ξ ⋈ Θ) (Θ.binding z)).extend (Θ.binding z))
             hbd.eq_left
-        case hr =>
-          rw [dTel.binding_concatenate_inl, dTel.binding_concatenate_inr]
+        · rw [dTel.binding_concatenate_inl, dTel.binding_concatenate_inr]
           apply Wf_e.weaken
             ((Ambient.Renaming.weaken (Ξ ⋈ Θ) (Θ.binding z)).extend (Θ.binding z))
             hbd.eq_right
-        case fill =>
-          rw [dTel.binding_concatenate_inl, dTel.binding_concatenate_inr]
+        · rw [dTel.binding_concatenate_inl, dTel.binding_concatenate_inr]
           apply Wf_s.eta (Ξ ⋈ Θ) (Θ.binding z) (Wf_t.binding hΘ z)
       case filler =>
         intro Λ z hne
-        convert Wf_e.eta (Ξ ⋈ Θ) (C.inr z) ?_ ?_ using 2
-        · rw [dTel.binding_concatenate_inr]
-          apply dTel.instantiate_binding_instId
+        erw [dTel.instantiate_binding_instId, ← dTel.binding_concatenate_inr Ξ Θ]
+        apply Wf_e.eta (Ξ ⋈ Θ) (C.inr z)
         · rw [dTel.binding_concatenate_inr]
           apply Wf_t.binding hΘ z
-        · rw [dTel.declaration_concatenate_inr]
-          convert hne using 2
-          symm
-          apply dTel.act_declaration_instId
+        · erw [dTel.declaration_concatenate_inr, ← dTel.act_declaration_instId Θ z]
+          apply hne
       case declared =>
         intro Λ z _
+        erw [dTel.instantiate_binding_instId]
         convert Wf_bd.refl (Wf_t.declaration hΘ z) using 2
-        · apply dTel.instantiate_binding_instId
-        · convert dTel.boundaryOf_eta (Ξ ⋈ Θ) (C.inr z) using 1
-          · congr 2
-            rw [dTel.binding_concatenate_inr]
-            apply dTel.instantiate_binding_instId
-          · symm
-            apply dTel.declaration_concatenate_inr
+        · erw [← dTel.declaration_concatenate_inr Ξ Θ, ← dTel.binding_concatenate_inr Ξ Θ]
+          apply dTel.boundaryOf_eta
         · apply dTel.act_declaration_instId
 termination_by Δ Ω _ _ _ => (Ω, 0)
 decreasing_by all_goals exact Prod.Lex.left _ _ ⟨z⟩

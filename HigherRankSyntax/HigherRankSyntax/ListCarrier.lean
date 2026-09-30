@@ -30,10 +30,6 @@ theorem Entry.sizeOf_arity_lt (e : Entry) :
   cases e
   simp [arity]
 
-theorem sizeOf_arity_lt_of_mem {e : Entry} {ℓ : List Entry} (h : e ∈ ℓ) :
-  sizeOf e.arity < sizeOf ℓ
-  := lt_trans e.sizeOf_arity_lt (List.sizeOf_lt_of_mem h)
-
 /-- Prepending a fixed list, as an endofunction of lists. -/
 def prepend (ℓ : List Entry) : Function.End (List Entry) :=
   fun Θ => ℓ ++ Θ
@@ -135,9 +131,7 @@ private theorem elim_position_iff (P : Entry → Prop) (ℓ₁ ℓ₂ : List Ent
   Sum.elim (fun i => P (ℓ₁.get i)) (fun j => P (ℓ₂.get j)) x
     ↔ P ((ℓ₁ ++ ℓ₂).get (finAppendEquiv ℓ₁ ℓ₂ x))
   := by
-  rcases x with i | j
-  · simp [finAppendEquiv]
-  · simp [finAppendEquiv]
+  rcases x with i | j <;> simp [finAppendEquiv]
 
 private def positionAppendEquiv (P : Entry → Prop) (ℓ₁ ℓ₂ : List Entry) :
     Position P ℓ₁ ⊕ Position P ℓ₂ ≃ Position P (ℓ₁ ++ ℓ₂) :=
@@ -162,14 +156,14 @@ def positionAppend (P : Entry → Prop) (ℓ₁ ℓ₂ : List Entry) :
   toEquiv := positionAppendEquiv P ℓ₁ ℓ₂
   map_rel_iff' := by
     rintro (x | x) (y | y)
-    · simp only [positionWellOrder, Fin.lt_def, positionAppendEquiv_val_inl, Sum.lex_inl_inl]
-    · simp only [positionWellOrder, Fin.lt_def, positionAppendEquiv_val_inl,
-        positionAppendEquiv_val_inr, Sum.Lex.sep, iff_true]
+    · simp only [Fin.lt_def, positionAppendEquiv_val_inl, Sum.lex_inl_inl]
+    · simp only [Fin.lt_def, positionAppendEquiv_val_inl, positionAppendEquiv_val_inr,
+        Sum.Lex.sep, iff_true]
       omega
-    · simp only [positionWellOrder, Fin.lt_def, positionAppendEquiv_val_inl,
-        positionAppendEquiv_val_inr, Sum.lex_inr_inl, iff_false]
+    · simp only [Fin.lt_def, positionAppendEquiv_val_inl, positionAppendEquiv_val_inr,
+        Sum.lex_inr_inl, iff_false]
       omega
-    · simp only [positionWellOrder, Fin.lt_def, positionAppendEquiv_val_inr, Sum.lex_inr_inr]
+    · simp only [Fin.lt_def, positionAppendEquiv_val_inr, Sum.lex_inr_inr]
       omega
 
 /-- `slotPredicate α e`: the binding arity of `e` is `α`. -/
@@ -193,20 +187,19 @@ def slotAppend (Γ Δ α : aritySubmonoid) :
 theorem slotAppend_val_inl {Γ Δ α : aritySubmonoid} (x : Slot Γ α) :
   (slotAppend Γ Δ α (Sum.inl x)).val.val = x.val.val
   := by
-  rw [slotAppend, RelIso.trans_apply, positionCongr_val]
-  rfl
+  apply positionCongr_val
 
 theorem slotAppend_val_inr {Γ Δ α : aritySubmonoid} (x : Slot Δ α) :
   (slotAppend Γ Δ α (Sum.inr x)).val.val = (underlyingList Γ).length + x.val.val
   := by
-  rw [slotAppend, RelIso.trans_apply, positionCongr_val]
-  rfl
+  apply positionCongr_val
 
 theorem sub_sizeOf {Δ Γ : aritySubmonoid} (x : Slot Γ Δ) :
   sizeOf (underlyingList Δ) < sizeOf (underlyingList Γ)
   := by
   rw [← x.property]
-  apply sizeOf_arity_lt_of_mem
+  apply lt_trans (Entry.sizeOf_arity_lt _)
+  apply List.sizeOf_lt_of_mem
   apply List.get_mem
 
 /-! ### Splitting an arity at a slot -/
@@ -223,16 +216,13 @@ theorem before_after {Γ α : aritySubmonoid} (x : Slot Γ α) :
   before x * after x = Γ
   := by
   apply arity_ext
-  rw [underlyingList_mul]
-  simp only [before, after, underlyingList_ofList]
+  simp only [underlyingList_mul, before, after, underlyingList_ofList]
   apply List.take_append_drop
 
 /-- The slot `x` as the first position of `after x`. -/
-def localized {Γ α : aritySubmonoid} (x : Slot Γ α) : Slot (after x) α := by
-  refine ⟨⟨0, ?_⟩, ?_⟩
-  · simp only [after, underlyingList_ofList, List.length_drop]
-    omega
-  · simpa [after, slotPredicate, List.get_eq_getElem] using x.property
+def localized {Γ α : aritySubmonoid} (x : Slot Γ α) : Slot (after x) α :=
+  ⟨⟨0, by simp [after, Nat.sub_pos_iff_lt]⟩,
+    by simpa [after, slotPredicate, List.get_eq_getElem] using x.property⟩
 
 theorem transport_val {Γ Δ α : aritySubmonoid} (h : Γ = Δ) (x : Slot Γ α) :
   (h ▸ x : Slot Δ α).val.val = x.val.val
@@ -327,12 +317,6 @@ open ListCarrier
 
 /-! ### Single-entry arities -/
 
-/-- An arity is determined by its underlying list. -/
-theorem ListCarrier.underlyingList_injective {Γ Δ : C.Arity}
-    (h : underlyingList Γ = underlyingList Δ) :
-  Γ = Δ
-  := arity_ext h
-
 /-- The arity with a single entry, of binding arity `α`. -/
 def C.single (α : C.Arity) : C.Arity :=
   ofList [Entry.mk (underlyingList α)]
@@ -347,22 +331,13 @@ theorem C.underlyingList_single (α : C.Arity) :
 def C.singleSlot (α : C.Arity) : C.single α ∋ α :=
   ⟨⟨0, by simp⟩, rfl⟩
 
-/-- Every position of a one-element list `[a]` holds `a`. -/
-theorem ListCarrier.get_singleton {ℓ : List Entry} {a : Entry} (hl : ℓ = [a])
-    (i : Fin ℓ.length) :
-  ℓ.get i = a
-  := by
-  subst hl
-  simp
-
 /-- Single-entry arities are equal only for equal binding arities. -/
 theorem C.single_injective :
   Function.Injective C.single
   := by
   intro α β h
-  have hlist := congrArg underlyingList h
-  simp only [underlyingList_single, List.cons.injEq, Entry.mk.injEq, and_true] at hlist
-  apply underlyingList_injective hlist
+  apply arity_ext
+  simpa using congrArg underlyingList h
 
 /-- `C.singleSlot α` is the only slot of `C.single α` of arity `α`. -/
 theorem C.single_slot_unique {α : C.Arity} (z : C.single α ∋ α) :
@@ -376,6 +351,6 @@ theorem C.single_slot_unique {α : C.Arity} (z : C.single α ∋ α) :
 theorem C.single_arity {α β : C.Arity} (x : C.single α ∋ β) :
   β = α
   := by
-  apply underlyingList_injective
-  rw [← x.property, get_singleton (underlyingList_single α) x.val]
-  rfl
+  apply arity_ext
+  rw [← x.property]
+  simp [List.get_eq_getElem, Entry.arity]

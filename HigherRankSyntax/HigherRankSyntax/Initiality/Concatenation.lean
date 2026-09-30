@@ -9,10 +9,12 @@ environment by an appended decoration is extending it by the first decoration an
 then by the second, and the interpretation of a concatenation of syntactic
 telescopes is the append of the interpretations.
 
-The η-expansion of a slot is interpreted as the filler of the slot's value, at the
-environment extended by the value's binding decoration. More generally, a filling
-whose fillers are the η-expansions of slots holding generic values read along a
-section is interpreted as that section.
+The η-expansion of a slot whose value is not an equation is interpreted as the value's
+filler, at the environment extended by the value's binding decoration. A filling of a
+decoration by the η-expansions of slots that hold its generic values reindexed along a
+substitution `k` is interpreted as `k`, from `k` followed by the projection of the
+decoration's chain, when those η-expansions are interpreted as the fillers of the
+slots' values.
 -/
 
 universe u
@@ -37,21 +39,6 @@ theorem Chain.last_append :
   | _, _, _, .nil, _ => rfl
   | _, _, _, .cons _ c, c' => Chain.last_append c c'
 
-/-- The projection of an appended chain is the projection of the second chain
-followed by the projection of the first. -/
-theorem Chain.projection_append :
-    ∀ {Γ : M.Ob} {Φ Λ : C.Arity} (c : Chain M Γ Φ) (c' : Chain M c.last Λ),
-      HEq (c.append c').projection (M.comp c.projection c'.projection)
-  | _, _, _, .nil, c' => by
-      apply heq_of_eq
-      symm
-      apply M.identity_comp
-  | _, _, _, .cons A c, c' => by
-      erw [append, projection, projection, M.comp_assoc]
-      congr 1
-      · apply last_append
-      · apply projection_append
-
 /-- A decoration of a chain followed by a decoration of a chain over its end: a
 decoration of the appended chain. -/
 def Decoration.append : {Γ : M.Ob} → {Φ Λ : C.Arity} → {c : Chain M Γ Φ} →
@@ -59,7 +46,8 @@ def Decoration.append : {Γ : M.Ob} → {Φ Λ : C.Arity} → {c : Chain M Γ Φ
   | _, _, _, _, _, .nil, d' => d'
   | _, _, _, _, _, .cons db B A hA d, d' => .cons db B A hA (d.append d')
 
-/-- A telescope followed by a telescope over its end. -/
+/-- A telescope followed by a telescope over the end of its chain: the chains appended
+and the decorations appended. -/
 def Telescope.append {Γ : M.Ob} {Φ Λ : C.Arity} (T : Telescope M Γ Φ)
     (T' : Telescope M T.chain.last Λ) : Telescope M Γ (Φ ⋈ Λ) :=
   ⟨T.chain.append T'.chain, T.decoration.append T'.decoration⟩
@@ -84,18 +72,9 @@ theorem extend_append :
     ∀ {Γ : M.Ob} {Δ Φ Λ : C.Arity} (E : Environment M Γ Δ) {c : Chain M Γ Φ}
       (d : Decoration M c) {c' : Chain M c.last Λ} (d' : Decoration M c'),
       HEq (E.extend (d.append d')) ((E.extend d).extend d')
-  | _, Δ, _, Λ, E, _, .nil, _, d' => by
-      apply heq_of_eq
-      funext β x
-      obtain ⟨y, rfl⟩ | ⟨z, rfl⟩ := C.cover Δ (1 ⋈ Λ) x
-      · rw [extend_inl, C.inl_inl Δ 1 Λ y]
-        erw [extend_inl, extend_inl, Value.subst_identity]
-        rfl
-      · obtain ⟨w, rfl⟩ | ⟨u, rfl⟩ := C.cover 1 Λ z
-        · apply (C.unit_is_empty w).elim
-        · rw [extend_inr, C.inr_inr Δ 1 Λ u, C.unit_left]
-          erw [extend_inr]
-          rfl
+  | _, _, _, _, _, _, .nil, _, _ => by
+      rw [extend_nil]
+      rfl
   | _, _, _, _, E, _, .cons db B A hA d, _, d' => by
       erw [extend_cons E db B A hA (d.append d')]
       rw [extend_cons E db B A hA d]
@@ -109,7 +88,7 @@ theorem interpretTelescope_concatenate :
       (Θ : dTel (Δ ⋈ Φ) Λ) (T : Telescope M Γ Φ) (T' : Telescope M T.chain.last Λ),
       T ∈ E.interpretTelescope Ξ → T' ∈ (E.extend T.decoration).interpretTelescope Θ →
       T.append T' ∈ E.interpretTelescope (Ξ ⋈ Θ)
-  | _, _, _, _, E, .nil, Θ, T, T', hT, hT' => by
+  | _, _, _, _, E, .nil, _, T, _, hT, hT' => by
       obtain rfl := (mem_interpretTelescope_nil E T).mp hT
       rw [extend_nil] at hT'
       apply hT'
@@ -118,10 +97,8 @@ theorem interpretTelescope_concatenate :
         (mem_interpretTelescope_cons E bind boundary rest T).mp hT
       erw [extend_cons] at hT'
       apply (mem_interpretTelescope_cons E bind boundary (rest ⋈ Θ) _).mpr
-      use T₀, hT₀, B, hB, A, hA, R.append T'
-      constructor
-      · apply interpretTelescope_concatenate _ rest Θ R T' hR hT'
-      · rfl
+      use T₀, hT₀, B, hB, A, hA, R.append T', interpretTelescope_concatenate _ rest Θ R T' hR hT'
+      rfl
 
 end Environment
 
@@ -154,10 +131,11 @@ theorem Chain.lam_mem_entryTerm
 
 namespace Environment
 
-/-- When the slots `ι i` of `F` hold the generic values of the slots `i` of `d`,
-reindexed along `k`, and each of them is interpreted by its η-expansion wherever it is
-not an equation, the filling of `d` by the η-expansions of the slots `ι i` is
-interpreted, from the projection of `k` to the base, as `k`. -/
+/-- When the slots `ι i` of `F` hold the generic values of the slots `i` of `d`
+reindexed along `k`, and the η-expansion of each slot `ι i` whose value is not an
+equation is interpreted, at `F` extended by the value's binding decoration, as the
+value's filler, the filling of `d` by the η-expansions of the slots `ι i` is
+interpreted, from `k` followed by the projection of the chain of `d`, as `k`. -/
 theorem interpretFilling_ofRenaming
     {Z : M.Ob} {Δ : C.Arity} (F : Environment M Z Δ) :
     ∀ {Y : M.Ob} {Ω : C.Arity} {c : Chain M Y Ω} (d : Decoration M c) (k : M.Sub Z c.last)
@@ -177,29 +155,23 @@ theorem interpretFilling_ofRenaming
       erw [← hgt]
       rw [M.projection_pair]
       apply (mem_interpretFilling_cons F _ db B A hA d g k).mpr
-      have hvalue : F (ι (C.inl (C.singleSlot α)))
-          = (Decoration.headValue db B A hA).subst (M.pair g t) := by
-        rw [hgt, hslot, Decoration.slot_head]
-        symm
-        apply Value.subst_comp
-      rw [Decoration.headValue_subst_pair] at hvalue
       have hfiller := heta (C.inl (C.singleSlot α))
-      rw [hvalue] at hfiller
-      use (b.subst g).lam ((b.subst g).unlam (Chain.Bind_subst_entry hA g ▸ t))
-      constructor
-      · apply Chain.lam_mem_entryTerm
-        apply hfiller
-      · rw [Chain.lam_unlam]
-        convert interpretFilling_ofRenaming F d k (fun _ j => ι (C.inr j))
-          (fun _ j => by
-            rw [hslot, Decoration.slot_tail]
-            rfl)
-          (fun _ j => heta (C.inr j)) using 2
-        rw [← hgt]
-        congr 1
-        apply eq_of_heq
-        apply HEq.trans (eqRec_heq _ _)
-        apply eqRec_heq
+      rw [hslot, Decoration.slot_head] at hfiller
+      erw [← Value.subst_comp, ← hgt] at hfiller
+      rw [Decoration.headValue_subst_pair] at hfiller
+      use (b.subst g).lam ((b.subst g).unlam (Chain.Bind_subst_entry hA g ▸ t)),
+        Chain.lam_mem_entryTerm _ _ _ hfiller
+      rw [Chain.lam_unlam]
+      convert interpretFilling_ofRenaming F d k (fun _ j => ι (C.inr j))
+        (fun _ j => by
+          rw [hslot, Decoration.slot_tail]
+          rfl)
+        (fun _ j => heta (C.inr j)) using 2
+      rw [← hgt]
+      congr 1
+      apply eq_of_heq
+      apply HEq.trans (eqRec_heq _ _)
+      apply eqRec_heq
 
 /-- The η-expansion of a slot whose value is not an equation is interpreted, at the
 environment extended by the value's binding decoration, as the value's filler. -/
@@ -214,7 +186,7 @@ theorem interpret_eta :
       intro E x hne
       rw [Expr.η.eq_1, interpret_ap, extend_inl]
       apply Part.mem_assert_iff.mpr
-      use fun h => hne ((Boundary.isEq_subst _ _).mp h)
+      use (Boundary.isEq_subst _ _).not.mpr hne
       have hs := interpretFilling_ofRenaming (E.extend (E x).binding.decoration)
         (E x).binding.decoration (M.identity _) (Renaming.inr Δ α)
         (fun _ i => by
@@ -227,24 +199,6 @@ theorem interpret_eta :
       use s, hs
       simp only [Value.subst, Telescope.subst]
       rw [← Filler.subst_comp, hcomp, Filler.subst_identity]
-
-/-- The filling of a decoration `d` by the η-expansions of its own slots, at the
-environment extended by `d`, is interpreted, along `d` reindexed along the projection
-of its chain and from the identity, as a section of the lift of that projection. -/
-theorem interpretFilling_eta
-    {Γ : M.Ob} {Δ Ω : C.Arity} (E : Environment M Γ Δ) {c : Chain M Γ Ω}
-    (d : Decoration M c) :
-  ∃ s ∈ (E.extend d).interpretFilling (Subst.instId Δ Ω) (d.subst c.projection)
-      (M.identity c.last),
-    M.comp (c.lift c.projection) s = M.identity c.last
-  := by
-  have hs := interpretFilling_ofRenaming (E.extend d) d (M.identity c.last) (Renaming.inr Δ Ω)
-    (fun _ i => by
-      rw [Value.subst_identity]
-      apply extend_inr)
-    (fun _ i => interpret_eta _ _)
-  rw [interpretFilling, pairFillers_comp] at hs
-  apply (Part.mem_map_iff _).mp hs
 
 end Environment
 

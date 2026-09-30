@@ -15,7 +15,9 @@ environment of `X`, a section into the end of the chain of `Y` reindexed along t
 substitution into the empty object; the substitution it presents is that section
 followed by the lift of the substitution into the empty object through the chain.
 
-Each of these respects the equalities the classes are taken modulo.
+Each of these respects the equalities the classes are taken modulo. The interpretation
+of the ambient of an extension by an entry class is the interpretation of the ambient
+of the base followed by the one-entry telescope of the interpreted entry.
 -/
 
 universe u
@@ -39,7 +41,8 @@ def interpretEntry {Γ : M.Ob} {Δ γ : C.Arity} (E : Environment M Γ Δ) (bind
     ((E.extend T.decoration).interpretBoundary declaration).map fun B => ⟨T, B⟩
 
 /-- An entry is interpreted as a telescope and a boundary exactly when the telescope
-interprets its binding telescope and the boundary its declaration. -/
+interprets its binding telescope and the boundary interprets its declaration at the
+environment extended by the telescope's decoration. -/
 theorem mem_interpretEntry
     {Γ : M.Ob} {Δ γ : C.Arity} (E : Environment M Γ Δ) (binding : dTel Δ γ)
     (declaration : Bd (Δ ⋈ γ)) (p : Σ T : Telescope M Γ γ, Boundary M T.chain.last) :
@@ -47,15 +50,12 @@ theorem mem_interpretEntry
     ↔ p.1 ∈ E.interpretTelescope binding
         ∧ p.2 ∈ (E.extend p.1.decoration).interpretBoundary declaration
   := by
-  rw [interpretEntry, Part.mem_bind_iff]
+  simp only [interpretEntry, Part.mem_bind_iff, Part.mem_map_iff]
   constructor
-  · rintro ⟨T, hT, hp⟩
-    obtain ⟨B, hB, rfl⟩ := (Part.mem_map_iff _).mp hp
+  · rintro ⟨T, hT, B, hB, rfl⟩
     exact ⟨hT, hB⟩
   · rintro ⟨hT, hB⟩
-    use p.1, hT
-    apply (Part.mem_map_iff _).mpr
-    use p.2, hB
+    use p.1, hT, p.2, hB
 
 /-- The environments for the arity with no slots are all equal. -/
 instance {Γ : M.Ob} : Subsingleton (Environment M Γ 1) where
@@ -63,10 +63,10 @@ instance {Γ : M.Ob} : Subsingleton (Environment M Γ 1) where
     funext _ x
     apply (C.unit_is_empty x).elim
 
-/-- A term an entry reindexed along the identity is given by the interpretation of `f`
-at the environment extended by the reindexed binding decoration is, up to the identity,
-a term the entry is given by the interpretation of `f` at the environment extended by
-the binding decoration. -/
+/-- A term that the entry `T`, `B` reindexed along the identity is given by the
+interpretation of `f` at `E` extended by the reindexed binding decoration is
+heterogeneously equal to a term that `T`, `B` is given by the interpretation of `f` at
+`E` extended by the binding decoration. -/
 theorem entryTerm_subst_identity
     {Γ : M.Ob} {Δ α : C.Arity} (E : Environment M Γ Δ) (T : Telescope M Γ α)
     (B : Boundary M T.chain.last) (f : Expr (Δ ⋈ α)) {t}
@@ -87,6 +87,8 @@ theorem entryTerm_subst_identity
 
 end Environment
 
+open Environment
+
 /-! ### Objects and environments -/
 
 variable (M) in
@@ -97,11 +99,11 @@ def telescopeOf (X : Ctx.Ob) : Telescope M M.empty X.arity :=
     (fun Γ => ((Environment.empty M.empty).interpretTelescope Γ.ambient).get
       (Part.dom_iff_mem.mpr (Ambient.Wf.sound Γ.wf M.empty)))
     (by
-      rintro ⟨_, A, _⟩ ⟨_, A', _⟩ ⟨rfl, hAA⟩
+      rintro ⟨_, Ξ, _⟩ ⟨_, Ξ', _⟩ ⟨rfl, hΞ⟩
       apply heq_of_eq
       symm
       apply Part.get_eq_of_mem
-      apply Eq_t.sound hAA _ (Environment.Typed.empty M.empty) _ (Part.get_mem _))
+      apply Eq_t.sound hΞ _ (Typed.empty M.empty) _ (Part.get_mem _))
 
 variable (M) in
 /-- The object of a context class: the end of the interpretation of its ambient. -/
@@ -118,7 +120,7 @@ def envOf (X : Ctx.Ob) : Environment M (onOb M X) X.arity :=
 theorem envOf_typed (Γ : Ctx) :
   (envOf M (Quotient.mk _ Γ)).Typed Γ.ambient
   := by
-  apply Environment.Typed.extend (Environment.Typed.empty M.empty)
+  apply Typed.extend (Typed.empty M.empty)
   apply Part.get_mem
 
 /-! ### Types -/
@@ -129,12 +131,11 @@ theorem interpretEntry_dom {X : Ctx.Ob} (e : Ctx.Ob.Entry X) :
   := by
   induction X using Quotient.ind with
   | _ Γ =>
-      obtain ⟨T, hT⟩ := Wf_t.sound e.wf (envOf M (Quotient.mk _ Γ)) (envOf_typed Γ)
-      obtain ⟨T₀, hT₀, B, hB, -⟩ :=
-        (Environment.mem_interpretTelescope_cons _ _ _ _ T).mp hT
+      obtain ⟨T, hT⟩ := Wf_t.sound e.wf _ (envOf_typed (M := M) Γ)
+      obtain ⟨T₀, hT₀, B, hB, -⟩ := (mem_interpretTelescope_cons _ _ _ _ T).mp hT
       apply Part.dom_iff_mem.mpr
       use ⟨T₀, B⟩
-      apply (Environment.mem_interpretEntry _ _ _ _).mpr ⟨hT₀, hB⟩
+      apply (mem_interpretEntry _ _ _ _).mpr ⟨hT₀, hB⟩
 
 variable (M) in
 /-- The interpretation of an entry over a context class at the environment of the
@@ -148,22 +149,22 @@ theorem entryOf_mem {X : Ctx.Ob} (e : Ctx.Ob.Entry X) :
   (entryOf M e).1 ∈ (envOf M X).interpretTelescope e.binding
     ∧ (entryOf M e).2
         ∈ ((envOf M X).extend (entryOf M e).1.decoration).interpretBoundary e.declaration
-  := (Environment.mem_interpretEntry _ _ _ _).mp (Part.get_mem _)
+  := (mem_interpretEntry _ _ _ _).mp (Part.get_mem _)
 
 /-- The one-entry telescope of the interpreted entry interprets the one-entry telescope
 of the entry. -/
 theorem entryOf_telescope {X : Ctx.Ob} (e : Ctx.Ob.Entry X) :
-  (⟨.cons ((entryOf M e).1.chain.Bind (entryOf M e).2.ty) .nil,
-      .cons (entryOf M e).1.decoration (entryOf M e).2 _ rfl .nil⟩ :
-      Telescope M (onOb M X) (C.single e.arity ⋈ 1))
+  ⟨.cons ((entryOf M e).1.chain.Bind (entryOf M e).2.ty) .nil,
+      .cons (entryOf M e).1.decoration (entryOf M e).2 _ rfl .nil⟩
     ∈ (envOf M X).interpretTelescope e.toTele.telescope
   := by
-  apply (Environment.mem_interpretTelescope_cons _ _ _ _ _).mpr
+  apply (mem_interpretTelescope_cons _ _ _ _ _).mpr
   use (entryOf M e).1, (entryOf_mem e).1, (entryOf M e).2, (entryOf_mem e).2,
     (entryOf M e).1.chain.Bind (entryOf M e).2.ty, rfl, ⟨.nil, .nil⟩, Part.mem_some _
   rfl
 
-/-- Entries with equal one-entry telescopes of one arity are interpreted alike. -/
+/-- Entries of one arity whose one-entry telescopes are equal have the same
+interpretation. -/
 theorem entryOf_congr
     {X : Ctx.Ob} {γ : C.Arity} {binding binding' : dTel X.arity γ}
     {declaration declaration' : Bd (X.arity ⋈ γ)}
@@ -174,19 +175,18 @@ theorem entryOf_congr
   := by
   induction X using Quotient.ind with
   | _ Γ =>
-      obtain ⟨-, heq⟩ := h
-      obtain ⟨_, _, _, hcons, hbinding, hdeclaration, -⟩ := Eq_t.cons_inv heq
+      obtain ⟨-, _, _, _, hcons, hbinding, hdeclaration, -⟩ := h
       injection hcons with _ _ _ hbinding' hdeclaration' _
       subst hbinding' hdeclaration'
       obtain ⟨hT, hB⟩ := entryOf_mem (M := M) ⟨γ, binding, declaration, w⟩
       symm
       apply Part.get_eq_of_mem
-      apply (Environment.mem_interpretEntry _ _ _ _).mpr
+      apply (mem_interpretEntry _ _ _ _).mpr
       constructor
       · apply Eq_t.sound hbinding _ (envOf_typed Γ) _ hT
       · convert hB using 1
         symm
-        apply Eq_bd.sound hdeclaration _ (Environment.Typed.extend (envOf_typed Γ) hT)
+        apply Eq_bd.sound hdeclaration _ (Typed.extend (envOf_typed Γ) hT)
 
 variable (M) in
 /-- The type an entry class presents: `Bind` of the chain of the interpreted binding
@@ -194,8 +194,8 @@ telescope of an entry of the class at the type of its interpreted declaration. -
 def onTy {X : Ctx.Ob} (a : Ctx.Ty₁ X) : M.Ty (onOb M X) :=
   Quotient.lift (fun e => (entryOf M e).1.chain.Bind (entryOf M e).2.ty)
     (by
-      rintro ⟨γ, binding, declaration, w⟩ ⟨γ', binding', declaration', w'⟩ ⟨hs, h⟩
-      obtain rfl : γ = γ' := C.single_injective hs
+      rintro ⟨γ, binding, declaration, w⟩ ⟨γ', binding', declaration', w'⟩ ⟨harity, h⟩
+      obtain rfl : γ = γ' := C.single_injective harity
       dsimp only
       rw [entryOf_congr h])
     a
@@ -211,8 +211,8 @@ theorem entryTerm_dom {X : Ctx.Ob} {e : Ctx.Ob.Entry X} (τ : Ctx.Ob.Fill X e.to
   induction X using Quotient.ind with
   | _ Γ =>
       obtain ⟨s, hs⟩ := Wf_s.sound τ.2.2 _ (envOf_typed (M := M) Γ) _ (entryOf_telescope e)
-      obtain ⟨t, ht, -⟩ := (Environment.mem_interpretFilling_cons _ _ _ _ _ _ _ _ _).mp hs
-      obtain ⟨t', ht', -⟩ := Environment.entryTerm_subst_identity _ _ _ _ ht
+      obtain ⟨t, ht, -⟩ := (mem_interpretFilling_cons _ _ _ _ _ _ _ _ _).mp hs
+      obtain ⟨t', ht', -⟩ := entryTerm_subst_identity _ _ _ _ ht
       apply Part.dom_iff_mem.mpr ⟨t', ht'⟩
 
 variable (M) in
@@ -232,8 +232,8 @@ theorem termOf_mem {X : Ctx.Ob} {e : Ctx.Ob.Entry X} (τ : Ctx.Ob.Fill X e.toTel
     (((envOf M X).extend (entryOf M e).1.decoration).interpret τ.filler)
   := Part.get_mem _
 
-/-- Equal telescopes with agreeing fillings of the one-entry telescopes of two entries
-give heterogeneously equal terms. -/
+/-- Fillings of the one-entry telescopes of two entries that are related as terms (the
+telescopes equal and the fillings agreeing) give heterogeneously equal terms. -/
 theorem termOf_heq
     {X : Ctx.Ob} {e e' : Ctx.Ob.Entry X} (τ : Ctx.Ob.Fill X e.toTele)
     (τ' : Ctx.Ob.Fill X e'.toTele) (h : Ctx.Ob.Term.Rel ⟨e.toTele, τ⟩ ⟨e'.toTele, τ'⟩) :
@@ -246,22 +246,20 @@ theorem termOf_heq
       obtain ⟨harity, htele, hfill⟩ := h
       obtain rfl : γ = γ' := C.single_injective harity
       obtain ⟨-, hτ, hττ'⟩ := hfill
-      have hentry := entryOf_congr (M := M) (w := w) (w' := w') htele
       obtain ⟨s, hs⟩ := Wf_s.sound hτ _ (envOf_typed (M := M) Γ) _ (entryOf_telescope _)
       have hs' := Eq_s.sound hττ' _ (envOf_typed (M := M) Γ) _ (entryOf_telescope _) s hs
-      obtain ⟨t₁, ht₁, hs₁⟩ := (Environment.mem_interpretFilling_cons _ _ _ _ _ _ _ _ _).mp hs
-      obtain ⟨t₂, ht₂, hs₂⟩ := (Environment.mem_interpretFilling_cons _ _ _ _ _ _ _ _ _).mp hs'
-      have hpair₁ := (Environment.mem_interpretFilling_nil _ _ _ _).mp hs₁
-      have hpair₂ := (Environment.mem_interpretFilling_nil _ _ _ _).mp hs₂
+      obtain ⟨t₁, ht₁, hs₁⟩ := (mem_interpretFilling_cons _ _ _ _ _ _ _ _ _).mp hs
+      obtain ⟨t₂, ht₂, hs₂⟩ := (mem_interpretFilling_cons _ _ _ _ _ _ _ _ _).mp hs'
+      obtain rfl := (mem_interpretFilling_nil _ _ _ _).mp hs₁
+      have hpair := (mem_interpretFilling_nil _ _ _ _).mp hs₂
       have ht : HEq t₁ t₂ := by
-        have hpair := M.generic_pair (M.identity _) (Chain.Bind_subst_entry rfl (M.identity _) ▸ t₁)
-        rw [← hpair₁, hpair₂] at hpair
         apply HEq.trans (HEq.symm (eqRec_heq _ _))
-        apply HEq.trans (HEq.symm hpair)
+        apply HEq.trans (HEq.symm (M.generic_pair (M.identity _) _))
+        apply HEq.trans (congr_arg_heq (M.substTm (M.generic _)) hpair)
         apply HEq.trans (M.generic_pair _ _)
         apply eqRec_heq
-      obtain ⟨t₁', ht₁', h₁⟩ := Environment.entryTerm_subst_identity _ _ _ _ ht₁
-      obtain ⟨t₂', ht₂', h₂⟩ := Environment.entryTerm_subst_identity _ _ _ _ ht₂
+      obtain ⟨t₁', ht₁', h₁⟩ := entryTerm_subst_identity _ _ _ _ ht₁
+      obtain ⟨t₂', ht₂', h₂⟩ := entryTerm_subst_identity _ _ _ _ ht₂
       rw [Part.mem_unique (termOf_mem τ) ht₁']
       apply HEq.trans (HEq.symm h₁)
       apply HEq.trans ht
@@ -269,7 +267,7 @@ theorem termOf_heq
       have hmem := termOf_mem (M := M) τ'
       generalize termOf M τ' = y at hmem ⊢
       revert y
-      rw [← hentry]
+      rw [← entryOf_congr (w := w) (w' := w') htele]
       intro y hmem
       apply heq_of_eq (Part.mem_unique ht₂' hmem)
 
@@ -305,10 +303,10 @@ theorem telescopeOf_rename (Γ Δ : Ctx) :
     ∈ (envOf M (Quotient.mk _ Γ)).interpretTelescope
         (dTel.rename (Renaming.fromUnit Γ.arity) Δ.ambient)
   := by
-  rw [Environment.interpretTelescope_rename,
+  rw [interpretTelescope_rename,
     Subsingleton.elim ((envOf M (Quotient.mk _ Γ)).rename _)
       ((Environment.empty M.empty).subst (M.toEmpty (onOb M (Quotient.mk _ Γ))))]
-  apply Environment.interpretTelescope_subst _ _ _ _ (Part.get_mem _)
+  apply interpretTelescope_subst _ _ _ _ (Part.get_mem _)
 
 /-- A filling from `X` to `Y` is interpreted at the environment of `X`, from the
 identity, along the decoration of the interpretation of the ambient of `Y` reindexed
@@ -321,8 +319,8 @@ theorem sectionOf_dom {X Y : Ctx.Ob} (σ : Ctx.Ob.Subst X Y) :
   | _ Γ =>
       induction Y using Quotient.ind with
       | _ Δ =>
-          obtain ⟨s, hs⟩ := Wf_s.sound σ.2 _ (envOf_typed Γ) _ (telescopeOf_rename Γ Δ)
-          apply Part.dom_iff_mem.mpr ⟨s, hs⟩
+          apply Part.dom_iff_mem.mpr
+          apply Wf_s.sound σ.2 _ (envOf_typed Γ) _ (telescopeOf_rename Γ Δ)
 
 variable (M) in
 /-- The section a filling from `X` to `Y` gives: its interpretation at the environment of
@@ -349,9 +347,9 @@ theorem sectionOf_congr {X Y : Ctx.Ob} {σ σ' : Ctx.Ob.Subst X Y}
           apply Eq_s.sound hσσ' _ (envOf_typed Γ) _ (telescopeOf_rename Γ Δ) _ (Part.get_mem _)
 
 variable (M) in
-/-- The substitution a morphism of context classes presents: the section a filling of the
-class gives, followed by the lift of the substitution into the empty object through the
-chain of the interpretation of the ambient of the codomain. -/
+/-- The substitution a morphism of context classes presents: the section a filling
+representing it gives, followed by the lift of the substitution into the empty object
+through the chain of the interpretation of the ambient of the codomain. -/
 def onSub {X Y : Ctx.Ob} (f : X ⟶ Y) : M.Sub (onOb M X) (onOb M Y) :=
   Quotient.lift (s := Ctx.Ob.Subst.setoid X Y)
     (fun σ => M.comp ((telescopeOf M Y).chain.lift (M.toEmpty (onOb M X))) (sectionOf M σ))
@@ -359,21 +357,10 @@ def onSub {X Y : Ctx.Ob} (f : X ⟶ Y) : M.Sub (onOb M X) (onOb M Y) :=
 
 /-! ### Representatives -/
 
-/-- The interpretation of the ambient of the class of a context interprets its
-ambient. -/
-theorem telescopeOf_mem (Γ : Ctx) :
-  telescopeOf M (Quotient.mk _ Γ) ∈ (Environment.empty M.empty).interpretTelescope Γ.ambient
-  := Part.get_mem _
-
 /-- The type the class of an entry presents is `Bind` of the chain of its interpreted
 binding telescope at the type of its interpreted declaration. -/
 theorem onTy_mk {X : Ctx.Ob} (e : Ctx.Ob.Entry X) :
   onTy M (Quotient.mk _ e) = (entryOf M e).1.chain.Bind (entryOf M e).2.ty
-  := rfl
-
-/-- The term the class of a filling presents is the term the filling gives. -/
-theorem onTm_ofFill {X : Ctx.Ob} {e : Ctx.Ob.Entry X} (τ : Ctx.Ob.Fill X e.toTele) :
-  onTm M (Ctx.Tm₁.ofFill τ) = termOf M τ
   := rfl
 
 /-- The section a filling gives is its interpretation. -/
@@ -400,8 +387,7 @@ theorem telescopeOf_extend (Γ : Ctx) (e : Ctx.Ob.Entry (Quotient.mk _ Γ)) :
         .cons (entryOf M e).1.decoration (entryOf M e).2 _ rfl .nil⟩
   := by
   apply Part.get_eq_of_mem
-  apply Environment.interpretTelescope_concatenate _ _ _ _ _ (telescopeOf_mem Γ)
-    (entryOf_telescope e)
+  apply interpretTelescope_concatenate _ _ _ _ _ (Part.get_mem _) (entryOf_telescope e)
 
 /-- The object of the extension of a context class by a type class is the extension of
 the object by the type. -/
@@ -425,23 +411,20 @@ theorem envOf_extend (Γ : Ctx) (e : Ctx.Ob.Entry (Quotient.mk _ Γ)) :
   := by
   apply HEq.trans (congr_arg_heq (fun T => (Environment.empty M.empty).extend T.decoration)
     (telescopeOf_extend Γ e))
-  apply Environment.extend_append
+  apply extend_append
 
 /-! ### The environment of a substitution -/
 
-/-- The new slots of an extended environment hold the generic values of the decoration,
-whatever the old slots hold. -/
+/-- Restricted to its new slots, an environment extended by a decoration is the empty
+environment extended by that decoration. -/
 theorem Environment.rename_inr_extend
     {Γ : M.Ob} {Δ Ω : C.Arity} (E : Environment M Γ Δ) {c : Chain M Γ Ω}
     (d : Decoration M c) :
   (E.extend d).rename (Renaming.inr Δ Ω) = (Environment.empty Γ).extend d
   := by
   funext β z
-  have h := extend_inr (Environment.empty Γ) d z
-  rw [C.unit_left] at h
   apply Eq.trans (extend_inr E d z)
-  symm
-  apply h
+  rw [← extend_inr (Environment.empty Γ) d z, C.unit_left]
 
 /-- Reindexed along the section a filling from `X` to `Y` gives, the new slots of the
 environment of `X` extended by the reindexed decoration of the ambient of `Y` hold the
@@ -454,13 +437,11 @@ theorem envOf_substitution {X Y : Ctx.Ob} (σ : Ctx.Ob.Subst X Y) :
   have h : ((envOf M X).extend ((telescopeOf M Y).decoration.subst (M.toEmpty (onOb M X)))).rename
         (Renaming.inr X.arity Y.arity)
       = (envOf M Y).subst ((telescopeOf M Y).chain.lift (M.toEmpty (onOb M X))) := by
-    rw [Environment.rename_inr_extend, Subsingleton.elim (Environment.empty (onOb M X))
-      ((Environment.empty M.empty).subst (M.toEmpty (onOb M X))), Environment.extend_subst]
+    rw [rename_inr_extend, Subsingleton.elim (Environment.empty (onOb M X))
+      ((Environment.empty M.empty).subst (M.toEmpty (onOb M X))), extend_subst]
     rfl
   rw [onSub_mk]
-  symm
-  apply Eq.trans (Environment.subst_comp (envOf M Y) _ _)
-  rw [← h]
+  erw [subst_comp, ← h]
   rfl
 
 end HrS

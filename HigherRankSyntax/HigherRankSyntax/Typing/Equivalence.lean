@@ -152,11 +152,8 @@ theorem Eq_s.trans {Δ : C.Arity} {Ξ : Ambient Δ} (hΞ : Ambient.Wf Ξ) :
       apply Eq_s.cons
       · intro hne
         have hhead := h'.slot (C.inl (C.singleSlot α))
-        rw [dTel.declaration_head_instantiate] at hhead
-        apply Eq_e.trans (slot hne)
-        convert hhead hne using 2
-        symm
-        apply dTel.binding_head_instantiate
+        erw [dTel.declaration_head_instantiate, dTel.binding_head_instantiate] at hhead
+        apply Eq_e.trans (slot hne) (hhead hne)
       · apply Eq_s.trans hΞ hrest _ (Wf_t.instantiate hσ.head hrestwf) hσ.tail hθtail
         apply Eq_s.ofEq_t hΞ h'.tail hθ.tail (Eq_t.symm hΞ htail)
 
@@ -170,8 +167,36 @@ theorem Eq_sub.trans
   Eq_sub A A' σ κ
   := by
   apply Eq_s.toEq_sub
-  apply Eq_s.trans hA' hst.toAgreement htk.toAgreement (hA.weaken A') hσ.toFilling
-    hθ.toFilling
+  apply Eq_s.trans hA' hst.toAgreement htk.toAgreement (hA.weaken A') hσ.toFilling hθ.toFilling
+
+/-- If `σ` and `θ` are well-formed agreeing substitutions from a well-formed `A`
+to a well-formed `A'` and `τ` fills a telescope `X` well formed over `A`, then
+`σ ⋆ τ` and `θ ⋆ τ` agree as fillings of `σ ⋆ X` over `A'`. -/
+theorem Eq_s.agree
+    {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'} {σ θ : Subst Γ Γ'}
+    (hA : Ambient.Wf A) (hA' : Ambient.Wf A')
+    (hσ : Wf_sub A A' σ) (hθ : Wf_sub A A' θ) (hst : Eq_sub A A' σ θ)
+    {Χ : C.Arity} {X : dTel Γ Χ} {τ : Subst Χ Γ} (hX : Wf_t A X) (hτ : Wf_s A X τ) :
+  Eq_s A' (σ ⋆ X) (σ ⋆ τ) (θ ⋆ τ)
+  := by
+  apply Eq_s.slotwise_actBase
+  intro Λ z hne
+  have hT := Wf_t.instantiate hτ (Wf_t.binding hX z)
+  have hne' : ¬ (τ ⋆ X.declaration z).isEq := by
+    erw [dTel.declaration_actBase, Bd.isEq_act, Bd.isEq_act] at hne
+    erw [Bd.isEq_act]
+    exact hne
+  have hbase := Eq_t.Both.refl Eq_t.Both.nil hA'
+  have hamb := Eq_t.Both.concatenate hbase (Eq_t.toBoth hbase (Eq_t.agree hA hA' hσ hθ hst hT))
+  have hθlift := Wf_sub.ofBoth (Wf_t.concatenate hA hT) hamb.symm (Wf_sub.lift hθ hT)
+  convert Eq_e.agree (Wf_t.concatenate hA hT) (Wf_sub.lift hσ hT) hθlift
+    (Eq_sub.lift hσ hT hst) (Wf_s.filler hτ z hne') using 2
+  · rw [dTel.binding_actBase, dTel.actBase_instantiate]
+    rfl
+  · symm
+    apply Subst.act_lift_depth
+  · symm
+    apply Subst.act_lift_depth
 
 /-- Composition of well-formed substitutions between well-formed ambients
 respects agreement. -/
@@ -188,55 +213,6 @@ theorem Eq_sub.comp
   · apply Eq_s.toEq_sub
     rw [← Ambient.actBase_weaken A σ]
     apply Eq_s.subst_ambient hσ htt.toAgreement
-  · intro α x hne
-    have hT := Wf_t.subst_ambient hτ' (Wf_t.binding hA x)
-    have hbase := Eq_t.Both.refl Eq_t.Both.nil hD
-    have hamb := Eq_t.Both.concatenate hbase
-      (Eq_t.toBoth hbase (Eq_t.agree hB hD hσ hσ' hss hT))
-    have hσ'lift := Wf_sub.ofBoth (Wf_t.concatenate hB hT) hamb.symm (Wf_sub.lift hσ' hT)
-    have hne' : ¬ (Bd.applyAt τ' α (A.declaration x)).isEq := by
-      intro hEq
-      apply hne
-      apply (Bd.isEq_act _ _ _).mpr
-      apply (Bd.isEq_act _ _ _).mp hEq
-    obtain ⟨_, hfiller, _⟩ := hτ' x
-    convert Eq_e.agree (Wf_t.concatenate hB hT) (Wf_sub.lift hσ hT) hσ'lift
-      (Eq_sub.lift hσ hT hss) (hfiller hne') using 2
-    · apply dTel.actBase_comp
-    · symm
-      apply Subst.act_lift_depth
-    · symm
-      apply Subst.act_lift_depth
-
-/-- If `σ` and `θ` are well-formed agreeing substitutions from a well-formed `A`
-to a well-formed `A'` and `τ` fills a telescope `X` well formed over `A`, then
-`σ ⋆ τ` and `θ ⋆ τ` agree as fillings of `σ ⋆ X` over `A'`. -/
-theorem Eq_s.agree
-    {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'} {σ θ : Subst Γ Γ'}
-    (hA : Ambient.Wf A) (hA' : Ambient.Wf A')
-    (hσ : Wf_sub A A' σ) (hθ : Wf_sub A A' θ) (hst : Eq_sub A A' σ θ)
-    {Χ : C.Arity} {X : dTel Γ Χ} {τ : Subst Χ Γ} (hX : Wf_t A X) (hτ : Wf_s A X τ) :
-  Eq_s A' (σ ⋆ X) (σ ⋆ τ) (θ ⋆ τ)
-  := by
-  apply Eq_s.slotwise_actBase
-  intro Λ z hne
-  have hT := Wf_t.instantiate hτ (Wf_t.binding hX z)
-  have hne' : ¬ (τ ⋆ X.declaration z).isEq := by
-    intro hEq
-    apply hne
-    rw [dTel.declaration_actBase]
-    apply (Bd.isEq_act _ _ _).mpr
-    apply (Bd.isEq_act _ _ _).mpr
-    apply (Bd.isEq_act _ _ _).mp hEq
-  have hbase := Eq_t.Both.refl Eq_t.Both.nil hA'
-  have hamb := Eq_t.Both.concatenate hbase
-    (Eq_t.toBoth hbase (Eq_t.agree hA hA' hσ hθ hst hT))
-  have hθlift := Wf_sub.ofBoth (Wf_t.concatenate hA hT) hamb.symm (Wf_sub.lift hθ hT)
-  convert Eq_e.agree (Wf_t.concatenate hA hT) (Wf_sub.lift hσ hT) hθlift
-    (Eq_sub.lift hσ hT hst) (Wf_s.filler hτ z hne') using 2
-  · rw [dTel.binding_actBase, dTel.actBase_instantiate]
-    rfl
-  · symm
-    apply Subst.act_lift_depth
-  · symm
-    apply Subst.act_lift_depth
+  · apply Eq_s.toEq_sub
+    rw [← Ambient.actBase_weaken A σ]
+    apply Eq_s.agree hB hD hσ hσ' hss (hA.weaken B) hτ'.toFilling

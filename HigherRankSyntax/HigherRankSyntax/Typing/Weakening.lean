@@ -7,12 +7,14 @@ A renaming of ambients `A → A'` is a renaming of slots under which the
 declaration and the bound entries of the image of a slot are the renamed
 declaration and bound entries of the slot.  A renaming of ambients carries every
 judgement over `A` to the renamed judgement over `A'`.  The inclusion of `Ξ` into
-`Ξ ⋈ Θ` is a renaming of ambients, and renamings of ambients extend along
-telescopes.  Consequently the declaration and the bound entries of every slot of
-a well-formed telescope are well formed, and the declarations of equal
-telescopes are equal, as are the declarations and the bound entries of
-telescopes equal over two ambients.  Equality of telescopes, over one ambient or
-over two, is preserved by concatenation.
+`Ξ ⋈ Θ` and the renaming out of the empty ambient are renamings of ambients, and
+renamings of ambients extend along telescopes.  Consequently a well-formed
+ambient is a well-formed telescope over every ambient, and the declaration and
+the bound entries of every slot of a telescope `Θ` well formed over `Ξ` are well
+formed over `Ξ ⋈ Θ`; the declarations of equal telescopes are equal, as are the
+declarations and the bound entries of telescopes equal over two ambients.
+Well-formed declarations and telescopes are equal to themselves.  Equality of
+telescopes, over one ambient or over two, is preserved by concatenation.
 -/
 
 /-! ## Renamings of ambients -/
@@ -29,16 +31,6 @@ structure Ambient.Renaming {Γ Γ' : C.Arity} (A : Ambient Γ) (A' : Ambient Γ'
 
 namespace Ambient.Renaming
 
-/-- The declaration of the image of a slot under a renaming of ambients is an
-equation exactly when the declaration of the slot is. -/
-theorem isEq
-    {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
-    (ι : Ambient.Renaming A A') {α : C.Arity} (x : Γ ∋ α) :
-  (A'.declaration (ι.slot x)).isEq ↔ (A.declaration x).isEq
-  := by
-  rw [ι.declaration x]
-  apply Bd.isEq_rename
-
 /-- The inclusion of an ambient `Ξ` into `Ξ ⋈ Θ` is a renaming of ambients. -/
 def weaken {Δ Ω : C.Arity} (Ξ : Ambient Δ) (Θ : dTel Δ Ω) :
     Ambient.Renaming Ξ (Ξ ⋈ Θ) where
@@ -53,21 +45,17 @@ def weakenInto {Γ Γ' : C.Arity} (A : Ambient Γ) (A' : Ambient Γ') :
   slot := Renaming.inr Γ' Γ
   declaration := by
     intro α x
-    apply Eq.trans (dTel.declaration_concatenate_inr _ _ x)
-    rw [dTel.declaration_rename]
-    congr 2
-    apply Renaming.fromUnit_extend
+    erw [dTel.declaration_concatenate_inr, dTel.declaration_rename, Renaming.fromUnit_extend]
+    rfl
   binding := by
     intro α x
-    apply Eq.trans (dTel.binding_concatenate_inr _ _ x)
-    rw [dTel.binding_rename]
-    congr 1
-    apply Renaming.fromUnit_extend
+    erw [dTel.binding_concatenate_inr, dTel.binding_rename, Renaming.fromUnit_extend]
+    rfl
 
 /-- The renaming of slots out of the empty ambient is a renaming of ambients into
 every ambient. -/
 def fromEmpty {Δ : C.Arity} (Ξ : Ambient Δ) :
-    Ambient.Renaming (.nil : Ambient 1) Ξ where
+    Ambient.Renaming .nil Ξ where
   slot := Renaming.fromUnit Δ
   declaration := fun ⦃_⦄ x => (C.unit_is_empty x).elim
   binding := fun ⦃_⦄ x => (C.unit_is_empty x).elim
@@ -81,30 +69,19 @@ def extend {Γ Γ' Ω : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
   declaration := by
     intro α x
     rcases C.cover Γ Ω x with ⟨y, rfl⟩ | ⟨z, rfl⟩
-    · rw [Renaming.extend_inl, dTel.declaration_concatenate_inl,
-        dTel.declaration_concatenate_inl, ι.declaration]
-      calc _
-          = Bd.rename ((Renaming.inl Γ' Ω ∘ʳ ι.slot) ⇑ʳ α) (A.declaration y) := by
-            rw [Renaming.extend_comp, Bd.rename_comp]
-            rfl
-        _ = _ := by
-            rw [Renaming.inl_comp, Renaming.extend_comp, Bd.rename_comp]
-            rfl
+    · erw [Renaming.extend_inl, dTel.declaration_concatenate_inl,
+        dTel.declaration_concatenate_inl, ι.declaration, ← Bd.rename_comp, ← Bd.rename_comp,
+        ← Renaming.extend_comp, ← Renaming.extend_comp, Renaming.inl_comp]
+      rfl
     · rw [Renaming.extend_inr, dTel.declaration_concatenate_inr,
         dTel.declaration_concatenate_inr, dTel.declaration_rename]
       rfl
   binding := by
     intro α x
     rcases C.cover Γ Ω x with ⟨y, rfl⟩ | ⟨z, rfl⟩
-    · rw [Renaming.extend_inl, dTel.binding_concatenate_inl,
-        dTel.binding_concatenate_inl, ι.binding]
-      calc _
-          = dTel.rename (Renaming.inl Γ' Ω ∘ʳ ι.slot) (A.binding y) := by
-            rw [dTel.rename_comp]
-            rfl
-        _ = _ := by
-            rw [Renaming.inl_comp, dTel.rename_comp]
-            rfl
+    · erw [Renaming.extend_inl, dTel.binding_concatenate_inl, dTel.binding_concatenate_inl,
+        ι.binding, ← dTel.rename_comp, ← dTel.rename_comp, Renaming.inl_comp]
+      rfl
     · rw [Renaming.extend_inr, dTel.binding_concatenate_inr,
         dTel.binding_concatenate_inr, dTel.binding_rename]
       rfl
@@ -117,7 +94,8 @@ theorem boundaryOf
   ∀ e : Expr Γ, A'.boundaryOf (⟦ ι.slot ⟧ʳ e) = Bd.rename ι.slot (A.boundaryOf e)
   | .ap x args => by
       rw [Renaming.act_ap, dTel.boundaryOf_ap, dTel.boundaryOf_ap, ι.declaration x]
-      simpa only [Renaming.extend_unit] using Bd.act_rename (Φ := 1) ι.slot args (A.declaration x)
+      simpa only [Renaming.extend_unit]
+        using Bd.act_rename (Φ := 1) ι.slot args (A.declaration x)
 
 end Ambient.Renaming
 
@@ -132,7 +110,8 @@ theorem Wf_e.weaken
   ∀ {e : Expr Γ}, Wf_e A e → Wf_e A' (⟦ ι.slot ⟧ʳ e)
   | _, .ap x _ head fill => by
       apply Wf_e.ap
-      · rwa [ι.isEq x]
+      · erw [ι.declaration x, Bd.isEq_rename]
+        exact head
       · rw [ι.binding x]
         apply Wf_s.weaken ι fill
 
@@ -150,15 +129,15 @@ theorem Eq_e.weaken
       · rw [ι.declaration q, decl]
         rfl
       · rw [ι.binding q]
-        apply Wf_e.weaken (ι.extend (A.binding q)) hl
+        apply Wf_e.weaken (ι.extend _) hl
       · rw [ι.binding q]
-        apply Wf_e.weaken (ι.extend (A.binding q)) hr
+        apply Wf_e.weaken (ι.extend _) hr
       · rw [ι.binding q]
         apply Wf_s.weaken ι fill
-  | _, _, .congr (Θ := Θ) _ _ hΘ hσ hθ agree h => by
+  | _, _, .congr _ _ hΘ hσ hθ agree h => by
       rw [← act_rename, ← act_rename]
       apply Eq_e.congr _ _ (Wf_t.weaken ι hΘ) (Wf_s.weaken ι hσ) (Wf_s.weaken ι hθ)
-        (Eq_s.weaken ι agree) (Eq_e.weaken (ι.extend Θ) h)
+        (Eq_s.weaken ι agree) (Eq_e.weaken (ι.extend _) h)
 
 /-- Equality of boundaries is stable under a renaming of ambients. -/
 theorem Eq_bd.weaken
@@ -176,18 +155,18 @@ theorem Wf_s.weaken
   ∀ {Ω : C.Arity} {Θ : dTel Γ Ω} {σ : Subst Ω Γ}, Wf_s A Θ σ →
     Wf_s A' (dTel.rename ι.slot Θ) (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ i))
   | _, _, _, .nil => .nil
-  | _, _, _, .cons (bind := bind) equation filler declared hrest => by
+  | _, _, _, .cons equation filler declared hrest => by
       apply Wf_s.cons
       · intro l r h
         obtain ⟨l₀, r₀, hβ, rfl, rfl⟩ := Bd.rename_eq_inv _ h
-        apply Eq_e.weaken (ι.extend bind) (equation l₀ r₀ hβ)
+        apply Eq_e.weaken (ι.extend _) (equation l₀ r₀ hβ)
       · rw [Bd.isEq_rename]
         intro hne
-        apply Wf_e.weaken (ι.extend bind) (filler hne)
+        apply Wf_e.weaken (ι.extend _) (filler hne)
       · rw [Bd.isEq_rename]
         intro hne
-        convert Eq_bd.weaken (ι.extend bind) (declared hne) using 2
-        apply (ι.extend bind).boundaryOf
+        convert Eq_bd.weaken (ι.extend _) (declared hne) using 2
+        apply (ι.extend _).boundaryOf
       · convert Wf_s.weaken ι hrest using 1
         apply dTel.instantiate_rename
 
@@ -199,18 +178,19 @@ theorem Eq_s.weaken
     Eq_s A' (dTel.rename ι.slot Θ) (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (σ i))
       (fun ⦃Λ⦄ i => ⟦ ι.slot ⇑ʳ Λ ⟧ʳ (θ i))
   | _, _, _, _, .nil => .nil
-  | _, _, _, _, .cons (bind := bind) slot hrest => by
+  | _, _, _, _, .cons slot hrest => by
       apply Eq_s.cons
       · rw [Bd.isEq_rename]
         intro hne
-        apply Eq_e.weaken (ι.extend bind) (slot hne)
+        apply Eq_e.weaken (ι.extend _) (slot hne)
       · convert Eq_s.weaken ι hrest using 1
         apply dTel.instantiate_rename
 
-/-- A well-formed declaration stays well formed under a renaming of ambients. -/
+/-- A declaration well formed over `A` with bound entries `Θ` renames to a
+declaration well formed over `A'` with bound entries `dTel.rename ι.slot Θ`. -/
 theorem Wf_bd.weaken
     {Γ Γ' : C.Arity} {A : Ambient Γ} {A' : Ambient Γ'}
-    (ι : Ambient.Renaming A A') {Λ : C.Arity} (Θ : dTel Γ Λ) :
+    (ι : Ambient.Renaming A A') {Λ : C.Arity} {Θ : dTel Γ Λ} :
   ∀ {β : Bd (Γ ⋈ Λ)}, Wf_bd A Θ β →
     Wf_bd A' (dTel.rename ι.slot Θ) (Bd.rename (ι.slot ⇑ʳ Λ) β)
   | _, .sort => .sort
@@ -228,9 +208,8 @@ theorem Wf_t.weaken
     (ι : Ambient.Renaming A A') :
   ∀ {Ω : C.Arity} {Θ : dTel Γ Ω}, Wf_t A Θ → Wf_t A' (dTel.rename ι.slot Θ)
   | _, _, .nil => .nil
-  | _, _, .cons (bind := bind) (boundary := boundary) hbind hboundary hrest =>
-      .cons (Wf_t.weaken ι hbind) (Wf_bd.weaken ι bind hboundary)
-        (Wf_t.weaken (ι.extend (dTel.cons bind boundary .nil)) hrest)
+  | _, _, .cons hbind hboundary hrest =>
+      .cons (Wf_t.weaken ι hbind) (Wf_bd.weaken ι hboundary) (Wf_t.weaken (ι.extend _) hrest)
 
 end
 
@@ -253,12 +232,10 @@ theorem Wf_t.declaration {Δ : C.Arity} {Ξ : Ambient Δ} :
       induction z using slotCases with
       | head =>
         rw [dTel.binding_head, dTel.declaration_head]
-        apply Wf_bd.weaken (Ambient.Renaming.weaken Ξ _) _ hboundary
+        apply Wf_bd.weaken (Ambient.Renaming.weaken Ξ _) hboundary
       | tail y =>
         rw [dTel.binding_tail, dTel.declaration_tail]
-        convert Wf_t.declaration hrest y using 1
-        symm
-        apply dTel.concatenate_assoc
+        simpa only [dTel.concatenate_assoc] using Wf_t.declaration hrest y
 
 /-- A declaration well formed over `Ξ` with bound entries `Θ` is equal to itself
 over `Ξ ⋈ Θ`. -/
@@ -281,9 +258,7 @@ theorem Wf_t.binding {Δ : C.Arity} {Ξ : Ambient Δ} :
         apply Wf_t.weaken (Ambient.Renaming.weaken Ξ _) hbind
       | tail y =>
         rw [dTel.binding_tail]
-        convert Wf_t.binding hrest y using 1
-        symm
-        apply dTel.concatenate_assoc
+        simpa only [dTel.concatenate_assoc] using Wf_t.binding hrest y
 
 /-- A well-formed telescope is equal to itself. -/
 theorem Wf_t.refl {Δ : C.Arity} {Ξ : Ambient Δ} :
@@ -301,10 +276,10 @@ theorem Eq_t.weaken
   | _, .nil, _, h => by
       obtain rfl := Eq_t.nil_inv h
       apply Eq_t.nil
-  | _, .cons bind boundary _, _, h => by
+  | _, .cons _ _ _, _, h => by
       obtain ⟨_, _, _, rfl, hbind, hboundary, hrest⟩ := Eq_t.cons_inv h
-      apply Eq_t.cons (Eq_t.weaken ι hbind) (Eq_bd.weaken (ι.extend bind) hboundary)
-      apply Eq_t.weaken (ι.extend (dTel.cons bind boundary .nil)) hrest
+      apply Eq_t.cons (Eq_t.weaken ι hbind) (Eq_bd.weaken (ι.extend _) hboundary)
+      apply Eq_t.weaken (ι.extend _) hrest
 
 /-- If `Θ` and `Θ'` are equal over `Ξ`, and `X` and `X'` over `Ξ ⋈ Θ`, then
 `Θ ⋈ X` and `Θ' ⋈ X'` are equal over `Ξ`. -/
@@ -330,12 +305,12 @@ theorem Eq_t.declaration {Δ : C.Arity} {Ξ : Ambient Δ} :
     ∀ ⦃Λ : C.Arity⦄ (z : Ω ∋ Λ),
       Eq_bd (Ξ ⋈ Θ ⋈ Θ.binding z) (Θ.declaration z) (Θ'.declaration z)
   | _, .nil, _, _, _, z => (C.unit_is_empty z).elim
-  | _, .cons bind _ _, _, h, _, z => by
+  | _, .cons _ _ _, _, h, _, z => by
       obtain ⟨_, _, _, rfl, _, hboundary, hrest⟩ := Eq_t.cons_inv h
       induction z using slotCases with
       | head =>
         rw [dTel.declaration_head, dTel.declaration_head, dTel.binding_head]
-        apply Eq_bd.weaken ((Ambient.Renaming.weaken Ξ _).extend bind) hboundary
+        apply Eq_bd.weaken ((Ambient.Renaming.weaken Ξ _).extend _) hboundary
       | tail y =>
         rw [dTel.declaration_tail, dTel.declaration_tail, dTel.binding_tail]
         convert Eq_t.declaration hrest y using 2
@@ -356,17 +331,14 @@ theorem Eq_t.Both.weaken
   | _, .nil, _, h => by
       obtain rfl := Eq_t.Both.nil_inv h
       apply Eq_t.Both.nil
-  | _, .cons (α := α) bind boundary _, _, h => by
-      obtain ⟨bind', boundary', _, rfl, hbind, hboundary, hboundary', hrest⟩ :=
-        Eq_t.Both.cons_inv h
+  | _, .cons _ _ _, _, h => by
+      obtain ⟨_, _, _, rfl, hbind, hboundary, hboundary', hrest⟩ := Eq_t.Both.cons_inv h
       apply Eq_t.Both.cons (Eq_t.Both.weaken ι ι₁ hslot hbind)
-      · apply Eq_bd.weaken (ι.extend bind) hboundary
+      · apply Eq_bd.weaken (ι.extend _) hboundary
       · rw [← hslot]
-        apply Eq_bd.weaken (ι₁.extend bind') hboundary'
-      · have hrest := Eq_t.Both.weaken (ι.extend (dTel.cons bind boundary .nil))
-          (ι₁.extend (dTel.cons bind' boundary' .nil)) (congrArg (· ⇑ʳ C.single α) hslot)
-          hrest
-        rwa [hslot] at hrest
+        apply Eq_bd.weaken (ι₁.extend _) hboundary'
+      · have h' := Eq_t.Both.weaken (ι.extend _) (ι₁.extend _) (congrArg (· ⇑ʳ _) hslot) hrest
+        rwa [hslot] at h'
 
 /-- If `Θ` and `Θ'` are equal over `Ξ` and `Ξ'`, and `X` and `X'` over `Ξ ⋈ Θ`
 and `Ξ' ⋈ Θ'`, then `Θ ⋈ X` and `Θ' ⋈ X'` are equal over `Ξ` and `Ξ'`. -/
@@ -395,11 +367,11 @@ theorem Eq_t.Both.declaration_right {Δ : C.Arity} {Ξ Ξ' : Ambient Δ} :
       Eq_bd (Ξ' ⋈ Θ' ⋈ Θ'.binding z) (Θ.declaration z) (Θ'.declaration z)
   | _, .nil, _, _, _, z => (C.unit_is_empty z).elim
   | _, .cons _ _ _, _, h, _, z => by
-      obtain ⟨bind', _, _, rfl, _, _, hboundary', hrest⟩ := Eq_t.Both.cons_inv h
+      obtain ⟨_, _, _, rfl, _, _, hboundary', hrest⟩ := Eq_t.Both.cons_inv h
       induction z using slotCases with
       | head =>
         rw [dTel.declaration_head, dTel.declaration_head, dTel.binding_head]
-        apply Eq_bd.weaken ((Ambient.Renaming.weaken Ξ' _).extend bind') hboundary'
+        apply Eq_bd.weaken ((Ambient.Renaming.weaken Ξ' _).extend _) hboundary'
       | tail y =>
         rw [dTel.declaration_tail, dTel.declaration_tail, dTel.binding_tail]
         convert Eq_t.Both.declaration_right hrest y using 2
@@ -422,8 +394,4 @@ theorem Eq_t.Both.binding {Δ : C.Arity} {Ξ Ξ' : Ambient Δ} :
           (Ambient.Renaming.weaken Ξ' _) rfl hbind
       | tail y =>
         rw [dTel.binding_tail, dTel.binding_tail]
-        convert Eq_t.Both.binding hrest y using 1
-        · symm
-          apply dTel.concatenate_assoc
-        · symm
-          apply dTel.concatenate_assoc
+        simpa only [dTel.concatenate_assoc] using Eq_t.Both.binding hrest y

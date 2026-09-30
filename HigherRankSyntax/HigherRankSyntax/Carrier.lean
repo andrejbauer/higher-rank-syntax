@@ -3,6 +3,15 @@ import Mathlib.Algebra.Group.Submonoid.Basic
 import Mathlib.Data.Sum.Order
 import Mathlib.SetTheory.Ordinal.Basic
 
+/-!
+# Carriers of higher-rank binding syntax
+
+A `Carrier A` consists of arities, forming a submonoid of `Function.End A`, and for arities
+`Γ` and `α` the well-ordered type `Γ ∋ α` of slots of `Γ` of arity `α`.  The slots of the
+product `Γ ⋈ Δ` are the slots of `Γ` followed by those of `Δ`, via `Carrier.inl` and
+`Carrier.inr`; the unit arity `1` has no slots.
+-/
+
 private def sumLexAssocRel {α β γ : Type}
     (r : α → α → Prop) (s : β → β → Prop) (t : γ → γ → Prop) :
     Sum.Lex (Sum.Lex r s) t ≃r Sum.Lex r (Sum.Lex s t) where
@@ -107,35 +116,21 @@ def copair {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity}
     X :=
   Sum.elim f g ((C.slotAt_mul Γ Δ α).symm p)
 
-theorem copair_inl
-    {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity}
-    (X : Type) (f : Γ ∋ α → X) (g : Δ ∋ α → X) :
-  C.copair Γ Δ X f g ∘ C.inl = f
-  := by
-  funext x
-  simp [copair, inl]
-
-theorem copair_inr
-    {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity}
-    (X : Type) (f : Γ ∋ α → X) (g : Δ ∋ α → X) :
-  C.copair Γ Δ X f g ∘ C.inr = g
-  := by
-  funext x
-  simp [copair, inr]
-
 @[simp]
 theorem copair_apply_inl
     {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity}
     (X : Type) (f : Γ ∋ α → X) (g : Δ ∋ α → X) (x : Γ ∋ α) :
   C.copair Γ Δ X f g (C.inl x) = f x
-  := congrFun (C.copair_inl Γ Δ X f g) x
+  := by
+  rw [copair, inl, RelIso.symm_apply_apply, Sum.elim_inl]
 
 @[simp]
 theorem copair_apply_inr
     {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity}
     (X : Type) (f : Γ ∋ α → X) (g : Δ ∋ α → X) (x : Δ ∋ α) :
   C.copair Γ Δ X f g (C.inr x) = g x
-  := congrFun (C.copair_inr Γ Δ X f g) x
+  := by
+  rw [copair, inr, RelIso.symm_apply_apply, Sum.elim_inr]
 
 /-- A slot of `Γ * Δ` as a slot of `Γ` or a slot of `Δ`. -/
 def split {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity}
@@ -146,13 +141,13 @@ def split {A : Type} (C : Carrier A) (Γ Δ : C.Arity) {α : C.Arity}
 theorem split_inl {A : Type} (C : Carrier A) {Γ Δ α : C.Arity} (x : Γ ∋ α) :
   C.split Γ Δ (C.inl x) = .inl x
   := by
-  simp [split, inl]
+  rw [split, inl, RelIso.symm_apply_apply]
 
 @[simp]
 theorem split_inr {A : Type} (C : Carrier A) {Γ Δ α : C.Arity} (x : Δ ∋ α) :
   C.split Γ Δ (C.inr x) = .inr x
   := by
-  simp [split, inr]
+  rw [split, inr, RelIso.symm_apply_apply]
 
 /-- Every slot of `Γ * Δ` is a left- or a right-injected slot. -/
 theorem cover
@@ -161,45 +156,22 @@ theorem cover
   (∃ x : Γ ∋ α, p = C.inl x) ∨ (∃ y : Δ ∋ α, p = C.inr y)
   := by
   obtain ⟨x | y, rfl⟩ := (C.slotAt_mul Γ Δ α).surjective p
-  · left
-    use x
-    rfl
-  · right
-    use y
-    rfl
+  · exact Or.inl ⟨x, rfl⟩
+  · exact Or.inr ⟨y, rfl⟩
 
 /-- The unit arity has no slots. -/
 theorem unit_is_empty {A : Type} (C : Carrier A) {α : C.Arity} (x : 1 ∋ α) :
   False
   := (C.unit_empty α).false x
 
-private def slotAt_mul_leftAssoc {A : Type} (C : Carrier A)
-    (Γ Δ Ξ α : C.Arity) :
-  Sum.Lex (C.slotAt Γ α).r (Sum.Lex (C.slotAt Δ α).r (C.slotAt Ξ α).r)
-    ≃r (C.slotAt (Γ * (Δ * Ξ)) α).r := by
-  apply RelIso.trans
-  · apply RelIso.sumLexCongr
-    · apply RelIso.refl
-    · apply C.slotAt_mul
-  · apply C.slotAt_mul
-
-private def slotAt_mul_rightAssoc {A : Type} (C : Carrier A)
-    (Γ Δ Ξ α : C.Arity) :
-  Sum.Lex (C.slotAt Γ α).r (Sum.Lex (C.slotAt Δ α).r (C.slotAt Ξ α).r)
-    ≃r (C.slotAt (Γ * (Δ * Ξ)) α).r := by
-  apply RelIso.trans
-  · apply RelIso.symm
-    apply sumLexAssocRel
-  · apply RelIso.trans
-    · apply RelIso.sumLexCongr
-      · apply C.slotAt_mul
-      · apply RelIso.refl
-    · apply C.slotAt_mul
-
+/-- The two isomorphisms from the lexicographic sum of the slots of `Γ`, `Δ` and `Ξ` to the
+slots of `Γ * (Δ * Ξ)` built from `slotAt_mul` agree. -/
 private theorem slotAt_mul_assoc_apply
     {A : Type} (C : Carrier A) (Γ Δ Ξ α : C.Arity)
     (p : Sum (C.slotAt Γ α) (Sum (C.slotAt Δ α) (C.slotAt Ξ α))) :
-  slotAt_mul_leftAssoc C Γ Δ Ξ α p = slotAt_mul_rightAssoc C Γ Δ Ξ α p
+  ((RelIso.sumLexCongr (.refl _) (C.slotAt_mul Δ Ξ α)).trans (C.slotAt_mul Γ (Δ * Ξ) α)) p
+    = ((sumLexAssocRel _ _ _).symm.trans <|
+        (RelIso.sumLexCongr (C.slotAt_mul Γ Δ α) (.refl _)).trans (C.slotAt_mul (Γ * Δ) Ξ α)) p
   := by
   apply DFunLike.congr_fun
   apply relIso_of_wellOrder_eq
@@ -208,22 +180,19 @@ theorem inr_inl
     {A : Type} (C : Carrier A) (Γ Δ Ξ : C.Arity) {α : C.Arity} (x : Δ ∋ α) :
   (C.inr (C.inl x) : Γ * (Δ * Ξ) ∋ α) = (C.inl (C.inr x) : (Γ * Δ) * Ξ ∋ α)
   := by
-  simpa only [slotAt_mul_leftAssoc, slotAt_mul_rightAssoc, inl, inr]
-    using slotAt_mul_assoc_apply C Γ Δ Ξ α (Sum.inr (Sum.inl x))
+  apply slotAt_mul_assoc_apply C Γ Δ Ξ α (Sum.inr (Sum.inl x))
 
 theorem inr_inr
     {A : Type} (C : Carrier A) (Γ Δ Ξ : C.Arity) {α : C.Arity} (x : Ξ ∋ α) :
   (C.inr (C.inr x) : Γ * (Δ * Ξ) ∋ α) = (C.inr x : (Γ * Δ) * Ξ ∋ α)
   := by
-  simpa only [slotAt_mul_leftAssoc, slotAt_mul_rightAssoc, inl, inr]
-    using slotAt_mul_assoc_apply C Γ Δ Ξ α (Sum.inr (Sum.inr x))
+  apply slotAt_mul_assoc_apply C Γ Δ Ξ α (Sum.inr (Sum.inr x))
 
 theorem inl_inl
     {A : Type} (C : Carrier A) (Γ Δ Ξ : C.Arity) {α : C.Arity} (x : Γ ∋ α) :
   (C.inl x : Γ * (Δ * Ξ) ∋ α) = (C.inl (C.inl x) : (Γ * Δ) * Ξ ∋ α)
   := by
-  simpa only [slotAt_mul_leftAssoc, slotAt_mul_rightAssoc, inl, inr]
-    using slotAt_mul_assoc_apply C Γ Δ Ξ α (Sum.inl x)
+  apply slotAt_mul_assoc_apply C Γ Δ Ξ α (Sum.inl x)
 
 theorem unit_right
     {A : Type} (C : Carrier A) (Γ : C.Arity) {α : C.Arity} (x : Γ ∋ α) :

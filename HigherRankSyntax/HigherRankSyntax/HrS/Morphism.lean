@@ -46,7 +46,7 @@ structure Morphism (M : Structure.{u}) (N : Structure.{v}) where
   /-- The projection is preserved. -/
   onSub_projection : ∀ {Γ : M.Ob} (a : M.Ty Γ),
     HEq (onSub (M.projection a)) (N.projection (onTy a))
-  /-- The adjoined term is preserved. -/
+  /-- The generic term is preserved. -/
   onTm_generic : ∀ {Γ : M.Ob} (a : M.Ty Γ),
     HEq (onTm (M.generic a)) (N.generic (onTy a))
   /-- Pairing is preserved. -/
@@ -61,11 +61,13 @@ structure Morphism (M : Structure.{u}) (N : Structure.{v}) where
   onTy_El : ∀ {Γ : M.Ob} (S : M.Tm Γ (M.U Γ)),
     onTy (M.El S) = N.El (onTy_U Γ ▸ onTm S)
   -- Binding
-  /-- Binding is preserved. -/
+  /-- Binding is preserved: `onTy (Bind a c)` is `N.Bind (onTy a) c'` for every `c'`
+  heterogeneously equal to `onTy c`. -/
   onTy_Bind : ∀ {Γ : M.Ob} (a : M.Ty Γ) (c : M.Ty (M.extend Γ a))
       (c' : N.Ty (N.extend (onOb Γ) (onTy a))), HEq (onTy c) c' →
     onTy (M.Bind a c) = N.Bind (onTy a) c'
-  /-- `lam` is preserved. -/
+  /-- `lam` is preserved: `onTm (lam e)` is heterogeneously equal to `N.lam e'` for every `e'`
+  heterogeneously equal to `onTm e`, over a type heterogeneously equal to `onTy c`. -/
   onTm_lam : ∀ {Γ : M.Ob} {a : M.Ty Γ} {c : M.Ty (M.extend Γ a)}
       (e : M.Tm (M.extend Γ a) c) (c' : N.Ty (N.extend (onOb Γ) (onTy a)))
       (e' : N.Tm (N.extend (onOb Γ) (onTy a)) c'),

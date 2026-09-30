@@ -8,6 +8,11 @@ carries the telescope of entries it binds and its declaration; the entries after
 it are over the base extended by it.  `declaration T x` and `binding T x` are the
 declaration of the slot `x` and the telescope of entries it binds, weakened into
 the whole telescope.
+
+`rename` and `actBase` reindex the base along a renaming and a substitution,
+`instantiate σ` fills the block `Ω` of a base `Γ ⋈ Ω` by `σ`, and `concatenate`
+(`⋈`) appends a telescope over the extended base.  The infix `⋆` denotes the
+actions of substitutions on expressions, boundaries, telescopes and substitutions.
 -/
 
 /-- `dTel Ω Δ` is a telescope over the base `Ω` with slots `Δ`.  An entry of arity `α`
@@ -30,8 +35,8 @@ theorem slotCases
   rcases C.cover (C.single α) Δ x with ⟨z, rfl⟩ | ⟨y, rfl⟩
   · obtain rfl := C.single_arity z
     rw [C.single_slot_unique z]
-    exact head
-  · exact tail y
+    apply head
+  · apply tail
 
 namespace dTel
 
@@ -95,7 +100,6 @@ theorem declaration_head
   declaration (.cons bind boundary rest) (C.inl (C.singleSlot α))
     = Bd.rename (Renaming.inl Ω (C.single α ⋈ Δ) ⇑ʳ α) boundary
   := by
-  simp only [declaration, C.split_inl]
   rfl
 
 /-- The declaration of a later entry is its declaration in the remaining
@@ -118,7 +122,6 @@ theorem binding_head
   binding (.cons bind boundary rest) (C.inl (C.singleSlot α))
     = rename (Renaming.inl Ω (C.single α ⋈ Δ)) bind
   := by
-  simp only [binding, C.split_inl]
   rfl
 
 /-- The entries bound by a later entry are those it binds in the remaining
@@ -322,7 +325,7 @@ theorem actBase_ofRenaming {Γ Δ : C.Arity} (ρ : Γ →ʳ Δ) :
   ∀ {Ψ : C.Arity} (T : dTel Γ Ψ), actBase (Subst.ofRenaming ρ) T = rename ρ T
   | _, .nil => rfl
   | _, .cons bind boundary rest => by
-      simp only [actBase, rename, Subst.lift_ofRenaming, actBase_ofRenaming]
+      simp only [actBase, Subst.lift_ofRenaming, actBase_ofRenaming]
       congr 1
       apply Bd.act_ofRenaming
 
@@ -370,14 +373,14 @@ theorem actBase_rename_cancel
   intro Ψ T
   rw [actBase_square ρ ρ' κ (Subst.id Γ), actBase_id]
   intro α x
-  simp only [h, Subst.id, Renaming.act_eta]
+  rw [h, Subst.id, Renaming.act_eta]
 
 /-- Renaming the base along `Renaming.inl Δ Ω ⇑ʳ Ω` and then filling the second block
 `Ω` by `Subst.instId Δ Ω` returns the telescope. -/
 theorem instantiate_rename_inl {Δ Ω Ψ : C.Arity} (T : dTel (Δ ⋈ Ω) Ψ) :
   instantiate (Subst.instId Δ Ω) (rename (Renaming.inl Δ Ω ⇑ʳ Ω) T) = T
   := by
-  rw [instantiate, actBase_rename_cancel (Renaming.inl Δ Ω ⇑ʳ Ω) (𝟙ʳ (Δ ⋈ Ω)), rename_id]
+  rw [instantiate, actBase_rename_cancel _ (𝟙ʳ (Δ ⋈ Ω)), rename_id]
   intro γ x
   rcases C.cover Δ Ω x with ⟨y, rfl⟩ | ⟨z, rfl⟩
   · rw [Renaming.extend_inl, Subst.copair_inl]
@@ -407,7 +410,7 @@ is acting on the base by `s`. -/
 theorem instantiate_weaken {Γ Γ' Χ : C.Arity} (s : Subst Γ Γ') (T : dTel Γ Χ) :
   instantiate s (rename (Renaming.inr Γ' Γ) T) = actBase s T
   := by
-  rw [instantiate, actBase_square (Renaming.inr Γ' Γ) (𝟙ʳ Γ') _ s, rename_id]
+  rw [instantiate, actBase_square _ (𝟙ʳ Γ') _ s, rename_id]
   intro α x
   rw [Renaming.inr, Subst.copair_inr, Renaming.extend_id, Renaming.act_id]
 
@@ -430,6 +433,8 @@ instantiated by `args`. -/
 def boundaryOf {Δ : C.Arity} (Ξ : dTel 1 Δ) : Expr Δ → Bd Δ
   | .ap x args => Bd.instantiate args (Ξ.declaration x)
 
+/-- The boundary of `Expr.ap x args` over `Ξ` is the declaration of `x` instantiated
+by `args`. -/
 @[simp]
 theorem boundaryOf_ap {Δ α : C.Arity} (Ξ : dTel 1 Δ) (x : Δ ∋ α) (args : Subst α Δ) :
   Ξ.boundaryOf (.ap x args) = Bd.instantiate args (Ξ.declaration x)
@@ -498,9 +503,7 @@ theorem Subst.applyEach_copair
   applyEach s (copair σ τ) = copair (applyEach s σ) (applyEach s τ)
   := by
   funext α x
-  rcases C.cover Γ Δ x with ⟨u, rfl⟩ | ⟨v, rfl⟩
-  · simp only [applyEach, copair_inl]
-  · simp only [applyEach, copair_inr]
+  rcases C.cover Γ Δ x with ⟨u, rfl⟩ | ⟨v, rfl⟩ <;> simp only [applyEach, copair_inl, copair_inr]
 
 /-- Act by `s : Subst Γ Γ'` on a boundary over `Γ ⋈ Φ` at depth `Φ`. -/
 abbrev Bd.applyAt {Γ Γ' : C.Arity} (s : Subst Γ Γ') (Φ : C.Arity) (β : Bd (Γ ⋈ Φ)) :
@@ -535,19 +538,16 @@ theorem Bd.act_weaken {Γ Γ' Φ : C.Arity} (s : Subst Γ Γ') (β : Bd (Γ ⋈ 
   := by
   cases β with
   | sort => rfl
-  | of S =>
-      apply congrArg of
-      apply Subst.act_weaken
+  | of S => exact congrArg of (Subst.act_weaken ..)
   | eq l r => apply congrArg₂ eq <;> apply Subst.act_weaken
 
 /-- Filling the block `Ω ⋈ Φ` by `σ` is the composite of filling `Ω` by the
 restriction of `σ` to `Ω`, lifted past `Φ`, and then filling `Φ` by the
 restriction of `σ` to `Φ`. -/
 theorem Subst.copair_split {Δ Ω Φ : C.Arity} (σ : Subst (Ω ⋈ Φ) Δ) :
-  (comp (Γ := 1) (Ξ := Δ)
+  comp (Γ := 1) (Ξ := Δ)
       (lift (copair (Subst.id Δ) (fun ⦃β⦄ (i : Ω ∋ β) => σ (C.inl i))) Φ)
-      (copair (Subst.id Δ) (fun ⦃β⦄ (j : Φ ∋ β) => σ (C.inr j))) :
-    Subst (Δ ⋈ Ω ⋈ Φ) Δ)
+      (copair (Subst.id Δ) (fun ⦃β⦄ (j : Φ ∋ β) => σ (C.inr j)))
     = copair (Subst.id Δ) σ
   := by
   funext β x
@@ -583,30 +583,6 @@ theorem Subst.copair_weaken {Δ Ω Φ : C.Arity} (κ : Subst (Ω ⋈ Φ) Δ) :
   · simp only [Renaming.inl, ← C.inl_inl, copair_inl]
   · simp only [Renaming.inl, ← C.inr_inl, copair_inr]
 
-/-- Filling the block `Ω ⋈ Φ` by `κ` in a boundary renamed along
-`Renaming.inl (Δ ⋈ Ω) Φ ⇑ʳ Λ` is filling `Ω` by the restriction of `κ` to `Ω`. -/
-theorem Bd.fill_weaken_inl
-    {Δ Ω Φ Λ : C.Arity}
-    (κ : Subst (Ω ⋈ Φ) Δ) (β : Bd ((Δ ⋈ Ω) ⋈ Λ)) :
-  fill κ (rename (Renaming.inl (Δ ⋈ Ω) Φ ⇑ʳ Λ) β)
-    = fill (fun ⦃γ⦄ (w : Ω ∋ γ) => κ (C.inl w)) β
-  := by
-  rw [fill, fill, ← act_copair_prefix, ← act_copair_prefix]
-  apply Eq.trans (act_square _ (𝟙ʳ Δ) _ _ (Subst.copair_weaken κ) Λ β)
-  rw [Renaming.extend_id]
-  apply rename_id
-
-/-- Filling the block `Ω ⋈ Φ` by `κ` in a telescope renamed along
-`Renaming.inl (Δ ⋈ Ω) Φ` is filling `Ω` by the restriction of `κ` to `Ω`. -/
-theorem dTel.instantiate_weaken_inl
-    {Δ Ω Φ Λ : C.Arity}
-    (κ : Subst (Ω ⋈ Φ) Δ) (T : dTel (Δ ⋈ Ω) Λ) :
-  instantiate κ (rename (Renaming.inl (Δ ⋈ Ω) Φ) T)
-    = instantiate (fun ⦃γ⦄ (w : Ω ∋ γ) => κ (C.inl w)) T
-  := by
-  apply Eq.trans (actBase_square _ (𝟙ʳ Δ) _ _ (Subst.copair_weaken κ) T)
-  apply rename_id
-
 /-- Filling by `κ` the declaration of a slot of `Θ` in `concatenate Θ X` is filling
 by the restriction of `κ` to `Ω` its declaration in `Θ`. -/
 theorem dTel.declaration_left_instantiate
@@ -615,8 +591,11 @@ theorem dTel.declaration_left_instantiate
   Bd.fill κ ((concatenate Θ X).declaration (C.inl w))
     = Bd.fill (fun ⦃γ⦄ (v : Ω ∋ γ) => κ (C.inl v)) (Θ.declaration w)
   := by
-  rw [declaration_concatenate_inl]
-  apply Bd.fill_weaken_inl
+  rw [declaration_concatenate_inl, Bd.fill, Bd.fill, ← Bd.act_copair_prefix,
+    ← Bd.act_copair_prefix]
+  apply Eq.trans (Bd.act_square _ (𝟙ʳ Δ) _ _ (Subst.copair_weaken κ) Λ _)
+  rw [Renaming.extend_id]
+  apply Bd.rename_id
 
 /-- Filling by `κ` the entries a slot of `Θ` binds in `concatenate Θ X` is filling
 by the restriction of `κ` to `Ω` the entries it binds in `Θ`. -/
@@ -627,7 +606,8 @@ theorem dTel.binding_left_instantiate
     = instantiate (fun ⦃γ⦄ (v : Ω ∋ γ) => κ (C.inl v)) (Θ.binding w)
   := by
   rw [binding_concatenate_inl]
-  apply instantiate_weaken_inl
+  apply Eq.trans (actBase_square _ (𝟙ʳ Δ) _ _ (Subst.copair_weaken κ) _)
+  apply rename_id
 
 /-- Filling by the restriction of `κ` to `Φ` the declaration of `z` in `X` with `Ω`
 filled by the restriction of `κ` to `Ω` is filling by `κ` the declaration of
@@ -735,9 +715,8 @@ theorem dTel.binding_tail_instantiate
     = (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)) ⋆
         (instantiate (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) rest).binding y
   := by
-  rw [binding_tail, instantiate, instantiate, instantiate, binding_actBase, ← actBase_comp,
-    ← Subst.copair_split]
-  rfl
+  symm
+  apply binding_right_instantiate (cons bind boundary .nil)
 
 /-- Filling by `σ` the declaration of `C.inr y` in `cons bind boundary rest` is
 filling by the restriction of `σ` to `Ω` the declaration of `y` in `rest` with
@@ -750,6 +729,5 @@ theorem dTel.declaration_tail_instantiate
     = (fun ⦃β⦄ (j : Ω ∋ β) => σ (C.inr j)) ⋆
         (instantiate (fun ⦃β⦄ (i : C.single α ∋ β) => σ (C.inl i)) rest).declaration y
   := by
-  rw [declaration_tail, instantiate, declaration_actBase, Bd.fill, Bd.fill,
-    ← Bd.act_copair_prefix, ← Bd.act_copair_prefix, ← Bd.act_comp, Subst.copair_split]
-  rfl
+  symm
+  apply declaration_right_instantiate (cons bind boundary .nil)

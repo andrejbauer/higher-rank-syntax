@@ -160,15 +160,9 @@ theorem Renaming.extend_assoc
   funext α x
   rcases C.cover (Γ ⋈ Ξ) Ω x with ⟨y, rfl⟩ | ⟨z, rfl⟩
   · rcases C.cover Γ Ξ y with ⟨z, rfl⟩ | ⟨z, rfl⟩
-    · calc
-        _ = (ρ ⇑ʳ (Ξ ⋈ Ω)) (C.inl z) := by rw [C.inl_inl]
-        _ = C.inl (C.inl (ρ z)) := by rw [extend_inl, C.inl_inl]
-        _ = _ := by simp
-    · calc
-        _ = (ρ ⇑ʳ (Ξ ⋈ Ω)) (C.inr (C.inl z)) := by rw [C.inr_inl]
-        _ = C.inl (C.inr z) := by rw [extend_inr, C.inr_inl]
-        _ = _ := by simp
-  · calc
-      _ = (ρ ⇑ʳ (Ξ ⋈ Ω)) (C.inr (C.inr z)) := by rw [C.inr_inr]
-      _ = (C.inr z : (Δ ⋈ Ξ) ⋈ Ω ∋ α) := by rw [extend_inr, C.inr_inr]
-      _ = _ := by simp
+    · conv_lhs => rw [← C.inl_inl, extend_inl, C.inl_inl]
+      rw [extend_inl, extend_inl]
+    · conv_lhs => rw [← C.inr_inl, extend_inr, C.inr_inl]
+      rw [extend_inl, extend_inr]
+  · conv_lhs => rw [← C.inr_inr, extend_inr, C.inr_inr]
+    rw [extend_inr]

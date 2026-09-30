@@ -136,19 +136,17 @@ def Ob.Fill.Eq (X : Ob) {Ω : C.Arity} (Θ : dTel X.arity Ω)
       rintro _ ⟨_, _, _⟩ ⟨rfl, hA⟩
       apply heq_of_eq
       funext _ _ _ _
+      have hbase := Eq_t.toBoth Eq_t.Both.nil hA
       apply propext
       constructor
       · rintro ⟨hΘ, hσ, hst⟩
-        have hσ' := Wf_s.ofEq hA hσ (Wf_t.refl hΘ)
-        have hbase := Eq_t.toBoth Eq_t.Both.nil hA
-        use Wf_t.ofEq hA hΘ, hσ'
-        apply Eq_s.ofBoth hbase hst (Eq_t.Both.refl hbase hΘ) hσ hσ'
+        have hΘΘ := Eq_t.Both.refl hbase hΘ
+        have hσ' := Wf_s.ofBoth hbase hσ hΘΘ
+        exact ⟨Wf_t.ofBoth hbase hΘ, hσ', Eq_s.ofBoth hbase hst hΘΘ hσ hσ'⟩
       · rintro ⟨hΘ, hσ, hst⟩
-        have hA' := Eq_t.symm Wf_t.nil hA
-        have hσ' := Wf_s.ofEq hA' hσ (Wf_t.refl hΘ)
-        have hbase := Eq_t.toBoth Eq_t.Both.nil hA'
-        use Wf_t.ofEq hA' hΘ, hσ'
-        apply Eq_s.ofBoth hbase hst (Eq_t.Both.refl hbase hΘ) hσ hσ')
+        have hΘΘ := Eq_t.Both.refl hbase.symm hΘ
+        have hσ' := Wf_s.ofBoth hbase.symm hσ hΘΘ
+        exact ⟨Wf_t.ofBoth hbase.symm hΘ, hσ', Eq_s.ofBoth hbase.symm hst hΘΘ hσ hσ'⟩)
     Ω Θ σ σ'
 
 /-- Two fillings of a telescope over a context class agree. -/
@@ -196,9 +194,9 @@ theorem Ob.Fill.Wf.ofRel
   := by
   obtain ⟨Ξ⟩ := X
   obtain ⟨_, _, _⟩ := Θ
-  obtain ⟨_, _, _⟩ := Θ'
-  obtain ⟨rfl, hΘ, he⟩ := h
-  exact ⟨Wf_t.ofEq_t Ξ.wf hΘ he, Wf_s.ofEq_t Ξ.wf τ.2.2 he⟩
+  obtain ⟨_, _, hΘ'⟩ := Θ'
+  obtain ⟨rfl, _, he⟩ := h
+  exact ⟨hΘ', Wf_s.ofEq_t Ξ.wf τ.2.2 he⟩
 
 /-- A filling of `Θ` as a filling of an equal telescope `Θ'`. -/
 def Ob.Fill.ofRel {X : Ob} {Θ Θ' : Ob.Tele X} (h : Ob.Tele.Rel Θ Θ')
@@ -266,6 +264,11 @@ def Ty : Obᵒᵖ ⥤ Type where
 /-- The class of a context. -/
 def toOb (Γ : Ctx) : Ob := Quotient.mk setoid Γ
 
+/-- Induction on a context class through its representatives. -/
+theorem Ob.ind {motive : Ob → Prop} (h : ∀ Γ : Ctx, motive Γ.toOb) (X : Ob) :
+  motive X
+  := Quotient.ind h X
+
 /-- The class of the context with ambient `Γ.ambient ⋈ Θ.telescope`. -/
 def extend (Γ : Ctx) (Θ : Ob.Tele Γ.toOb) : Ob :=
   toOb ⟨Γ.arity ⋈ Θ.arity, Γ.ambient ⋈ Θ.telescope,
@@ -275,12 +278,11 @@ def extend (Γ : Ctx) (Θ : Ob.Tele Γ.toOb) : Ob :=
 the η-expansion of `C.inl x`. -/
 def projection (Γ : Ctx) (Θ : Ob.Tele Γ.toOb) : extend Γ Θ ⟶ Γ.toOb :=
   Quotient.mk (Ob.Subst.setoid (extend Γ Θ) Γ.toOb)
-    ⟨_root_.Subst.ofRenaming (Renaming.inl Γ.arity Θ.arity), by
+    ⟨Subst.ofRenaming (Renaming.inl Γ.arity Θ.arity), by
       have h := Wf_s.weaken (Ambient.Renaming.weaken Γ.ambient Θ.telescope)
         (Wf_sub.id Γ.wf).toFilling
       rw [← dTel.rename_comp, Renaming.eq_fromUnit (_ ∘ʳ _)] at h
-      simp only [_root_.Subst.id, Renaming.act_eta] at h
-      exact h⟩
+      simpa only [Subst.id, Renaming.act_eta] using h⟩
 
 /-- Extending equal ambients by equal telescopes gives the same context class. -/
 theorem extend_congr
@@ -296,7 +298,7 @@ theorem extend_congr
 def lift {Ξ Γ : Ctx} (σ : Ob.Subst Ξ.toOb Γ.toOb) (Θ : Ob.Tele Γ.toOb) :
     extend Ξ (Ob.Tele.subst σ Θ) ⟶ extend Γ Θ :=
   Quotient.mk (Ob.Subst.setoid (extend Ξ (Ob.Tele.subst σ Θ)) (extend Γ Θ))
-    ⟨_root_.Subst.lift σ.1 Θ.arity, (Wf_sub.lift σ.2.toWf_sub Θ.wf).toFilling⟩
+    ⟨Subst.lift σ.1 Θ.arity, (Wf_sub.lift σ.2.toWf_sub Θ.wf).toFilling⟩
 
 /-- The class of the empty context is terminal. -/
 def emptyIsTerminal : Limits.IsTerminal empty.toOb :=

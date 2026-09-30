@@ -1,5 +1,4 @@
 import HigherRankSyntax.Dispatch
-import Batteries.Tactic.Trans
 
 /-!
 # Substitution and η-expansion
@@ -9,7 +8,7 @@ import Batteries.Tactic.Trans
 * `act_idOfη`, `act_inst_id`: a substitution sending every slot `z` to the
   η-expansion of `C.inr z` acts as the identity.
 * `act_inst_η`: `ι` acting on the η-expansion of a slot `x` gives the
-  application of `C.inl x` to the fillers of `ι`.
+  application of `C.inl x` to the expressions `ι i`.
 -/
 
 /-- `σ` acting at depth `Φ ⋈ α` sends the η-expansion of `C.inr x`, for
@@ -20,14 +19,12 @@ theorem act_η_right
   σ.act (Φ ⋈ α) (Expr.η (C.inr x) : Expr ((Γ ⋈ Δ ⋈ Φ) ⋈ α))
     = (Expr.η (C.inr x) : Expr ((Γ ⋈ Ξ ⋈ Φ) ⋈ α))
   := by
-  rw [Expr.η.eq_1, ← C.inr_inl]
-  trans
-  · apply act_right
-  · rw [Expr.η.eq_1, ← C.inr_inl]
-    congr 1
-    funext Ω i
-    rw [← C.inr_inr (Γ ⋈ Δ) Φ α i, ← C.inr_inr (Γ ⋈ Ξ) Φ α i]
-    apply act_η_right
+  rw [Expr.η.eq_1, Expr.η.eq_1, ← C.inr_inl, ← C.inr_inl]
+  apply Eq.trans (act_right _ _ _ _)
+  congr 1
+  funext Ω i
+  rw [← C.inr_inr (Γ ⋈ Δ) Φ α i, ← C.inr_inr (Γ ⋈ Ξ) Φ α i]
+  apply act_η_right
 termination_by α
 decreasing_by exact ⟨i⟩
 
@@ -42,7 +39,7 @@ theorem act_idOfη
   Subst.act σ Φ e = e
   := by
   match e with
-  | .ap (α := β) x args =>
+  | .ap x args =>
     head_cases x with z
     case right =>
       rw [act_right]
@@ -67,37 +64,29 @@ decreasing_by
   · exact Prod.Lex.right _ (Expr.Subterm.of_arg x args _)
 
 /-- `ι` acting at depth `1` on the η-expansion of `x : Γ ∋ α` is the application
-of `C.inl x` to the fillers `ι i`. -/
-theorem act_inst_η
-    {Γ Ξ : C.Arity} {α : C.Arity}
-    (ι : Subst α (Γ ⋈ Ξ)) (x : Γ ∋ α) :
+of `C.inl x` to the expressions `ι i`. -/
+theorem act_inst_η {Γ Ξ α : C.Arity} (ι : Subst α (Γ ⋈ Ξ)) (x : Γ ∋ α) :
   ι.act 1 (Expr.η x : Expr (Γ ⋈ α))
     = (.ap (C.inl x) (fun ⦃_⦄ i => ι i) : Expr (Γ ⋈ Ξ))
   := by
   rw [Expr.η.eq_1, ← C.unit_right (Γ ⋈ α) (C.inl x)]
-  trans
-  · apply act_left
-  · rw [C.unit_right (Γ ⋈ Ξ) (C.inl x)]
-    congr 1
-    funext β j
-    rw [Expr.η.eq_1]
-    trans
-    · apply act_middle
-    · calc _
-          = Subst.act (Subst.instId (Γ ⋈ Ξ) β) 1 (ι j) := by
-            congr 1
-            funext Ω k
-            apply act_η_right
-        _ = ι j := by apply act_idOfη _ (fun _ => rfl)
+  apply Eq.trans (act_left _ _ _ _)
+  rw [C.unit_right (Γ ⋈ Ξ) (C.inl x)]
+  congr 1
+  funext β j
+  rw [Expr.η.eq_1]
+  apply Eq.trans (act_middle _ _ _ _)
+  apply Eq.trans _ (act_idOfη (Subst.instId (Γ ⋈ Ξ) β) (fun _ => rfl) 1 (ι j))
+  congr 1
+  funext Ω k
+  apply act_η_right
 termination_by (α, (⟨Γ ⋈ α, Expr.η x⟩ : Σ Γ : C.Arity, Expr Γ))
 decreasing_by exact Prod.Lex.left _ _ ⟨j⟩
 
 end
 
-/-- The substitution `Subst.instId Γ α` acts as the identity. -/
-theorem act_inst_id
-    (α : C.Arity) (Γ : C.Arity)
-    (Φ : C.Arity) (e : Expr (Γ ⋈ α ⋈ Φ)) :
+/-- The substitution `Subst.instId Γ α` acts as the identity at every depth. -/
+theorem act_inst_id (α Γ Φ : C.Arity) (e : Expr (Γ ⋈ α ⋈ Φ)) :
   Subst.act (Subst.instId Γ α) Φ e = e
   := by
   apply act_idOfη _ (fun _ => rfl)

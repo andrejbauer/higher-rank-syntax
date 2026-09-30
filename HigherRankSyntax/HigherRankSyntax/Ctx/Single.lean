@@ -40,8 +40,8 @@ def Ob.Entry.Rel {X : Ob} (e e' : Ob.Entry X) : Prop :=
 
 /-- The setoid of entries over `X` under `Ob.Entry.Rel`. -/
 def Ob.Entry.setoid (X : Ob) : Setoid (Ob.Entry X) where
-  r := Ob.Entry.Rel
-  iseqv := ⟨fun e => Ob.Tele.Rel.refl e.toTele, Ob.Tele.Rel.symm, Ob.Tele.Rel.trans⟩
+  r := Rel
+  iseqv := ⟨fun e => Tele.Rel.refl e.toTele, Tele.Rel.symm, Tele.Rel.trans⟩
 
 /-- The classes of entries over a context class. -/
 def Ty₁ (X : Ob) : Type := Quotient (Ob.Entry.setoid X)
@@ -52,7 +52,7 @@ def Ty₁.toTy {X : Ob} (a : Ty₁ X) : Ty.obj (Opposite.op X) :=
 
 /-- An entry class is determined by the telescope class it presents. -/
 theorem Ty₁.toTy_injective {X : Ob} :
-  Function.Injective (Ty₁.toTy (X := X))
+  Function.Injective (toTy (X := X))
   := by
   rintro ⟨e⟩ ⟨e'⟩ h
   apply Quotient.sound
@@ -68,20 +68,12 @@ def Ob.Entry.subst {X Y : Ob} (σ : Ob.Subst X Y) (e : Ob.Entry Y) : Ob.Entry X 
   arity := e.arity
   binding := dTel.actBase σ.1 e.binding
   declaration := Bd.act (Γ := 1) σ.1 e.arity e.declaration
-  wf := Ob.Tele.Wf.subst σ e.toTele
-
-/-- Reindexing along related fillings sends related entries to related
-entries. -/
-theorem Ob.Entry.subst_congr
-    {X Y : Ob} {σ σ' : Ob.Subst X Y} {e e' : Ob.Entry Y}
-    (hσ : Ob.Subst.Rel X Y σ.1 σ'.1) (h : Ob.Entry.Rel e e') :
-  Ob.Entry.Rel (Ob.Entry.subst σ e) (Ob.Entry.subst σ' e')
-  := Ob.Tele.Rel.subst hσ h
+  wf := Tele.Wf.subst σ e.toTele
 
 /-- A type reindexed along a substitution. -/
 def Ty₁.subst {X Y : Ob} (a : Ty₁ Y) (σ : X ⟶ Y) : Ty₁ X :=
   Quotient.map₂ Ob.Entry.subst
-    (fun _ _ hσ _ _ h => Ob.Entry.subst_congr hσ h) σ a
+    (fun _ _ hσ e e' => Ob.Tele.Rel.subst (Θ := e.toTele) (Θ' := e'.toTele) hσ) σ a
 
 /-- Reindexing an entry class reindexes the telescope class it presents. -/
 theorem Ty₁.toTy_subst {X Y : Ob} (a : Ty₁ Y) (σ : X ⟶ Y) :
@@ -178,7 +170,8 @@ theorem Tm₁.ind
   apply Quotient.sound
   apply Ob.Term.Rel.symm (Ob.Term.fibre_left ⟨s, hrel⟩)
 
-/-- The generic term of a one-entry type, over the extension by that type. -/
+/-- The generic term `Ob.generic X a.toTy` over the extension by `a`, as a term of
+`a` reindexed along the projection. -/
 def Tm₁.generic {X : Ob} (a : Ty₁ X) :
     Tm₁ (Ob.extend X a.toTy) (a.subst (Ob.projection X a.toTy)) :=
   ⟨Ob.generic X a.toTy, by rw [Ty₁.toTy_subst, Ob.generic_tele]⟩
@@ -281,7 +274,7 @@ theorem Tm₁.heq_of_heq_val
   HEq t t'
   := by
   subst hX
-  apply Tm₁.heq_of_eq (_root_.eq_of_heq h)
+  apply heq_of_eq (_root_.eq_of_heq h)
 
 theorem Tm₁.heq_val
     {Z Z' : Ob} (h : Z = Z') {c : Ty₁ Z} {c' : Ty₁ Z'} (hc : HEq c c')
@@ -301,15 +294,15 @@ theorem Tm₁.type_congr
   obtain rfl := _root_.eq_of_heq hc
   rfl
 
-/-- A substitution extended past a one-entry type. -/
+/-- The lift of `σ` past `a`: `Ob.lift` along the telescope class `a` presents. -/
 def Ty₁.lift {X Y : Ob} (a : Ty₁ X) (σ : Y ⟶ X) :
     Ob.extend Y (a.subst σ).toTy ⟶ Ob.extend X a.toTy :=
-  (Ty₁.toTy_subst a σ).symm ▸ Ob.lift a.toTy σ
+  (toTy_subst a σ).symm ▸ Ob.lift a.toTy σ
 
 /-- On the classes of a substitution and an entry, `Ty₁.lift` is `Ctx.lift`
 along the one-entry telescope the entry presents. -/
 theorem Ty₁.lift_mk {Ξ Γ : Ctx} (e : Ob.Entry Γ.toOb) (σ : Ob.Subst Ξ.toOb Γ.toOb) :
-  Ty₁.lift (Quotient.mk (Ob.Entry.setoid Γ.toOb) e)
+  lift (Quotient.mk (Ob.Entry.setoid Γ.toOb) e)
       (Quotient.mk (Ob.Subst.setoid Ξ.toOb Γ.toOb) σ)
     = Ctx.lift σ e.toTele
   := Ob.lift_mk σ e.toTele
@@ -318,50 +311,48 @@ theorem Ty₁.lift_mk {Ξ Γ : Ctx} (e : Ob.Entry Γ.toOb) (σ : Ob.Subst Ξ.toO
 substitution into the extension by that type. -/
 def Ty₁.pair {X Y : Ob} {a : Ty₁ Y} (σ : X ⟶ Y) (t : Tm₁ X (a.subst σ)) :
     X ⟶ Ob.extend Y a.toTy :=
-  Ob.pair σ t.1 (by rw [t.2, Ty₁.toTy_subst])
+  Ob.pair σ t.1 (by rw [t.2, toTy_subst])
 
 /-- `Ty₁.pair σ t` followed by the projection is `σ`. -/
 theorem Ty₁.projection_pair {X Y : Ob} {a : Ty₁ Y} (σ : X ⟶ Y) (t : Tm₁ X (a.subst σ)) :
-  Ty₁.pair σ t ≫ Ob.projection Y a.toTy = σ
+  pair σ t ≫ Ob.projection Y a.toTy = σ
   := Ob.pair_projection σ t.1 _
 
 /-- The generic term reindexed along `Ty₁.pair σ t` is `t`. -/
 theorem Ty₁.generic_pair {X Y : Ob} {a : Ty₁ Y} (σ : X ⟶ Y) (t : Tm₁ X (a.subst σ)) :
-  HEq ((Tm₁.generic a).subst (Ty₁.pair σ t)) t
+  HEq ((Tm₁.generic a).subst (pair σ t)) t
   := Tm₁.heq_of_eq (Ob.pair_generic σ t.1 _)
 
 /-- The projection paired with the generic term is the identity. -/
 theorem Ty₁.pair_eta {X : Ob} (a : Ty₁ X) :
-  Ty₁.pair (Ob.projection X a.toTy) (Tm₁.generic a) = 𝟙 (Ob.extend X a.toTy)
+  pair (Ob.projection X a.toTy) (Tm₁.generic a) = 𝟙 (Ob.extend X a.toTy)
   := Ob.pair_eta X a.toTy
 
 /-- `Ty₁.pair σ t` after `θ` is `θ ≫ σ` paired with `t` reindexed along `θ`. -/
 theorem Ty₁.pair_comp
     {X Y Z : Ob} {a : Ty₁ Y} (σ : X ⟶ Y) (t : Tm₁ X (a.subst σ)) (θ : Z ⟶ X) :
-  θ ≫ Ty₁.pair σ t = Ty₁.pair (θ ≫ σ) (Ty₁.subst_comp a σ θ ▸ t.subst θ)
+  θ ≫ pair σ t = pair (θ ≫ σ) (subst_comp a σ θ ▸ t.subst θ)
   := by
-  rw [Ty₁.pair, Ty₁.pair]
+  rw [pair, pair]
   convert Ob.pair_comp σ t.1 _ θ _ using 2
-  · apply Tm₁.eq_of_heq (Ty₁.subst_comp a σ θ) (t' := t.subst θ)
+  · apply Tm₁.eq_of_heq (subst_comp a σ θ) (t' := t.subst θ)
     apply eqRec_heq
-  · rw [Ob.Term.tele_map, t.2, Ty₁.toTy_subst, op_comp, Functor.map_comp_apply]
+  · rw [Ob.Term.tele_map, t.2, toTy_subst, op_comp, Functor.map_comp_apply]
 
 /-- `a.lift σ` is the projection followed by `σ`, paired with the generic term. -/
 theorem Ty₁.lift_eq_pair {X Y : Ob} (a : Ty₁ X) (σ : Y ⟶ X) :
-  Ty₁.lift a σ
-    = Ty₁.pair (Ob.projection Y (a.subst σ).toTy ≫ σ)
-        (Ty₁.subst_comp a σ (Ob.projection Y (a.subst σ).toTy) ▸ Tm₁.generic (a.subst σ))
+  lift a σ
+    = pair (Ob.projection Y (a.subst σ).toTy ≫ σ)
+        (subst_comp a σ (Ob.projection Y (a.subst σ).toTy) ▸ Tm₁.generic (a.subst σ))
   := by
   induction a using Quotient.ind with
   | _ e =>
   induction σ using Quotient.ind with
   | _ σ =>
-  have hlift : Ty₁.lift (Quotient.mk _ e) (Quotient.mk _ σ)
-      = Ob.lift (Ty₁.toTy (Quotient.mk _ e)) (Quotient.mk _ σ) := rfl
-  rw [hlift, Ty₁.pair, Ob.lift]
+  dsimp only [lift, pair, Ob.lift]
   congr 1
   symm
-  apply Tm₁.eq_of_heq (Ty₁.subst_comp _ _ _) (t' := Tm₁.generic _)
+  apply Tm₁.eq_of_heq (subst_comp _ _ _) (t' := Tm₁.generic _)
   apply eqRec_heq
 
 end Ctx

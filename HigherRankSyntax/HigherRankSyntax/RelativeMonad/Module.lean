@@ -34,20 +34,6 @@ abbrev act (M : LeftModule T D) {X Y : A}
     M.obj (Kleisli.of T X) ⟶ M.obj (Kleisli.of T Y) :=
   M.map f
 
-@[simp]
-theorem act_η (M : LeftModule T D) (X : A) :
-  act M (T.η X) = 𝟙 (M.obj (Kleisli.of T X))
-  := by
-  apply M.map_id
-
-@[simp]
-theorem act_comp
-    (M : LeftModule T D)
-    {X Y Z : A} (f : J.obj X ⟶ T.map Y) (g : J.obj Y ⟶ T.map Z) :
-  act M (f ≫ T.lift g) = act M f ≫ act M g
-  := by
-  apply M.map_comp
-
 /-- A morphism of left modules over `T` is a natural transformation. -/
 abbrev Hom (M N : LeftModule T D) := M ⟶ N
 

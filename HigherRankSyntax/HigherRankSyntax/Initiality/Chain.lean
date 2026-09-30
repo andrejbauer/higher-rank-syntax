@@ -106,20 +106,14 @@ theorem projection_lift :
       apply M.comp_identity
   | _, _, _, .cons A c, σ =>
       calc M.comp (M.comp (M.projection A) c.projection) (c.lift (M.lift A σ))
-          = M.comp (M.projection A) (M.comp c.projection (c.lift (M.lift A σ))) := by
-            rw [M.comp_assoc]
-        _ = M.comp (M.projection A)
-              (M.comp (M.lift A σ) (c.subst (M.lift A σ)).projection) := by
-            rw [projection_lift c]
-        _ = M.comp (M.comp σ (M.projection (M.substTy A σ)))
-              (c.subst (M.lift A σ)).projection := by
-            rw [← M.comp_assoc, Structure.projection_lift]
-        _ = M.comp σ
-              (M.comp (M.projection (M.substTy A σ)) (c.subst (M.lift A σ)).projection) := by
-            rw [M.comp_assoc]
+          = M.comp (M.projection A) (M.comp (M.lift A σ) (c.subst (M.lift A σ)).projection) := by
+            rw [M.comp_assoc, projection_lift c]
+        _ = _ := by
+            rw [← M.comp_assoc (M.projection A), M.projection_lift, M.comp_assoc]
+            rfl
 
-/-- Reindexing a bound type along `σ` is binding the reindexed chain at the type
-reindexed along the lift of `σ` through the chain. -/
+/-- Reindexing `c.Bind B` along `σ` is binding, along the reindexed chain, `B` reindexed
+along the lift of `σ` through `c`. -/
 theorem Bind_subst :
     ∀ {Γ Δ : M.Ob} {Ω : C.Arity} (c : Chain M Γ Ω) (B : M.Ty c.last) (σ : M.Sub Δ Γ),
       M.substTy (c.Bind B) σ = (c.subst σ).Bind (M.substTy B (c.lift σ))
@@ -140,18 +134,11 @@ theorem unlam_subst :
       apply Eq.trans (unlam_subst c (M.unlam t) (M.lift A σ))
       apply congrArg (c.subst (M.lift A σ)).unlam
       apply eq_of_heq
-      apply HEq.trans (eqRec_heq _ _)
-      symm
-      apply HEq.trans (b := M.unlam (M.lam (M.substTm (M.unlam t) (M.lift A σ))))
-      · congr 1
-        · symm
-          apply Bind_subst
-        · apply HEq.trans (eqRec_heq _ _)
-          apply HEq.trans _ (heq_of_eq (M.lam_subst (M.unlam t) σ))
-          rw [M.lam_unlam]
-          symm
-          apply eqRec_heq
-      · rw [M.unlam_lam]
+      rw [eqRec_heq_iff_heq, ← M.unlam_lam (M.substTm (M.unlam t) (M.lift A σ))]
+      congr 1
+      · apply Bind_subst
+      · erw [← M.lam_subst, M.lam_unlam, eqRec_heq_iff_heq, heq_eqRec_iff_heq]
+        rfl
 
 /-- `lam` along a chain commutes with reindexing: reindexing the bound term along `σ`
 is binding the term reindexed along the lift of `σ`. -/
@@ -176,7 +163,7 @@ theorem subst_comp :
       · apply M.substTy_comp
       · congr 1
         · rw [M.substTy_comp]
-        · apply Structure.lift_comp
+        · apply M.lift_comp
 
 /-- The lift of a composite through a chain is the composite of the lifts. The two
 sides have domains that are equal by `subst_comp`. -/
@@ -189,7 +176,7 @@ theorem lift_comp :
       rw [lift]
       congr 1
       · rw [M.substTy_comp]
-      · apply Structure.lift_comp
+      · apply M.lift_comp
 
 /-- Reindexing a chain along the identity leaves it unchanged. -/
 theorem subst_identity :
@@ -202,7 +189,7 @@ theorem subst_identity :
       · apply HEq.trans _ (heq_of_eq (subst_identity c))
         congr 1
         · rw [M.substTy_identity]
-        · apply Structure.lift_identity
+        · apply M.lift_identity
 
 /-- The lift of the identity through a chain is the identity. The two sides have
 domains that are equal by `subst_identity`. -/
@@ -211,11 +198,11 @@ theorem lift_identity :
       HEq (c.lift (M.identity Γ)) (M.identity c.last)
   | _, _, .nil => HEq.rfl
   | _, _, .cons A c => by
-      simp only [lift, subst]
+      rw [lift]
       apply HEq.trans _ (lift_identity c)
       congr 1
       · rw [M.substTy_identity]
-      · apply Structure.lift_identity
+      · apply M.lift_identity
 
 end Chain
 

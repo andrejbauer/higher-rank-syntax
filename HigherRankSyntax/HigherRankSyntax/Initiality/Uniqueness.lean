@@ -15,6 +15,6 @@ theorem eq_of_ctx {M : Structure.{v}} (F G : Morphism Ctx.model M) :
   F = G
   := by
   obtain ⟨hOb, hSub, hTy, hTm⟩ := Ctx.generated (agree_closed F G)
-  apply Morphism.ext hOb hSub hTy hTm
+  apply ext hOb hSub hTy hTm
 
 end HrS.Morphism

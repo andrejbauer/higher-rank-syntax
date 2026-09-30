@@ -12,11 +12,12 @@ The interpretation is natural in the environment.
 * Reindexing the environment along a substitution `σ` of the model reindexes the
   interpretation along `σ`: whatever is interpreted at the environment, reindexed
   along `σ`, is interpreted at the reindexed environment.
-* A filling of a decoration is interpreted as a section of the decoration's chain
-  over the substitution it starts from, and along that section every slot that is
-  not an equation holds the interpretation of its filler.
-* Typed environments are stable under reindexing, under renamings of ambients, and
-  under extension by the interpretation of a telescope.
+* The interpretation of a filling of a decoration from `g` is a section of the
+  projection of the decoration's chain over `g`, and along it the generic value of
+  every slot that is not an equation has as filler an interpretation of the slot's
+  filler.
+* Typed environments are stable under reindexing and under extension by the
+  interpretation of a telescope.
 -/
 
 universe u
@@ -27,57 +28,54 @@ variable {M : Structure.{u}}
 
 /-! ### Reindexing an entry -/
 
-/-- The term an entry is given by a filler, reindexed along `σ`, is a term the
-reindexed entry is given by a filler reindexed along the lift of `σ`. -/
+/-- If every filler of `w`, reindexed along the lift of `σ` through `b`, is one of `w'`,
+then a term an entry is given by `w`, reindexed along `σ`, is a term the reindexed entry
+is given by `w'`. -/
 theorem Chain.entryTerm_subst
     {Γ Δ : M.Ob} {α : C.Arity} (b : Chain M Γ α) (σ : M.Sub Δ Γ) (B : Boundary M b.last)
     (w : Part (Filler M b.last)) (w' : Part (Filler M (b.subst σ).last))
     (hw : ∀ v ∈ w, v.subst (b.lift σ) ∈ w') {t} (ht : t ∈ b.entryTerm B w) :
   Chain.Bind_subst_entry rfl σ ▸ M.substTm t σ ∈ (b.subst σ).entryTerm (B.subst (b.lift σ)) w'
   := by
+  have hlam : ∀ v : Filler M b.last,
+      Bind_subst_entry rfl σ ▸ M.substTm (b.lam v.tm) σ
+        = (b.subst σ).lam (v.subst (b.lift σ)).tm := by
+    intro v
+    apply eq_of_heq
+    apply HEq.trans (eqRec_heq _ _)
+    apply HEq.trans (b := (b.subst σ).lam (M.substTm v.tm (b.lift σ)))
+    · rw [← lam_subst]
+      symm
+      apply eqRec_heq
+    · congr 1
+      · apply Boundary.subst_ty
+      · symm
+        apply eqRec_heq
   cases B with
   | sort =>
-      obtain ⟨s, hs, rfl⟩ := (Chain.mem_entryTerm_sort b w).mp ht
-      apply (Chain.mem_entryTerm_sort _ w').mpr
+      obtain ⟨s, hs, rfl⟩ := (mem_entryTerm_sort b w).mp ht
+      apply (mem_entryTerm_sort _ w').mpr
       use ((Filler.mk .sort s).subst (b.lift σ)).tm, hw _ hs
-      apply eq_of_heq
-      apply HEq.trans (eqRec_heq _ _)
-      apply HEq.trans (b := (b.subst σ).lam (M.substTm s (b.lift σ)))
-      · rw [← Chain.lam_subst]
-        symm
-        apply eqRec_heq
-      · congr 1
-        · apply Boundary.subst_ty
-        · symm
-          apply eqRec_heq
+      apply hlam ⟨.sort, s⟩
   | of S =>
-      obtain ⟨e, he, rfl⟩ := (Chain.mem_entryTerm_of b S w).mp ht
-      apply (Chain.mem_entryTerm_of _ _ w').mpr
+      obtain ⟨e, he, rfl⟩ := (mem_entryTerm_of b S w).mp ht
+      apply (mem_entryTerm_of _ _ w').mpr
       use ((Filler.mk (.of S) e).subst (b.lift σ)).tm, hw _ he
-      apply eq_of_heq
-      apply HEq.trans (eqRec_heq _ _)
-      apply HEq.trans (b := (b.subst σ).lam (M.substTm e (b.lift σ)))
-      · rw [← Chain.lam_subst]
-        symm
-        apply eqRec_heq
-      · congr 1
-        · apply Boundary.subst_ty
-        · symm
-          apply eqRec_heq
+      apply hlam ⟨.of S, e⟩
   | eqSort S S' =>
-      obtain ⟨h, rfl⟩ := (Chain.mem_entryTerm_eqSort b S S' w).mp ht
-      apply (Chain.mem_entryTerm_eqSort _ _ _ w').mpr
-      use (by rw [h])
+      obtain ⟨rfl, rfl⟩ := (mem_entryTerm_eqSort b S S' w).mp ht
+      apply (mem_entryTerm_eqSort _ _ _ w').mpr
+      use rfl
       symm
-      apply Eq.trans _ (Chain.lam_unlam _ _)
+      apply Eq.trans _ (lam_unlam _ _)
       congr 1
       apply M.IdSort_irrelevant
   | eqElement S l r =>
-      obtain ⟨h, rfl⟩ := (Chain.mem_entryTerm_eqElement b S l r w).mp ht
-      apply (Chain.mem_entryTerm_eqElement _ _ _ _ w').mpr
-      use (by rw [h])
+      obtain ⟨rfl, rfl⟩ := (mem_entryTerm_eqElement b S l r w).mp ht
+      apply (mem_entryTerm_eqElement _ _ _ _ w').mpr
+      use rfl
       symm
-      apply Eq.trans _ (Chain.lam_unlam _ _)
+      apply Eq.trans _ (lam_unlam _ _)
       congr 1
       apply M.IdElement_irrelevant
 
@@ -103,8 +101,8 @@ theorem extend_rename
   · simp only [rename, extend_inl, Renaming.extend_inl]
   · simp only [rename, extend_inr, Renaming.extend_inr]
 
-/-- The old slots of an extended environment hold the values of the environment
-reindexed along the projection of the chain. -/
+/-- An extended environment, renamed along the inclusion of the old slots, is the
+environment reindexed along the projection of the chain. -/
 theorem rename_inl_extend
     {Γ : M.Ob} {Δ Ω : C.Arity} (E : Environment M Γ Δ) {c : Chain M Γ Ω}
     (d : Decoration M c) :
@@ -177,7 +175,7 @@ theorem interpretTelescope_rename :
     ∀ {Γ : M.Ob} {Δ Φ Ω : C.Arity} (E : Environment M Γ Δ) (ρ : Φ →ʳ Δ) (Θ : dTel Φ Ω),
       E.interpretTelescope (Θ.rename ρ) = (E.rename ρ).interpretTelescope Θ
   | _, _, _, _, _, _, .nil => rfl
-  | _, _, _, _, E, ρ, .cons bind boundary rest => by
+  | _, _, _, _, _, ρ, .cons bind boundary rest => by
       rw [dTel.rename, interpretTelescope, interpretTelescope, interpretTelescope_rename]
       congr 1
       funext T
@@ -203,59 +201,38 @@ theorem pairFillers_comp
       E.pairFillers d (M.comp f g) fillers
         = (E.pairFillers (d.subst f) g fillers).map (M.comp (c.lift f))
   | _, _, _, _, .nil, _, _, _ => rfl
-  | _, _, _, _, @Decoration.cons _ _ α _ b db B A hA c d, f, g, fillers => by
-      have hb := Chain.subst_comp b f g
-      have hB : HEq (B.subst (b.lift (M.comp f g)))
-          ((B.subst (b.lift f)).subst ((b.subst f).lift g)) := by
-        apply HEq.trans _ (heq_of_eq (Boundary.subst_comp _ _ _))
-        congr 1
-        · rw [Chain.subst_comp]
-        · apply Chain.lift_comp
-      have hw : HEq (fillers (C.inl (C.singleSlot α)) (E.extend (db.subst (M.comp f g))))
-          (fillers (C.inl (C.singleSlot α)) (E.extend ((db.subst f).subst g))) := by
-        congr 1
-        · rw [Chain.subst_comp]
+  | _, _, _, _, .cons (b := b) db B A hA d, f, g, fillers => by
+      simp only [pairFillers, Decoration.subst, Chain.lift]
+      erw [Part.map_bind]
+      have hT : M.Tm Γ ((b.subst (M.comp f g)).Bind (B.subst (b.lift (M.comp f g))).ty)
+          = M.Tm Γ (((b.subst f).subst g).Bind
+              ((B.subst (b.lift f)).subst ((b.subst f).lift g)).ty) := by
+        rw [← Chain.Bind_subst_entry hA, ← Chain.Bind_subst_entry (Chain.Bind_subst_entry hA f),
+          M.substTy_comp]
+      congr 1
+      · congr 1
+        · apply Chain.subst_comp
+        · apply HEq.trans _ (heq_of_eq (Boundary.subst_comp _ _ _))
+          congr 1
+          · rw [Chain.subst_comp]
+          · apply Chain.lift_comp
         · congr 1
-          apply Decoration.subst_comp
-      have hpair : ∀ t₁ t₂, HEq t₁ t₂ →
-          M.pair (M.comp f g) (Chain.Bind_subst_entry hA (M.comp f g) ▸ t₁)
-            = M.comp (M.lift A f)
-                (M.pair g (Chain.Bind_subst_entry (Chain.Bind_subst_entry hA f) g ▸ t₂)) := by
-        intro t₁ t₂ htt
-        rw [Structure.lift_comp_pair]
-        congr 1
+          · rw [Chain.subst_comp]
+          · congr 1
+            · apply Chain.subst_comp
+            · apply Decoration.subst_comp
+      · apply Function.hfunext hT
+        intro t t' htt
+        apply heq_of_eq
+        apply Eq.trans _ (pairFillers_comp E d (M.lift A f) _ _)
+        rw [M.lift_comp_pair]
+        congr 2
         apply eq_of_heq
         apply HEq.trans (eqRec_heq _ _)
         apply HEq.trans htt
         symm
         apply HEq.trans (eqRec_heq _ _)
         apply eqRec_heq
-      apply Part.ext
-      intro s
-      rw [Part.mem_map_iff]
-      constructor
-      · intro hs
-        obtain ⟨t, ht, hs'⟩ := Part.mem_bind_iff.mp hs
-        obtain ⟨t', ht', htt⟩ := Chain.entryTerm_congr hb hB hw ht
-        rw [hpair t t' htt, pairFillers_comp E d (M.lift A f)] at hs'
-        obtain ⟨s', hs'', rfl⟩ := (Part.mem_map_iff _).mp hs'
-        use s'
-        constructor
-        · apply Part.mem_bind_iff.mpr
-          use t', ht'
-          apply hs''
-        · rfl
-      · rintro ⟨s', hs', rfl⟩
-        obtain ⟨t', ht', hs''⟩ := Part.mem_bind_iff.mp hs'
-        have hb' : (b.subst f).subst g = b.subst (M.comp f g) := by
-          symm
-          apply Chain.subst_comp
-        obtain ⟨t, ht, htt⟩ := Chain.entryTerm_congr hb' (HEq.symm hB) (HEq.symm hw) ht'
-        apply Part.mem_bind_iff.mpr
-        use t, ht
-        rw [hpair t t' (HEq.symm htt), pairFillers_comp E d (M.lift A f)]
-        apply Part.mem_map
-        apply hs''
 
 /-- If the fillers are stable under reindexing, a pairing of them at an environment,
 reindexed along `σ`, is a pairing of them at the reindexed environment from the
@@ -271,11 +248,9 @@ theorem pairFillers_subst
   | _, _, _, .nil, g, _, _, s, hs => by
       obtain rfl := Part.mem_some_iff.mp hs
       apply Part.mem_some
-  | _, _, _, @Decoration.cons _ _ α _ b db B A hA c d, g, fillers, hfill, s, hs => by
+  | _, _, _, .cons (α := α) (b := b) db B A hA d, g, fillers, hfill, s, hs => by
       obtain ⟨t, ht, hs'⟩ := Part.mem_bind_iff.mp hs
-      have ht₁ := Chain.entryTerm_subst (b.subst g) σ (B.subst (b.lift g)) _
-        (fillers (C.inl (C.singleSlot α)) ((E.extend (db.subst g)).subst ((b.subst g).lift σ)))
-        (fun v hv => hfill _ _ _ v hv) ht
+      have ht₁ := Chain.entryTerm_subst (b.subst g) σ (B.subst (b.lift g)) _ _ (hfill _ _ _) ht
       have hb : (b.subst g).subst σ = b.subst (M.comp g σ) := by
         symm
         apply Chain.subst_comp
@@ -298,25 +273,18 @@ theorem pairFillers_subst
       obtain ⟨t₂, ht₂, htt⟩ := Chain.entryTerm_congr hb hB hw ht₁
       apply Part.mem_bind_iff.mpr
       use t₂, ht₂
-      have hrest := pairFillers_subst E σ d _ _ (fun _ j _ _ E' τ v hv => hfill (C.inr j) E' τ v hv)
-        s hs'
-      have hp : M.pair (M.comp g σ)
-            (M.substTy_comp A g σ ▸ M.substTm (Chain.Bind_subst_entry hA g ▸ t) σ)
-          = M.pair (M.comp g σ) (Chain.Bind_subst_entry hA (M.comp g σ) ▸ t₂) := by
-        congr 1
-        apply eq_of_heq
-        apply HEq.trans (eqRec_heq _ _)
-        symm
-        apply HEq.trans (eqRec_heq _ _)
-        apply HEq.trans (HEq.symm htt)
-        apply HEq.trans (eqRec_heq _ _)
-        congr 1
-        · symm
-          apply Chain.Bind_subst_entry hA g
-        · symm
-          apply eqRec_heq
-      rw [M.pair_comp, hp] at hrest
-      apply hrest
+      convert pairFillers_subst E σ d _ _ (fun _ j => hfill (C.inr j)) s hs' using 2
+      rw [M.pair_comp]
+      congr 2
+      apply eq_of_heq
+      apply HEq.trans (eqRec_heq _ _)
+      apply HEq.trans (HEq.symm htt)
+      apply HEq.trans (eqRec_heq _ _)
+      symm
+      apply HEq.trans (eqRec_heq _ _)
+      congr 1
+      · apply Chain.Bind_subst_entry hA g
+      · apply eqRec_heq
 
 /-- Whatever an expression is interpreted as at an environment, reindexed along `σ`,
 the expression is interpreted as at the reindexed environment. -/
@@ -331,16 +299,15 @@ theorem interpret_subst :
         (fun _ i _ E' => E'.interpret (args i))
       rw [M.comp_identity] at hcomp
       have hs' := pairFillers_subst E σ (E x).binding.decoration (M.identity Γ) _
-        (fun _ i _ _ E' τ v hv => interpret_subst E' τ (args i) v hv) s hs
+        (fun _ i _ _ E' τ => interpret_subst E' τ (args i)) s hs
       rw [M.identity_comp, hcomp] at hs'
       obtain ⟨s', hs'', hss⟩ := (Part.mem_map_iff _).mp hs'
       apply Part.mem_assert_iff.mpr
-      use fun h => hne ((Boundary.isEq_subst _ _).mp h)
+      use mt (Boundary.isEq_subst _ _).mp hne
       apply (Part.mem_map_iff _).mpr
       use s', hs''
-      rw [← Filler.subst_comp, ← hss]
-      symm
-      apply Filler.subst_comp
+      rw [← Filler.subst_comp, ← hss, Filler.subst_comp]
+      rfl
 
 /-- The interpretation of a filling, reindexed along `σ`, is the interpretation of
 the filling at the reindexed environment from the reindexed substitution. -/
@@ -350,8 +317,7 @@ theorem interpretFilling_subst
     (hs : s ∈ E.interpretFilling τ d g) :
   M.comp s σ ∈ (E.subst σ).interpretFilling τ d (M.comp g σ)
   := by
-  apply pairFillers_subst E σ d g _
-    (fun _ i _ _ E' τ' v hv => interpret_subst E' τ' (τ i) v hv) s hs
+  apply pairFillers_subst E σ d g _ (fun _ i _ _ E' τ' => interpret_subst E' τ' (τ i)) s hs
 
 /-- The interpretation of a boundary, reindexed along `σ`, is the interpretation of
 the boundary at the reindexed environment. -/
@@ -362,9 +328,8 @@ theorem interpretBoundary_subst
   := by
   cases β with
   | sort =>
-      rw [mem_interpretBoundary_sort] at hB ⊢
-      rw [hB]
-      rfl
+      obtain rfl := (mem_interpretBoundary_sort E B).mp hB
+      apply (mem_interpretBoundary_sort _ _).mpr rfl
   | of S =>
       obtain ⟨t, ht, rfl⟩ := (mem_interpretBoundary_of E S B).mp hB
       apply (mem_interpretBoundary_of _ S _).mpr
@@ -391,23 +356,20 @@ theorem interpretTelescope_subst :
       (Θ : dTel Δ Ω) (T : Telescope M Γ Ω), T ∈ E.interpretTelescope Θ →
       T.subst σ ∈ (E.subst σ).interpretTelescope Θ
   | _, _, _, _, E, σ, .nil, T, hT => by
-      rw [mem_interpretTelescope_nil] at hT ⊢
-      rw [hT]
-      rfl
+      obtain rfl := (mem_interpretTelescope_nil E T).mp hT
+      apply (mem_interpretTelescope_nil _ _).mpr rfl
   | _, _, _, _, E, σ, .cons bind boundary rest, T, hT => by
       obtain ⟨T₀, hT₀, B, hB, A, hA, R, hR, rfl⟩ :=
         (mem_interpretTelescope_cons E bind boundary rest T).mp hT
       apply (mem_interpretTelescope_cons _ bind boundary rest _).mpr
       use T₀.subst σ, interpretTelescope_subst E σ bind T₀ hT₀, B.subst (T₀.chain.lift σ)
       constructor
-      · have hB' := interpretBoundary_subst _ (T₀.chain.lift σ) _ _ hB
-        rw [← extend_subst] at hB'
-        apply hB'
+      · erw [extend_subst]
+        apply interpretBoundary_subst _ _ _ _ hB
       · use M.substTy A σ, Chain.Bind_subst_entry hA σ, R.subst (M.lift A σ)
         constructor
-        · have hR' := interpretTelescope_subst _ (M.lift A σ) rest R hR
-          erw [← extend_subst] at hR'
-          apply hR'
+        · erw [extend_subst E (.cons T₀.decoration B A hA .nil)]
+          apply interpretTelescope_subst _ (M.lift A σ) rest R hR
         · rfl
 
 /-! ### Sections and slots -/
@@ -419,19 +381,18 @@ theorem interpretFilling_projection
     ∀ {Y : M.Ob} {Ω : C.Arity} {c : Chain M Y Ω} (τ : Subst Ω Δ) (d : Decoration M c)
       (g : M.Sub Γ Y) (s : M.Sub Γ c.last), s ∈ E.interpretFilling τ d g →
       M.comp c.projection s = g
-  | _, _, _, σ, .nil, g, s, hs => by
-      obtain rfl := (mem_interpretFilling_nil E σ g s).mp hs
+  | _, _, _, τ, .nil, g, s, hs => by
+      obtain rfl := (mem_interpretFilling_nil E τ g s).mp hs
       apply M.identity_comp
   | _, _, _, τ, .cons db B A hA d, g, s, hs => by
       obtain ⟨t, _, hs'⟩ := (mem_interpretFilling_cons E τ db B A hA d g s).mp hs
       rw [Chain.projection, M.comp_assoc]
-      apply Eq.trans
-        (congrArg (M.comp (M.projection A)) (interpretFilling_projection E _ d _ s hs'))
+      erw [interpretFilling_projection E _ d _ s hs']
       apply M.projection_pair
 
-/-- Along the interpretation of a filling, the generic value of a slot that is not
-an equation holds the interpretation of the slot's filler, at the environment
-extended by the slot's binding decoration read along the filling. -/
+/-- Along the interpretation `s` of a filling `τ` of a decoration, the generic value of
+a slot `z` that is not an equation, reindexed along `s`, has as filler an interpretation
+of `τ z` at the environment extended by the value's binding decoration. -/
 theorem interpretFilling_slot
     {Γ : M.Ob} {Δ : C.Arity} (E : Environment M Γ Δ) :
     ∀ {Y : M.Ob} {Ω : C.Arity} {c : Chain M Y Ω} (τ : Subst Ω Δ) (d : Decoration M c)
@@ -440,7 +401,7 @@ theorem interpretFilling_slot
         ((d.slot z).subst s).filler
           ∈ (E.extend ((d.slot z).subst s).binding.decoration).interpret (τ z)
   | _, _, _, _, .nil, _, _, _ => fun _ z _ => (C.unit_is_empty z).elim
-  | _, _, _, τ, .cons db B A hA d, g, s, hs => by
+  | _, _, _, τ, .cons (b := b) db B A hA d, g, s, hs => by
       obtain ⟨t, ht, hs'⟩ := (mem_interpretFilling_cons E τ db B A hA d g s).mp hs
       apply slotCases
       · intro hz
@@ -450,25 +411,20 @@ theorem interpretFilling_slot
         rw [← Value.subst_comp, interpretFilling_projection E _ d _ s hs',
           Decoration.headValue_subst_pair] at hv
         subst hv
-        cases B with
-        | sort =>
-            obtain ⟨v, hv, rfl⟩ := (Chain.mem_entryTerm_sort _ _).mp ht
-            convert hv using 2
-            apply Eq.trans _ (Chain.unlam_lam _ v)
-            congr 1
-            apply eq_of_heq
-            apply HEq.trans (eqRec_heq _ _)
-            apply eqRec_heq
-        | of S =>
-            obtain ⟨v, hv, rfl⟩ := (Chain.mem_entryTerm_of _ _ _).mp ht
-            convert hv using 2
-            apply Eq.trans _ (Chain.unlam_lam _ v)
-            congr 1
-            apply eq_of_heq
-            apply HEq.trans (eqRec_heq _ _)
-            apply eqRec_heq
-        | eqSort S S' => apply (hz trivial).elim
-        | eqElement S l r => apply (hz trivial).elim
+        obtain ⟨v, hv, rfl⟩ : ∃ v, (⟨B.subst (b.lift g), v⟩ : Filler M _)
+            ∈ (E.extend (db.subst g)).interpret (τ (C.inl (C.singleSlot _)))
+              ∧ t = (b.subst g).lam v := by
+          cases B with
+          | sort => apply (Chain.mem_entryTerm_sort _ _).mp ht
+          | of S => apply (Chain.mem_entryTerm_of _ _ _).mp ht
+          | eqSort S S' => apply (hz trivial).elim
+          | eqElement S l r => apply (hz trivial).elim
+        convert hv using 2
+        apply Eq.trans _ (Chain.unlam_lam _ v)
+        congr 1
+        apply eq_of_heq
+        apply HEq.trans (eqRec_heq _ _)
+        apply eqRec_heq
       · intro _ y hy
         rw [Decoration.slot_tail] at hy ⊢
         apply interpretFilling_slot E _ d _ s hs' y hy
@@ -483,20 +439,20 @@ theorem extend_cons
     {c : Chain M (M.extend Γ A) Ω} (d : Decoration M c) :
   E.extend (.cons db B A hA d) = (E.extend (.cons db B A hA .nil)).extend d
   := by
-  funext β x
-  obtain ⟨y, rfl⟩ | ⟨z, rfl⟩ := C.cover Δ (C.single α ⋈ Ω) x
-  · rw [extend_inl, C.inl_inl Δ (C.single α) Ω y]
+  funext _ x
+  obtain ⟨y, rfl⟩ | ⟨z, rfl⟩ := C.cover _ _ x
+  · rw [extend_inl, C.inl_inl _ _ _ y]
     erw [extend_inl, extend_inl, ← Value.subst_comp]
     simp only [Chain.projection, Chain.last, M.comp_identity]
-  · obtain ⟨w, rfl⟩ | ⟨y', rfl⟩ := C.cover (C.single α) Ω z
-    · obtain rfl := C.single_arity w
-      obtain rfl := C.single_slot_unique w
-      rw [extend_inr, Decoration.slot_head, C.inr_inl]
-      erw [extend_inl, extend_inr, Decoration.slot_head, ← Value.subst_comp]
-      simp only [Chain.projection, Chain.last, M.identity_comp]
-    · rw [extend_inr, Decoration.slot_tail, C.inr_inr]
-      erw [extend_inr]
-      rfl
+  · induction z using slotCases with
+    | head =>
+        rw [extend_inr, Decoration.slot_head, C.inr_inl]
+        erw [extend_inl, extend_inr, Decoration.slot_head, ← Value.subst_comp]
+        simp only [Chain.projection, Chain.last, M.identity_comp]
+    | tail w =>
+        rw [extend_inr, Decoration.slot_tail, C.inr_inr]
+        erw [extend_inr]
+        rfl
 
 /-- A typed environment reindexed along a substitution is typed by the same
 ambient. -/
@@ -509,24 +465,8 @@ theorem Typed.subst
   obtain ⟨hT, hB⟩ := h x
   constructor
   · apply interpretTelescope_subst E σ _ _ hT
-  · have hB' := interpretBoundary_subst _ ((E x).binding.chain.lift σ) _ _ hB
-    rw [← extend_subst] at hB'
-    apply hB'
-
-/-- An environment typed by `A'` and renamed along a renaming of ambients from `A` to
-`A'` is typed by `A`. -/
-theorem Typed.rename
-    {Γ : M.Ob} {Φ Δ : C.Arity} {A : Ambient Φ} {A' : Ambient Δ} (ι : Ambient.Renaming A A')
-    {E : Environment M Γ Δ} (h : E.Typed A') :
-  (E.rename ι.slot).Typed A
-  := by
-  intro _ x
-  obtain ⟨hT, hB⟩ := h (ι.slot x)
-  rw [ι.binding x, interpretTelescope_rename] at hT
-  rw [ι.declaration x, interpretBoundary_rename, ← extend_rename] at hB
-  constructor
-  · apply hT
-  · apply hB
+  · erw [extend_subst]
+    apply interpretBoundary_subst _ _ _ _ hB
 
 /-- An environment typed by `Ξ`, extended by the interpretation of a telescope `Θ` at
 it, is typed by `Ξ ⋈ Θ`. -/
@@ -535,24 +475,15 @@ theorem Typed.extend
     {Θ : dTel Δ Ω} {T : Telescope M Γ Ω} (hT : T ∈ E.interpretTelescope Θ) :
   (E.extend T.decoration).Typed (Ξ ⋈ Θ)
   := by
-  have old : ∀ {Γ' : M.Ob} {Δ' : C.Arity} {E' : Environment M Γ' Δ'} {Ξ' : Ambient Δ'},
-      E'.Typed Ξ' → ∀ {Ω' : C.Arity} {c : Chain M Γ' Ω'} (d : Decoration M c)
-        (Θ' : dTel Δ' Ω') ⦃β : C.Arity⦄ (y : Δ' ∋ β),
-        ((E'.extend d) (C.inl y)).binding
-            ∈ (E'.extend d).interpretTelescope ((Ξ' ⋈ Θ').binding (C.inl y)) ∧
-          ((E'.extend d) (C.inl y)).filler.boundary
-            ∈ ((E'.extend d).extend ((E'.extend d) (C.inl y)).binding.decoration).interpretBoundary
-                ((Ξ' ⋈ Θ').declaration (C.inl y)) := by
-    intro _ _ E' _ h' _ c d Θ' _ y
-    rw [extend_inl, dTel.binding_concatenate_inl, dTel.declaration_concatenate_inl]
-    erw [interpretTelescope_rename, interpretBoundary_rename, ← extend_rename, rename_inl_extend]
-    apply Typed.subst h' c.projection y
   induction Θ generalizing Γ with
   | nil =>
       obtain rfl := (mem_interpretTelescope_nil E T).mp hT
       intro _ x
       obtain ⟨y, rfl⟩ | ⟨z, rfl⟩ := C.cover _ _ x
-      · apply old h
+      · rw [extend_inl, dTel.binding_concatenate_inl, dTel.declaration_concatenate_inl]
+        erw [interpretTelescope_rename, interpretBoundary_rename, ← extend_rename,
+          rename_inl_extend]
+        apply h.subst _ y
       · apply (C.unit_is_empty z).elim
   | cons bind boundary rest _ ihrest =>
       obtain ⟨T₀, hT₀, B, hB, A, rfl, R, hR, rfl⟩ :=
@@ -561,22 +492,22 @@ theorem Typed.extend
           (Ξ ⋈ dTel.cons bind boundary .nil) := by
         intro _ x
         obtain ⟨y, rfl⟩ | ⟨z, rfl⟩ := C.cover _ _ x
-        · apply old h
-        · obtain ⟨w, rfl⟩ | ⟨u, rfl⟩ := C.cover _ _ z
-          · obtain rfl := C.single_arity w
-            obtain rfl := C.single_slot_unique w
-            rw [extend_inr, Decoration.slot_head, dTel.binding_concatenate_inr,
-              dTel.declaration_concatenate_inr, dTel.binding_head, dTel.declaration_head]
-            erw [interpretTelescope_rename, interpretBoundary_rename, ← extend_rename,
-              rename_inl_extend, Value.subst_identity]
-            simp only [Chain.projection, Chain.last, M.comp_identity]
-            constructor
-            · apply interpretTelescope_subst E _ bind _ hT₀
-            · have hB' := interpretBoundary_subst _
-                (T₀.chain.lift (M.projection (T₀.chain.Bind B.ty))) _ _ hB
-              rw [← extend_subst] at hB'
-              apply hB'
-          · apply (C.unit_is_empty u).elim
+        · rw [extend_inl, dTel.binding_concatenate_inl, dTel.declaration_concatenate_inl]
+          erw [interpretTelescope_rename, interpretBoundary_rename, ← extend_rename,
+            rename_inl_extend]
+          apply h.subst _ y
+        · induction z using slotCases with
+          | head =>
+              rw [extend_inr, Decoration.slot_head, dTel.binding_concatenate_inr,
+                dTel.declaration_concatenate_inr, dTel.binding_head, dTel.declaration_head]
+              erw [interpretTelescope_rename, interpretBoundary_rename, ← extend_rename,
+                rename_inl_extend, Value.subst_identity]
+              simp only [Chain.projection, Chain.last, M.comp_identity]
+              constructor
+              · apply interpretTelescope_subst E _ bind _ hT₀
+              · erw [extend_subst]
+                apply interpretBoundary_subst _ _ _ _ hB
+          | tail u => apply (C.unit_is_empty u).elim
       have hrest := ihrest h₁ hR
       erw [dTel.concatenate_assoc] at hrest
       erw [extend_cons]

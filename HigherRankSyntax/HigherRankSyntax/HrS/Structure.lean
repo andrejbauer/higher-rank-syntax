@@ -9,10 +9,10 @@ into types of elements; binding, a type over an extension read as a type over
 the base, with a bijection on terms; and extensional equality types of sorts
 and of elements of a sort.
 
-Lifting a substitution through an extension is not an operation of its own: it is
-derived from pairing, at the end of the file, together with its laws. The end of the
-file also restates the reindexing laws of terms for reindexed terms transported along
-equations of types.
+Lifting a substitution through an extension (`Structure.lift`) is defined from
+pairing; it commutes with the projections and preserves identities and composites.
+`substTm_comp_heq` and `substTm_identity_heq` state the reindexing laws of terms for
+reindexed terms transported along arbitrary equations of types.
 -/
 
 universe u
@@ -196,11 +196,9 @@ theorem substTm_identity_heq
   symm
   apply eqRec_heq
 
-/-- The substitution `σ` carried through the extension by `a`. It goes from `Δ`
-extended by `a` reindexed along `σ` to `Γ` extended by `a`, and is `σ` after the
-projection, paired with the generic term: on the base it acts as `σ`, and it sends
-the generic term to the generic term. `Bind_subst` and `lam_subst` reindex the type
-and the term over the extension along exactly this substitution. -/
+/-- The substitution `σ` lifted through the extension by `a`, from `Δ` extended by `a`
+reindexed along `σ` to `Γ` extended by `a`: `σ` after the projection, paired with the
+generic term. `Bind_subst` and `lam_subst` reindex along it. -/
 def lift {Γ Δ : M.Ob} (a : M.Ty Γ) (σ : M.Sub Δ Γ) :
     M.Sub (M.extend Δ (M.substTy a σ)) (M.extend Γ a) :=
   M.pair (M.comp σ (M.projection (M.substTy a σ)))
@@ -212,15 +210,6 @@ theorem projection_lift
   M.comp (M.projection a) (M.lift a σ) = M.comp σ (M.projection (M.substTy a σ))
   := by
   apply M.projection_pair
-
-/-- The generic term reindexed along the lift of `σ` is the generic term of the
-reindexed type. -/
-theorem generic_lift
-    {Γ Δ : M.Ob} (a : M.Ty Γ) (σ : M.Sub Δ Γ) :
-  HEq (M.substTm (M.generic a) (M.lift a σ)) (M.generic (M.substTy a σ))
-  := by
-  apply HEq.trans (M.generic_pair _ _)
-  apply eqRec_heq
 
 /-- A substitution into an extension is the pair of its two components: its
 composite with the projection, and the generic term reindexed along it. -/
@@ -245,35 +234,7 @@ theorem lift_identity
   · apply HEq.trans (eqRec_heq _ _)
     rw [M.substTy_identity]
 
-/-- Lifting along a composite is lifting along each factor in turn. The two sides
-have domains that are equal by `substTy_comp`. -/
-theorem lift_comp
-    {Γ Δ Ξ : M.Ob} (a : M.Ty Γ) (σ : M.Sub Δ Γ) (θ : M.Sub Ξ Δ) :
-  HEq (M.lift a (M.comp σ θ)) (M.comp (M.lift a σ) (M.lift (M.substTy a σ) θ))
-  := by
-  rw [← M.pair_components (M.comp (M.lift a σ) (M.lift (M.substTy a σ) θ)), lift]
-  congr 1
-  · rw [M.substTy_comp]
-  · conv =>
-      rhs
-      rw [← M.comp_assoc, projection_lift, M.comp_assoc, projection_lift, ← M.comp_assoc]
-    rw [M.substTy_comp]
-  · apply HEq.trans (eqRec_heq _ _)
-    symm
-    apply HEq.trans (eqRec_heq _ _)
-    apply HEq.trans
-      (b := M.substTm (M.substTm (M.generic a) (M.lift a σ)) (M.lift (M.substTy a σ) θ))
-    · apply HEq.trans _ (heq_of_eq (M.substTm_comp _ _ _))
-      symm
-      apply eqRec_heq
-    · apply HEq.trans (b := M.substTm (M.generic (M.substTy a σ)) (M.lift (M.substTy a σ) θ))
-      · congr 1
-        · rw [← M.substTy_comp, projection_lift, M.substTy_comp]
-        · apply generic_lift
-      · apply HEq.trans (generic_lift _ _)
-        rw [M.substTy_comp]
-
-/-- Lifting `σ` after pairing `g` with `t` is pairing `σ` after `g` with `t`. -/
+/-- The lift of `σ` after `pair g t` is `σ` after `g`, paired with `t`. -/
 theorem lift_comp_pair
     {Γ Δ Ξ : M.Ob} (a : M.Ty Γ) (σ : M.Sub Δ Γ) (g : M.Sub Ξ Δ)
     (t : M.Tm Ξ (M.substTy (M.substTy a σ) g)) :
@@ -283,13 +244,27 @@ theorem lift_comp_pair
   congr 1
   · rw [M.comp_assoc, M.projection_pair]
   · apply HEq.trans (eqRec_heq _ _)
-    symm
-    apply HEq.trans (eqRec_heq _ _)
-    symm
+    apply HEq.trans _ (HEq.symm (eqRec_heq _ _))
     apply HEq.trans _ (M.generic_pair g t)
     congr 1
     · apply M.substTy_comp
     · apply eqRec_heq
+
+/-- Lifting along a composite is lifting along each factor in turn. The two sides
+have domains that are equal by `substTy_comp`. -/
+theorem lift_comp
+    {Γ Δ Ξ : M.Ob} (a : M.Ty Γ) (σ : M.Sub Δ Γ) (θ : M.Sub Ξ Δ) :
+  HEq (M.lift a (M.comp σ θ)) (M.comp (M.lift a σ) (M.lift (M.substTy a σ) θ))
+  := by
+  erw [lift_comp_pair]
+  rw [lift]
+  congr 1
+  · rw [M.substTy_comp]
+  · rw [M.comp_assoc, M.substTy_comp]
+  · apply HEq.trans (eqRec_heq _ _)
+    apply HEq.trans _ (HEq.symm (eqRec_heq _ _))
+    apply HEq.trans _ (HEq.symm (eqRec_heq _ _))
+    rw [M.substTy_comp]
 
 end Structure
 

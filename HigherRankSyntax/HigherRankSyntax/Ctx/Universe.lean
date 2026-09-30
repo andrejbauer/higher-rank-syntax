@@ -3,8 +3,9 @@ import HigherRankSyntax.Ctx.Single
 /-!
 # Sorts and their elements
 
-The entries declaring a sort and declaring an element of a sort, and the types
-they present.
+The entry declaring a sort and the entry declaring an element of the sort a
+filling of it supplies; the type of sorts `U` and the type `El S` of elements of
+a sort `S` they present, both stable under reindexing.
 -/
 
 open CategoryTheory

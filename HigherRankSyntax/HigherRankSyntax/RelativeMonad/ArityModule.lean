@@ -17,17 +17,17 @@ Kleisli arrows.
 
 open CategoryTheory
 
-variable {T : RelativeMonad (J)}
+variable {T : RelativeMonad J}
 
 /-- The constant functor on the Kleisli category of `T` with value `C.Arity`. -/
-def arityConst (T : RelativeMonad (J)) : RelativeMonad.Kleisli T ⥤ Type where
+def arityConst (T : RelativeMonad J) : RelativeMonad.Kleisli T ⥤ Type where
   obj _ := C.Arity
   map _ := ↾fun (Φ : C.Arity) => Φ
   map_id _ := rfl
   map_comp _ _ := rfl
 
 /-- The slice category of `T`-modules over `arityConst T`. -/
-abbrev ArityMod (T : RelativeMonad (J)) := CategoryTheory.Over (arityConst T)
+abbrev ArityMod (T : RelativeMonad J) := Over (arityConst T)
 
 namespace ArityMod
 
@@ -46,7 +46,7 @@ theorem shape_natural
     (x : module M |>.obj (RelativeMonad.Kleisli.of T Ω)) :
   shape M (module M |>.map σ x) = shape M x
   := by
-  apply NatTrans.naturality_apply M.hom σ x
+  apply NatTrans.naturality_apply
 
 /-- A morphism of arity modules preserves shape. -/
 theorem hom_shape
@@ -54,6 +54,6 @@ theorem hom_shape
     {Ω : C.Arity} (x : module M |>.obj Ω) :
   shape N (f.left.app Ω x) = shape M x
   := by
-  apply ConcreteCategory.congr_hom (NatTrans.congr_app (Over.w f) Ω) x
+  apply ConcreteCategory.congr_hom (NatTrans.congr_app (Over.w f) Ω)
 
 end ArityMod

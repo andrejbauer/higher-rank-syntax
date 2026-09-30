@@ -4,10 +4,10 @@ import HigherRankSyntax.Typing.Eta
 # Substitution
 
 The judgements are stable under fillings of ambients (`substitutionAt`), hence
-under filling a block `Θ` of the ambient by a filling of `Θ`, and under
-well-formed substitutions between ambients. Also here: the two sides of an
-equality of expressions are well formed and, over a well-formed ambient, have
-equal computed boundaries.
+under instantiating the block `Θ` of an ambient `Ξ ⋈ Θ` by a filling of `Θ`, and
+under well-formed substitutions between ambients. The two sides of an equality of
+expressions are well formed and, over a well-formed ambient, have equal computed
+boundaries.
 -/
 
 /-! ## Fillings of ambients -/
@@ -73,20 +73,17 @@ def Ambient.Filling.extend {Γ Γ' Ω Χ : C.Arity} {A : Ambient Γ} {A' : Ambie
         let ι := (Ambient.Renaming.weaken A' (F.fill ⋆ T)).extend (F.fill ⋆ A.binding w)
         right
         use hsub
+        rw [hd, Bd.isEq_rename, Subst.lift_inl]
+        erw [hb]
         and_intros
         · intro l r hlr
-          rw [hd] at hlr
           obtain ⟨l₀, r₀, hlr₀, rfl, rfl⟩ := Bd.rename_eq_inv _ hlr
-          convert Eq_e.weaken ι (heq l₀ r₀ hlr₀) using 2
+          apply Eq_e.weaken ι (heq l₀ r₀ hlr₀)
         · intro hne
-          convert Wf_e.weaken ι (hwf ?_) using 2
-          · apply Subst.lift_inl
-          · rwa [hd, Bd.isEq_rename] at hne
+          apply Wf_e.weaken ι (hwf hne)
         · intro hne
-          convert Eq_bd.weaken ι (hbd ?_) using 2
-          · convert ι.boundaryOf (F.fill w) using 3
-            apply Subst.lift_inl
-          · rwa [hd, Bd.isEq_rename] at hne
+          erw [ι.boundaryOf]
+          apply Eq_bd.weaken ι (hbd hne)
     · left
       use C.inr i
       and_intros
@@ -121,25 +118,17 @@ def Wf_s.filling {Γ Ω : C.Arity} {A : Ambient Γ} {T : dTel Γ Ω} {τ : Subst
         · apply dTel.rename_id
         · intro _ u
           apply Subst.copair_inl
-    · have hd : Bd.applyAt (Subst.copair (Subst.id Γ) τ) α ((A ⋈ T).declaration (C.inr z))
-          = τ ⋆ T.declaration z := by
-        rw [dTel.declaration_concatenate_inr]
-        apply Bd.act_copair_prefix
-      have hb := dTel.binding_concatenate_inr A T z
+    · have hd : Bd.applyAt (Subst.copair (Subst.id Γ) τ) α (T.declaration z)
+          = τ ⋆ T.declaration z :=
+        Bd.act_copair_prefix τ α _
       right
       use ⟨z⟩
+      rw [dTel.declaration_concatenate_inr, dTel.binding_concatenate_inr, Subst.copair_inr]
+      erw [hd]
       and_intros
-      · intro l r hlr
-        convert h.equation z l r ?_ using 3
-        rwa [← hd]
-      · intro hne
-        convert h.filler z ?_ using 3
-        · apply Subst.copair_inr
-        · rwa [← hd]
-      · intro hne
-        convert h.declared z ?_ using 4
-        · apply Subst.copair_inr
-        · rwa [← hd]
+      · apply h.equation z
+      · apply h.filler z
+      · apply h.declared z
 
 /-! ## The substitution lemma -/
 
@@ -191,7 +180,7 @@ theorem Wf_e.subst_step
   | _, .ap (α := α) x args head fill => by
       rcases F.slot x with ⟨y, hη, hdecl, hbind⟩ | ⟨hsub, _, hwf, _⟩
       · convert Wf_e.ap y (F.fill ⋆ args) ?_ ?_ using 1
-        · apply act_ap_eta F.fill x y hη args
+        · apply act_ap_eta _ _ _ hη
         · rwa [hdecl, Bd.isEq_act]
         · rw [hbind]
           apply Wf_s.subst_step ih F fill
@@ -409,146 +398,62 @@ theorem Wf_t.subst_step
 end
 
 /-- `SubstitutionAt Ω` holds for every arity `Ω`. -/
-theorem substitutionAt : ∀ Ω : C.Arity, SubstitutionAt Ω
-  | Ω =>
-      have ih : ∀ ⦃α : C.Arity⦄, Carrier.Sub α Ω → SubstitutionAt α :=
-        fun _ _ => substitutionAt _
-      { expr := Wf_e.subst_step ih
-        boundary := boundaryOf_subst_step ih
-        boundaryEquality := Eq_bd.subst_step ih
-        equality := Eq_e.subst_step ih
-        filling := Wf_s.subst_step ih
-        declaration := Wf_bd.subst_step ih
-        telescope := Wf_t.subst_step ih }
-termination_by Ω => Ω
-decreasing_by all_goals assumption
+theorem substitutionAt (Ω : C.Arity) :
+  SubstitutionAt Ω
+  :=
+  have ih : ∀ ⦃α : C.Arity⦄, Carrier.Sub α Ω → SubstitutionAt α := fun α _ => substitutionAt α
+  { expr := Wf_e.subst_step ih
+    boundary := boundaryOf_subst_step ih
+    boundaryEquality := Eq_bd.subst_step ih
+    equality := Eq_e.subst_step ih
+    filling := Wf_s.subst_step ih
+    declaration := Wf_bd.subst_step ih
+    telescope := Wf_t.subst_step ih }
+termination_by Ω
+decreasing_by assumption
 
-/-! ## Filling a block -/
+/-! ## Instantiating a block -/
 
 section
 
-variable {Δ Ω Φ : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω} {σ : Subst Ω Δ}
-  {Ψ : dTel (Δ ⋈ Ω) Φ}
-
-/-- A filling `σ` of `Θ` over `Ξ` gives a filling of `Ξ ⋈ Θ ⋈ Ψ` by
-`Ξ ⋈ σ ⋆ Ψ` at `Ω`. -/
-def Wf_s.fillBefore (hσ : Wf_s Ξ Θ σ) (Ψ : dTel (Δ ⋈ Ω) Φ) :
-    Ambient.Filling (Ξ ⋈ Θ ⋈ Ψ) (Ξ ⋈ σ ⋆ Ψ) Ω :=
-  (Wf_s.filling hσ).extend Ψ
-
-/-- Applying the substitution of `hσ.fillBefore Ψ` to an expression over
-`Δ ⋈ Ω ⋈ Φ` fills its block `Ω` by `σ`. -/
-theorem Wf_s.fillBefore_act
-    (hσ : Wf_s Ξ Θ σ) (Ψ : dTel (Δ ⋈ Ω) Φ) (g : Expr ((Δ ⋈ Ω) ⋈ Φ)) :
-  (hσ.fillBefore Ψ).fill ⋆ g = σ ⋆ g
-  := by
-  apply Eq.trans (Subst.act_lift_depth _ g)
-  apply act_copair_prefix
-
-/-- Applying the substitution of `hσ.fillBefore Ψ` to a boundary over
-`Δ ⋈ Ω ⋈ Φ` fills its block `Ω` by `σ`. -/
-theorem Wf_s.fillBefore_act_boundary
-    (hσ : Wf_s Ξ Θ σ) (Ψ : dTel (Δ ⋈ Ω) Φ) (β : Bd ((Δ ⋈ Ω) ⋈ Φ)) :
-  (hσ.fillBefore Ψ).fill ⋆ β = σ ⋆ β
-  := by
-  apply Eq.trans (Bd.act_lift_depth _ β)
-  apply Bd.act_copair_prefix
-
-/-- Filling the block `Θ` of the ambient `Ξ ⋈ Θ ⋈ Ψ` by a filling `σ` of `Θ`
-preserves well-formedness of expressions. -/
-theorem Wf_e.subst
-    (hσ : Wf_s Ξ Θ σ) {g : Expr ((Δ ⋈ Ω) ⋈ Φ)} (h : Ξ ⋈ Θ ⋈ Ψ ⊢ g) :
-  Ξ ⋈ σ ⋆ Ψ ⊢ σ ⋆ g
-  := by
-  rw [← hσ.fillBefore_act Ψ g]
-  apply (substitutionAt Ω).expr (hσ.fillBefore Ψ) h
-
-/-- Filling the block `Θ` of the ambient `Ξ ⋈ Θ ⋈ Ψ` by a filling `σ` of `Θ`
-preserves equality of expressions. -/
-theorem Eq_e.subst
-    (hσ : Wf_s Ξ Θ σ) {l r : Expr ((Δ ⋈ Ω) ⋈ Φ)} (h : Ξ ⋈ Θ ⋈ Ψ ⊢ l ≈ r) :
-  Ξ ⋈ σ ⋆ Ψ ⊢ σ ⋆ l ≈ σ ⋆ r
-  := by
-  rw [← hσ.fillBefore_act Ψ l, ← hσ.fillBefore_act Ψ r]
-  apply (substitutionAt Ω).equality (hσ.fillBefore Ψ) h
-
-/-- Filling the block `Θ` of the ambient `Ξ ⋈ Θ ⋈ Ψ` by a filling `σ` of `Θ`
-preserves equality of boundaries. -/
-theorem Eq_bd.subst
-    (hσ : Wf_s Ξ Θ σ) {β β' : Bd ((Δ ⋈ Ω) ⋈ Φ)} (h : Ξ ⋈ Θ ⋈ Ψ ⊢ β ≈ β') :
-  Ξ ⋈ σ ⋆ Ψ ⊢ σ ⋆ β ≈ σ ⋆ β'
-  := by
-  rw [← hσ.fillBefore_act_boundary Ψ β, ← hσ.fillBefore_act_boundary Ψ β']
-  apply (substitutionAt Ω).boundaryEquality (hσ.fillBefore Ψ) h
-
-/-- Filling the block `Θ` of the ambient `Ξ ⋈ Θ ⋈ Ψ` by a filling `σ` of `Θ`
-preserves well-formedness of telescopes. -/
-theorem Wf_t.subst
-    (hσ : Wf_s Ξ Θ σ) {Λ : C.Arity} {T : dTel ((Δ ⋈ Ω) ⋈ Φ) Λ} (h : Wf_t (Ξ ⋈ Θ ⋈ Ψ) T) :
-  Wf_t (Ξ ⋈ σ ⋆ Ψ) (σ ⋆ T)
-  := (substitutionAt Ω).telescope (hσ.fillBefore Ψ) h
+variable {Δ Ω : C.Arity} {Ξ : Ambient Δ} {Θ : dTel Δ Ω} {σ : Subst Ω Δ}
 
 /-- Instantiating the block `Θ` of the ambient `Ξ ⋈ Θ` by a filling `σ` of `Θ`
 preserves well-formedness of expressions. -/
 theorem Wf_e.instantiate (hσ : Wf_s Ξ Θ σ) {g : Expr (Δ ⋈ Ω)} (h : Ξ ⋈ Θ ⊢ g) :
   Ξ ⊢ σ ⋆ g
   := by
-  rw [← dTel.concatenate_nil Ξ]
-  apply Wf_e.subst (Ψ := .nil) hσ
-  convert h using 1
-  apply dTel.concatenate_nil
+  rw [Subst.instantiate, ← act_copair_prefix]
+  apply (substitutionAt Ω).expr (Wf_s.filling hσ) h
 
 /-- Instantiating the block `Θ` of the ambient `Ξ ⋈ Θ` by a filling `σ` of `Θ`
 preserves equality of expressions. -/
 theorem Eq_e.instantiate (hσ : Wf_s Ξ Θ σ) {l r : Expr (Δ ⋈ Ω)} (h : Ξ ⋈ Θ ⊢ l ≈ r) :
   Ξ ⊢ σ ⋆ l ≈ σ ⋆ r
   := by
-  rw [← dTel.concatenate_nil Ξ]
-  apply Eq_e.subst (Ψ := .nil) hσ
-  convert h using 1
-  apply dTel.concatenate_nil
+  rw [Subst.instantiate, Subst.instantiate, ← act_copair_prefix, ← act_copair_prefix]
+  apply (substitutionAt Ω).equality (Wf_s.filling hσ) h
 
 /-- Instantiating the block `Θ` of the ambient `Ξ ⋈ Θ` by a filling `σ` of `Θ`
 preserves equality of boundaries. -/
 theorem Eq_bd.instantiate (hσ : Wf_s Ξ Θ σ) {β β' : Bd (Δ ⋈ Ω)} (h : Ξ ⋈ Θ ⊢ β ≈ β') :
   Ξ ⊢ σ ⋆ β ≈ σ ⋆ β'
   := by
-  rw [← dTel.concatenate_nil Ξ]
-  apply Eq_bd.subst (Ψ := .nil) hσ
-  convert h using 1
-  apply dTel.concatenate_nil
+  rw [Bd.instantiate, ← Bd.act_copair_prefix, ← Bd.act_copair_prefix]
+  apply (substitutionAt Ω).boundaryEquality (Wf_s.filling hσ) h
 
 /-- Instantiating the block `Θ` of the ambient `Ξ ⋈ Θ` by a filling `σ` of `Θ`
 preserves well-formedness of telescopes. -/
 theorem Wf_t.instantiate (hσ : Wf_s Ξ Θ σ) {Λ : C.Arity} {T : dTel (Δ ⋈ Ω) Λ}
     (h : Wf_t (Ξ ⋈ Θ) T) :
   Wf_t Ξ (σ ⋆ T)
-  := by
-  rw [← dTel.concatenate_nil Ξ]
-  convert Wf_t.subst (Ψ := .nil) (T := T) hσ ?_ using 2
-  · rw [dTel.fill, Subst.lift_one]
-    rfl
-  · convert h using 1
-    apply dTel.concatenate_nil
+  := (substitutionAt Ω).telescope (Wf_s.filling hσ) h
 
 /-- The computed boundary of a well-formed expression over a well-formed ambient
 is equal to itself. -/
 theorem boundaryOf_refl {Δ : C.Arity} {Ξ : Ambient Δ} (hΞ : Ambient.Wf Ξ) :
   ∀ {e : Expr Δ}, Ξ ⊢ e → Ξ ⊢ Ξ.boundaryOf e ≈ Ξ.boundaryOf e
   | _, .ap x _ _ fill => Eq_bd.instantiate fill (Wf_bd.refl (Wf_t.declaration hΞ x))
-
-/-- Over a well-formed ambient `Ξ ⋈ Θ ⋈ Ψ`, filling the block `Θ` by a filling
-`σ` of `Θ` in a well-formed expression gives an expression whose computed boundary
-is equal to the filled computed boundary of the original. -/
-theorem boundaryOf_subst
-    (hΞ : Ambient.Wf (Ξ ⋈ Θ ⋈ Ψ)) (hσ : Wf_s Ξ Θ σ)
-    {g : Expr ((Δ ⋈ Ω) ⋈ Φ)} (h : Ξ ⋈ Θ ⋈ Ψ ⊢ g) :
-  Ξ ⋈ σ ⋆ Ψ ⊢ (Ξ ⋈ σ ⋆ Ψ).boundaryOf (σ ⋆ g) ≈ σ ⋆ (Ξ ⋈ Θ ⋈ Ψ).boundaryOf g
-  := by
-  rw [← hσ.fillBefore_act Ψ g, ← hσ.fillBefore_act_boundary Ψ ((Ξ ⋈ Θ ⋈ Ψ).boundaryOf g)]
-  apply (substitutionAt Ω).boundary (hσ.fillBefore Ψ) h
-  rw [hσ.fillBefore_act_boundary Ψ]
-  apply Eq_bd.subst hσ (boundaryOf_refl hΞ h)
 
 /-- Over a well-formed ambient `Ξ ⋈ Θ`, instantiating the block `Θ` by a filling
 `σ` of `Θ` in a well-formed expression gives an expression whose computed boundary
@@ -557,18 +462,9 @@ theorem boundaryOf_instantiate
     (hΞ : Ambient.Wf (Ξ ⋈ Θ)) (hσ : Wf_s Ξ Θ σ) {g : Expr (Δ ⋈ Ω)} (h : Ξ ⋈ Θ ⊢ g) :
   Ξ ⊢ Ξ.boundaryOf (σ ⋆ g) ≈ σ ⋆ (Ξ ⋈ Θ).boundaryOf g
   := by
-  convert boundaryOf_subst (Ψ := .nil) (g := g) ?_ hσ ?_ using 2
-  · symm
-    apply dTel.concatenate_nil
-  · symm
-    apply dTel.concatenate_nil
-  · congr 2
-    symm
-    apply dTel.concatenate_nil
-  · convert hΞ using 1
-    apply dTel.concatenate_nil
-  · convert h using 1
-    apply dTel.concatenate_nil
+  rw [Subst.instantiate, Bd.instantiate, ← act_copair_prefix, ← Bd.act_copair_prefix]
+  apply (substitutionAt Ω).boundary (Wf_s.filling hσ) h
+  apply (substitutionAt Ω).boundaryEquality (Wf_s.filling hσ) (boundaryOf_refl hΞ h)
 
 end
 
@@ -695,24 +591,6 @@ def Eq_sub {Γ Γ' : C.Arity} (A : Ambient Γ) (A' : Ambient Γ') (σ θ : Subst
   ∀ ⦃α : C.Arity⦄ (x : Γ ∋ α), ¬ (Bd.applyAt σ α (A.declaration x)).isEq →
     Eq_e (A' ⋈ σ ⋆ A.binding x) (σ x) (θ x)
 
-/-- The declaration of `x` in `A` reindexed over `Γ'` is the declaration of `x` in
-`A` renamed along `Renaming.inr Γ' Γ ⇑ʳ α`. -/
-theorem Ambient.weaken_declaration {Γ Γ' α : C.Arity} (A : Ambient Γ) (x : Γ ∋ α) :
-  (dTel.rename (Renaming.fromUnit Γ') A).declaration x
-    = Bd.rename (Renaming.inr Γ' Γ ⇑ʳ α) (A.declaration x)
-  := by
-  rw [dTel.declaration_rename, Renaming.fromUnit_extend]
-  rfl
-
-/-- The entries `x` binds in `A` reindexed over `Γ'` are the entries `x` binds in
-`A` renamed along `Renaming.inr Γ' Γ`. -/
-theorem Ambient.weaken_binding {Γ Γ' α : C.Arity} (A : Ambient Γ) (x : Γ ∋ α) :
-  (dTel.rename (Renaming.fromUnit Γ') A).binding x
-    = dTel.rename (Renaming.inr Γ' Γ) (A.binding x)
-  := by
-  rw [dTel.binding_rename, Renaming.fromUnit_extend]
-  rfl
-
 /-- Filling by `σ` the declaration of `x` in `A` reindexed over `Γ'` gives the
 declaration of `x` in `A` under `σ`. -/
 theorem Wf_sub.declaration_weaken
@@ -721,18 +599,18 @@ theorem Wf_sub.declaration_weaken
   Bd.fill σ ((dTel.rename (Renaming.fromUnit Γ') A).declaration x)
     = Bd.applyAt σ α (A.declaration x)
   := by
-  rw [Ambient.weaken_declaration]
+  rw [dTel.declaration_rename, Renaming.fromUnit_extend]
   apply Bd.act_weaken
 
-/-- Instantiating by `σ` the entries `x` binds in `A` reindexed over `Γ'` gives
-the entries `x` binds in `A` under `σ`. -/
+/-- Extending `A'` by the entries `x` binds in `A` reindexed over `Γ'` and
+instantiated by `σ` gives `A'` extended by the entries `x` binds in `A` under `σ`. -/
 theorem Wf_sub.binding_weaken
-    {Γ Γ' : C.Arity} {A : Ambient Γ}
+    {Γ Γ' : C.Arity} {A : Ambient Γ} (A' : Ambient Γ')
     (σ : Subst Γ Γ') ⦃α : C.Arity⦄ (x : Γ ∋ α) :
-  dTel.instantiate σ ((dTel.rename (Renaming.fromUnit Γ') A).binding x)
-    = dTel.actBase σ (A.binding x)
+  A' ⋈ σ ⋆ (dTel.rename (Renaming.fromUnit Γ') A).binding x = A' ⋈ σ ⋆ A.binding x
   := by
-  rw [Ambient.weaken_binding]
+  rw [dTel.binding_rename, Renaming.fromUnit_extend]
+  congr 1
   apply dTel.instantiate_weaken
 
 /-- A well-formed substitution `σ` from `A` to `A'` fills, over `A'`, the ambient
@@ -743,20 +621,15 @@ theorem Wf_sub.toFilling
   Wf_s A' (dTel.rename (Renaming.fromUnit Γ') A) σ
   := by
   apply Wf_s.slotwise
-  · intro Λ z l r hlr
-    rw [Wf_sub.declaration_weaken] at hlr
-    convert (hσ z).1 l r hlr using 2
-    apply Wf_sub.binding_weaken
-  · intro Λ z hne
-    rw [Wf_sub.declaration_weaken] at hne
-    convert (hσ z).2.1 hne using 2
-    apply Wf_sub.binding_weaken
-  · intro Λ z hne
-    rw [Wf_sub.declaration_weaken] at hne
-    convert (hσ z).2.2 hne using 3
-    · apply Wf_sub.binding_weaken
-    · apply Wf_sub.binding_weaken
-    · apply Wf_sub.declaration_weaken
+  · intro Λ z
+    rw [Wf_sub.declaration_weaken, Wf_sub.binding_weaken]
+    apply (hσ z).1
+  · intro Λ z
+    rw [Wf_sub.declaration_weaken, Wf_sub.binding_weaken]
+    apply (hσ z).2.1
+  · intro Λ z
+    rw [Wf_sub.declaration_weaken, Wf_sub.binding_weaken]
+    apply (hσ z).2.2
 
 /-- Agreeing substitutions `σ` and `θ` from `A` to `A'` agree, over `A'`, as
 fillings of the ambient `A` reindexed over `Γ'`. -/
@@ -766,10 +639,9 @@ theorem Eq_sub.toAgreement
   Eq_s A' (dTel.rename (Renaming.fromUnit Γ') A) σ θ
   := by
   apply Eq_s.slotwise
-  intro Λ z hne
-  rw [Wf_sub.declaration_weaken] at hne
-  convert hst z hne using 2
-  apply Wf_sub.binding_weaken
+  intro Λ z
+  rw [Wf_sub.declaration_weaken, Wf_sub.binding_weaken]
+  apply hst z
 
 /-- Applying `σ : Subst Δ Ω` to the ambient `A` reindexed over `Δ` gives `A`
 reindexed over `Ω`. -/
@@ -789,26 +661,8 @@ theorem Wf_s.toWf_sub
   Wf_sub A A' σ
   := by
   intro α x
-  and_intros
-  · intro l r hlr
-    convert hσ.equation x l r ?_ using 2
-    · symm
-      apply Wf_sub.binding_weaken
-    · rwa [Wf_sub.declaration_weaken]
-  · intro hne
-    convert hσ.filler x ?_ using 2
-    · symm
-      apply Wf_sub.binding_weaken
-    · rwa [Wf_sub.declaration_weaken]
-  · intro hne
-    convert hσ.declared x ?_ using 3
-    · symm
-      apply Wf_sub.binding_weaken
-    · symm
-      apply Wf_sub.binding_weaken
-    · symm
-      apply Wf_sub.declaration_weaken
-    · rwa [Wf_sub.declaration_weaken]
+  rw [← Wf_sub.declaration_weaken σ x, ← Wf_sub.binding_weaken A' σ x]
+  exact ⟨hσ.equation x, hσ.filler x, hσ.declared x⟩
 
 /-- Substitutions `σ` and `θ` agreeing, over `A'`, as fillings of the ambient `A`
 reindexed over `Γ'` are agreeing substitutions from `A` to `A'`. -/
@@ -817,48 +671,22 @@ theorem Eq_s.toEq_sub
     (hst : Eq_s A' (dTel.rename (Renaming.fromUnit Γ') A) σ θ) :
   Eq_sub A A' σ θ
   := by
-  intro α x hne
-  convert hst.slot x ?_ using 2
-  · symm
-    apply Wf_sub.binding_weaken
-  · rwa [Wf_sub.declaration_weaken]
+  intro α x
+  rw [← Wf_sub.declaration_weaken σ x, ← Wf_sub.binding_weaken A' σ x]
+  apply hst.slot x
 
 /-- The identity is a well-formed substitution from a well-formed ambient to
 itself. -/
 theorem Wf_sub.id {Δ : C.Arity} {Ξ : Ambient Δ} (hΞ : Ambient.Wf Ξ) :
   Wf_sub Ξ Ξ (Subst.id Δ)
   := by
-  intro α x
-  have hd : Bd.applyAt (Subst.id Δ) α (Ξ.declaration x) = Ξ.declaration x :=
-    Bd.act_id Δ α _
-  have hb : dTel.actBase (Subst.id Δ) (Ξ.binding x) = Ξ.binding x := dTel.actBase_id _
-  rw [hd]
-  and_intros
-  · intro l r hlr
-    have hbd := Wf_t.declaration hΞ x
-    rw [hlr] at hbd
-    let ι := (Ambient.Renaming.weaken Ξ (Ξ.binding x)).extend (Ξ.binding x)
-    convert Eq_e.hyp (Ξ := Ξ ⋈ Ξ.binding x) (C.inl x) (⟦ ι.slot ⟧ʳ l) (⟦ ι.slot ⟧ʳ r)
-      (Subst.instId Δ α) ?_ ?_ ?_ ?_ using 2
-    · rw [← Renaming.extend_unit ι.slot]
-      symm
-      apply act_instId_weaken
-    · rw [← Renaming.extend_unit ι.slot]
-      symm
-      apply act_instId_weaken
-    · rw [dTel.declaration_concatenate_inl, hlr]
-      rfl
-    · convert Wf_e.weaken ι hbd.eq_left using 2
-      apply dTel.binding_concatenate_inl
-    · convert Wf_e.weaken ι hbd.eq_right using 2
-      apply dTel.binding_concatenate_inl
-    · convert Wf_s.eta Ξ (Ξ.binding x) (Wf_t.binding hΞ x) using 2
-      apply dTel.binding_concatenate_inl
-  · intro hne
-    convert Wf_e.eta Ξ x (Wf_t.binding hΞ x) hne using 2
-  · intro _
-    convert Wf_bd.refl (Wf_t.declaration hΞ x) using 2
-    convert dTel.boundaryOf_eta Ξ x using 3
+  apply Wf_s.toWf_sub
+  convert Wf_s.eta .nil Ξ hΞ using 1
+  · rw [Renaming.eq_fromUnit (Renaming.inl 1 Δ)]
+    rfl
+  · funext _ x
+    rw [Subst.instId, C.unit_left]
+    rfl
 
 /-- Over a well-formed ambient `Ξ`, a filling `σ` of `Θ` gives a well-formed
 substitution from `Ξ ⋈ Θ` to `Ξ`: the identity on `Ξ` paired with `σ` on `Θ`. -/
@@ -867,24 +695,11 @@ theorem Wf_s.toSub
     (hΞ : Ambient.Wf Ξ) (h : Wf_s Ξ Θ σ) :
   Wf_sub (Ξ ⋈ Θ) Ξ (Subst.copair (Subst.id Δ) σ)
   := by
-  intro α x
-  rcases (Wf_s.filling h).slot x with ⟨y, hη, hdecl, hbind⟩ | ⟨_, heq, hwf, hbd⟩
-  · obtain ⟨heq, hwf, hbd⟩ := Wf_sub.id hΞ y
-    have hd : Bd.applyAt (Subst.id Δ) α (Ξ.declaration y) = Ξ.declaration y :=
-      Bd.act_id Δ α _
-    have hb : (Wf_s.filling h).fill ⋆ (Ξ ⋈ Θ).binding x
-        = dTel.actBase (Subst.id Δ) (Ξ.binding y) := by
-      rw [dTel.actBase_id, hbind]
-    rw [hd, hdecl] at heq hwf hbd
-    and_intros
-    · intro l r hlr
-      convert heq l r hlr using 2
-    · intro hne
-      convert hwf hne using 2
-    · intro hne
-      convert hbd hne using 2
-      apply congrArg (Ξ ⋈ ·) hb
-  · exact ⟨heq, hwf, hbd⟩
+  apply Wf_s.toWf_sub
+  rw [dTel.rename_concatenate, Renaming.fromUnit_extend]
+  apply Wf_s.concatenate (Wf_sub.id hΞ).toFilling
+  erw [dTel.instantiate_weaken, dTel.actBase_id]
+  apply h
 
 /-- Over a well-formed ambient `Ξ`, substitutions `σ` and `θ` agreeing as fillings
 of `Θ` give agreeing substitutions from `Ξ ⋈ Θ` to `Ξ`: the identity on `Ξ`
@@ -894,33 +709,11 @@ theorem Eq_s.toSub
     (hΞ : Ambient.Wf Ξ) (h : Eq_s Ξ Θ σ θ) :
   Eq_sub (Ξ ⋈ Θ) Ξ (Subst.copair (Subst.id Δ) σ) (Subst.copair (Subst.id Δ) θ)
   := by
-  intro α x hne
-  rcases C.cover Δ Ω x with ⟨w, rfl⟩ | ⟨z, rfl⟩
-  · have hd : Bd.applyAt (Subst.copair (Subst.id Δ) σ) α ((Ξ ⋈ Θ).declaration (C.inl w))
-        = Ξ.declaration w := by
-      rw [dTel.declaration_concatenate_inl]
-      apply Eq.trans (Bd.act_rename_cancel (Renaming.inl Δ Ω) (𝟙ʳ Δ) _ ?_ α (Ξ.declaration w))
-      · rw [Renaming.extend_id, Bd.rename_id]
-      · intro _ u
-        apply Subst.copair_inl
-    have hb : dTel.actBase (Subst.copair (Subst.id Δ) σ) ((Ξ ⋈ Θ).binding (C.inl w))
-        = Ξ.binding w := by
-      rw [dTel.binding_concatenate_inl]
-      apply Eq.trans (dTel.actBase_rename_cancel (Renaming.inl Δ Ω) (𝟙ʳ Δ) _ ?_ (Ξ.binding w))
-      · apply dTel.rename_id
-      · intro _ u
-        apply Subst.copair_inl
-    rw [hd] at hne
-    rw [Subst.copair_inl, Subst.copair_inl]
-    convert Eq_e.refl (Wf_e.eta Ξ w (Wf_t.binding hΞ w) hne) using 2
-  · have hd : Bd.applyAt (Subst.copair (Subst.id Δ) σ) α ((Ξ ⋈ Θ).declaration (C.inr z))
-        = σ ⋆ Θ.declaration z := by
-      rw [dTel.declaration_concatenate_inr]
-      apply Bd.act_copair_prefix
-    have hb := dTel.binding_concatenate_inr Ξ Θ z
-    rw [hd] at hne
-    rw [Subst.copair_inr, Subst.copair_inr]
-    convert h.slot z hne using 3
+  apply Eq_s.toEq_sub
+  rw [dTel.rename_concatenate, Renaming.fromUnit_extend]
+  apply Eq_s.concatenate (Eq_s.refl (Wf_sub.id hΞ).toFilling)
+  erw [dTel.instantiate_weaken, dTel.actBase_id]
+  apply h
 
 /-- Agreeing well-formed substitutions from a well-formed ambient `A` to `A'`
 send a well-formed expression over `A` to equal expressions over `A'`. -/
@@ -1016,56 +809,20 @@ theorem Wf_sub.lift
     (hσ : Wf_sub A A' σ) {Χ : C.Arity} {T : dTel Γ Χ} (hT : Wf_t A T) :
   Wf_sub (A ⋈ T) (A' ⋈ σ ⋆ T) (Subst.lift σ Χ)
   := by
-  intro α x
-  rcases C.cover Γ Χ x with ⟨w, rfl⟩ | ⟨i, rfl⟩
-  · have hd : Bd.applyAt (Subst.lift σ Χ) α ((A ⋈ T).declaration (C.inl w))
-        = Bd.rename (Renaming.inl Γ' Χ ⇑ʳ α) (Bd.applyAt σ α (A.declaration w)) := by
-      rw [dTel.declaration_concatenate_inl]
-      apply Bd.act_square
+  apply Wf_s.toWf_sub
+  rw [dTel.rename_concatenate, Renaming.fromUnit_extend, ← Subst.copair_eta (Subst.lift σ Χ)]
+  apply Wf_s.concatenate
+  · convert Wf_s.weaken (Ambient.Renaming.weaken A' (σ ⋆ T)) hσ.toFilling using 1
+    · rw [← dTel.rename_comp, Renaming.eq_fromUnit (_ ∘ʳ _)]
+    · funext _ u
       apply Subst.lift_inl
-    have hb : dTel.actBase (Subst.lift σ Χ) ((A ⋈ T).binding (C.inl w))
-        = dTel.rename (Renaming.inl Γ' Χ) (σ ⋆ A.binding w) := by
-      rw [dTel.binding_concatenate_inl]
-      apply dTel.actBase_square
+  · erw [dTel.instantiate_weaken]
+    convert Wf_s.eta A' (σ ⋆ T) (Wf_t.subst_ambient hσ hT) using 1
+    · conv_lhs => rw [← dTel.rename_id T]
+      rw [dTel.actBase_square (𝟙ʳ Γ) (Renaming.inl Γ' Χ) _ σ]
+      intro _ u
       apply Subst.lift_inl
-    let ι := (Ambient.Renaming.weaken A' (σ ⋆ T)).extend (σ ⋆ A.binding w)
-    obtain ⟨heq, hwf, hbd⟩ := hσ w
-    and_intros
-    · intro l r hlr
-      rw [hd] at hlr
-      obtain ⟨l₀, r₀, hlr₀, rfl, rfl⟩ := Bd.rename_eq_inv _ hlr
-      convert Eq_e.weaken ι (heq l₀ r₀ hlr₀) using 2
-    · intro hne
-      convert Wf_e.weaken ι (hwf ?_) using 2
-      · apply Subst.lift_inl
-      · rwa [hd, Bd.isEq_rename] at hne
-    · intro hne
-      convert Eq_bd.weaken ι (hbd ?_) using 2
-      · convert ι.boundaryOf (σ w) using 3
-        apply Subst.lift_inl
-      · rwa [hd, Bd.isEq_rename] at hne
-  · have hη := Wf_s.eta A' (σ ⋆ T) (Wf_t.subst_ambient hσ hT)
-    have hd : Bd.applyAt (Subst.lift σ Χ) α ((A ⋈ T).declaration (C.inr i))
-        = Subst.instId Γ' Χ ⋆ (dTel.rename (Renaming.inl Γ' Χ) (σ ⋆ T)).declaration i := by
-      symm
-      apply Eq.trans (dTel.act_declaration_instId (σ ⋆ T) i)
-      rw [dTel.declaration_actBase, dTel.declaration_concatenate_inr]
-      rfl
-    have hb : dTel.actBase (Subst.lift σ Χ) ((A ⋈ T).binding (C.inr i))
-        = Subst.instId Γ' Χ ⋆ (dTel.rename (Renaming.inl Γ' Χ) (σ ⋆ T)).binding i := by
-      symm
-      apply Eq.trans (dTel.instantiate_binding_instId (σ ⋆ T) i)
-      rw [dTel.binding_actBase, dTel.binding_concatenate_inr]
-      rfl
-    rw [hd]
-    and_intros
-    · intro l r hlr
-      convert hη.equation i l r hlr using 2
-    · intro hne
-      convert hη.filler i hne using 2
-      apply Subst.lift_inr
-    · intro hne
-      convert hη.declared i hne using 3
+    · funext _ i
       apply Subst.lift_inr
 
 /-- Agreeing substitutions `σ` and `θ` from `A` to `A'`, with `σ` well formed,
@@ -1077,38 +834,21 @@ theorem Eq_sub.lift
     (hst : Eq_sub A A' σ θ) :
   Eq_sub (A ⋈ T) (A' ⋈ σ ⋆ T) (Subst.lift σ Χ) (Subst.lift θ Χ)
   := by
-  intro α x hne
-  rcases C.cover Γ Χ x with ⟨w, rfl⟩ | ⟨i, rfl⟩
-  · have hd : Bd.applyAt (Subst.lift σ Χ) α ((A ⋈ T).declaration (C.inl w))
-        = Bd.rename (Renaming.inl Γ' Χ ⇑ʳ α) (Bd.applyAt σ α (A.declaration w)) := by
-      rw [dTel.declaration_concatenate_inl]
-      apply Bd.act_square
+  apply Eq_s.toEq_sub
+  rw [dTel.rename_concatenate, Renaming.fromUnit_extend, ← Subst.copair_eta (Subst.lift σ Χ),
+    ← Subst.copair_eta (Subst.lift θ Χ)]
+  apply Eq_s.concatenate
+  · convert Eq_s.weaken (Ambient.Renaming.weaken A' (σ ⋆ T)) hst.toAgreement using 1
+    · rw [← dTel.rename_comp, Renaming.eq_fromUnit (_ ∘ʳ _)]
+    · funext _ u
       apply Subst.lift_inl
-    have hb : dTel.actBase (Subst.lift σ Χ) ((A ⋈ T).binding (C.inl w))
-        = dTel.rename (Renaming.inl Γ' Χ) (σ ⋆ A.binding w) := by
-      rw [dTel.binding_concatenate_inl]
-      apply dTel.actBase_square
+    · funext _ u
       apply Subst.lift_inl
-    rw [hd, Bd.isEq_rename] at hne
-    rw [Subst.lift_inl, Subst.lift_inl]
-    convert Eq_e.weaken ((Ambient.Renaming.weaken A' (σ ⋆ T)).extend (σ ⋆ A.binding w))
-      (hst w hne) using 2
-  · have hη := Wf_s.eta A' (σ ⋆ T) (Wf_t.subst_ambient hσ hT)
-    have hd : Bd.applyAt (Subst.lift σ Χ) α ((A ⋈ T).declaration (C.inr i))
-        = Subst.instId Γ' Χ ⋆ (dTel.rename (Renaming.inl Γ' Χ) (σ ⋆ T)).declaration i := by
-      symm
-      apply Eq.trans (dTel.act_declaration_instId (σ ⋆ T) i)
-      rw [dTel.declaration_actBase, dTel.declaration_concatenate_inr]
-      rfl
-    have hb : dTel.actBase (Subst.lift σ Χ) ((A ⋈ T).binding (C.inr i))
-        = Subst.instId Γ' Χ ⋆ (dTel.rename (Renaming.inl Γ' Χ) (σ ⋆ T)).binding i := by
-      symm
-      apply Eq.trans (dTel.instantiate_binding_instId (σ ⋆ T) i)
-      rw [dTel.binding_actBase, dTel.binding_concatenate_inr]
-      rfl
-    rw [hd] at hne
+  · have h := (Wf_sub.lift hσ hT).toFilling
+    rw [dTel.rename_concatenate, Renaming.fromUnit_extend] at h
+    convert Eq_s.refl (Wf_s.concatenate_right h) using 1
+    funext _ i
     rw [Subst.lift_inr, Subst.lift_inr]
-    convert Eq_e.refl (hη.filler i hne) using 2
 
 /-- Agreeing well-formed substitutions from a well-formed ambient `A` to `A'` send
 a boundary equal to itself over `A` to equal boundaries over `A'`. -/

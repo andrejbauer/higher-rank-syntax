@@ -1,11 +1,11 @@
-import HigherRankSyntax.ListCarrier
 import HigherRankSyntax.Renaming
 
 /-!
-# Expressions of a higher-rank binding signature
+# Expressions and their renaming
 
 `Expr Γ` is the type of expressions in arity `Γ`.  The constructor `ap` takes a
 head slot `x : Γ ∋ α` and, for each slot `i : α ∋ Δ`, an argument in `Expr (Γ ⋈ Δ)`.
+`Expr.η x` is the η-expansion of a slot `x`, and `⟦ ρ ⟧ʳ e` renames `e` along `ρ`.
 -/
 
 /-- Expressions in arity `Γ`. -/
@@ -28,22 +28,19 @@ inductive Expr.Subterm :
   | of_arg {Γ α : C.Arity} (x : Γ ∋ α) (args : Args Γ α)
       {Δ} (j : α ∋ Δ) : Subterm ⟨Γ ⋈ Δ, args j⟩ ⟨Γ, ap x args⟩
 
-theorem Expr.Subterm.wf :
-  WellFounded (@Expr.Subterm)
-  := by
-  constructor
-  intro ⟨Γ, e⟩
-  induction e with
-  | ap x args ih =>
-    apply Acc.intro
-    rintro ⟨_, _⟩ h
-    cases h
-    apply ih
-
+/-- `Expr.Subterm` is well-founded. -/
 instance Expr.Subterm.wellFoundedRelation :
     WellFoundedRelation (Σ Γ : C.Arity, Expr Γ) where
   rel := @Expr.Subterm
-  wf := Expr.Subterm.wf
+  wf := by
+    constructor
+    intro ⟨Γ, e⟩
+    induction e with
+    | ap x args ih =>
+      apply Acc.intro
+      rintro ⟨_, _⟩ h
+      cases h
+      apply ih
 
 /-- The η-expansion of a slot `x : Γ ∋ α`: the expression
 `ap (C.inl x) (fun i => η (C.inr i))` in `Expr (Γ ⋈ α)`. -/

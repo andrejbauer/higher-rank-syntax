@@ -6,20 +6,22 @@ import HigherRankSyntax.Initiality.Chain
 The semantic counterparts, in a model `M`, of the syntactic boundaries, decorated
 telescopes and fillers.
 
-* A `Boundary` over an object is a sort, an element of a sort, or one of the two
-  equations; its type is `U`, `El S`, `IdSort S S'` or `IdElement l r`.
+* A `Boundary` over an object declares a sort, an element of a sort `S`, or one of
+  the two equations; the type it declares is `U`, `El S`, `IdSort S S'` or
+  `IdElement l r`.
 * A `Decoration` of a chain records, for each type of the chain, a decorated binding
-  chain and a boundary at its end, and that the type is `Bind` of that binding at
-  that boundary. A `Telescope` is a chain together with a decoration.
+  chain and a boundary at its end, and that the type is `Bind` of that binding chain
+  at the type the boundary declares. A `Telescope` is a chain together with a
+  decoration.
 * A `Filler` over an object is a boundary together with a term of its type.
 * The `Value` of a slot is its binding telescope together with a filler over the end
   of that telescope.
 * An `Environment` over an object assigns a value to every slot of an arity.
 
 Everything reindexes along substitutions, functorially. Extending an environment by
-a decoration keeps the old slots, reindexed along the projection, and gives the new
-slots their generic values: the generic term of the entry's type, `unlam`ped along
-its binding chain.
+a decoration keeps the values of the old slots, reindexed along the projection, and
+gives the new slots their generic values, built from the generic term of the entry's
+type read over the end of its binding chain by `unlam`.
 -/
 
 universe u
@@ -31,8 +33,8 @@ variable {M : Structure.{u}}
 /-! ### Boundaries -/
 
 variable (M) in
-/-- A semantic boundary over `Γ`: a sort, an element of the sort `S`, the equation
-of two sorts, or the equation of two elements of a sort. -/
+/-- A semantic boundary over `Γ`, declaring a sort, an element of the sort `S`, the
+equation of two sorts, or the equation of two elements of a sort. -/
 inductive Boundary (Γ : M.Ob) : Type u
   | sort
   | of (S : M.Tm Γ (M.U Γ))
@@ -48,7 +50,7 @@ def ty {Γ : M.Ob} : Boundary M Γ → M.Ty Γ
   | .eqSort S S' => M.IdSort S S'
   | .eqElement _ l r => M.IdElement l r
 
-/-- A boundary is an equation. -/
+/-- The boundary is one of the two equations `eqSort`, `eqElement`. -/
 def IsEq {Γ : M.Ob} : Boundary M Γ → Prop
   | .eqSort _ _ => True
   | .eqElement _ _ _ => True
@@ -86,20 +88,14 @@ theorem subst_comp
   | sort => rfl
   | of S =>
       apply congrArg of
-      apply eq_of_heq
-      apply M.substTm_comp_heq
+      apply eq_of_heq (M.substTm_comp_heq ..)
   | eqSort S S' =>
-      rw [subst, subst, subst]
-      congr 1
-      · apply eq_of_heq
-        apply M.substTm_comp_heq
-      · apply eq_of_heq
-        apply M.substTm_comp_heq
+      simp only [subst]
+      congr 1 <;> apply eq_of_heq (M.substTm_comp_heq ..)
   | eqElement S l r =>
-      rw [subst, subst, subst]
+      simp only [subst]
       congr 1
-      · apply eq_of_heq
-        apply M.substTm_comp_heq
+      · apply eq_of_heq (M.substTm_comp_heq ..)
       · apply M.substTm_comp_heq
       · apply M.substTm_comp_heq
 
@@ -112,20 +108,14 @@ theorem subst_identity
   | sort => rfl
   | of S =>
       apply congrArg of
-      apply eq_of_heq
-      apply M.substTm_identity_heq
+      apply eq_of_heq (M.substTm_identity_heq ..)
   | eqSort S S' =>
       rw [subst]
-      congr 1
-      · apply eq_of_heq
-        apply M.substTm_identity_heq
-      · apply eq_of_heq
-        apply M.substTm_identity_heq
+      congr 1 <;> apply eq_of_heq (M.substTm_identity_heq ..)
   | eqElement S l r =>
       rw [subst]
       congr 1
-      · apply eq_of_heq
-        apply M.substTm_identity_heq
+      · apply eq_of_heq (M.substTm_identity_heq ..)
       · apply M.substTm_identity_heq
       · apply M.substTm_identity_heq
 
@@ -138,15 +128,15 @@ theorem isEq_subst
 
 end Boundary
 
-/-- The type of an entry, `Bind` of its binding chain at a boundary, reindexed along
-`σ` is `Bind` of the reindexed binding chain at the boundary reindexed along the
-lift of `σ`. -/
+/-- A type `A` equal to `Bind` of a chain `b` at the type of a boundary `B`, reindexed
+along `σ`, is `Bind` of `b` reindexed along `σ` at the type of `B` reindexed along the
+lift of `σ` through `b`. -/
 theorem Chain.Bind_subst_entry
     {Γ Δ : M.Ob} {α : C.Arity} {b : Chain M Γ α} {B : Boundary M b.last} {A : M.Ty Γ}
     (hA : A = b.Bind B.ty) (σ : M.Sub Δ Γ) :
   M.substTy A σ = (b.subst σ).Bind (B.subst (b.lift σ)).ty
   := by
-  rw [← Boundary.subst_ty, ← Chain.Bind_subst, hA]
+  rw [← Boundary.subst_ty, ← Bind_subst, hA]
 
 /-! ### Decorations and telescopes -/
 
@@ -161,8 +151,9 @@ inductive Decoration : {Γ : M.Ob} → {Ω : C.Arity} → Chain M Γ Ω → Type
       {c : Chain M (M.extend Γ A) Ω} (d : Decoration c) :
       Decoration (Chain.cons (α := α) A c)
 
-/-- A decoration of a chain reindexed along `σ`: every binding chain, boundary and
-type in it reindexed along `σ` lifted through the types before it. -/
+/-- A decoration of a chain reindexed along `σ`: the binding decoration and the type of
+each entry reindexed along `σ` lifted through the types before the entry, and its
+boundary along that substitution lifted further through the entry's binding chain. -/
 def Decoration.subst : {Γ Δ : M.Ob} → {Ω : C.Arity} → {c : Chain M Γ Ω} →
     Decoration M c → (σ : M.Sub Δ Γ) → Decoration M (c.subst σ)
   | _, _, _, _, .nil, _ => .nil
@@ -177,7 +168,7 @@ theorem Decoration.subst_comp :
       (θ : M.Sub Ξ Δ),
       HEq (d.subst (M.comp σ θ)) ((d.subst σ).subst θ)
   | _, _, _, _, _, .nil, _, _ => HEq.rfl
-  | _, _, _, _, _, @Decoration.cons _ _ _ _ b db B A hA c d, σ, θ => by
+  | _, _, _, _, _, .cons db B A hA d, σ, θ => by
       simp only [subst]
       congr 1
       · apply Chain.subst_comp
@@ -203,7 +194,7 @@ theorem Decoration.subst_identity :
     ∀ {Γ : M.Ob} {Ω : C.Arity} {c : Chain M Γ Ω} (d : Decoration M c),
       HEq (d.subst (M.identity Γ)) d
   | _, _, _, .nil => HEq.rfl
-  | _, _, _, @Decoration.cons _ _ _ _ b db B A hA c d => by
+  | _, _, _, .cons db B A hA d => by
       rw [subst]
       congr 1
       · apply Chain.subst_identity
@@ -214,7 +205,7 @@ theorem Decoration.subst_identity :
         · apply Chain.lift_identity
       · apply M.substTy_identity
       · apply proof_irrel_heq
-      · apply HEq.trans _ (heq_of_eq (Chain.subst_identity c))
+      · apply HEq.trans _ (heq_of_eq (Chain.subst_identity _))
         congr 1
         · rw [M.substTy_identity]
         · apply Structure.lift_identity
@@ -320,7 +311,7 @@ theorem Value.subst_comp
   apply Value.ext
   · apply Telescope.subst_comp
   · apply HEq.trans _ (heq_of_eq (Filler.subst_comp _ _ _))
-    simp only [Value.subst]
+    simp only [subst]
     congr 1
     · rw [Telescope.subst_comp]
     · apply Chain.lift_comp
@@ -333,7 +324,7 @@ theorem Value.subst_identity
   apply Value.ext
   · apply Telescope.subst_identity
   · apply HEq.trans _ (heq_of_eq (Filler.subst_identity _))
-    simp only [Value.subst]
+    simp only [subst]
     congr 1
     · rw [Telescope.subst_identity]
     · apply Chain.lift_identity
@@ -346,7 +337,7 @@ def Environment (Γ : M.Ob) (Δ : C.Arity) : Type u :=
 
 namespace Environment
 
-/-- The environment for the arity with no slots. -/
+/-- The environment over `Γ` for the unit arity, which has no slots. -/
 def empty (Γ : M.Ob) : Environment M Γ 1 :=
   fun _ x => (C.unit_is_empty x).elim
 
@@ -369,10 +360,10 @@ end Environment
 
 /-! ### Generic values and extension -/
 
-/-- The generic value of the first entry of a decoration, over the extension by that
-entry's type `A`: the entry's binding telescope and boundary reindexed along the
-projection, and the generic term of `A` read over the end of the reindexed binding
-chain by `unlam`. -/
+/-- The generic value of the entry with binding decoration `db`, boundary `B` and type
+`A = b.Bind B.ty`, over the extension by `A`: the binding telescope reindexed along the
+projection, `B` reindexed along the lift of the projection through `b`, and the generic
+term of `A` read over the end of the reindexed binding chain by `unlam`. -/
 def Decoration.headValue {Γ : M.Ob} {α : C.Arity} {b : Chain M Γ α} (db : Decoration M b)
     (B : Boundary M b.last) (A : M.Ty Γ) (hA : A = b.Bind B.ty) :
     Value M (M.extend Γ A) α :=
@@ -381,18 +372,19 @@ def Decoration.headValue {Γ : M.Ob} {α : C.Arity} {b : Chain M Γ α} (db : De
       (b.subst (M.projection A)).unlam
         (Chain.Bind_subst_entry hA (M.projection A) ▸ M.generic A)⟩⟩
 
-/-- The generic value of an entry, reindexed along the pair of `g` with a term `t` of
-the entry's type, is the entry's binding telescope and boundary reindexed along `g`,
-with `t` read over the end of the reindexed binding chain by `unlam`. -/
+/-- The generic value of an entry of type `A`, reindexed along the pair of `g` with a
+term `t` of the type `A` reindexed along `g`, is the entry's binding telescope reindexed along
+`g`, its boundary reindexed along the lift of `g` through the binding chain, and `t`
+read over the end of the reindexed binding chain by `unlam`. -/
 theorem Decoration.headValue_subst_pair
     {Γ Ξ : M.Ob} {α : C.Arity} {b : Chain M Γ α} (db : Decoration M b)
     (B : Boundary M b.last) (A : M.Ty Γ) (hA : A = b.Bind B.ty)
     (g : M.Sub Ξ Γ) (t : M.Tm Ξ (M.substTy A g)) :
-  (Decoration.headValue db B A hA).subst (M.pair g t)
+  (headValue db B A hA).subst (M.pair g t)
     = ⟨(Telescope.mk b db).subst g,
         ⟨B.subst (b.lift g), (b.subst g).unlam (Chain.Bind_subst_entry hA g ▸ t)⟩⟩
   := by
-  simp only [Decoration.headValue, Value.subst]
+  simp only [headValue, Value.subst]
   congr 1
   · rw [← Telescope.subst_comp, M.projection_pair]
   · simp only [Telescope.subst, Filler.subst]
@@ -428,12 +420,12 @@ type, is the generic value of the entry reindexed along `σ`. -/
 theorem Decoration.headValue_subst_lift
     {Γ Δ : M.Ob} {α : C.Arity} {b : Chain M Γ α} (db : Decoration M b)
     (B : Boundary M b.last) (A : M.Ty Γ) (hA : A = b.Bind B.ty) (σ : M.Sub Δ Γ) :
-  (Decoration.headValue db B A hA).subst (M.lift A σ)
-    = Decoration.headValue (db.subst σ) (B.subst (b.lift σ)) (M.substTy A σ)
+  (headValue db B A hA).subst (M.lift A σ)
+    = headValue (db.subst σ) (B.subst (b.lift σ)) (M.substTy A σ)
         (Chain.Bind_subst_entry hA σ)
   := by
   rw [Structure.lift, headValue_subst_pair]
-  simp only [Decoration.headValue]
+  simp only [headValue]
   congr 1
   · apply Telescope.subst_comp
   · simp only [Telescope.subst]
@@ -481,20 +473,20 @@ theorem Decoration.slot_head
     {Γ : M.Ob} {α Ω : C.Arity} {b : Chain M Γ α} (db : Decoration M b)
     (B : Boundary M b.last) (A : M.Ty Γ) (hA : A = b.Bind B.ty)
     {c : Chain M (M.extend Γ A) Ω} (d : Decoration M c) :
-  (Decoration.cons db B A hA d).slot (C.inl (C.singleSlot α))
-    = (Decoration.headValue db B A hA).subst c.projection
+  (cons db B A hA d).slot (C.inl (C.singleSlot α))
+    = (headValue db B A hA).subst c.projection
   := by
-  simp only [Decoration.slot, C.split_inl]
+  simp only [slot, C.split_inl]
 
-/-- A later slot of a decoration has its generic value in the rest of the
-decoration. -/
+/-- The slot `inr y` of a decoration with a first entry has the generic value of `y`
+in the rest of the decoration. -/
 theorem Decoration.slot_tail
     {Γ : M.Ob} {α Ω β : C.Arity} {b : Chain M Γ α} (db : Decoration M b)
     (B : Boundary M b.last) (A : M.Ty Γ) (hA : A = b.Bind B.ty)
     {c : Chain M (M.extend Γ A) Ω} (d : Decoration M c) (y : Ω ∋ β) :
-  (Decoration.cons db B A hA d).slot (C.inr y) = d.slot y
+  (cons db B A hA d).slot (C.inr y) = d.slot y
   := by
-  simp only [Decoration.slot, C.split_inr]
+  simp only [slot, C.split_inr]
 
 /-- An old slot of an extended environment keeps its value, reindexed along the
 chain's projection. -/
@@ -503,15 +495,15 @@ theorem Environment.extend_inl
     (d : Decoration M c) (y : Δ ∋ β) :
   E.extend d (C.inl y) = (E y).subst c.projection
   := by
-  simp only [Environment.extend, C.split_inl]
+  simp only [extend, C.split_inl]
 
-/-- A new slot of an extended environment has its generic value. -/
+/-- A new slot of an extended environment has its generic value in the decoration. -/
 theorem Environment.extend_inr
     {Γ : M.Ob} {Δ Ω β : C.Arity} (E : Environment M Γ Δ) {c : Chain M Γ Ω}
     (d : Decoration M c) (z : Ω ∋ β) :
   E.extend d (C.inr z) = d.slot z
   := by
-  simp only [Environment.extend, C.split_inr]
+  simp only [extend, C.split_inr]
 
 /-- Generic values commute with reindexing: reindexing the generic value of a slot
 along the lift of `σ` through the chain gives the generic value of that slot in the
@@ -521,19 +513,14 @@ theorem Decoration.slot_subst :
       {β : C.Arity} (z : Ω ∋ β),
       (d.slot z).subst (c.lift σ) = (d.subst σ).slot z
   | _, _, _, _, .nil, _, _, z => (C.unit_is_empty z).elim
-  | _, _, _, _, @Decoration.cons _ _ α _ b db B A hA c d, σ, _, z => by
+  | _, _, _, _, .cons db B A hA d, σ, _, z => by
       obtain ⟨x, rfl⟩ | ⟨y, rfl⟩ := C.cover _ _ z
       · obtain rfl := C.single_arity x
         obtain rfl := C.single_slot_unique x
-        rw [slot_head]
-        simp only [Chain.lift, Chain.last, Chain.subst]
+        simp only [subst, slot_head, Chain.lift, Chain.last, Chain.subst]
         rw [← Value.subst_comp, Chain.projection_lift, Value.subst_comp, headValue_subst_lift]
-        symm
-        apply slot_head
-      · rw [slot_tail]
-        apply Eq.trans (slot_subst d _ y)
-        symm
-        apply slot_tail
+      · simp only [subst, slot_tail, Chain.subst]
+        apply slot_subst
 
 /-- Extending an environment commutes with reindexing: extending the reindexed
 environment by the reindexed decoration is reindexing the extended environment along
@@ -545,9 +532,9 @@ theorem Environment.extend_subst
   := by
   funext _ x
   obtain ⟨y, rfl⟩ | ⟨z, rfl⟩ := C.cover _ _ x
-  · simp only [Environment.subst, extend_inl]
+  · simp only [subst, extend_inl]
     rw [← Value.subst_comp, ← Value.subst_comp, Chain.projection_lift]
-  · simp only [Environment.subst, extend_inr]
+  · simp only [subst, extend_inr]
     symm
     apply Decoration.slot_subst
 
