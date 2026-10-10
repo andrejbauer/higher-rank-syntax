@@ -27,10 +27,12 @@ positivity   PositiveEntry, PositiveBinding, Positive: inductive on
 model        𝒞 small, chosen 1, a point M : 1 ⟶ J_𝒞 Ξ, chosen extensions by
              admissible entries at the points of Ξ ▷ c, c a chain of
              positive entries                                                  [settled]
-morphism     F : 𝒞 ⥤ 𝒟 preserving 1 and the chosen extensions strictly, and
-             maps on the sort slots commuting with the operations              [settled]
+stability    the extension at g′ by a[σ] is the extension at J(σ)(g′) by a,
+             with the same projection and generic element                      [paper]
+morphism     (F, φ): F : 𝒞 ⥤ 𝒟 preserving 1 and the chosen extensions
+             strictly; φ from the points over M to the points over N along F,
+             natural in the stage and in the positive chain                    [settled]
 Mod T is a category                                                            [paper] §4
-the condition at sort equations, on Russell universes                          [paper] §4
 ```
 
 Extensions are required only at points of `Ξ ▷ c` with `c` positive, not at every
@@ -270,6 +272,8 @@ Model T   𝒞 small, chosen terminal 1
           ext : for c a chain of positive entries over Ξ, a admissible over Ξ ▷ c,
                 I : 𝒞, g ∈ J(Ξ ▷ c)(I) over M:
                 I ⊲ a,   p : I ⊲ a ⟶ I,   v ∈ J(a)(I ⊲ a, g·p),   universal
+          stable : ext at g′ by a[σ]  =  ext at J(σ)(g′) by a,  same p and v,
+                   for σ a map over Ξ between positive chain objects
 ```
 
 Unfolding lemmas (the components of `M` at sort, operation and equation slots,
@@ -279,59 +283,26 @@ semantics.md Lemma 3.3) as far as later passes need them. `[open]`
 
 ## 4. Morphisms and the category of models
 
-**Relational model.** For `F : 𝒞 ⥤ 𝒟`, an HrS-structure `Rel F`: an object is a
-presheaf over `𝒞`, a presheaf over `𝒟`, and a proof-relevant relation between the
-first and the second restricted along `F`; types and terms likewise, componentwise.
-The universe relates `X` and `Y` by the maps `El X ⟶ F*(El Y)`, and `El` of such a
-map is its graph; `Bind` is the logical relation over the images of `F`. Its two
-projections are strict HrS-morphisms by construction, so by `HrS.initial` the
-composites of `J (Rel F)` with them are `J 𝒞` and `J 𝒟`: the fundamental lemma,
-invariance under `≈` included.
+`P T`: the full subcategory of `Ctx/Ξ` on the objects `Ξ ▷ Δ`, `Δ` a chain of
+positive entries. A model has a functor of points `P T ⥤ PSh 𝒞`: `Ξ ▷ Δ` goes to the
+points of `J 𝒞 (Ξ ▷ Δ)` over `M`.
 
-- Not the direct route (comparisons by recursion on positive syntax): invariance
-  under `≈` would need an induction on `Eq_e`, and `Eq_e.congr` has premises over
-  `Ξ ⋈ Θ` for arbitrary `Θ`, where no comparison is defined. `J (Rel F)` is defined
-  on classes.
-- Not presheaves on the collage of `F`, which `Rel F` is up to iso: restriction to
-  a sieve preserves `Π` only up to iso, so the projections would not be strict.
+**Morphism** `[settled]`. `(F, φ)` with `F : 𝒞 ⥤ 𝒟`, `F 1 = 1`, and `φ` from the
+points over `M` to the points over `N` along `F`, natural in the stage and in `P T`,
+with (ext): `F (I ⊲_g a) = F I ⊲_{φ g} a`, `F p = p`, `φ (g·p, v) = (φ g·p, v)`.
+positive-theories-and-initiality.md §5.
 
-**Morphism.** `(F, r)` with `r` a point of `J (Rel F) Ξ` over `(M, N)`, and (ext):
-at related points `F (I ⊲ a) = F I ⊲ a`, with projections and generic elements
-related. The sort components of `r` are the maps `φ_y`; its operation components
-are the commutation with operations; its components at sort equations are the
-condition on sort equations.
-
-**Functionality** `[paper]`. On a chain of positive entries, relatedness of points
-over `M` and over `N` is the graph of a map, natural along `F`; for a composite it is
-the composite. Induction on positivity:
-
-```text
-El S         related points give a map φ_S : El⟦S⟧_M → El⟦S⟧_N; relatedness is its graph
-IdElement    l_M g = r_M g  ⟹  l_N g′ = φ(l_M g) = φ(r_M g) = r_N g′;  graph of ★ ↦ ★
-Bind w c′    w admissible:  F(I ⊲ w) = FI ⊲ w′,  φ v = v′                    (ext)
-             h′ is determined by  h′(p, v′) = φ_{c′}(h(p, v))                 Yoneda in 𝒟
-             F⟨f, u⟩ = ⟨Ff, φu⟩,  so  h′(Ff, φu) = φ_{c′}(h(f, u))            related
-```
-
-Sort terms over `Ξ ▷ c` are headed by sort slots of `Ξ`, `c` having no sort entries,
-so `φ_S` is computed from the `φ_y` and composes. Each excluded form fails in this
-induction: an `IdSort` entry is not a graph, a sort entry is related by an arbitrary
-map, a non-admissible binder has no generic element.
-
-Then composition `(G, s) ∘ (F, r)`, identities, associativity: `Category T.Model`
+Then composition `(G ∘ F, ψ ∘ φ)`, identities, associativity: `Category T.Model`
 in each universe. `[open]`
 
-**Sort equations** `[paper]`. Russell universes, beyond-sogats-examples.md §10:
-
-```text
-e₁ : [n] eq (El (S n) (U n)) (Ty n)          φ_El(S n, U n) = φ_Ty(n)
-e₂ : [n, A] eq (El (S n) (lift n A)) (El n A)   φ_El(S n, lift n A) = φ_El(n, A)
-```
-
-Well typed: sources agree by the equations in `M`; targets by commutation with `S`,
-`U`, `lift` and the equations in `N`. Right: a code and the type it names are one
-element, so the morphism treats them alike; likewise for cumulativity. Enough:
-equations derived from `e₁`, `e₂` hold in `J (Rel F)` by soundness.
+- Not `(F, r)` with `r` a point of `J (Rel F) Ξ`, `Rel F` the relational
+  HrS-structure: `φ` is defined on classes, composes as a natural transformation,
+  and needs neither `Rel F` nor a functionality lemma. The two agree for positive
+  `T` (positive-theories-and-initiality.md, App. A). `[paper]`
+- Sort equations need no condition: for `e : [B_e] S ≡ S'`, the chains
+  `B_e ▷ El S` and `B_e ▷ El S'` are one object of `P T`.
+- A morphism is determined by `F` and its sort components `φ_y`, which commute
+  with the operations (positive-theories-and-initiality.md Prop. 5.3). `[paper]`
 
 ---
 
@@ -356,20 +327,20 @@ The riskiest item after §1. `[open]`
 
 ## 6. Existence
 
-`F` on objects by recursion on chains, `F [] = 1`, `F (c ▷ a) = F c ⊲ a` in `N` at the
-related point; on maps through `J 𝒟` at `N` and the universal property. The point
-`r`: at sort slots, a syntactic sort goes to its interpretation in `N`; operation
-components related by the lemma `J(e)(M_syn) = [e]` and soundness of `J 𝒟`. (ext) by
-construction. `[open]`
+`F` on objects by recursion on chains: `F [] = 1`, `F (Θ ▷ a) = F Θ ⊲ a` in `N` at the
+generic point `γ_Θ`. `γ_Θ` represents the points of `Θ` over `N`, which gives `F` on
+maps. `φ (ev θ) := J 𝒟 θ γ_Θ`, with `ev` the bijection of
+positive-theories-and-initiality.md Prop. 6.2; natural because `ev` is. (ext) by
+stability in `N`. `[open]`
 
 ---
 
 ## 7. Uniqueness
 
-A morphism out of the term model is determined: on objects by (ext) and induction
-on chains; on maps by its operation components and induction on expressions; its
-point by the sort components, which functionality fixes on syntactic sorts. The
-pattern is that of `Ctx/Generation.lean` and `HrS/Closed.lean`. `[open]`
+For a morphism `(F', φ')` out of the term model: by (ext) and induction on chains,
+`F' Θ = F Θ` and `φ' τ_Θ = γ_Θ`, with `τ_Θ = ev id`. Every point of the term model is
+`J θ τ_Θ`, so `φ' = φ` by naturality; then `F' = F` on maps, since `γ_Θ` represents
+the points of `Θ`. `[open]`
 
 ---
 

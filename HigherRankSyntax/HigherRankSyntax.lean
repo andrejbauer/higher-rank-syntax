@@ -29,6 +29,7 @@ import HigherRankSyntax.Ctx.Binding
 import HigherRankSyntax.Ctx.Identity
 import HigherRankSyntax.Ctx.Model
 import HigherRankSyntax.Ctx.Generation
+import HigherRankSyntax.Ctx.Inversion
 import HigherRankSyntax.Initiality.Chain
 import HigherRankSyntax.Initiality.Environment
 import HigherRankSyntax.Initiality.Interpretation
@@ -46,3 +47,5 @@ import HigherRankSyntax.HrS.Presheaf.Pi
 import HigherRankSyntax.HrS.Presheaf.Universe
 import HigherRankSyntax.HrS.Presheaf.Identity
 import HigherRankSyntax.HrS.Presheaf.Model
+import HigherRankSyntax.Theory.Basic
+import HigherRankSyntax.Theory.Positive

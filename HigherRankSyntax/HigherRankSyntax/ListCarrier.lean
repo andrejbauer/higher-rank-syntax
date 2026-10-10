@@ -339,6 +339,25 @@ theorem C.single_injective :
   apply arity_ext
   simpa using congrArg underlyingList h
 
+/-- `C.single γ ⋈ δ` determines `γ` and `δ`. -/
+theorem C.single_mul_injective {γ γ' δ δ' : C.Arity} (h : C.single γ ⋈ δ = C.single γ' ⋈ δ') :
+  γ = γ' ∧ δ = δ'
+  := by
+  have hl := congrArg underlyingList h
+  erw [underlyingList_mul, underlyingList_mul, C.underlyingList_single,
+    C.underlyingList_single] at hl
+  simp only [List.singleton_append, List.cons.injEq, Entry.mk.injEq] at hl
+  exact ⟨arity_ext hl.1, arity_ext hl.2⟩
+
+/-- `C.single γ ⋈ δ` is not the unit arity. -/
+theorem C.single_mul_ne_one {γ δ : C.Arity} :
+  C.single γ ⋈ δ ≠ 1
+  := by
+  intro h
+  have hl := congrArg underlyingList h
+  erw [underlyingList_mul, C.underlyingList_single, List.singleton_append] at hl
+  exact List.cons_ne_nil _ _ hl
+
 /-- `C.singleSlot α` is the only slot of `C.single α` of arity `α`. -/
 theorem C.single_slot_unique {α : C.Arity} (z : C.single α ∋ α) :
   z = C.singleSlot α
