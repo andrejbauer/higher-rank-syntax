@@ -1,0 +1,35 @@
+% Main file: assembles the dissertation from the chapters.
+%
+% Build with `latexmk` (see latexmkrc).  To typeset only some chapters while
+% keeping cross-references to the others, uncomment \includeonly below.
+
+\documentclass[11pt,a4paper]{report}
+
+\input{preamble}
+\input{macros}
+
+\addbibresource{references.bib}
+
+% \includeonly{raw-syntax/raw-syntax}
+
+\title{Higher-rank syntax}
+\author{Ivan Kobe}
+\date{\today}
+
+\begin{document}
+
+
+\begin{titlepage}
+\maketitle
+\end{titlepage}
+
+\cleardoublepage
+\tableofcontents
+
+
+\include{raw-syntax/raw-syntax}
+
+
+\printbibliography[heading=bibintoc]
+
+\end{document}

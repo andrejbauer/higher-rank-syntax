@@ -1,0 +1,12 @@
+# latexmk configuration: `latexmk` builds build/dissertation.pdf, `latexmk -C` cleans.
+@default_files = ('dissertation.tex');
+$pdf_mode = 1;
+$out_dir = 'build';
+set_tex_cmds('-synctex=1 -interaction=nonstopmode %O %S');
+
+# pdflatex writes the .aux file of each \include'd chapter into the matching
+# subdirectory of the output directory, but does not create that subdirectory.
+mkdir $out_dir;
+foreach my $dir (grep { -d $_ && $_ ne $out_dir } glob('*')) {
+  mkdir "$out_dir/$dir";
+}

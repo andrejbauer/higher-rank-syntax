@@ -1,0 +1,56 @@
+% Packages, layout and theorem environments.
+% Notation and shortcuts belong in macros.tex.
+
+% --- Fonts and encoding ------------------------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage{microtype}
+\usepackage{csquotes}
+
+% --- Mathematics -------------------------------------------------------------
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+\SetSymbolFont{stmry}{bold}{U}{stmry}{m}{n} % stmaryrd has no bold series
+\usepackage{bm}
+\usepackage{mathpartir}
+\usepackage{tikz-cd}
+\usepackage{quiver}
+\usepackage{eucal}
+
+% --- Lists, colour, misc -----------------------------------------------------
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{booktabs}
+
+% --- Bibliography ------------------------------------------------------------
+\usepackage[backend=biber,style=alphabetic,maxbibnames=99,giveninits=true]{biblatex}
+
+% --- Hyperlinks and cross-references (load last) -----------------------------
+\usepackage[hidelinks]{hyperref}
+\usepackage[capitalise,noabbrev]{cleveref}
+
+% --- Theorem environments ----------------------------------------------------
+% All numbered statements share one counter, numbered within the chapter.
+% They are declared after cleveref so that \cref picks the right names.
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{notation}[theorem]{Notation}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\crefname{notation}{Notation}{Notations}
+
+\numberwithin{equation}{chapter}

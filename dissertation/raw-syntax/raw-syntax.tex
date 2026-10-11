@@ -1,0 +1,37 @@
+\chapter{Raw syntax}
+\label{ch:raw-syntax}
+
+We begin by observing that a fundamental stratification criterion for type-theoretic constructs is according to their \textit{binding arity}. We preliminarily introduce this notion through a series of examples. A variable of an object language, say $x : \N$, binds nothing, so its binding arity has rank $0$; we may make this explicit by writing $x : [] \; \N$. 
+Next, consider the $\Pi$-formation rule.
+\begin{mathpar}
+\inferrule*{\vdash A \;\texttt{type} \\ x : A \vdash B \;\texttt{type}}{\vdash \Pi A B \;\texttt{type}}
+\end{mathpar}  
+Here, $A$ and $B$ are meta-variables standing for types. $A$ is formed in the empty context, so it binds no variables, whereas $B$ depends on $A$: it binds a variable $x$ of type $A$. We record this by writing
+\begin{align*}
+    &A : [] \; \texttt{type}\\
+    &B : [x : A] \; \texttt{type}
+\end{align*}
+and say that the meta-variable $B$ has a binding arity of rank $1$. Symbols, which make up the the signature of a type theory, have an even richer binding structure. The rule above shows that the symbol $\Pi$ binds two meta-variables, the second of which itself binds a variable whose type is the first. Accordingly, we write
+$$\Pi : [A : \;\texttt{type}, B : [x : A] \; \texttt{type}] \; \texttt{type},$$
+omitting, here and below, the empty brackets of arguments that bind nothing. Since the arguments of $\Pi$ have arities of ranks $0$ and $1$, the binding arity of $\Pi$ has rank $2$.
+
+Finally, arities of rank $3$ and higher arise when we abstract over symbols themselves. The symbol $\Pi$ is not the only one of its arity: $\Sigma$ and $\mathsf{W}$-types, for instance, have the same binding structure. Let's call any operator
+$$F : [A : \texttt{type}, B : [x : A] \; \texttt{type}] \; \texttt{type}$$
+\emph{$\Pi$-like}, and consider the statement that every $\Pi$-like operator preserves equivalences: if $e : A \simeq A'$ and $B(x) \simeq B'(e\,x)$ for every $x : A$, then $F A B \simeq F A' B'$. This statement is expressed by the type
+\begin{align*}
+    &\mathsf{eqPreserve}(F, A, A', B, B') \coloneqq\\
+    &\hspace{2cm}(e : A \simeq A') \to ((x : A) \to B(x) \simeq B'(e\,x)) \to F A B \simeq F A' B',
+\end{align*}
+so the binding arity of this schema is
+\begin{align*}
+\mathsf{eqPreserve} : [&F : [A : \texttt{type}, B : [x : A] \; \texttt{type}] \; \texttt{type},\; A : \texttt{type},\; A' : \texttt{type},\\
+&B : [x : A] \; \texttt{type},\; B' : [x : A'] \; \texttt{type}] \; \texttt{type}.
+\end{align*}
+of rank $3$. Nothing prevents us from going further: abstracting over schemas yields arities of rank $4$, and so on.
+
+Each of these levels comes with its own notion of substitution. At the level of the object language, a \emph{substitution} assigns expressions to variables, for instance $x \mapsto \mathsf{succ}(0) + y$, and applying it to an expression $e$ replaces every free occurrence of $x$ in $e$ by $\mathsf{succ}(0) + y$. One level up, the corresponding notion is that of a meta-variable \emph{instantiation}, which assigns to each meta-variable an expression abstracted over the variables that the meta-variable binds. For instance, the meta-variable $B : [x : \N] \; \texttt{type}$ may be instantiated by $B \mapsto \{x\}\mathsf{Vec}(\mathsf{succ}(x))$, and applying this instantiation to an expression $e$ replaces every occurrence $B(t)$ in $e$, whatever its argument $t$, by $\mathsf{Vec}(\mathsf{succ}(t))$. Note that instantiation is defined in terms of substitution: the occurrence $B(t)$ is replaced by $\mathsf{Vec}(\mathsf{succ}(x))[t/x]$. To recover the same pattern one level further up, at the level of signatures, we must consider \emph{transformations} between type theories\footnote{Transformations of this kind were studied systematically by Petković Komel~\cite[Ch.~8]{PetkovicKomel2021}, under the name \emph{syntactic transformations}.}, which assign to each symbol of one signature an expression over another signature, abstracted over the meta-variables that the symbol binds. For instance, the transformation $\exists A B \mapsto \lVert \Sigma A B \rVert$ interprets the existential quantifier as the propositional truncation of a $\Sigma$-type, replacing every occurrence $\exists C D$ by $\lVert \Sigma C D \rVert$. In turn, transformations are defined in terms of instantiations: transforming $\exists C D$ involves instantiating the meta-variables $A$ and $B$ by $C$ and $D$.
+
+Each of these operations satisfies its own \emph{substitution lemma}, stating that performing two of them in succession is the same as performing their composite once. The lemma at each level relies on the lemmas of the levels below, as well as on laws describing how operations of different levels interact: instantiation must commute with substitution, and transformations must commute with both instantiations and substitutions. Hence, proving all of these laws separately, level by level, is tedious and repetitive, and the same repetition reappears in implementations of type theory, which handle the various levels separately.
+
+Our first goal is therefore to develop a raw syntax that accounts uniformly for all of these constructs --- variables, meta-variables, symbols, and those of higher rank --- in such a way that substitution, instantiation and transformation become instances of a single operation, and to prove a single substitution lemma for it, once and for all. This should provide a framework in which theorems about all levels can be proved homogeneously, and which simplifies the implementation of type theories in proof assistants.
+\section{Arities and slots}

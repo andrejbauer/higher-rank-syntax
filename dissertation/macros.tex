@@ -1,0 +1,32 @@
+% Notation, shortcuts and custom commands.
+% Use \newcommand (not \renewcommand) so that clashes with existing commands
+% are reported instead of silently overriding them.
+
+% --- Editorial ---------------------------------------------------------------
+\newcommand{\TODO}[1]{\textcolor{red}{[TODO: #1]}}
+
+% --- General mathematics -----------------------------------------------------
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\id}{\mathrm{id}}
+\DeclarePairedDelimiter{\set}{\{}{\}}
+\DeclarePairedDelimiter{\sem}{\llbracket}{\rrbracket}
+
+% --- Category theory ---------------------------------------------------------
+\newcommand{\cat}[1]{\mathcal{#1}}
+\newcommand{\op}{\mathrm{op}}
+\newcommand{\Set}{\mathbf{Set}}
+\newcommand{\Psh}{\mathbf{Psh}}
+\newcommand{\Kl}{\mathrm{Kl}}
+
+% --- Raw syntax --------------------------------------------------------------
+\newcommand{\Ar}{\mathsf{Ar}}                % arities
+\newcommand{\ArCat}{\mathbb{A}}             % arities and renamings
+\newcommand{\one}{\mathbf{1}}               % the empty arity
+\newcommand{\concat}{\mathbin{\bowtie}}     % concatenation of arities
+\newcommand{\inl}{\mathsf{inl}}
+\newcommand{\inr}{\mathsf{inr}}
+\DeclareMathOperator{\rank}{rank}
+\newcommand{\Expr}{\mathsf{Expr}}
+\newcommand{\Args}{\mathsf{Args}}
+\newcommand{\Subst}{\mathsf{Subst}}
