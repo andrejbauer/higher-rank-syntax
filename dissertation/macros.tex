@@ -11,17 +11,24 @@
 \newcommand{\id}{\mathrm{id}}
 \DeclarePairedDelimiter{\set}{\{}{\}}
 \DeclarePairedDelimiter{\sem}{\llbracket}{\rrbracket}
+% \newcommand{\lBrace}{\mathopen{\{\mkern-4.5mu\{}}   % double braces, as in stix
+% \newcommand{\rBrace}{\mathclose{\}\mkern-4.5mu\}}}
 
 % --- Category theory ---------------------------------------------------------
 \newcommand{\cat}[1]{\mathcal{#1}}
 \newcommand{\op}{\mathrm{op}}
-\newcommand{\Set}{\mathbf{Set}}
+\newcommand{\Set}{\mathsf{Set}}
 \newcommand{\Psh}{\mathbf{Psh}}
 \newcommand{\Kl}{\mathrm{Kl}}
+\newcommand{\List}{\mathsf{List}}
+\newcommand{\End}{\mathsf{End}}
+\newcommand{\WO}{\mathsf{WO}}
+
 
 % --- Raw syntax --------------------------------------------------------------
 \newcommand{\Ar}{\mathsf{Ar}}                % arities
-\newcommand{\ArCat}{\mathbb{A}}             % arities and renamings
+\newcommand{\bA}{\mathbb{A}}             % arities and renamings
+\newcommand{\bE}{\mathbb{E}}             % arities and renamings
 \newcommand{\one}{\mathbf{1}}               % the empty arity
 \newcommand{\concat}{\mathbin{\bowtie}}     % concatenation of arities
 \newcommand{\inl}{\mathsf{inl}}
@@ -30,3 +37,7 @@
 \newcommand{\Expr}{\mathsf{Expr}}
 \newcommand{\Args}{\mathsf{Args}}
 \newcommand{\Subst}{\mathsf{Subst}}
+\newcommand{\emptyar}{\left[\,\right]}
+\newcommand{\ren}{\to^{\mathsf{r}}}
+\newcommand{\sub}{\to^{\mathsf{s}}}
+

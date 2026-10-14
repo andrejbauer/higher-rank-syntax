@@ -29,9 +29,184 @@ so the binding arity of this schema is
 \end{align*}
 of rank $3$. Nothing prevents us from going further: abstracting over schemas yields arities of rank $4$, and so on.
 
-Each of these levels comes with its own notion of substitution. At the level of the object language, a \emph{substitution} assigns expressions to variables, for instance $x \mapsto \mathsf{succ}(0) + y$, and applying it to an expression $e$ replaces every free occurrence of $x$ in $e$ by $\mathsf{succ}(0) + y$. One level up, the corresponding notion is that of a meta-variable \emph{instantiation}, which assigns to each meta-variable an expression abstracted over the variables that the meta-variable binds. For instance, the meta-variable $B : [x : \N] \; \texttt{type}$ may be instantiated by $B \mapsto \{x\}\mathsf{Vec}(\mathsf{succ}(x))$, and applying this instantiation to an expression $e$ replaces every occurrence $B(t)$ in $e$, whatever its argument $t$, by $\mathsf{Vec}(\mathsf{succ}(t))$. Note that instantiation is defined in terms of substitution: the occurrence $B(t)$ is replaced by $\mathsf{Vec}(\mathsf{succ}(x))[t/x]$. To recover the same pattern one level further up, at the level of signatures, we must consider \emph{transformations} between type theories\footnote{Transformations of this kind were studied systematically by Petković Komel~\cite[Ch.~8]{PetkovicKomel2021}, under the name \emph{syntactic transformations}.}, which assign to each symbol of one signature an expression over another signature, abstracted over the meta-variables that the symbol binds. For instance, the transformation $\exists A B \mapsto \lVert \Sigma A B \rVert$ interprets the existential quantifier as the propositional truncation of a $\Sigma$-type, replacing every occurrence $\exists C D$ by $\lVert \Sigma C D \rVert$. In turn, transformations are defined in terms of instantiations: transforming $\exists C D$ involves instantiating the meta-variables $A$ and $B$ by $C$ and $D$.
+Each of these levels comes with its own notion of substitution. At the level of the object language, a \emph{substitution} assigns expressions to variables, for instance $x \mapsto \mathsf{succ}(0) + y$, and applying it to an expression $e$ replaces every free occurrence of $x$ in $e$ by $\mathsf{succ}(0) + y$. One level up, the corresponding notion is that of a meta-variable \emph{instantiation}, which assigns to each meta-variable an expression abstracted over the variables that the meta-variable binds. For instance, the meta-variable $B : [x : \N] \; \texttt{type}$ may be instantiated by $B \mapsto \{x\}\mathsf{Vec}(\mathsf{succ}(x))$, and applying this instantiation to an expression $e$ replaces every occurrence $B(t)$ in $e$, whatever its argument $t$, by $\mathsf{Vec}(\mathsf{succ}(t))$. Note that instantiation is defined in terms of substitution: the occurrence $B(t)$ is replaced by $\mathsf{Vec}(\mathsf{succ}(x))[t/x]$. To recover the same pattern one level further up, at the level of signatures, we must consider \emph{transformations} between type theories\footnote{Transformations of this kind were studied systematically by Petković Komel~\cite[Ch.~8]{PetkovicKomel2021}, under the name \emph{syntactic transformations}.}, which assign to each symbol of one signature an expression over another signature, abstracted over the meta-variables that the symbol binds. For instance, the transformation $\exists A B \mapsto \lVert \Sigma A B \rVert_{-1}$ interprets the existential quantifier as the propositional truncation of a $\Sigma$-type, replacing every occurrence $\exists C D$, whatever its arguments $C$ and $D$, by $\lVert \Sigma C D \rVert_{-1}$. In turn, transformations are defined in terms of instantiations: transforming $\exists C D$ involves instantiating the meta-variables $A$ and $B$ by $C$ and $D$.
 
 Each of these operations satisfies its own \emph{substitution lemma}, stating that performing two of them in succession is the same as performing their composite once. The lemma at each level relies on the lemmas of the levels below, as well as on laws describing how operations of different levels interact: instantiation must commute with substitution, and transformations must commute with both instantiations and substitutions. Hence, proving all of these laws separately, level by level, is tedious and repetitive, and the same repetition reappears in implementations of type theory, which handle the various levels separately.
 
 Our first goal is therefore to develop a raw syntax that accounts uniformly for all of these constructs --- variables, meta-variables, symbols, and those of higher rank --- in such a way that substitution, instantiation and transformation become instances of a single operation, and to prove a single substitution lemma for it, once and for all. This should provide a framework in which theorems about all levels can be proved homogeneously, and which simplifies the implementation of type theories in proof assistants.
-\section{Arities and slots}
+
+In the rest of this chapter we make these ideas precise. We begin by defining binding arities as a recursive notion, and expressions as an inductive family indexed by a context of arities, with a single constructor that applies a variable of the context to arguments matching its arity. At this stage we consider raw syntax only: an arity records no typing information. This initial set-up is closely analogous to that of the lambda-free logical frameworks of Adams~\cite{Adams2008}. Our main goal is then to show that the functor of expressions carries the structure of a relative monad~\cite{AltenkirchChapmanUustalu2015}, whose Kleisli extension is the action of substitution. Its associativity law is precisely the substitution lemma.
+
+\section{Arities and expressions}
+
+\begin{definition}
+    The set $\bA$ of \emph{arities} is the initial algebra of the list functor $\List : \Set \to \Set$. Explicitly, $\bA$ is generated by a single rule: whenever $\alpha_1, \ldots, \alpha_n$ are arities, so is the list $[\alpha_1, \ldots, \alpha_n]$. In particular, taking $n = 0$ yields the empty arity $\emptyar$. Arities form a monoid under concatenation, written as
+    \[
+    [\alpha_1, \ldots, \alpha_n] \concat [\beta_1, \ldots, \beta_m] = [\alpha_1, \ldots, \alpha_n, \beta_1, \ldots, \beta_m],
+    \]
+    whose unit is the empty arity $\emptyar$.
+
+    Let $\Gamma = [\gamma_1, \ldots, \gamma_n]$ and $\alpha$ be arities. A \emph{slot} of $\Gamma$ of arity $\alpha$ is a position $i : \{1, \ldots, n\}$ such that $\gamma_i = \alpha$. We write
+    \begin{align*}
+        \_ &\ni \_ : \bA \to \bA \to \Set\\
+        \Gamma &\ni \alpha \coloneqq \{\, i : \{1, \ldots, n\} \mid \gamma_i = \alpha \,\}
+    \end{align*}
+    for the set of slots of $\Gamma$ of arity $\alpha$, ordered by position.
+
+    It is convenient to name the entries of an arity, writing $\Gamma = [x_1 : \gamma_1, \ldots, x_n : \gamma_n]$, and to refer to the slot at position $i$ as $x_i$. Thus $\Gamma \ni \alpha$ is the set of variables of $\Gamma$ of arity $\alpha$. Note that slots refer to be positions rather than entries: in $\Gamma = [x : \emptyar, y : \emptyar]$, the variables $x$ and $y$ have the same arity, yet they are different slots.
+
+    Let $\Gamma$ and $\Delta$ be arities. A \emph{renaming} $\rho : \Gamma \ren \Delta$ is a family of functions
+    \[
+    \rho_\alpha : (\Gamma \ni \alpha) \to (\Delta \ni \alpha), \qquad \alpha : \bA,
+    \]
+    that is, a map sending each slot of $\Gamma$ to a slot of $\Delta$ of the same arity. Arities and renamings form a category, which we denote by $\bA$. Henceforth, the \emph{set} of arities will be denoted by $\left|\bA\right|$.
+
+    Tautologically, the assignment $\Gamma \mapsto \Gamma \ni \_$ extends to a fully-faithful functor
+    \[
+    \_ \ni \_ : \bA \to \Set^{\left|\bA\right|}.
+    \]
+    Indeed, a renaming $\Gamma \ren \Delta$ is by definition precisely a morphism of $\left|\bA\right|$-indexed families of sets from $\Gamma \ni \_$ to $\Delta \ni \_$. (Just as clearly, the assignment $\_ \ni \_$ is \emph{not} functorial in the second component.) This functor will serve as the base of the relative monad of expressions.
+\end{definition}
+
+\begin{remark}
+    In the formalization, an arity $\alpha$ is represented by the endofunction $\alpha \concat \_$, i.e.\ via the Cayley embedding $\left|\bA\right| \hookrightarrow \End(\left|\bA\right|)$, so that concatenation becomes composition of functions, which is associative and unital \emph{definitionally}, whereas for lists these laws hold only propositionally. This makes types such as $\Expr((\Gamma \concat \Delta) \concat \Xi)$ and $\Expr(\Gamma \concat (\Delta \concat \Xi))$ definitionally equal, so that no transport between them is needed; this is what keeps the formalization tractable.
+\end{remark}
+
+\begin{remark}
+    The development of this chapter could be carried out in greater generality. One may in fact replace the monoid $\left|\bA\right|$ by an arbitrary monoid $M$ of arities --- in the formalization, a submonoid of an endofunction monoid $\End(M)$ --- and the slots by an arbitrary function $\mathsf{slot} : M \to M \to \WO$ into well-ordered sets, provided that the unit has no slots, that the slots of $\Gamma \concat \Delta$ are the ordered sum of those of $\Gamma$ and of $\Delta$, and that the relation ``$\Gamma$ has a slot of arity $\alpha$'' is well-founded. The relative monad of expressions constructed in this chapter exists at this level of generality, and in the formalization the raw syntax is indeed developed against a parametric interface consisting of these data. We now nevertheless work with the canonical arities throughout, since the added generality brings no benefit to the exposition, and the treatment of well-typed syntax in later chapters relies on arities being lists, which decompose uniquely into single entries.
+\end{remark}
+
+\begin{definition}
+    The family of sets $\Expr(\Gamma)$ of \emph{expressions} over an arity $\Gamma : \left|\bA\right|$ is defined inductively by a single rule: for every slot $x : \Gamma \ni \alpha$ and every family of arguments
+    \[
+    t : \Args(\Gamma, \alpha) \coloneqq \prod_{\delta : \left|\bA\right|} \; \prod_{i : \alpha \ni \delta} \Expr(\Gamma \concat \delta),
+    \]
+    there is an expression $x(t) : \Expr(\Gamma)$, the \emph{application} of $x$ to $t$. More explicitly, if we write $\alpha = [\delta_1, \ldots, \delta_n]$, then a family of arguments $t : \Args(\Gamma, \alpha)$ consists of one expression $t_i : \Expr(\Gamma \concat \delta_i)$ for each $i : \{1, \ldots, n\}$, and we write $x(t_1, \ldots, t_n)$ for $x(t)$.
+\end{definition}
+
+\begin{remark}
+    Equivalently, $\Expr$ is the initial algebra of the dependent polynomial functor~\cite{GambinoHyland2004} on $\Set_{/\left|\bA\right|} \simeq \Set^{\left|\bA\right|}$ associated to the diagram
+    \[\begin{tikzcd}
+    	{\Sigma_{\lBrace \Gamma, \alpha\rBrace} \Sigma_{(x : \Gamma \ni \alpha)} \Sigma_{\lBrace \delta \rBrace}(i : \alpha \ni \delta)} && {\Sigma_{\lBrace \Gamma, \alpha\rBrace}(x : \Gamma \ni \alpha)} \\
+    	& {\left|\bA\right|.}
+    	\arrow["{(\pi_1,\pi_2,\pi_3)}", from=1-1, to=1-3]
+    	\arrow["{\pi_1\concat\pi_4}"', from=1-1, to=2-2]
+    	\arrow["{\pi_1}", from=1-3, to=2-2]
+    \end{tikzcd}\]
+\end{remark}
+
+Thus an expression over $\Gamma$ is a slot of $\Gamma$ applied to one argument for each slot of its arity, and the argument corresponding to a slot of arity $\delta$ is an expression over the extended arity $\Gamma \concat \delta$. Besides the slots of $\Gamma$, it may therefore refer to the slots of $\delta$, which the application binds in its argument: binding amounts to arity extension. In particular, abstraction is not a primitive of our syntax. This is the main difference from Adams' framework~\cite{Adams2008}, whose arities coincide with ours and whose expressions likewise consist of a head applied to one argument for each slot of its arity, but where these arguments are abstractions $[\vec x]M$ --- a separate syntactic form binding named variables, identified up to $\alpha$-conversion --- and where the head is either a variable or a constant, the two being distinguished. In our setting, the $i$-th argument is an abstraction over $\delta_i$ simply by virtue of being an expression over $\Gamma \concat \delta_i$, and constants are slots like any other. The distinction between expressions and abstractions is thus a matter of perspective: any expression $t : \Expr(\Gamma \concat \delta)$ may be read as an abstraction over $\delta$ in context $\Gamma$, depending only on how we split its arity.
+
+\begin{example}
+    A single arity can accommodate all the layers of a type theory: a signature, meta-variables, free variables and, under binders, bound variables. To illustrate this, we consider the expression
+    \[
+    \Pi(\N, \{y\}B(y + n)) : \Expr(\Gamma)
+    \]
+    over the arity
+    \[
+    \Gamma = \underbrace{[\N : \emptyar,\; {+} : [\emptyar, \emptyar],\; \Pi : [\emptyar, [\emptyar]]]}_{\text{signature}} \concat \underbrace{[B : [\emptyar]]}_{\text{meta-variables}} \concat \underbrace{[n : \emptyar]}_{\text{free variables}}.
+    \]
+
+    Here $\N : \emptyar$ denotes a slot of arity $\emptyar$ named $\N$, and similarly for the other slots. Such names are merely syntactic sugar for referring to slots; they are not part of the syntax, and they do not appear in the formalization. Likewise, $\{\vec y\}t$ is notation rather than a syntactic construct: it denotes an expression $t$ over an arity extended by slots that we name $\vec y$.
+
+    To form this expression, we wish to apply the slot $\Pi$. Its arity $[\emptyar, [\emptyar]]$ has two slots, so $\Pi$ must be applied to two arguments: one over $\Gamma \concat \emptyar = \Gamma$, and one over $\Gamma \concat [\emptyar]$. For the first, we may take the constant $\N$: having the empty arity, it takes no arguments and yields the expression $\N() : \Expr(\Gamma)$, which we abbreviate to $\N$. The second must be an expression over the extended arity $\Gamma' = \Gamma \concat [y : \emptyar]$, whose last slot, which we name $y$, is a bound variable; we take the meta-variable $B$, which has arity $[\emptyar]$ and must therefore be applied to an argument over $\Gamma'$. For this argument, in turn, we take the symbol ${+}$, of arity $[\emptyar, \emptyar]$, applied to two arguments over $\Gamma'$, namely $y$ and $n$: having the empty arity, they yield the expressions $y(), n() : \Expr(\Gamma')$, abbreviated to $y$ and $n$. Thus ${+}(y, n) : \Expr(\Gamma')$, which we write as $y + n$, and hence $B(y + n) : \Expr(\Gamma')$ and $\Pi(\N, \{y\}B(y + n)) : \Expr(\Gamma)$. In particular, the bound variable $y$ is precisely the slot by which the second argument of $\Pi$ extends the arity.
+\end{example}
+
+Renamings extend along concatenation. For arities $\Gamma$ and $\Delta$, write $\inl : \Gamma \ren \Gamma \concat \Delta$ and $\inr : \Delta \ren \Gamma \concat \Delta$ for the inclusions. Given a renaming $\rho : \Gamma \ren \Delta$ and an arity $\Xi$, let
+\[
+\rho \concat \Xi : \Gamma \concat \Xi \ren \Delta \concat \Xi
+\]
+be the renaming that acts as $\rho$ on the slots of $\Gamma$ and as the identity on those of $\Xi$, that is, $(\rho \concat \Xi)(\inl\, x) = \inl(\rho\, x)$ and $(\rho \concat \Xi)(\inr\, z) = \inr\, z$. This extension is functorial: $\id_\Gamma \concat \Xi = \id_{\Gamma \concat \Xi}$ and $(\rho' \circ \rho) \concat \Xi = (\rho' \concat \Xi) \circ (\rho \concat \Xi)$.
+
+Given a renaming $\rho : \Gamma \ren \Delta$, its \emph{action on expressions} $\rho_* : \Expr(\Gamma) \to \Expr(\Delta)$ is defined by structural recursion: for $x : \Gamma \ni \alpha$ and $t : \Args(\Gamma, \alpha)$,
+\[
+\rho_*\big(x(t)\big) \coloneqq (\rho\, x)\big((\rho \concat \delta)_*(t_i)\big)_{i : \alpha \ni \delta},
+\]
+or more explicitly, writing $\alpha = [\delta_1, \ldots, \delta_n]$,
+\[
+\rho_*\big(x(t_1, \ldots, t_n)\big) = (\rho\, x)\big((\rho \concat \delta_1)_*\, t_1, \ldots, (\rho \concat \delta_n)_*\, t_n\big).
+\]
+That is, $\rho$ renames the head, and each argument $t_i : \Expr(\Gamma \concat \delta_i)$ is renamed along the extension $\rho \concat \delta_i$, which leaves fixed the slots $\delta_i$, i.e.\ the slots that the head $x$ binds in its $i$-th argument.
+The right-hand side is well formed: $\rho\, x : \Delta \ni \alpha$ requires arguments in $\Args(\Delta, \alpha)$, that is, an expression over $\Delta \concat \delta_i$ for each $i : \alpha \ni \delta_i$, and renaming $t_i : \Expr(\Gamma \concat \delta_i)$ along $\rho \concat \delta_i : \Gamma \concat \delta_i \ren \Delta \concat \delta_i$ yields precisely such an expression.
+
+The action of renamings is functorial: $(\id_\Gamma)_* = \id$ and $(\rho' \circ \rho)_* = \rho'_* \circ \rho_*$. Hence $\Expr$ extends to a functor $\bA \to \Set$. It will be convenient to collect, for each arity $\Gamma$, the abstractions in context $\Gamma$ into a family indexed by the arity they abstract over, yielding a functor
+\begin{align*}
+    \bE : \bA &\to \Set^{\left| \bA \right|}\\
+    \Gamma &\mapsto (\alpha \mapsto \Expr(\Gamma \concat \alpha)),
+\end{align*}
+which sends a renaming $\rho$ to the family $\big((\rho \concat \alpha)_*\big)_{\alpha}$.
+The functor $\bE$ has the same type as $\_ \ni \_$. Thus it makes sense to consider morphisms $(\Gamma \ni \_) \to \bE(\Delta)$ in $\Set^{\left|\bA\right|}$ which assign to each slot of $\Gamma$ an abstraction over its arity in context $\Delta$; this will be our notion of substitution.
+
+A typical instance of renamings is \emph{weakening}, the action of $\inl : \Gamma \ren \Gamma \concat \Xi$, which regards an expression over $\Gamma$ as one over an extended arity.
+
+Every slot can be turned into an expression by applying it, generically, to fresh slots of its arity. Indeed, a slot $x : \Gamma \ni \alpha$ is not itself an expression over $\Gamma$, but over the extended arity $\Gamma \concat \alpha$ it may be applied to the slots of $\alpha$, which match its arguments one for one, which must in turn be expanded in the same way.
+
+\begin{definition}
+    The \emph{$\eta$-expansion} of a slot $x : \Gamma \ni \alpha$ is the expression $\eta(x) : \Expr(\Gamma \concat \alpha)$ defined by well-founded recursion on $\alpha$ as
+    \[
+    \eta(x) \coloneqq (\inl\, x)\big(\eta(\inr\, i)\big)_{i : \alpha \ni \delta}.
+    \]
+\end{definition}
+
+The right-hand side is well formed: $\inl\, x : \Gamma \concat \alpha \ni \alpha$ requires arguments in $\Args(\Gamma \concat \alpha, \alpha)$, that is, an expression over $(\Gamma \concat \alpha) \concat \delta$ for each $i : \alpha \ni \delta$, and since $\inr\, i : \Gamma \concat \alpha \ni \delta$, the expression $\eta(\inr\, i)$ is precisely of this kind.
+The recursion is well founded: the recursive call concerns a slot of arity $\delta$, where $\delta$ is an entry of the list $\alpha$. Since arities are inductively generated as lists of arities, $\delta$ is a proper subtree of $\alpha$, so the definition is a structural recursion on $\alpha$.
+
+The definition is perhaps easier to read in terms of named slots. Writing $\alpha = [y_1 : \delta_1, \ldots, y_n : \delta_n]$, it reads
+\[
+\eta(x) = \{y_1 \ldots y_n\}\, x\big(\eta(y_1), \ldots, \eta(y_n)\big).
+\]
+
+By induction on $\alpha$, $\eta$-expansion commutes with renamings: $(\rho \concat \alpha)_*\big(\eta(x)\big) = \eta(\rho\, x)$ for every renaming $\rho : \Gamma \ren \Delta$ and every slot $x : \Gamma \ni \alpha$. Hence the maps $\eta_{\Gamma, \alpha} : (\Gamma \ni \alpha) \to \Expr(\Gamma \concat \alpha)$ constitute a natural transformation
+\[
+\eta : \_ \ni \_ \Rightarrow \bE,
+\]
+which will serve as the unit of the relative monad of expressions.
+
+\begin{remark}
+    In the terminology of $\lambda$-calculus, our expressions are \emph{$\beta$-normal} and \emph{$\eta$-long}~\cite[\S2]{HarperLicata2007}. They are $\beta$-normal because the head of an application is always a slot, never a compound expression: our syntax offers no way of applying an abstraction to arguments, so the analogue of a $\beta$-redex $(\lambda y.\, M)\, N$ cannot even be formed. They are $\eta$-long because a slot is always applied to a full family of arguments, each abstracted over exactly the slots that the head binds in it.
+    For instance, a slot $B : [\emptyar]$ cannot itself serve as the second argument of $\Pi$, which must be an expression over $\Gamma \concat [\emptyar]$; instead, one passes the $\eta$-expansion $\eta(B)$. The resulting expression is $\Pi(A, \eta(B))$, which, using named slots, we can write $\Pi(A, \{y\}B(y))$.
+\end{remark}
+
+\section{Substitution}
+
+\begin{definition}
+    Let $\Gamma$ and $\Delta$ be arities. A \emph{substitution} $\sigma : \Gamma \sub \Delta$ is a morphism $\sigma : (\Gamma \ni \_) \to \bE(\Delta)$ in $\Set^{\left|\bA\right|}$, that is, a family of functions
+    \[
+    \sigma_\alpha : (\Gamma \ni \alpha) \to \Expr(\Delta \concat \alpha); \qquad \alpha : \left|\bA\right|,
+    \]
+    assigning to each slot $x : \Gamma \ni \alpha$ an abstraction $\sigma(x)$ over $\alpha$ in context $\Delta$. We write $\Subst(\Gamma, \Delta)$ for the set of substitutions $\Gamma \sub \Delta$.
+\end{definition}
+
+The $\eta$-expansion provides the \emph{identity substitution} $\id_\Gamma : \Gamma \sub \Gamma$, which sends each slot $x$ to $\eta(x)$. More generally, every renaming $\rho : \Gamma \ren \Delta$ induces a substitution $\Gamma \sub \Delta$, which sends $x$ to $\eta(\rho\, x)$. Note also that the arguments of an application form a substitution: by definition, $\Args(\Gamma, \alpha) = \Subst(\alpha, \Gamma)$. An application $x(t)$, with $x : \Gamma \ni \alpha$, is thus constructed from a slot of arity $\alpha$ and a substitution $t : \alpha \sub \Gamma$.
+
+Let us consider how a substitution $\sigma : \Gamma \sub \Delta$ should act on an expression $x(t)$, with $x : \Gamma \ni \alpha$ and $t : \alpha \sub \Gamma$. Intuitivelly, we would like to replace the head by its value and act on it by the substituted arguments:
+\[
+\sigma_*\big(x(t)\big) \coloneqq t'_*\big(\sigma(x)\big), \qquad t'_i \coloneqq \sigma_*(t_i),
+\]
+where $t' : \alpha \sub \Delta$ and $\sigma(x) : \Expr(\Delta \concat \alpha)$. Neither recursive call is really an instance of $(\_)_* : (\Gamma \sub \Delta) \to \Expr(\Gamma) \to \Expr(\Delta)$, however: $\sigma$ is supposed to act on $t_i : \Expr(\Gamma \concat \delta_i)$ keeping the slots of $\delta_i$ fixed, and $t'$ is supposed to act on $\sigma(x) : \Expr(\Delta \concat \alpha)$ keeping the slots of $\Delta$ fixed. Consequently, we need a more general notion of substitution action, in which a substitution replaces the slots of only one segment of an arity, keeping fixed the slots before and after it.
+
+\begin{definition}
+    Let $\Phi$, $\Gamma$, $\Delta$ and $\Psi$ be arities, and let $\sigma : \Gamma \sub \Phi \concat \Delta$ be a substitution. The \emph{action} of $\sigma$ with prefix $\Phi$ at depth $\Psi$ is the map
+    \[
+    \sigma^\Psi_* : \Expr(\Phi \concat \Gamma \concat \Psi) \to \Expr(\Phi \concat \Delta \concat \Psi),
+    \]
+    which, intuitivelly, replaces the slots of the block $\Gamma$ according to $\sigma$, keeping those of $\Phi$ and $\Psi$ fixed. It is defined as follows: let $x : \Phi \concat \Gamma \concat \Psi \ni \alpha$ and $t : \Args(\Phi \concat \Gamma \concat \Psi, \alpha)$, and let $t' : \Args(\Phi \concat \Delta \concat \Psi, \alpha)$ be the substituted arguments $t'_i \coloneqq \sigma^{\Psi \concat \delta}_*(t_i)$, for $i : \alpha \ni \delta$. Then
+    \[
+    \sigma^\Psi_*\big(x(t)\big) \coloneqq
+    \begin{cases}
+        x(t') & \text{if $x$ is a slot of $\Phi$ or of $\Psi$}\\[2pt]
+        t'^{[]}_*\big(\sigma(x)\big) & \text{if $x$ is a slot of $\Gamma$}
+    \end{cases}
+    \]
+    where, in the second, hereditary, case, the substitution $t' : \alpha \sub (\Phi \concat \Delta) \concat \Psi$ acts on $\sigma(x) : \Expr((\Phi \concat \Delta) \concat \alpha)$ with prefix $\Phi \concat \Delta$ and at empty depth. Henceforth, we shall abbreviate $\sigma^{\emptyar}_*$ to $\sigma_*$.
+
+    The recursion is well founded, by lexicographic induction on the pair $(\Gamma, x(t))$, consisting of the domain of the substitution and the expression it acts on: the recursive calls computing $t'$ act on the arguments $t_i$, which are subexpressions of $x(t)$, while the recursive call in the second case involves the substitution $t'$, whose domain $\alpha$ is an entry of $\Gamma$.
+
+\end{definition}
+
+
+% Here we identify the slots of $\Gamma$, $\Delta$, $\Xi$ and $\Phi$ with their images in the respective concatenations, so that in the first case $x$ is regarded as a slot of $\Gamma \concat \Xi \concat \Phi$. The split of the codomain of $\sigma$ into a prefix $\Gamma$ and a block $\Xi$ is part of the data, and is left implicit in the notation. When both the prefix and the depth are empty, a substitution $\sigma : \Delta \sub \Xi$ thus acts as a map $\sigma_* : \Expr(\Delta) \to \Expr(\Xi)$; this plain action, however, cannot be defined on its own, since its recursion passes through the general one.
+
+% The right-hand side is well formed. Each argument $t_i : \Expr(\Gamma \concat \Delta \concat \Phi \concat \delta)$ is mapped by $\sigma^{\Phi \concat \delta}_*$ to an expression over $\Gamma \concat \Xi \concat \Phi \concat \delta$, as required for $t'$. In the second case, $t'$ assigns to each slot $i : \alpha \ni \delta$ an expression over $(\Gamma \concat \Xi \concat \Phi) \concat \delta$, so it is indeed a substitution $\alpha \sub (\Gamma \concat \Xi) \concat \Phi$, and its action maps $\sigma(x) : \Expr((\Gamma \concat \Xi) \concat \alpha)$ to an expression over $(\Gamma \concat \Xi) \concat \Phi$, as required.
+
+% The recursion is well founded, by lexicographic induction, first on the block and then on the expression. The recursive calls computing $t'$ act with the same block $\Delta$ on the arguments $t_i$, which are subexpressions of $x(t)$. The recursive call in the second case acts on $\sigma(x)$, which is not a subexpression of $x(t)$, but with the block $\alpha$, which is an entry of $\Delta$. This is precisely the role of the prefix: without it, the inner call would have to substitute for all slots of $(\Gamma \concat \Xi) \concat \alpha$, and the block would not decrease.
