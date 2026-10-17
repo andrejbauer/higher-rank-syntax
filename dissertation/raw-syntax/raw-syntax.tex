@@ -141,7 +141,7 @@ A typical instance of renamings is \emph{weakening}, the action of $\inl : \Gamm
 
 Every slot can be turned into an expression by applying it, generically, to fresh slots of its arity. Indeed, a slot $x : \Gamma \ni \alpha$ is not itself an expression over $\Gamma$, but over the extended arity $\Gamma \concat \alpha$ it may be applied to the slots of $\alpha$, which match its arguments one for one, which must in turn be expanded in the same way.
 
-\begin{definition}
+\begin{definition}\label{eta-expansion}
     The \emph{$\eta$-expansion} of a slot $x : \Gamma \ni \alpha$ is the expression $\eta(x) : \Expr(\Gamma \concat \alpha)$ defined by well-founded recursion on $\alpha$ as
     \[
     \eta(x) \coloneqq (\inl\, x)\big(\eta(\inr\, i)\big)_{i : \alpha \ni \delta}.
@@ -181,32 +181,158 @@ The $\eta$-expansion provides the \emph{identity substitution} $\id_\Gamma : \Ga
 
 Let us consider how a substitution $\sigma : \Gamma \sub \Delta$ should act on an expression $x(t)$, with $x : \Gamma \ni \alpha$ and $t : \alpha \sub \Gamma$. Intuitivelly, we would like to replace the head by its value and act on it by the substituted arguments:
 \[
-\sigma_*\big(x(t)\big) \coloneqq t'_*\big(\sigma(x)\big), \qquad t'_i \coloneqq \sigma_*(t_i),
+\big(x(t)\big)[\sigma] \coloneqq \big(\sigma(x)\big)[t'], \qquad t'_i \coloneqq (t_i)[\sigma],
 \]
-where $t' : \alpha \sub \Delta$ and $\sigma(x) : \Expr(\Delta \concat \alpha)$. Neither recursive call is really an instance of $(\_)_* : (\Gamma \sub \Delta) \to \Expr(\Gamma) \to \Expr(\Delta)$, however: $\sigma$ is supposed to act on $t_i : \Expr(\Gamma \concat \delta_i)$ keeping the slots of $\delta_i$ fixed, and $t'$ is supposed to act on $\sigma(x) : \Expr(\Delta \concat \alpha)$ keeping the slots of $\Delta$ fixed. Consequently, we need a more general notion of substitution action, in which a substitution replaces the slots of only one segment of an arity, keeping fixed the slots before and after it.
+where $t' : \alpha \sub \Delta$ and $\sigma(x) : \Expr(\Delta \concat \alpha)$. Neither recursive call is really an instance of $\_[\_] : \Expr(\Gamma) \to (\Gamma \sub \Delta) \to \Expr(\Delta)$, however: $\sigma$ is supposed to act on $t_i : \Expr(\Gamma \concat \delta_i)$ keeping the slots of $\delta_i$ fixed, and $t'$ is supposed to act on $\sigma(x) : \Expr(\Delta \concat \alpha)$ keeping the slots of $\Delta$ fixed. Consequently, we need a more general notion of substitution action, in which a substitution replaces the slots of only one segment of an arity, keeping fixed the slots before and after it.
 
 \begin{definition}
     Let $\Phi$, $\Gamma$, $\Delta$ and $\Psi$ be arities, and let $\sigma : \Gamma \sub \Phi \concat \Delta$ be a substitution. The \emph{action} of $\sigma$ with prefix $\Phi$ at depth $\Psi$ is the map
     \[
-    \sigma^\Psi_* : \Expr(\Phi \concat \Gamma \concat \Psi) \to \Expr(\Phi \concat \Delta \concat \Psi),
+    \_[\sigma]_\Phi^\Psi : \Expr(\Phi \concat \Gamma \concat \Psi) \to \Expr(\Phi \concat \Delta \concat \Psi),
     \]
-    which, intuitivelly, replaces the slots of the block $\Gamma$ according to $\sigma$, keeping those of $\Phi$ and $\Psi$ fixed. It is defined as follows: let $x : \Phi \concat \Gamma \concat \Psi \ni \alpha$ and $t : \Args(\Phi \concat \Gamma \concat \Psi, \alpha)$, and let $t' : \Args(\Phi \concat \Delta \concat \Psi, \alpha)$ be the substituted arguments $t'_i \coloneqq \sigma^{\Psi \concat \delta}_*(t_i)$, for $i : \alpha \ni \delta$. Then
+    which, intuitivelly, replaces the slots of the \emph{active block} $\Gamma$ according to $\sigma$, keeping those of $\Phi$ and $\Psi$ fixed. It is defined as follows: let $x : \Phi \concat \Gamma \concat \Psi \ni \alpha$ and $t : \Args(\Phi \concat \Gamma \concat \Psi, \alpha)$, and let $t' : \Args(\Phi \concat \Delta \concat \Psi, \alpha)$ be the substituted arguments $t'_i \coloneqq t_i[\sigma]_\Phi^{\Psi \concat \delta}$, for $i : \alpha \ni \delta$. Then
     \[
-    \sigma^\Psi_*\big(x(t)\big) \coloneqq
+    \big(x(t)\big)[\sigma]_\Phi^\Psi \coloneqq
     \begin{cases}
         x(t') & \text{if $x$ is a slot of $\Phi$ or of $\Psi$}\\[2pt]
-        t'^{[]}_*\big(\sigma(x)\big) & \text{if $x$ is a slot of $\Gamma$}
+        \big(\sigma(x)\big)[t']_{\Phi\concat\Delta}^{[]} & \text{if $x$ is a slot of $\Gamma$}
     \end{cases}
     \]
-    where, in the second, hereditary, case, the substitution $t' : \alpha \sub (\Phi \concat \Delta) \concat \Psi$ acts on $\sigma(x) : \Expr((\Phi \concat \Delta) \concat \alpha)$ with prefix $\Phi \concat \Delta$ and at empty depth. Henceforth, we shall abbreviate $\sigma^{\emptyar}_*$ to $\sigma_*$.
+    where, in the second, hereditary, case, the substitution $t' : \alpha \sub (\Phi \concat \Delta) \concat \Psi$ acts on $\sigma(x) : \Expr((\Phi \concat \Delta) \concat \alpha)$ with prefix $\Phi \concat \Delta$, active block $\alpha$ and at empty depth. Henceforth, we shall abbreviate $[\sigma]_\bullet^{\emptyar}$ to $[\sigma]_\bullet$ and $[\sigma]^\bullet_{\emptyar}$ to $[\sigma]^\bullet$.
 
-    The recursion is well founded, by lexicographic induction on the pair $(\Gamma, x(t))$, consisting of the domain of the substitution and the expression it acts on: the recursive calls computing $t'$ act on the arguments $t_i$, which are subexpressions of $x(t)$, while the recursive call in the second case involves the substitution $t'$, whose domain $\alpha$ is an entry of $\Gamma$.
-
+    The recursion is well founded, by lexicographic induction on the pair $(\Gamma, x(t))$, consisting of the active block and the expression being acted on: the recursive calls computing $t'$ act on the arguments $t_i$, which are subexpressions of $x(t)$, while the recursive call in the second case involves the substitution $t'$, whose domain $\alpha$ is an entry of $\Gamma$.
 \end{definition}
 
+\section{The relative monad of expressions}
 
-% Here we identify the slots of $\Gamma$, $\Delta$, $\Xi$ and $\Phi$ with their images in the respective concatenations, so that in the first case $x$ is regarded as a slot of $\Gamma \concat \Xi \concat \Phi$. The split of the codomain of $\sigma$ into a prefix $\Gamma$ and a block $\Xi$ is part of the data, and is left implicit in the notation. When both the prefix and the depth are empty, a substitution $\sigma : \Delta \sub \Xi$ thus acts as a map $\sigma_* : \Expr(\Delta) \to \Expr(\Xi)$; this plain action, however, cannot be defined on its own, since its recursion passes through the general one.
+Monads are a well-established tool for describing syntax with variable binding. A syntactic monad $T$ assigns to each object $X$ an object $TX$ of expressions with free variables in $X$, equipped with a morphism $\eta_X : X \to TX$ including the variables among the expressions, and with an extension $f^\sharp : TX \to TY$ of each assignment $f : X \to TY$ of expressions to variables, which performs the substitution and in whose construction binding is handled. The monad laws are then the basic laws of substitution, associativity being the substitution lemma. In our setting, however, variables are not specified by an arbitrary set, but are indexed by arities and accessed via the functor $\_\ni\_$. Consequently, we must pass to \emph{relative monads} \cite{AltenkirchChapmanUustalu2015} to describe our syntax.
 
-% The right-hand side is well formed. Each argument $t_i : \Expr(\Gamma \concat \Delta \concat \Phi \concat \delta)$ is mapped by $\sigma^{\Phi \concat \delta}_*$ to an expression over $\Gamma \concat \Xi \concat \Phi \concat \delta$, as required for $t'$. In the second case, $t'$ assigns to each slot $i : \alpha \ni \delta$ an expression over $(\Gamma \concat \Xi \concat \Phi) \concat \delta$, so it is indeed a substitution $\alpha \sub (\Gamma \concat \Xi) \concat \Phi$, and its action maps $\sigma(x) : \Expr((\Gamma \concat \Xi) \concat \alpha)$ to an expression over $(\Gamma \concat \Xi) \concat \Phi$, as required.
+\subsection{Relative monads}
 
-% The recursion is well founded, by lexicographic induction, first on the block and then on the expression. The recursive calls computing $t'$ act with the same block $\Delta$ on the arguments $t_i$, which are subexpressions of $x(t)$. The recursive call in the second case acts on $\sigma(x)$, which is not a subexpression of $x(t)$, but with the block $\alpha$, which is an entry of $\Delta$. This is precisely the role of the prefix: without it, the inner call would have to substitute for all slots of $(\Gamma \concat \Xi) \concat \alpha$, and the block would not decrease.
+\begin{definition}
+    Let $J : \cat{J} \to \cat{C}$ be a functor. A \emph{relative monad} on $J$ consists of
+    \begin{itemize}
+        \item for each object $X : \cat{J}$, an object $TX : \cat{C}$;
+        \item for each object $X : \cat{J}$, a morphism $\eta_X : JX \to TX$, the \emph{unit};
+        \item for each morphism $f : JX \to TY : \cat{C}$, a morphism $f^\sharp : TX \to TY$, the \emph{Kleisli extension} of $f$,
+    \end{itemize}
+    such that, for all $f : JX \to TY$ and $g : JY \to TZ$,
+    \[
+    \eta_X^\sharp = \id_{TX}, \qquad
+    f^\sharp \circ \eta_X = f, \qquad
+    (g^\sharp \circ f)^\sharp = g^\sharp \circ f^\sharp.
+    \]
+\end{definition}
+
+When $J$ is the identity functor, this gives precisely a monad (presented as a Kleisli triple). The definition has several important consequences, which we collect into the following proposition; the proofs can be found in~\cite[\S\S2.1 and 2.3]{AltenkirchChapmanUustalu2015}.
+
+
+\begin{proposition}
+    Let $T$ be a relative monad on $J : \cat{J} \to \cat{C}$.
+    \begin{enumerate}
+        \item $T$ extends to a functor $T : \cat{J} \to \cat{C}$, given on a morphism $u : X \to Y$ by $Tu \coloneqq (\eta_Y \circ Ju)^\sharp$, and the unit is a natural transformation $\eta : J \Rightarrow T$.
+        \item The Kleisli extension is natural in $X$ and $Y$, that is, it constitutes a natural transformation $(\_)^\sharp : \cat{C}(J\_, T\_) \Rightarrow \cat{C}(T\_, T\_)$ of functors $\cat{J}^{\mathrm{op}} \times \cat{J} \to \Set$; explicitly, for $f : JX \to TY$, $u : X' \to X$ and $v : Y \to Y'$, we have
+        \[
+        f^\sharp \circ Tu = (f \circ Ju)^\sharp \;\;\;\;\;\text{ and }\;\;\;\;\; T(v) \circ f^\sharp = (T(v) \circ f)^\sharp.
+        \]
+        \item There is a category $\Kl(T)$, called the \emph{Kleisli category} of $T$, whose objects are those of $\cat{J}$, whose morphisms $X \to Y$ are the morphisms $JX \to TY$ of $\cat{C}$, whose identities are the units $\eta_X$, and whose composition is $g \odot f \coloneqq g^\sharp \circ f$. Moreover, $u \mapsto \eta_Y \circ Ju$ defines a functor $\cat{J} \to \Kl(T)$, and $f \mapsto f^\sharp$ defines a functor $\Kl(T) \to \cat{C}$, sending $X$ to $TX$.
+    \end{enumerate}
+\end{proposition}
+
+Relative monads for type-theoretic syntax are common in the literature; we briefly review some examples.
+
+\begin{example}
+    The untyped $\lambda$-calculus with well-scoped de~Bruijn indices forms a relative monad~\cite[Ex.~2.4]{AltenkirchChapmanUustalu2015}. Let $\mathbb{F}$ be the category of finite cardinals $n = \{0, \ldots, n - 1\}$ and functions, and $J : \mathbb{F} \to \Set$ the inclusion. The terms form a functor $\mathsf{Lam} : \mathbb{F} \to \Set$, defined as the carrier of the initial algebra of the endofunctor $\Phi$ of $[\mathbb{F}, \Set]$ given by
+    \[
+    (\Phi F)(\Gamma) = J\Gamma + F\Gamma \times F\Gamma + F(1 + \Gamma),
+    \]
+    whose summands correspond to variables, applications and abstractions, the body of an abstraction being a term over the extended context. The unit includes variables as terms, and the Kleisli extension of $f : J\Gamma \to \mathsf{Lam}(\Delta)$ is simultaneous substitution $f^\sharp : \mathsf{Lam}(\Gamma) \to \mathsf{Lam}(\Delta)$.
+\end{example}
+
+\begin{example}
+    The simply typed $\lambda$-calculus forms a relative monad in a similar way~\cite[Ex.~2.5]{AltenkirchChapmanUustalu2015}. Let $\mathsf{Ty}$ be the set of types, regarded as a discrete category, and let $\mathbb{F} \downarrow \mathsf{Ty}$ be the category of typed contexts $(\Gamma, \rho)$, with $\rho : \Gamma \to \mathsf{Ty}$, and type-preserving renamings. The functor
+    \[
+    J : \mathbb{F} \downarrow \mathsf{Ty} \to \Set^{\Ty}, \qquad J(\Gamma, \rho)(\sigma) = \{\, x \in \Gamma \mid \rho(x) = \sigma \,\}
+    \]
+    sends a typed context to its variables, sorted by type, and the typed terms form a relative monad on $J$, sending $(\Gamma, \rho)$ to the type-indexed family of sets of terms.
+\end{example}
+
+\begin{example}
+    Petković Komel organises the syntax of finitary type theories as relative monads of the form $J : \cat{C} \to \Set^{\cat{D}}$, where $\cat{C}$ is the category of the objects that vary under substitution and $\cat{D}$ collects the remaining parameters. Taking $\cat{C}$ to be the category of variable shapes, of meta-variable shapes, or of signatures yields three relative monads: of substitutions, of instantiations and of syntactic transformations, respectively~\cite[\S\S7.2, 7.3 and 8.3]{PetkovicKomel2021}. Their units send a variable to itself, a meta-variable to its generic application, and a symbol to its generic application to meta-variables, and their Kleisli extensions are the three actions discussed in the introduction. The relative monad $\bE$ we will construct below subsumes all three at once.
+\end{example}
+
+\subsection{The relative monad structure on expressions}
+
+We now equip $\bE : \bA \to \Set^{\left|\bA\right|}$ with the structure of a relative monad on the slot functor $\_ \ni \_$. Its unit is the $\eta$-expansion $\eta : \_ \ni \_ \Rightarrow \bE$ from \cref{eta-expansion} $\eta : \_ \ni \_ \Rightarrow \bE$, whose components $\eta_{\Gamma, \alpha} : (\Gamma \ni \alpha) \to \Expr(\Gamma \concat \alpha)$ send a slot to its $\eta$-expansion. A morphism $(\Gamma \ni \_) \to \bE(\Delta)$ in $\Set^{\left|\bA\right|}$ is precisely a substitution $\sigma : \Gamma \sub \Delta$, and we define its Kleisli extension $\sigma^\sharp : \bE(\Gamma) \to \bE(\Delta)$ componentwise by
+\[
+\sigma^\sharp_\alpha \coloneqq \_[\sigma]^\alpha : \Expr(\Gamma \concat \alpha) \to \Expr(\Delta \concat \alpha),
+\]
+that is, by the action of $\sigma$ with empty prefix at depth $\alpha$. The corresponding Kleisli composite of substitutions $\sigma : \Gamma \sub \Delta$ and $\tau : \Delta \sub \Xi$ is the substitution $(\sigma\,; \tau) : \Gamma \sub \Xi$, given by
+\[
+(\sigma\,; \tau)(x) = \big(\sigma(x)\big)[\tau]^\alpha; \qquad x : \Gamma \ni \alpha.
+\]
+
+\begin{theorem}\label{relative-monad}
+    The functor $\bE$, together with the unit and the Kleisli extension described above, is a relative monad on $\_ \ni \_$. Explicitly:
+    %, for all substitutions $\sigma : \Gamma \sub \Delta$ and $\tau : \Delta \sub \Xi$,
+    \begin{enumerate}
+        \item $\_[\id_\Gamma]^\alpha = \id_{\Expr(\Gamma \concat \alpha)}$ for any $\Gamma, \alpha : \bA$
+        \item $\big(\eta(x)\big)[\sigma]^\alpha = \sigma(x)$ for any $\sigma : \Gamma \sub \Delta$ and $x : \Gamma \ni \alpha$
+        \item $\_[\sigma \,; \tau]^\alpha = \_[\sigma]^\alpha[\tau]^\alpha$ for any composable pair of substitutions $\sigma$ and $\tau$ and  for any $\alpha : \bA$.
+    \end{enumerate}
+\end{theorem}
+
+The rest of this section is devoted to the proof of \cref{relative-monad}. We henceforth identify the slots of an arity with their images in any bigger arity containing it, that is, under the inclusions built from $\inl$ and $\inr$ by extension, such as $\inl \concat \alpha : \Phi \concat \alpha \ren \Phi \concat \Gamma \concat \alpha$; accordingly, the actions of these inclusions on expressions are left implicit. For instance, a slot $x : \Phi \ni \alpha$ is also regarded as a slot of $\Phi \concat \Gamma$, and $\eta(x)$ denotes its $\eta$-expansion over $\Phi \concat \alpha$ as well as over $\Phi \concat \Gamma \concat \alpha$.
+
+\begin{lemma}\label{lem:eta-depth}
+    Let $\sigma : \Gamma \sub \Phi \concat \Delta$ be a substitution, and let $y : \Psi \ni \alpha$. Then
+    \[
+    \eta(y)[\sigma]_\Phi^{\Psi \concat \alpha} = \eta(y).
+    \]
+\end{lemma}
+
+\begin{proof}
+    By induction on $\alpha$. By definition, $\eta(y) = y\big(\eta(i)\big)_{i : \alpha \ni \delta}$, and since $y$ is a slot of the inactive postfix, the first case of the definition of the action gives
+    \[
+    \eta(y)[\sigma]_\Phi^{\Psi \concat \alpha} = y\big(\eta(i)[\sigma]_\Phi^{\Psi \concat \alpha \concat \delta}\big)_{i : \alpha \ni \delta}.
+    \]
+    Each $i : \alpha \ni \delta$ is a slot whose arity $\delta$ is an entry of $\alpha$, so by the induction hypothesis $\eta(i)[\sigma]_\Phi^{\Psi \concat \alpha \concat \delta} = \eta(i)$. Hence $\eta(y)[\sigma]_\Phi^{\Psi \concat \alpha} = y\big(\eta(i)\big)_{i} = \eta(y)$.
+\end{proof}
+
+\begin{lemma}\label{lem:identity-like}
+    \begin{enumerate}
+        \item Let $\sigma : \Gamma \sub \Phi \concat \Gamma$ be a substitution such that $\sigma(z) = \eta(z)$ for every slot $z$ of $\Gamma$. Then $e[\sigma]_\Phi^\Psi = e$ for every $\Psi : \left|\bA\right|$ and $e : \Expr(\Phi\concat\Gamma\concat\Psi)$.
+        \item Let $x : \Phi \ni \alpha$ be a slot and $\iota : \alpha \sub \Phi \concat \Delta$ a substitution. Then
+        \[
+        \eta(x)[\iota]_\Phi = x(\iota),
+        \]
+        where on the right-hand side, $\iota$ is regarded as a family of arguments via the equality $\Args(\Phi \concat \Delta, \alpha) = \Subst(\alpha, \Phi \concat \Delta)$.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    We prove both parts by mutual induction.
+    For part~1, let $x(t) : \Expr(\Phi\concat\Gamma\concat\Psi)$ with $x : \Phi \concat \Gamma \concat \Psi \ni \beta$ and $t : \Args(\Phi \concat \Gamma \concat \Psi, \beta)$. By the induction hypothesis for the subexpressions $t_i$, we have $t'_i = t_i[\sigma]_\Phi^{\Psi \concat \delta} = t_i$ for every $i : \beta \ni \delta$, so $t' = t$. If $x$ is a slot of $\Phi$ or of $\Psi$, then $x(t)[\sigma]_\Phi^\Psi = x(t') = x(t)$. If $x$ is a slot of $\Gamma$, then
+    \[
+    x(t)[\sigma]_\Phi^\Psi = \sigma(x)[t']_{\Phi \concat \Gamma} = \eta(x)[t]_{\Phi \concat \Gamma} = x(t),
+    \]
+    where the last equation is part~2, applied to the slot $x : \Phi \concat \Gamma \ni \beta$ and the substitution $t : \beta \sub (\Phi \concat \Gamma) \concat \Psi$.
+
+    For part~2, we have by definition $\eta(x) = x\big(\eta(i)\big)_{i : \alpha \ni \delta}$, and since $x$ is a slot of the prefix,
+    \[
+    \eta(x)[\iota]_\Phi = x\big(\eta(i)[\iota]_\Phi^\delta\big)_{i : \alpha \ni \delta}.
+    \]
+    It thus suffices to show that $\eta(i)[\iota]_\Phi^\delta = \iota(i)$ for every slot $i : \alpha \ni \delta$. By definition, $\eta(i) = i\big(\eta(k)\big)_{k : \delta \ni \varepsilon}$, and since $i$ is a slot of the active block $\alpha$, we have
+    \[
+    \eta(i)[\iota]_\Phi^\delta = \iota(i)[s]_{\Phi \concat \Delta}; \qquad s(k) = \eta(k)[\iota]_\Phi^{\delta \concat \varepsilon} \quad \text{for } k : \delta \ni \varepsilon.
+    \]
+    Since $k$ is a slot of the postfix $\delta$, \cref{lem:eta-depth} gives $s(k) = \eta(k)$. Thus the substitution $s : \delta \sub (\Phi \concat \Delta) \concat \delta$ satisfies the hypothesis of part~1, with prefix $\Phi \concat \Delta$ and active block $\delta$, and part~1 yields $\iota(i)[s]_{\Phi \concat \Delta} = \iota(i)$.
+
+    The mutual induction is well founded: in each appeal to the induction hypothesis, either the relevant arity decreases, being replaced by one of its entries, or it stays the same and the expression decreases. Indeed, part~1 appeals to itself for the subexpressions $t_i$ of $x(t)$, and to part~2 at the arity $\beta$, an entry of $\Gamma$; and part~2 appeals to part~1 with the active block $\delta$, an entry of $\alpha$.
+\end{proof}
+
+The first two parts of \cref{relative-monad}, the unit laws, now follow readily. Part~1 is the special case of \cref{lem:identity-like}(1) with empty prefix, $\Phi = \emptyar$, since $\id_\Gamma(z) = \eta(z)$ for every slot $z$ of $\Gamma$. For part~2, let $\sigma : \Gamma \sub \Delta$ and $x : \Gamma \ni \alpha$. By definition, $\eta(x) = x\big(\eta(i)\big)_{i : \alpha \ni \delta}$, and since $x$ is a slot of the active block, we have
+\[
+\eta(x)[\sigma]^\alpha = \sigma(x)[t']_\Delta; \qquad t'(i) = \eta(i)[\sigma]^{\alpha \concat \delta} \quad \text{for } i : \alpha \ni \delta.
+\]
+Since $i$ is a slot of $\alpha$, which the action keeps fixed, \cref{lem:eta-depth} gives $t'(i) = \eta(i)$. Thus $t' : \alpha \sub \Delta \concat \alpha$ satisfies the hypothesis of \cref{lem:identity-like}(1), and therefore $\eta(x)[\sigma]^\alpha = \sigma(x)[t']_\Delta = \sigma(x)$.
