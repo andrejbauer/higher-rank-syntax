@@ -46,6 +46,11 @@ In the rest of this chapter we make these ideas precise. We begin by defining bi
     \]
     whose unit is the empty arity $\emptyar$.
 
+    We define \emph{rank} of an arity is by structural recursion:
+    \[
+    \rank(\emptyar) \coloneqq 0,\;\;\;\; \rank([\alpha_1, \ldots, \alpha_n]) \coloneqq \max(\rank(\alpha_1), \ldots, \rank(\alpha_n)) + 1 \quad (n \geq 1).
+    \]
+
     Let $\Gamma = [\gamma_1, \ldots, \gamma_n]$ and $\alpha$ be arities. A \emph{slot} of $\Gamma$ of arity $\alpha$ is a position $i : \{1, \ldots, n\}$ such that $\gamma_i = \alpha$. We write
     \begin{align*}
         \_ &\ni \_ : \bA \to \bA \to \Set\\
@@ -76,7 +81,7 @@ In the rest of this chapter we make these ideas precise. We begin by defining bi
     The development of this chapter could be carried out in greater generality. One may in fact replace the monoid $\left|\bA\right|$ by an arbitrary monoid $M$ of arities --- in the formalization, a submonoid of an endofunction monoid $\End(M)$ --- and the slots by an arbitrary function $\mathsf{slot} : M \to M \to \WO$ into well-ordered sets, provided that the unit has no slots, that the slots of $\Gamma \concat \Delta$ are the ordered sum of those of $\Gamma$ and of $\Delta$, and that the relation ``$\Gamma$ has a slot of arity $\alpha$'' is well-founded. The relative monad of expressions constructed in this chapter exists at this level of generality, and in the formalization the raw syntax is indeed developed against a parametric interface consisting of these data. We now nevertheless work with the canonical arities throughout, since the added generality brings no benefit to the exposition, and the treatment of well-typed syntax in later chapters relies on arities being lists, which decompose uniquely into single entries.
 \end{remark}
 
-\begin{definition}
+\begin{definition}\label{def:expressions}
     The family of sets $\Expr(\Gamma)$ of \emph{expressions} over an arity $\Gamma : \left|\bA\right|$ is defined inductively by a single rule: for every slot $x : \Gamma \ni \alpha$ and every family of arguments
     \[
     t : \Args(\Gamma, \alpha) \coloneqq \prod_{\delta : \left|\bA\right|} \; \prod_{i : \alpha \ni \delta} \Expr(\Gamma \concat \delta),
@@ -97,7 +102,7 @@ In the rest of this chapter we make these ideas precise. We begin by defining bi
 
 Thus an expression over $\Gamma$ is a slot of $\Gamma$ applied to one argument for each slot of its arity, and the argument corresponding to a slot of arity $\delta$ is an expression over the extended arity $\Gamma \concat \delta$. Besides the slots of $\Gamma$, it may therefore refer to the slots of $\delta$, which the application binds in its argument: binding amounts to arity extension. In particular, abstraction is not a primitive of our syntax. This is the main difference from Adams' framework~\cite{Adams2008}, whose arities coincide with ours and whose expressions likewise consist of a head applied to one argument for each slot of its arity, but where these arguments are abstractions $[\vec x]M$ --- a separate syntactic form binding named variables, identified up to $\alpha$-conversion --- and where the head is either a variable or a constant, the two being distinguished. In our setting, the $i$-th argument is an abstraction over $\delta_i$ simply by virtue of being an expression over $\Gamma \concat \delta_i$, and constants are slots like any other. The distinction between expressions and abstractions is thus a matter of perspective: any expression $t : \Expr(\Gamma \concat \delta)$ may be read as an abstraction over $\delta$ in context $\Gamma$, depending only on how we split its arity.
 
-\begin{example}
+\begin{example}\label{ex:layers}
     A single arity can accommodate all the layers of a type theory: a signature, meta-variables, free variables and, under binders, bound variables. To illustrate this, we consider the expression
     \[
     \Pi(\N, \{y\}B(y + n)) : \Expr(\Gamma)
@@ -162,7 +167,7 @@ By induction on $\alpha$, $\eta$-expansion commutes with renamings: $(\rho \conc
 \]
 which will serve as the unit of the relative monad of expressions.
 
-\begin{remark}
+\begin{remark}\label{rem:normal-forms}
     In the terminology of $\lambda$-calculus, our expressions are \emph{$\beta$-normal} and \emph{$\eta$-long}~\cite[\S2]{HarperLicata2007}. They are $\beta$-normal because the head of an application is always a slot, never a compound expression: our syntax offers no way of applying an abstraction to arguments, so the analogue of a $\beta$-redex $(\lambda y.\, M)\, N$ cannot even be formed. They are $\eta$-long because a slot is always applied to a full family of arguments, each abstracted over exactly the slots that the head binds in it.
     For instance, a slot $B : [\emptyar]$ cannot itself serve as the second argument of $\Pi$, which must be an expression over $\Gamma \concat [\emptyar]$; instead, one passes the $\eta$-expansion $\eta(B)$. The resulting expression is $\Pi(A, \eta(B))$, which, using named slots, we can write $\Pi(A, \{y\}B(y))$.
 \end{remark}
@@ -185,7 +190,7 @@ Let us consider how a substitution $\sigma : \Gamma \sub \Delta$ should act on a
 \]
 where $t' : \alpha \sub \Delta$ and $\sigma(x) : \Expr(\Delta \concat \alpha)$. Neither recursive call is really an instance of $\_[\_] : \Expr(\Gamma) \to (\Gamma \sub \Delta) \to \Expr(\Delta)$, however: $\sigma$ is supposed to act on $t_i : \Expr(\Gamma \concat \delta_i)$ keeping the slots of $\delta_i$ fixed, and $t'$ is supposed to act on $\sigma(x) : \Expr(\Delta \concat \alpha)$ keeping the slots of $\Delta$ fixed. Consequently, we need a more general notion of substitution action, in which a substitution replaces the slots of only one segment of an arity, keeping fixed the slots before and after it.
 
-\begin{definition}
+\begin{definition}\label{def:action}
     Let $\Phi$, $\Gamma$, $\Delta$ and $\Psi$ be arities, and let $\sigma : \Gamma \sub \Phi \concat \Delta$ be a substitution. The \emph{action} of $\sigma$ with prefix $\Phi$ at depth $\Psi$ is the map
     \[
     \_[\sigma]_\Phi^\Psi : \Expr(\Phi \concat \Gamma \concat \Psi) \to \Expr(\Phi \concat \Delta \concat \Psi),
@@ -282,7 +287,7 @@ that is, by the action of $\sigma$ with empty prefix at depth $\alpha$. The corr
     \end{enumerate}
 \end{theorem}
 
-The rest of this section is devoted to the proof of \cref{relative-monad}. We henceforth identify the slots of an arity with their images in any bigger arity containing it, that is, under the inclusions built from $\inl$ and $\inr$ by extension, such as $\inl \concat \alpha : \Phi \concat \alpha \ren \Phi \concat \Gamma \concat \alpha$; accordingly, the actions of these inclusions on expressions are left implicit. For instance, a slot $x : \Phi \ni \alpha$ is also regarded as a slot of $\Phi \concat \Gamma$, and $\eta(x)$ denotes its $\eta$-expansion over $\Phi \concat \alpha$ as well as over $\Phi \concat \Gamma \concat \alpha$.
+The rest of this section is devoted to the proof of \cref{relative-monad}. We henceforth identify the slots of an arity with their images in any bigger arity containing it under the inclusions built from $\inl$ and $\inr$ by extensions, such as $\inl \concat \alpha : \Phi \concat \alpha \ren \Phi \concat \Gamma \concat \alpha$; accordingly, the actions of these inclusions on expressions are left implicit. For instance, a slot $x : \Phi \ni \alpha$ is also regarded as a slot of $\Phi \concat \Gamma$, and $\eta(x)$ denotes its $\eta$-expansion over $\Phi \concat \alpha$ as well as over $\Phi \concat \Gamma \concat \alpha$.
 
 \begin{lemma}\label{lem:eta-depth}
     Let $\sigma : \Gamma \sub \Phi \concat \Delta$ be a substitution, and let $y : \Psi \ni \alpha$. Then
@@ -336,3 +341,231 @@ The first two parts of \cref{relative-monad}, the unit laws, now follow readily.
 \eta(x)[\sigma]^\alpha = \sigma(x)[t']_\Delta; \qquad t'(i) = \eta(i)[\sigma]^{\alpha \concat \delta} \quad \text{for } i : \alpha \ni \delta.
 \]
 Since $i$ is a slot of $\alpha$, which the action keeps fixed, \cref{lem:eta-depth} gives $t'(i) = \eta(i)$. Thus $t' : \alpha \sub \Delta \concat \alpha$ satisfies the hypothesis of \cref{lem:identity-like}(1), and therefore $\eta(x)[\sigma]^\alpha = \sigma(x)[t']_\Delta = \sigma(x)$.
+
+We move on to the substitution lemma. To state it in our setting, we need to consider the notion of applying a substitution to another substitution: this of course amounts to applying it pointwise to its values.
+
+\begin{definition} 
+    Given substitutions $\kappa : \Lambda \sub \Phi \concat \Gamma \concat \Xi$ and $\theta : \Gamma \sub \Phi \concat \Delta$, let
+    \[
+        \kappa[\theta]_\Phi^\Xi : \Lambda \sub \Phi \concat \Delta \concat \Xi, \qquad
+        \big(\kappa[\theta]_\Phi^\Xi\big)(y) \coloneqq \kappa(y)[\theta]_\Phi^{\Xi \concat \beta} \quad \text{for } y : \Lambda \ni \beta.
+        \]
+        When $\Phi = \emptyar$ or $\Xi = \emptyar$, we write $\_[\theta]_{\Phi}^{\bullet} = \_[\theta]^{\bullet}$ and $\_[\theta]^{\Xi}_{\bullet} = \_[\theta]_{\bullet}$, respectivelly. Observe that the composite of substitutions $\sigma : \Gamma \sub \Delta$ and $\tau : \Delta \sub \Xi$ is $\sigma \,; \tau = \sigma[\tau]$.
+\end{definition}
+        
+\begin{lemma}[Substitution lemma]\label{lem:substitution}
+    \begin{enumerate}
+        \item (Interchange.) Let $\sigma : \Gamma \sub \Phi \concat \Delta$ and $\kappa : \Lambda \sub \Phi \concat \Gamma \concat \Theta \concat \Omega$ be substitutions. Then, for every expression $e : \Expr(\Phi \concat \Gamma \concat \Theta \concat \Lambda \concat \Psi)$,
+        \[
+        e[\kappa]_{\Phi \concat \Gamma \concat \Theta}^{\Psi}\,[\sigma]_\Phi^{\Theta \concat \Omega \concat \Psi}
+        = e[\sigma]_\Phi^{\Theta \concat \Lambda \concat \Psi}\,\big[\kappa[\sigma]_\Phi^{\Theta \concat \Omega}\big]_{\Phi \concat \Delta \concat \Theta}^{\Psi}.
+        \]
+        \item (Associativity.) Let $\kappa : \Lambda \sub \Phi \concat \Theta \concat \Gamma \concat \Xi$ and $\theta : \Gamma \sub \Phi \concat \Theta \concat \Delta$ be substitutions. Then, for every expression $e : \Expr(\Phi \concat \Lambda \concat \Psi)$,
+        \[
+        e[\kappa]_\Phi^\Psi\,[\theta]_{\Phi \concat \Theta}^{\Xi \concat \Psi}
+        = e\big[\kappa[\theta]_{\Phi \concat \Theta}^{\Xi}\big]_\Phi^\Psi.
+        \]
+    \end{enumerate}
+\end{lemma}
+
+In words, interchange states that substituting $\kappa$ for the slots of $\Lambda$ and then $\sigma$ for those of $\Gamma$, which may occur in the values of $\kappa$, amounts to substituting $\sigma$ first and then $\kappa$ with $\sigma$ applied to its values; for single slots, this is the classical substitution lemma $e[s/y][t/x] = e[t/x][s[t/x]/y]$. Associativity states that acting first with $\kappa$ and then with $\theta$ amounts to acting once with $\kappa[\theta]$, the substitution obtained by applying $\theta$ to the values of $\kappa$.
+
+\begin{proof}
+    We prove both parts simultaneously by mutual induction. Let $e = x(t)$, where $x$ has arity $\beta$ and $t_i$ is the argument corresponding to $i : \beta \ni \delta$.
+
+    \emph{Part~1.} If $x$ is a slot of $\Phi$, $\Theta$ or $\Psi$, it is kept by all four actions, and both sides are $x$ applied to arguments which agree by the induction hypothesis for part~1, applied to $t_i$ with postfix $\Psi \concat \delta$. If $x$ is a slot of $\Gamma$, then $\kappa$ keeps $x$ and $\sigma$ replaces it, so the left-hand side is $\sigma(x)[u]_{\Phi \concat \Delta}$ with $u_i = t_i[\kappa]_{\Phi \concat \Gamma \concat \Theta}^{\Psi \concat \delta}[\sigma]_\Phi^{\Theta \concat \Omega \concat \Psi \concat \delta}$; on the right-hand side, $\sigma$ replaces $x$, so part~2, applied to $\sigma(x) : \Expr(\Phi \concat \Delta \concat \beta)$ and the substitutions $v : \beta \sub \Phi \concat \Delta \concat \Theta \concat \Lambda \concat \Psi$, given by $v_i = t_i[\sigma]_\Phi^{\Theta \concat \Lambda \concat \Psi \concat \delta}$, and $\kappa[\sigma]_\Phi^{\Theta \concat \Omega} : \Lambda \sub \Phi \concat \Delta \concat \Theta \concat \Omega$, gives:
+    \[
+    \sigma(x)[v]_{\Phi \concat \Delta}\,\big[\kappa[\sigma]_\Phi^{\Theta \concat \Omega}\big]_{\Phi \concat \Delta \concat \Theta}^{\Psi}
+    = \sigma(x)\big[v\big[\kappa[\sigma]_\Phi^{\Theta \concat \Omega}\big]_{\Phi \concat \Delta \concat \Theta}^{\Psi}\big]_{\Phi \concat \Delta}.
+    \]
+    By the induction hypothesis for part~1 applied pointwise to the arguments $t_i$, the substitution in brackets is equal to $u$. 
+    Finally, let $x$ be a slot of $\Lambda$, and let $u : \beta \sub \Phi \concat \Gamma \concat \Theta \concat \Omega \concat \Psi$, $u_i = t_i[\kappa]_{\Phi \concat \Gamma \concat \Theta}^{\Psi \concat \delta}$. We first compute the left-hand side:
+    \begin{align*}
+        x(t)[\kappa]_{\Phi \concat \Gamma \concat \Theta}^{\Psi}[\sigma]_\Phi^{\Theta \concat \Omega \concat \Psi}
+        &\overset{\textnormal{def}}{=} \kappa(x)[u]_{\Phi \concat \Gamma \concat \Theta \concat \Omega}[\sigma]_\Phi^{\Theta \concat \Omega \concat \Psi}\\
+        &= \kappa(x)[\sigma]_\Phi^{\Theta \concat \Omega \concat \beta}\big[u[\sigma]_\Phi^{\Theta \concat \Omega \concat \Psi}\big]_{\Phi \concat \Delta \concat \Theta \concat \Omega},
+    \end{align*}
+    where the second equality is by part~1, applied to $\sigma$, $u$ and $\kappa(x) : \Expr(\Phi \concat \Gamma \concat \Theta \concat \Omega \concat \beta)$. 
+    
+    We now compute the right-hand side. Let $v_i = t_i[\sigma]_\Phi^{\Theta \concat \Lambda \concat \Psi \concat \delta}$ and $w_i = v_i\big[\kappa[\sigma]_\Phi^{\Theta \concat \Omega}\big]_{\Phi \concat \Delta \concat \Theta}^{\Psi \concat \delta}$ for $i : \beta \ni \delta$. Then
+    \begin{align*}
+        x(t)[\sigma]_\Phi^{\Theta \concat \Lambda \concat \Psi}\big[\kappa[\sigma]_\Phi^{\Theta \concat \Omega}\big]_{\Phi \concat \Delta \concat \Theta}^{\Psi}
+        &\overset{\textnormal{def}}{=} x(v)\big[\kappa[\sigma]_\Phi^{\Theta \concat \Omega}\big]_{\Phi \concat \Delta \concat \Theta}^{\Psi}\\
+        &\overset{\textnormal{def}}{=} \kappa(x)[\sigma]_\Phi^{\Theta \concat \Omega \concat \beta}[w]_{\Phi \concat \Delta \concat \Theta \concat \Omega}\\
+        &= \kappa(x)[\sigma]_\Phi^{\Theta \concat \Omega \concat \beta}\big[u[\sigma]_\Phi^{\Theta \concat \Omega \concat \Psi}\big]_{\Phi \concat \Delta \concat \Theta \concat \Omega},
+    \end{align*}
+    which agrees with the left-hand side computed above. The last equality holds by the induction hypothesis for part~1 applied pointwise to the arguments $t_i$:
+    \[
+    w_i = t_i[\kappa]_{\Phi \concat \Gamma \concat \Theta}^{\Psi \concat \delta}[\sigma]_\Phi^{\Theta \concat \Omega \concat \Psi \concat \delta} = u_i[\sigma]_\Phi^{\Theta \concat \Omega \concat \Psi \concat \delta}.
+    \]
+
+    \emph{Part~2.} If $x$ is a slot of $\Phi$ or $\Psi$, it is kept by all three actions, and both sides agree by the induction hypothesis for part~2 applied pointwise to the arguments $t_i$. Otherwise $x$ is a slot of $\Lambda$; let $u : \beta \sub \Phi \concat \Theta \concat \Gamma \concat \Xi \concat \Psi$, $u_i = t_i[\kappa]_\Phi^{\Psi \concat \delta}$. We first compute the left-hand side:
+    \begin{align*}
+        x(t)[\kappa]_\Phi^\Psi[\theta]_{\Phi \concat \Theta}^{\Xi \concat \Psi}
+        &\overset{\textnormal{def}}{=} \kappa(x)[u]_{\Phi \concat \Theta \concat \Gamma \concat \Xi}[\theta]_{\Phi \concat \Theta}^{\Xi \concat \Psi}\\
+        &= \kappa(x)[\theta]_{\Phi \concat \Theta}^{\Xi \concat \beta}\big[u[\theta]_{\Phi \concat \Theta}^{\Xi \concat \Psi}\big]_{\Phi \concat \Theta \concat \Delta \concat \Xi},
+    \end{align*}
+    where the second equality is by part~1, applied to $\theta$, $u$ and $\kappa(x) : \Expr(\Phi \concat \Theta \concat \Gamma \concat \Xi \concat \beta)$, with prefix $\Phi \concat \Theta$ and empty postfix.
+
+    We now compute the right-hand side. Let $w_i = t_i\big[\kappa[\theta]_{\Phi \concat \Theta}^{\Xi}\big]_\Phi^{\Psi \concat \delta}$ for $i : \beta \ni \delta$. Then
+    \begin{align*}
+        x(t)\big[\kappa[\theta]_{\Phi \concat \Theta}^{\Xi}\big]_\Phi^\Psi
+        &\overset{\textnormal{def}}{=} \big(\kappa[\theta]_{\Phi \concat \Theta}^{\Xi}\big)(x)[w]_{\Phi \concat \Theta \concat \Delta \concat \Xi}\\
+        &\overset{\textnormal{def}}{=} \kappa(x)[\theta]_{\Phi \concat \Theta}^{\Xi \concat \beta}[w]_{\Phi \concat \Theta \concat \Delta \concat \Xi}\\
+        &= \kappa(x)[\theta]_{\Phi \concat \Theta}^{\Xi \concat \beta}\big[u[\theta]_{\Phi \concat \Theta}^{\Xi \concat \Psi}\big]_{\Phi \concat \Theta \concat \Delta \concat \Xi},
+    \end{align*}
+    which agrees with the left-hand side computed above. The last equality holds by the induction hypothesis for part~2 applied pointwise to the arguments $t_i$:
+    \[
+    w_i = t_i[\kappa]_\Phi^{\Psi \concat \delta}[\theta]_{\Phi \concat \Theta}^{\Xi \concat \Psi \concat \delta} = u_i[\theta]_{\Phi \concat \Theta}^{\Xi \concat \Psi \concat \delta}.
+    \]
+
+    Finally, the mutual induction is well founded: it proceeds along the lexicographic order on pairs $(n, e)$, where $n$ is the sum of the ranks of the two active blocks and $e$ is the expression.
+\end{proof}
+
+Part~3 of \cref{relative-monad} now follows at once: for substitutions $\sigma : \Gamma \sub \Delta$ and $\tau : \Delta \sub \Xi$, part~2 of \cref{lem:substitution} with empty $\Phi$, $\Theta$ and $\Xi$ gives
+\[
+e[\sigma]^\alpha[\tau]^\alpha = e\big[\sigma[\tau]\big]^\alpha = e[\sigma \,; \tau]^\alpha
+\]
+for every expression $e : \Expr(\Gamma \concat \alpha)$. This completes the proof of \cref{relative-monad}.
+
+\begin{remark}\label{rem:three-levels}
+    Representing the raw expressions over a signature $\Sigma$, a meta-variable shape $\Theta$ and a variable shape $\Gamma$ as elements of $\Expr(\Sigma \concat \Theta \concat \Gamma)$, as in \cref{ex:layers}, substitution of variables, instantiation of meta-variables and transformation of signatures all become instances of \cref{def:action}: a substitution $\sigma : \Gamma \sub \Sigma \concat \Theta \concat \Delta$ acts with prefix $\Sigma \concat \Theta$, an instantiation $I : \Theta \sub \Sigma \concat \Xi$ with prefix $\Sigma$ and postfix $\Gamma$, and a transformation $f : \Sigma \sub \Sigma'$ with postfix $\Theta \concat \Gamma$. Their substitution lemmas, that is, the associativity laws of Petković Komel's relative monads of substitutions and of instantiations~\cite[\S\S7.2 and~7.3]{PetkovicKomel2021} and of transformations~\cite[Lemma~8.3.4]{PetkovicKomel2021},
+    \begin{align*}
+        e[\sigma]_{\Sigma \concat \Theta}[\tau]_{\Sigma \concat \Theta} &= e\big[\sigma[\tau]_{\Sigma \concat \Theta}\big]_{\Sigma \concat \Theta},\\
+        e[I]_\Sigma^\Gamma[J]_\Sigma^\Gamma &= e\big[I[J]_\Sigma\big]_\Sigma^\Gamma,\\
+        e[f]^{\Theta \concat \Gamma}[g]^{\Theta \concat \Gamma} &= e[f \,; g]^{\Theta \concat \Gamma},
+    \end{align*}
+    are therefore all instances of associativity, \cref{lem:substitution}(2). Likewise, the laws by which the various levels interact, such as the commutation of transformations with substitutions and with instantiations~\cite[Lemmas~8.3.2 and~8.3.3]{PetkovicKomel2021}, are instances of interchange, \cref{lem:substitution}(1).
+\end{remark}
+
+\begin{remark}[Comparison with Adams]\label{rem:adams}
+    Our arities, and the shape of our expressions, go back to the lambda-free logical framework of Adams~\cite{Adams2008}. The differences in the syntax itself were discussed after \cref{def:expressions}. Adams' instantiation $\{F/x\}N$ of an abstraction $F$ for a variable $x$ in an object $N$ corresponds to our substitution action, but only works one slot at a time; similarly, his $\eta$-long forms of variables correspond to our $\eta$-expansions. He proves the analogues of the unit laws and of the substitution lemma~\cite[Lemmas~3.3 and~3.4]{Adams2008}.
+    
+    The differences concern substitution. First, Adams instantiates one named variable at a time, and in the hereditary case instantiates the arguments of $F$ one after another, relying on $\alpha$-conversion to keep them apart. We act by simultaneous substitutions on a whole block; these can be composed, and it is their composition that organises them into the Kleisli category of a relative monad, a structure absent from~\cite{Adams2008}. Second, since constants are slots like any other, they can be substituted as well, which is what makes type-theoretic transformations instances of the same phenomenon (\cref{rem:three-levels}); Adams instantiates variables only.
+\end{remark}
+
+\section{Comparison with the simply typed \texorpdfstring{$\lambda$}{lambda}-calculus}\label{sec:lambda}
+
+We now make precise the observation of \cref{rem:normal-forms} that our expressions are the $\beta$-normal, $\eta$-long terms of a simply typed $\lambda$-calculus, and moreover, we show that $\bE$ is isomorphic, as a relative monad, to the simply typed $\lambda$-terms modulo $\beta\eta$-equality.
+
+\subsection{Arities as simple types}
+
+Let $\mathrm{Ty}$ be the set of simple types over a single base type $\mathsf{o}$, generated by $\mathsf{o}$ and $A \to B$. We define a map
+\[
+\llbracket [\alpha_1, \ldots, \alpha_n] \rrbracket \coloneqq \llbracket \alpha_1 \rrbracket \to \cdots \to \llbracket \alpha_n \rrbracket \to \mathsf{o}.
+\]
+which is clearly bijection. Under this map, the rank of an arity is the order of the corresponding type.
+
+Accordingly, an arity $\Gamma = [\gamma_1, \ldots, \gamma_n]$ may be read as a typed context whose variables are the slots of $\Gamma$, the slot $i$ having type $\llbracket \gamma_i \rrbracket$, and renamings are then precisely type-preserving maps between such contexts. This identifies $\bA$ with the category $\mathrm{Fin} \downarrow \mathrm{Ty}$ of typed contexts of~\cite[Ex.~2.5]{AltenkirchChapmanUustalu2015}, and $\Set^{\left|\bA\right|}$ with $[\mathrm{Ty}, \Set]$; under these identifications, the slot functor $\_ \ni \_$ is the functor $J_t$, sending a typed context to the type-indexed family of its variables.
+
+For an arity $\Gamma$ and a type $A$, we write $\Lambda(\Gamma, A)$ for the set of simply typed $\lambda$-terms of type $A$ in the context $\Gamma$, and $\Lambda_{\beta\eta}(\Gamma)(A)$ for its quotient by $\beta\eta$-equality. The latter is a relative monad on $J_t$~\cite[Ex.~2.5]{AltenkirchChapmanUustalu2015}: the unit sends a variable to itself, and the Kleisli extension of a substitution, assigning to each variable of $\Gamma$ a term of the same type in context $\Delta$, is the simultaneous substitution of these terms, which respects $\beta\eta$-equality. For $\alpha = [\alpha_1, \ldots, \alpha_n]$ and a term $M : \Lambda(\Gamma \concat \alpha, \mathsf{o})$, we write $\lambda_\alpha. M \coloneqq \lambda y_1. \cdots \lambda y_n. M : \Lambda(\Gamma, \llbracket \alpha \rrbracket)$, where $y_1, \ldots, y_n$ are the slots of $\alpha$.
+
+The \emph{$\beta$-normal, $\eta$-long} terms form a family of subsets $\mathrm{NF}(\Gamma, A) \subseteq \Lambda(\Gamma, A)$, indexed by arities $\Gamma$ and types $A$, which is defined inductively by a single rule~\cite[\S3.1]{KellerAltenkirch2010}: for every arity $\alpha$, every variable $x$ of $\Gamma \concat \alpha$ of type $B_1 \to \cdots \to B_m \to \mathsf{o}$, and all $N_j \in \mathrm{NF}(\Gamma \concat \alpha, B_j)$, for $j = 1, \ldots, m$, we have:
+\[
+\lambda_\alpha.\, x\, N_1 \cdots N_m \in \mathrm{NF}(\Gamma, \llbracket \alpha \rrbracket).
+\]
+Here the application $x\, N_1 \cdots N_m$ is a term of type $\mathsf{o}$ in context $\Gamma \concat \alpha$, and abstracting over the variables of $\alpha$ turns it into a term of type $\llbracket \alpha \rrbracket$ in context $\Gamma$. Since every type is of the form $\llbracket \alpha \rrbracket$ for a unique arity $\alpha$, the rule covers every type. A term in $\mathrm{NF}(\Gamma, A)$ is $\beta$-normal because the head of every application is a variable, and $\eta$-long because every variable is applied to as many arguments as its type allows. Every term in $\Lambda(\Gamma, A)$ is $\beta\eta$-equal to exactly one term in $\mathrm{NF}(\Gamma, A)$, see~\cite{JayGhani1995} Hence,
+\[
+\Lambda_{\beta\eta}(\Gamma,A) \cong \mathrm{NF}(\Gamma, A).
+\]
+
+\subsection{The translation}
+
+\begin{definition}\label{def:translation}
+    The \emph{translation} is the family of maps
+    \[
+    \ulcorner \_ \urcorner^\alpha : \Expr(\Gamma \concat \alpha) \to \Lambda(\Gamma, \llbracket \alpha \rrbracket); \qquad \Gamma, \alpha : \left|\bA\right|,
+    \]
+    defined by structural recursion as follows. Let $\Gamma \concat \alpha = [\gamma_1, \ldots, \gamma_k]$, let $x_i$ be the $i$-th slot of $\Gamma \concat \alpha$, where $\gamma_i = [\delta_1, \ldots, \delta_{m_i}]$, and let $t_j : \Expr(\Gamma \concat \alpha \concat \delta_j)$, for $j = 1, \ldots, m_i$, be the arguments of $x(t)$. Then
+    \[
+    \ulcorner x(t) \urcorner^\alpha \coloneqq \lambda_\alpha.\, x\, \ulcorner t_1 \urcorner^{\delta_1} \cdots \ulcorner t_m \urcorner^{\delta_m}.
+    \]
+    Here $x$ is viewed as a variable of the context $\Gamma \concat \alpha$ of type $\llbracket \gamma_i \rrbracket = \llbracket \delta_1 \rrbracket \to \cdots \to \llbracket \delta_m \rrbracket \to \mathsf{o}$. When $\alpha = \emptyar$, we write $\ulcorner e \urcorner$ for $\ulcorner e \urcorner^{\emptyar} : \Lambda(\Gamma, \mathsf{o})$.
+
+    The translation extends to substitutions: for $\sigma : \Gamma \sub \Phi \concat \Delta$ and an arity $\Psi$, we write $M\{\ulcorner \sigma \urcorner\}$ for the simultaneous substitution in a term $M : \Lambda(\Phi \concat \Gamma \concat \Psi, A)$ of $\ulcorner \sigma(y) \urcorner^\gamma$ for each slot $y : \Gamma \ni \gamma$, which fixes the slots of $\Phi$ and $\Psi$.
+\end{definition}
+
+
+Comparing the clause of \cref{def:translation} with the description of $\beta$-normal, $\eta$-long terms above, an induction shows that $\ulcorner \_ \urcorner^\alpha$ is an injection with image $\mathrm{NF}(\Gamma, \llbracket \alpha \rrbracket)$.
+
+\begin{lemma}\label{lem:translation}
+    \begin{enumerate}
+        \item For every slot $x : \Gamma \ni \alpha$, the term $\ulcorner \eta(x) \urcorner^\alpha$ is the $\eta$-long form of $x$; in particular, $\ulcorner \eta(x) \urcorner^\alpha =_\eta x$.
+        \item The translation commutes with substitutions, that is, for every substitution $\sigma : \Gamma \sub \Phi \concat \Delta$ and expression $e : \Expr(\Phi \concat \Gamma \concat \Psi)$,
+        \[
+        \ulcorner e[\sigma]_\Phi^\Psi \urcorner =_\beta \ulcorner e \urcorner\{\ulcorner \sigma \urcorner\}.
+        \]
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    For part~1, we proceed by induction on $\alpha = [\alpha_1, \ldots, \alpha_n]$. Writing $y_1, \ldots, y_n$ for the slots of $\alpha$, we have $\ulcorner \eta(x) \urcorner^\alpha = \lambda_\alpha.\, x\, \ulcorner \eta(y_1) \urcorner^{\alpha_1} \cdots \ulcorner \eta(y_n) \urcorner^{\alpha_n}$, and by the induction hypothesis $\ulcorner \eta(y_j) \urcorner^{\alpha_j} =_\eta y_j$. Hence $\ulcorner \eta(x) \urcorner^\alpha =_\eta \lambda y_1. \cdots \lambda y_n.\, x\, y_1 \cdots y_n =_\eta x$.
+
+    For part~2, let $e = x(t)$, where $x$ has arity $\beta = [\beta_1, \ldots, \beta_m]$, and let $t'_i = t_i[\sigma]_\Phi^{\Psi \concat \beta_i}$, so that, by definition, $x(t)[\sigma]_\Phi^\Psi$ is $x(t')$ if $x$ is a slot of $\Phi$ or $\Psi$, and $\sigma(x)[t']_{\Phi \concat \Delta}$ if $x$ is a slot of $\Gamma$.
+    We first show that, for $i = 1, \ldots, m$,
+    \[
+    \ulcorner t_i \urcorner^{\beta_i}\{\ulcorner \sigma \urcorner\} =_\beta \ulcorner t'_i \urcorner^{\beta_i}. \tag{$*$}
+    \]
+    By definition, $\ulcorner t_i \urcorner^{\beta_i} = \lambda_{\beta_i}. \ulcorner t_i \urcorner$. The substitution $\{\ulcorner \sigma \urcorner\}$ replaces only slots of $\Gamma$, whereas $\lambda_{\beta_i}$ binds the slots of $\beta_i$, so the substitution passes under the binder: $\ulcorner t_i \urcorner^{\beta_i}\{\ulcorner \sigma \urcorner\} = \lambda_{\beta_i}. \big(\ulcorner t_i \urcorner\{\ulcorner \sigma \urcorner\}\big)$. The induction hypothesis then gives $\ulcorner t_i \urcorner\{\ulcorner \sigma \urcorner\} =_\beta \ulcorner t'_i \urcorner$, and $(*)$ follows because $\beta$-equality is preserved by $\lambda$-abstraction.
+
+    Since substitution distributes over application, $(*)$ gives
+    \begin{align*}    
+        \ulcorner x(t) \urcorner\{\ulcorner \sigma \urcorner\} &= x\{\ulcorner \sigma \urcorner\}\, \left(\ulcorner t_1 \urcorner^{\beta_1}\{\ulcorner \sigma \urcorner\}\right) \cdots \left(\ulcorner t_m \urcorner^{\beta_m}\{\ulcorner \sigma \urcorner\}\right)\\
+        &=_\beta x\{\ulcorner \sigma \urcorner\}\, \ulcorner t'_1 \urcorner^{\beta_1} \cdots \ulcorner t'_m \urcorner^{\beta_m}.
+    \end{align*}
+    If $x$ is a slot of $\Phi$ or $\Psi$, then $x\{\ulcorner \sigma \urcorner\} = x$, so the right-hand side is $\ulcorner x(t') \urcorner = \ulcorner x(t)[\sigma]_\Phi^\Psi \urcorner$. If $x$ is a slot of $\Gamma$, then $x\{\ulcorner \sigma \urcorner\} = \ulcorner \sigma(x) \urcorner^\beta = \lambda z_1. \cdots \lambda z_m. \ulcorner \sigma(x) \urcorner$, where $z_1, \ldots, z_m$ are the slots of $\beta$, and hence
+    \begin{align*}
+        \ulcorner x(t) \urcorner\{\ulcorner \sigma \urcorner\}
+        &=_\beta (\lambda z_1. \cdots \lambda z_m. \ulcorner \sigma(x) \urcorner)\, \ulcorner t'_1 \urcorner^{\beta_1} \cdots \ulcorner t'_m \urcorner^{\beta_m}\\
+        &=_\beta \ulcorner \sigma(x) \urcorner\{\ulcorner t' \urcorner\}\\
+        &=_\beta \ulcorner \sigma(x)[t']_{\Phi \concat \Delta} \urcorner\\
+        &= \ulcorner x(t)[\sigma]_\Phi^\Psi \urcorner.
+    \end{align*}
+    Here the second step consists of $m$ $\beta$-reductions, which substitute $\ulcorner t'_i \urcorner^{\beta_i}$ for $z_i$, and the third is the induction hypothesis for the expression $\sigma(x) : \Expr(\Phi \concat \Delta \concat \beta)$ and the substitution $t' : \beta \sub \Phi \concat \Delta \concat \Psi$, with prefix $\Phi \concat \Delta$ and empty postfix.
+\end{proof}
+
+\subsection{The isomorphism}
+
+Recall from~\cite[Def.~2.2]{AltenkirchChapmanUustalu2015} that a \emph{morphism} of relative monads $T \to T'$ on $J : \cat{J} \to \cat{C}$ is a family of morphisms $\varphi_X : TX \to T'X$ that preserve the units and Kleisli extensions, that is, such that the diagrams
+\[\begin{tikzcd}
+	JX & TX && TX & TY \\
+	& {T'X} && {T'X} & {T'Y}
+	\arrow["{\eta_X}", from=1-1, to=1-2]
+	\arrow["{\eta'_X}"', from=1-1, to=2-2]
+	\arrow["{\varphi_X}", from=1-2, to=2-2]
+	\arrow["{f^\sharp}", from=1-4, to=1-5]
+	\arrow["{\varphi_X}"', from=1-4, to=2-4]
+	\arrow["{\varphi_Y}", from=1-5, to=2-5]
+	\arrow["{(\varphi_Y \circ f)^\sharp}"', from=2-4, to=2-5]
+\end{tikzcd}\]
+commute, for all $f : JX \to TY$. Such a family $\varphi$ is automatically natural.
+
+\begin{proposition}\label{prop:lambda}
+    Under the identifications of $\bA$ with $\mathrm{Fin} \downarrow \mathrm{Ty}$ and of $\_ \ni \_$ with $J_t$, the maps
+    \begin{align*}
+        \varphi_{\Gamma, \alpha} : \bE(\Gamma)(\alpha) &\to \Lambda_{\beta\eta}(\Gamma)(\llbracket \alpha \rrbracket)\\
+        e &\mapsto [\ulcorner e \urcorner^\alpha],
+    \end{align*}
+    form an isomorphism of relative monads $\bE \cong \Lambda_{\beta\eta}$.
+\end{proposition}
+
+\begin{proof}
+    The units are preserved by \cref{lem:translation}(1). For the Kleisli extensions, let $\sigma : \Gamma \sub \Delta$ and $e : \Expr(\Gamma \concat \alpha)$. By \cref{lem:translation}(2) with empty prefix and postfix $\alpha$, and since substitution commutes with $\lambda_\alpha$,
+    \[
+    \ulcorner e[\sigma]^\alpha \urcorner^\alpha = \lambda_\alpha. \ulcorner e[\sigma]^\alpha \urcorner =_\beta \lambda_\alpha. \big(\ulcorner e \urcorner\{\ulcorner \sigma \urcorner\}\big) = \ulcorner e \urcorner^\alpha\{\ulcorner \sigma \urcorner\},
+    \]
+    so that the maps $\varphi_{\Gamma,\alpha}$ preserve Kleisli extensions. Finally, each $\varphi_{\Gamma, \alpha}$ is a bijection, since $\ulcorner \_ \urcorner^\alpha$ is a bijection onto the $\beta$-normal, $\eta$-long terms, and each $\beta\eta$-equivalence class contains precisely one of such. Hence, $\varphi$ is an isomorphism of relative monads.
+\end{proof}
+
+\begin{corollary}\label{cor:kleisli}
+    The Kleisli category $\Kl(\bE)$ is isomorphic to the category of typed contexts and substitutions of the simply typed $\lambda$-calculus over a single base type modulo $\beta\eta$-equality: its objects are typed contexts, and its morphisms $\Gamma \to \Delta$ assign to each variable of $\Gamma$ a $\beta\eta$-equivalence class of terms of the same type in context $\Delta$, composed by substitution.
+\end{corollary}
+
+% \begin{remark}\label{rem:ccc}
+%     The category $\Kl(\bE)^{\mathrm{op}}$ is equivalent to the free cartesian closed category $\mathcal{F}$ on one object; cf.~\cite[Ex.~2.15]{AltenkirchChapmanUustalu2015}. Indeed, $\mathcal{F}$ can be constructed as the syntactic category of the extension $\Lambda^\times$ of the simply typed $\lambda$-calculus over a single base type by finite product types, including the unit type~\cite[Part~I, \S\S4 and~11]{LambekScott1986}: its objects are the types of $\Lambda^\times$, and its morphisms $A \to B$ are the terms of type $B$ in the context $[A]$, modulo $\beta\eta$-equality.
+%     Sending a context $[A_1, \ldots, A_n]$ to $A_1 \times \cdots \times A_n$ defines a functor $\Kl(\bE)^{\mathrm{op}} \cong \Kl(\Lambda_{\beta\eta})^{\mathrm{op}} \to \mathcal{F}$, which is an equivalence. It is essentially surjective, since the isomorphisms $(A \times B) \to C \cong A \to (B \to C)$ and $A \to (B \times C) \cong (A \to B) \times (A \to C)$, together with their nullary versions, make every type isomorphic to a product of product-free types. It is fully faithful because $\Lambda^\times$ is conservative over $\Lambda$: every term of $\Lambda^\times$ is $\beta\eta$-equal to exactly one long normal form~\cite[Thm.~6.1 and Cor.~6.9]{JayGhani1995}, whose calculus includes product types, and a long normal form of a product-free type in a product-free context contains no pairs or projections, since all its variables, free or bound, and hence all its subterms have product-free types.
+% \end{remark}
+
+\begin{remark}
+    \Cref{prop:lambda} makes precise Adams' observation that arities correspond to simple types and instantiation to innermost reduction~\cite[\S2.3]{Adams2008}, and identifies our action with hereditary substitution~\cite{KellerAltenkirch2010}. It also offers a second route to \cref{relative-monad}: the relative monad laws could be transported along the isomorphism from $\Lambda_{\beta\eta}$, where they are immediate.
+\end{remark}
