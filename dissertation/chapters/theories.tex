@@ -1,0 +1,17 @@
+\chapter{Theories}
+\label{ch:theories}
+
+Voevodsky's programme for the semantics of type theories~\cite{Voevodsky2017Relative} rests on the \emph{Initiality Conjecture}: for a suitable class of inference rules, the term model of a type theory is initial among its models, so that the theory has a unique interpretation in every model. Voevodsky also considered obtaining the term models of type theories uniformly from a logical framework, and named the obstacle to doing so:
+\begin{quote}
+The term models for a class of type theories can be obtained by considering slices of the term model of the type theory called Logical Framework (LF), but unfortunately it is unclear how to extend this approach to type theories that have more substitutional (definitional) equalities than LF itself.~\cite[p.~3]{Voevodsky2017Relative}
+\end{quote}
+
+The obstacle is that LF is a syntactic framework: its definitional equality is fixed independently of the signature, so the equations of an object theory do not hold judgementally in the slice over its signature. In $\ToS^\omega$, which is a semantic framework (\cref{ch:wf-syntax}), an equation declared in a signature makes its two sides judgementally equal in every context that extends the signature, and in this chapter we carry out Voevodsky's approach for it. A \emph{theory} consists of a signature, which is a context of $\ToS^\omega$, together with the \emph{admissible} types, by which the contexts of the object theory may be extended. The term model of a theory, which we call its \emph{tautological model}, has as its category of contexts the full subcategory of the slice of the term C-system of $\ToS^\omega$ over the signature on the extensions by admissible types. Our main result is that the tautological model is initial among the models of the theory whenever the theory is \emph{positive}, meaning, roughly, that the premises of its rules and the hypotheses of its judgements are elements of sorts and equations between elements, possibly under hypotheses of the same kind, but never sorts or equations between sorts. Positivity thus delineates a class of inference rules for which the Initiality Conjecture holds, uniformly in the theory.
+
+% TODO outline (positive-theories-and-initiality.md):
+% - theories, admissible types, schemas
+% - positivity; examples, and theories that are not positive (counterexamples of Remark 5.6)
+% - models of a positive theory (presheaf semantics), their morphisms, the category of models
+% - the tautological model
+% - initiality
+% - related work: how Uemura2023 and KaposiXie2024 obtain the syntax of a theory (verify before writing)

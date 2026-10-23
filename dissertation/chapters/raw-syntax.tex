@@ -70,11 +70,7 @@ In the rest of this chapter we make these ideas precise. We begin by defining bi
     \[
     \_ \ni \_ : \bA \to \Set^{\left|\bA\right|}.
     \]
-    Indeed, a renaming $\Gamma \ren \Delta$ is by definition precisely a morphism of $\left|\bA\right|$-indexed families of sets from $\Gamma \ni \_$ to $\Delta \ni \_$. (Just as clearly, the assignment $\_ \ni \_$ is \emph{not} functorial in the second component.
-    %
-    \TODO{AB: Well, it is functorial with $|\bA|$ but not with $\bA$ in place of it, so something like ``\dots is not functorial when the second argument is taken to be $\bA$''.}
-    %
-    ) This functor will serve as the base of the relative monad of expressions.
+    Indeed, a renaming $\Gamma \ren \Delta$ is by definition precisely a morphism of $\left|\bA\right|$-indexed families of sets from $\Gamma \ni \_$ to $\Delta \ni \_$. (Just as clearly, the assignment $\_ \ni \_$ is \emph{not} functorial with respect to renamings in the second component.) This functor will serve as the base of the relative monad of expressions.
 \end{definition}
 
 \begin{remark}
@@ -104,7 +100,8 @@ In the rest of this chapter we make these ideas precise. We begin by defining bi
     \end{tikzcd}\]
 \end{remark}
 
-Thus an expression over $\Gamma$ is a slot of $\Gamma$ applied to one argument for each slot of its arity, and the argument corresponding to a slot of arity $\delta$ is an expression over the extended arity $\Gamma \concat \delta$. Besides the slots of $\Gamma$, it may therefore refer to the slots of $\delta$, which the application binds in its argument: binding amounts to arity extension. In particular, abstraction is not a primitive of our syntax. This is the main difference from Adams' framework~\cite{Adams2008}, whose arities coincide with ours and whose expressions likewise consist of a head applied to one argument for each slot of its arity, but where these arguments are abstractions $[\vec x]M$ --- a separate syntactic form binding named variables, identified up to $\alpha$-conversion --- and where the head is either a variable or a constant, the two being distinguished. In our setting, the $i$-th argument is an abstraction over $\delta_i$ simply by virtue of being an expression over $\Gamma \concat \delta_i$, and constants are slots like any other. The distinction between expressions and abstractions is thus a matter of perspective: any expression $t : \Expr(\Gamma \concat \delta)$ may be read as an abstraction over $\delta$ in context $\Gamma$, depending only on how we split its arity.
+Thus an expression over $\Gamma$ is a slot of $\Gamma$ applied to one argument for each slot of its arity, and the argument corresponding to a slot of arity $\delta$ is an expression over the extended arity $\Gamma \concat \delta$. Besides the slots of $\Gamma$, it may therefore refer to the slots of $\delta$, which the application binds in its argument: binding amounts to arity extension. Our expressions are thus \emph{intrinsically scoped}: an expression over $\Gamma$ can refer only to the slots of $\Gamma$ and to those bound within it, so that scoping is enforced by the indexing itself rather than by a separate judgement, as in the well-scoped presentations of the $\lambda$-calculus~\cite{AltenkirchReus1999,AltenkirchChapmanUustalu2015}.
+ In particular, abstraction is not a primitive of our syntax. This is the main difference from Adams' framework~\cite{Adams2008}, whose arities coincide with ours and whose expressions likewise consist of a head applied to one argument for each slot of its arity, but where these arguments are abstractions $[\vec x]M$ --- a separate syntactic form binding named variables, identified up to $\alpha$-conversion --- and where the head is either a variable or a constant, the two being distinguished. In our setting, the $i$-th argument is an abstraction over $\delta_i$ simply by virtue of being an expression over $\Gamma \concat \delta_i$, and constants are slots like any other. The distinction between expressions and abstractions is thus a matter of perspective: any expression $t : \Expr(\Gamma \concat \delta)$ may be read as an abstraction over $\delta$ in context $\Gamma$, depending only on how we split its arity.
 
 \begin{example}\label{ex:layers}
     A single arity can accommodate all the layers of a type theory: a signature, meta-variables, free variables and, under binders, bound variables. To illustrate this, we consider the expression
@@ -473,10 +470,10 @@ Here the application $x\, N_1 \cdots N_m$ is a term of type $\mathsf{o}$ in cont
 \Lambda_{\beta\eta}(\Gamma,A) \cong \mathrm{NF}(\Gamma, A).
 \]
 
-\subsection{The translation}
+\subsection{Expressions as \texorpdfstring{$\lambda$}{lambda}-terms}
 
 \begin{definition}\label{def:translation}
-    The \emph{translation} is the family of maps
+    The \emph{embedding} of expressions into $\lambda$-terms is the family of maps
     \[
     \ulcorner \_ \urcorner^\alpha : \Expr(\Gamma \concat \alpha) \to \Lambda(\Gamma, \llbracket \alpha \rrbracket); \qquad \Gamma, \alpha : \left|\bA\right|,
     \]
@@ -486,7 +483,7 @@ Here the application $x\, N_1 \cdots N_m$ is a term of type $\mathsf{o}$ in cont
     \]
     Here $x$ is viewed as a variable of the context $\Gamma \concat \alpha$ of type $\llbracket \gamma_i \rrbracket = \llbracket \delta_1 \rrbracket \to \cdots \to \llbracket \delta_m \rrbracket \to \mathsf{o}$. When $\alpha = \emptyar$, we write $\ulcorner e \urcorner$ for $\ulcorner e \urcorner^{\emptyar} : \Lambda(\Gamma, \mathsf{o})$.
 
-    The translation extends to substitutions: for $\sigma : \Gamma \sub \Phi \concat \Delta$ and an arity $\Psi$, we write $M\{\ulcorner \sigma \urcorner\}$ for the simultaneous substitution in a term $M : \Lambda(\Phi \concat \Gamma \concat \Psi, A)$ of $\ulcorner \sigma(y) \urcorner^\gamma$ for each slot $y : \Gamma \ni \gamma$, which fixes the slots of $\Phi$ and $\Psi$.
+    The embedding extends to substitutions: for $\sigma : \Gamma \sub \Phi \concat \Delta$ and an arity $\Psi$, we write $M\{\ulcorner \sigma \urcorner\}$ for the simultaneous substitution in a term $M : \Lambda(\Phi \concat \Gamma \concat \Psi, A)$ of $\ulcorner \sigma(y) \urcorner^\gamma$ for each slot $y : \Gamma \ni \gamma$, which fixes the slots of $\Phi$ and $\Psi$.
 \end{definition}
 
 
@@ -495,7 +492,7 @@ Comparing the clause of \cref{def:translation} with the description of $\beta$-n
 \begin{lemma}\label{lem:translation}
     \begin{enumerate}
         \item For every slot $x : \Gamma \ni \alpha$, the term $\ulcorner \eta(x) \urcorner^\alpha$ is the $\eta$-long form of $x$; in particular, $\ulcorner \eta(x) \urcorner^\alpha =_\eta x$.
-        \item The translation commutes with substitutions, that is, for every substitution $\sigma : \Gamma \sub \Phi \concat \Delta$ and expression $e : \Expr(\Phi \concat \Gamma \concat \Psi)$,
+        \item The embedding commutes with substitutions, that is, for every substitution $\sigma : \Gamma \sub \Phi \concat \Delta$ and expression $e : \Expr(\Phi \concat \Gamma \concat \Psi)$,
         \[
         \ulcorner e[\sigma]_\Phi^\Psi \urcorner =_\beta \ulcorner e \urcorner\{\ulcorner \sigma \urcorner\}.
         \]
@@ -571,7 +568,7 @@ commute, for all $f : JX \to TY$. Such a family $\varphi$ is automatically natur
 % \end{remark}
 
 \begin{remark}
-    \Cref{prop:lambda} makes precise Adams' observation that arities correspond to simple types and instantiation to innermost reduction~\cite[\S2.3]{Adams2008}. It also offers a second route to \cref{relative-monad}: the relative monad laws could be transported along the isomorphism from $\Lambda_{\beta\eta}$, where they are immediate. The direct construction nevertheless has merits of its own. It uses nothing beyond well-founded recursion and induction on arities and expressions, and it takes place entirely within the inductive family of expressions, without quotients: substitution is computed on canonical forms, and the relative monad laws hold as direct equalities. This makes the construction well suited to formalization, and it matches canonical presentations of logical frameworks, in which hereditary substitution never leaves the canonical forms~\cite[\S2]{HarperLicata2007}.
+    \Cref{prop:lambda} makes precise Adams' observation that arities correspond to simple types and instantiation to innermost reduction~\cite[\S2.3]{Adams2008}. It also offers a second route to \cref{relative-monad}: the relative monad laws could be transported along the isomorphism from $\Lambda_{\beta\eta}$, where they are immediate. The direct construction nevertheless has merits of its own. It uses nothing beyond well-founded recursion and induction on arities and expressions, and it takes place entirely within the inductive family of expressions, without quotients: substitution is computed on canonical forms, and the relative monad laws hold as direct equalities. This makes the construction well suited to formalization, and it matches canonical presentations of logical frameworks, in which hereditary substitution never leaves the canonical forms~\cite{HarperLicata2007}.
 \end{remark}
 
 %%% Local Variables:
