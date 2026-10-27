@@ -10,3 +10,188 @@ Different logical frameworks differ in their treatment of equality. \emph{Syntac
 The syntax of $\ToS^\omega$ is constructed from the raw syntax by judgements, defined by mutual induction, that single out the well-formed contexts, expressions and substitutions and determine when two of them are equal; in other words, typing is extrinsic. We establish the basic metatheoretical properties of $\ToS^{\omega}$, namely admissibility of weakening and of substitution, and presuppositivity, for arbitrary signatures at every rank. Our syntactic model is canonical in the sense of Canonical LF~\cite{HarperLicata2007}, meaning that its operations compute within $\beta$-normal, $\eta$-long expressions, so that a quotient is needed only for the equations of object theories, whereas a free construction, in the style of~\cite{AltenkirchKaposi2016}, builds terms as syntactic trees, quotiented by the equations of the framework as well.
 
 We construct this term model following Voevodsky's approach. Boundaries form a module $\Bd : \Kl(\bE) \to \Set$ over the relative monad of raw syntax, from which a higher-rank generalisation of his construction of the C-system of a module over a $J_f$-relative monad~\cite{Voevodsky2014Module,Voevodsky2016Relative} yields the \emph{raw syntax C-system} $\Ctxr$. The well-formed syntax then arises as the term C-system of $\ToS^\omega$, that is, as a regular subquotient $\Ctx$ of $\Ctxr$~\cite{Voevodsky2014Subsystems}, selected by the judgements and quotiented by judgemental equality. The judgements are defined so as to present the generalised algebraic theory of categories with families, equipped with a Tarski universe of sorts, dependent products over arbitrary types, and extensional equality types for sorts and for elements of a sort, which we prove $\Ctx$ to be an initial model of. This algebraic characterization hence establishes the initiality conjecture for the logical framework $\ToS^{\omega}$.
+
+\section{Raw contexts}
+
+As a first step towards constructing well-formed syntax, we consider \emph{raw context}, which are arities each of whose slots is freely decorated with a boundary over the preceeding slots, with no typing constraints. We show that boundaries form a module over the raw syntax monad $\bE$ which, in analogy with Voevodsky's construction~\cite{Voevodsky2016Relative}, determines the $C$-system structure on raw contexts.
+
+\subsection{Decorated arities}
+
+\begin{definition}\label{def:boundaries}
+    For an arity $\Xi$, the set of \emph{boundaries} over $\Xi$ is defined as:
+    $$\Bd(\Xi) := 1 + \Expr(\Xi) + \Expr(\Xi) \times \Expr(\Xi),$$
+    that is, a boundary given by either zero, one, or two expressions. We introduce the following suggestive notation:
+    $$\Bd(\Xi) := \{\bsort\} + \{S \;|\; S \in \Expr(\Xi) \} + \{\beq(l,r) \;|\; l,r\in\Expr(\Xi)\}.$$
+\end{definition}
+
+A boundary records what a slot is declared to be: a sort, an element of the sort $S$, or a witness that $l$ and $r$ are equal. Boundaries are raw and enforce no well-typedness constraints: nothing yet requires $S$ to be a sort, or $l$ and $r$ to be two sorts or two elements of a common sort. Once the judgements impose these conditions, $\beq$ splits into equations between sorts and between elements of sorts, and the four forms of boundaries of finitary type theories~\cite{HaselwarterBauer2023} are recovered. Unlike the boundary $l \equiv r : S$ of finitary type theories, however, an equation boundary $\beq(l, r)$ between elements does not record their sort, since every expression determines its sort.
+
+The well-typedness judgements will be phrased for arities in which every slot is freely decorated with a boundary over the slots that precede it and those that it binds. Since the bound slots must be decorated as well, decorations are defined by recursion on arities, relative to a base arity of variables already in scope.
+
+\begin{definition}\label{def:decorated-arities}
+    Let $\Xi, \Gamma, \alpha$ be arities. The sets $\Dec(\Xi, \Gamma)$ of \emph{$\Xi$-decorated arities} of shape $\Gamma$ and $\Ent(\Xi, \alpha)$ of \emph{entries} of arity $\alpha$ over $\Xi$ are defined by simultaneous structural recursion on $\Gamma$ and $\alpha$:
+    \begin{align*}
+        \Ent(\Xi, \alpha) &\coloneqq \Dec(\Xi, \alpha) \times \Bd(\Xi \concat \alpha),\\
+        \Dec(\Xi, \emptyar) &\coloneqq \{()\},\\
+        \Dec(\Xi, [\alpha] \concat \Gamma) &\coloneqq \Ent(\Xi, \alpha) \times \Dec(\Xi \concat [\alpha], \Gamma).
+    \end{align*}
+
+    We will write an entry as $[\Theta]\beta : \Ent(\Xi,\alpha)$, where $\Theta : \Dec(\Xi, \alpha)$ is a decoration of the bound slots and $\beta : \Bd(\Xi \concat \alpha)$ is the slot's boundary. We omit the prefix $[\Theta]$ when $\alpha = \emptyar$.
+    
+    A \emph{raw context} of arity $\Xi$ is an element of $\Dec(\emptyar, \Xi)$, that is, an arity whose each slot decorated only over the previous slots and those that it binds, in an empty ambient. 
+\end{definition}
+
+\begin{remark}
+    Unfolding the recursion, an $\Xi$-decorated arity of shape $\Gamma = [\gamma_1, \ldots, \gamma_n]$ is a list $[x_1 : [\Theta_1]\beta_1, \ldots, x_n : [\Theta_n]\beta_n]$ of entries $[\Theta_i]\beta_i : \Ent(\Xi \concat [\gamma_1, \ldots, \gamma_{i-1}], \gamma_i)$, each over $\Xi$ extended by the slots before it.
+    An entry $[\Theta]\beta$ generalises the abstracted boundaries $\{x_1 : A_1\} \cdots \{x_m : A_m\}\, \mathscr{b}$ by which finitary type theories declare the metavariables of a rule~\cite[\S2.1]{HaselwarterBauer2023}: the variables it abstracts may have non-trivial binding arities, and we also allow abstracting over sorts and equations, not just elements.
+\end{remark}
+
+\begin{remark}\label{rem:concatenation}
+    Concatenation of arities lifts to decorated arities: overloading the notation, we define 
+    \[
+    \_ \concat \_ : \Dec(\Xi, \Gamma) \times \Dec(\Xi \concat \Gamma, \Gamma') \to \Dec(\Xi, \Gamma \concat \Gamma')
+    \]
+    by recursion on $\Gamma$, by $() \concat \Theta' \coloneqq \Theta'$ and $(E, \Theta) \concat \Theta' \coloneqq (E, \Theta \concat \Theta')$. Every decorated arity of shape $\Gamma \concat \Gamma'$ splits uniquely, hence $\_ \concat \_$ is a bijection.
+\end{remark}
+
+\begin{example}\label{ex:raw-context}
+    The raw context
+    \[
+    \begin{aligned}
+        \big[\,&\mathsf{Ty} : \bsort,\\
+        &\mathsf{Tm} : [A : \mathsf{Ty}]\,\bsort,\\
+        &\Pi : [A : \mathsf{Ty},\ B : [x : \mathsf{Tm}(A)]\,\mathsf{Ty}]\,\mathsf{Ty}\,\big]
+    \end{aligned}
+    \]
+    of arity $[\emptyar, [\emptyar], [\emptyar, [\emptyar]]]$ declares a sort $\mathsf{Ty}$ of types, a family $\mathsf{Tm}$ of sorts of terms indexed by types, and the formation rule of dependent products, whose second premise $B$ is a type-family depending on a variable $x : \mathsf{Tm}(A)$.
+    
+    Extending this raw context by the application of dependent functions,
+    \[
+    \begin{aligned}
+        \mathsf{app} : \big[\,&A : \mathsf{Ty},\ B : [x : \mathsf{Tm}(A)]\,\mathsf{Ty},\\
+        &f : \mathsf{Tm}(\Pi(A, \{x\}B(x))),\ a : \mathsf{Tm}(A)\,\big]\,\mathsf{Tm}(B(a)),
+    \end{aligned}
+    \]
+    extensionality of dependent functions may be declared as
+    \[
+    \begin{aligned}
+        \mathsf{funext} : \big[\,&A : \mathsf{Ty},\ B : [x : \mathsf{Tm}(A)]\,\mathsf{Ty},\\
+        &f, g : \mathsf{Tm}(\Pi(A, \{x\}B(x))),\\
+        &h : [x : \mathsf{Tm}(A)]\,\beq\big(\mathsf{app}(A, \{x\}B(x), f, x),\\
+        &\hphantom{h : [x : \mathsf{Tm}(A)]\,\beq\big(}\mathsf{app}(A, \{x\}B(x), g, x)\big)\,\big]\,\beq(f, g),
+    \end{aligned}
+    \]
+    whose premise $h$ is an equation hypothesised generally in $x$.
+
+    Sorts may be bound just as well as elements and equations. A raw context may declare a sort of natural numbers with its usual constructors, together with an eliminator into arbitrary families of sorts,
+    \[
+    \begin{aligned}
+        \mathsf{natrec} : \big[\,&C : [n : \mathsf{Nat}]\,\bsort,\ c_0 : C(\mathsf{zero}),\\
+        &c_s : [n : \mathsf{Nat},\ c : C(n)]\,C(\mathsf{succ}(n)),\ n : \mathsf{Nat}\,\big]\,C(n),
+    \end{aligned}
+    \]
+    whose premise $C$ is a sort hypothesised generally in $n$.
+\end{example}
+
+\begin{example}\label{ex:raw-nonsense}
+    Decorations enforce no typing constraints, so a raw context may declare nonsense. For example, in the raw context
+    \[
+    [\,A : \bsort,\ a : A,\ b : a,\ e : \beq(A, a),\ f : [x : A]\,A,\ c : f(e)\,],
+    \]
+    the slot $b$ is declared an element of $a$, which is an element rather than a sort; $e$ equates the sort $A$ with its own element $a$; and $c$ is declared an element of $f(e)$, which is not a sort either, and which moreover applies $f$ to the equation $e$ in place of an element of $A$. What decorations do enforce is scoping, so that, for instance, no slot can be declared an element of itself.
+\end{example}
+
+\subsection{Substitution in decorated arities}
+
+The action of substitutions of \cref{def:action} extends from expressions to boundaries and decorated arities.
+
+\begin{definition}\label{def:action-decorations}
+    Let $\sigma : \Xi \sub \Phi \concat \Xi'$ be a substitution and $\Psi$ an arity. The action of $\sigma$ with prefix $\Phi$ at depth $\Psi$ extends to maps
+    \[
+    \begin{aligned}
+        \_[\sigma]_\Phi^\Psi &: \Bd(\Phi \concat \Xi \concat \Psi) \to \Bd(\Phi \concat \Xi' \concat \Psi),\\
+        \_[\sigma]_\Phi^\Psi &: \Ent(\Phi \concat \Xi \concat \Psi, \alpha) \to \Ent(\Phi \concat \Xi' \concat \Psi, \alpha),\\
+        \_[\sigma]_\Phi^\Psi &: \Dec(\Phi \concat \Xi \concat \Psi, \Gamma) \to \Dec(\Phi \concat \Xi' \concat \Psi, \Gamma),
+    \end{aligned}
+    \]
+    acting on a boundary through the expressions it contains, and on entries and decorated arities by simultaneous recursion:
+    \begin{align*}
+        ([\Theta]\beta)[\sigma]_\Phi^\Psi &\coloneqq [\Theta[\sigma]_\Phi^\Psi]\,\beta[\sigma]_\Phi^{\Psi \concat \alpha},\\
+        ()[\sigma]_\Phi^\Psi &\coloneqq (),\\
+        (E, \Theta')[\sigma]_\Phi^\Psi &\coloneqq \big(E[\sigma]_\Phi^\Psi,\ \Theta'[\sigma]_\Phi^{\Psi \concat [\alpha]}\big),
+    \end{align*}
+    where $[\Theta]\beta$ and $E$ are entries of arity $\alpha$.
+\end{definition}
+
+Next, we recall the definition of modules over a relative monad. 
+
+\begin{definition}\label{def:module}
+    Let $(T, \eta, (\_)^\sharp)$ be a relative monad on $J : \cat{J} \to \cat{C}$. A \emph{$T$-module} $(M, (\_)^M)$ in a category $\cat{D}$ is given by the following data:
+    \begin{itemize}
+        \item a map on objects $M : \left|\cat{J}\right| \to \left|\cat{D}\right|$
+        \item for any two objects $X,Y : \cat{C}$, an action $$(\_)^M : \cat{C}(JX,TY) \to \cat{D}(MX,MY),$$
+    \end{itemize}
+    such that 
+    \[
+    \eta_X^M = \id_{MX} \qquad \text{and} \qquad (g^\sharp \circ f)^M = g^M \circ f^M
+    \]
+    for all $f : JX \to TY$ and $g : JY \to TZ$. A \emph{morphism} of $T$-modules $\theta : (M, (\_)^M) \to (M', (\_)^{M'})$ is a family of morphisms $\theta_X : MX \to M'X$ such that the square
+    \[\begin{tikzcd}
+    	MX & MY \\
+    	{M'X} & {M'Y}
+    	\arrow["{f^M}", from=1-1, to=1-2]
+    	\arrow["{\vartheta_X}"', from=1-1, to=2-1]
+    	\arrow["{\vartheta_Y}", from=1-2, to=2-2]
+    	\arrow["{f^{M'}}"', from=2-1, to=2-2]
+    \end{tikzcd}\]
+    commutes for every $f : JX \to TY$.
+
+    Equivalently, a $T$-module in $\cat{D}$ is just a functor $\Kl(T) \to \cat{D}$.
+\end{definition}
+
+Modules over monads were introduced by Hirschowitz and Maggesi to describe syntax with binding~\cite{HirschowitzMaggesi2007}, in the form of a functor $M$ with a natural transformation $M \circ T \to M$. They construe signatures as module morphisms over the term monad with domain built from the monad using products and derivation, and the syntax is characterised as initial among monads equipped with such morphisms. Ahrens extended modules to relative monads to characterise syntax together with its reduction rules~\cite{Ahrens2016}: the terms form a relative monad on the functor $\Delta : \Set \to \mathsf{Pre}$ that equips a set of variables with the discrete preorder, the preorder on terms being reduction. In both settings, binding is accounted for by \emph{derivation}~\cite[Def.~8]{HirschowitzMaggesi2007}\cite[Def.~25]{Ahrens2016}: the derived module $M'(V) \coloneqq M(V + 1)$ extends the variables of $M$ by a fresh one, which substitutions keep fixed, so that a constructor binding a variable in its argument is a module morphism out of a derived module. In our case, however, a slot can have a binding structure of a higher rank, so we must derive along an arbitrary arity.
+
+\begin{definition}\label{def:derived-module}
+    Let $M$ be an $\bE$-module and $\Phi$ an arity. The \emph{derived module} $M^{(\Phi)}$ is given by
+    $$M^{(\Phi)} := M \circ\, (\_\bowtie\Phi),$$
+    where $\_\bowtie\Phi : \Kl(\bE) \to \Kl(\bE)$ is the functor defined by taking coproducts with $\Phi$.
+\end{definition}
+
+\begin{lemma}\label{lem:depth-derived}
+    Given a substitution $\sigma : \Xi \sub \Xi'$, arities $\Phi$ and $\Psi$, and an expression $e : \Expr(\Xi \concat \Phi \concat \Psi)$, we have $$e[\sigma \concat \Phi]^\Psi = e[\sigma]^{\Phi \concat \Psi}.$$
+\end{lemma}
+
+\begin{proof}
+    We first establish that $\sigma \concat \Phi = \id_{\Xi \concat \Psi}[\sigma]^{\Phi}$ as substitutions $\Xi \concat \Phi \sub \Xi' \concat \Phi$.
+    By definition, we have $\id_{\Xi \concat \Phi}[\sigma]^\Phi(x) = \eta(x)[\sigma]^{\Phi \concat \alpha}$ for a slot $x$ of arity $\alpha$. If $x : \Phi \ni \alpha$, we have $\eta(x)[\sigma]^{\Phi \concat \alpha} = \eta(x)$ by \cref{lem:eta-depth}.
+    If $x : \Xi \ni \alpha$, we have $\eta(x)[\sigma]^{\Phi \concat \alpha} = \sigma(x)[\iota]_{\Xi'}$, where $\iota(i : \alpha \ni \delta) = \eta(i)[\sigma]^{\Phi \concat \alpha \concat \delta} = \eta(i)$, again by \cref{lem:eta-depth}, so that $\sigma(x)[\iota]_{\Xi'}$ is the weakening of $\sigma(x) : \Expr(\Xi' \concat \alpha)$ to $\Expr(\Xi' \concat \Phi \concat \alpha)$ along the inclusion $\Xi' \concat \inr : \Xi' \concat \alpha \ren \Xi' \concat \Phi \concat \alpha$. Hence $\id_{\Xi \concat \Phi}[\sigma]^\Phi = \sigma \concat \Phi$, and the claim follows by the associativity law of \cref{lem:substitution} and the first unit law of \cref{relative-monad}:
+    \begin{align*}
+        e[\sigma\concat\Phi]^{\Psi} &= e[\id_{\Xi\concat\Phi}[\sigma]^{\Phi}]^{\Psi}\\
+        &= e[\id_{\Xi\concat\Phi}]^{\Psi}[\sigma]^{\Phi\concat\Psi}\\
+        &= e[\sigma]^{\Phi\concat\Psi}.\qedhere
+    \end{align*}
+\end{proof}
+
+\begin{proposition}\label{prop:decoration-modules}
+    Boundaries, entries, and decorated arities assemble into $\bE$-modules
+    \begin{align*}
+    \Bd : \Kl(\bE) &\to \Set\\
+    \Dec, \Ent : \Kl(\bE) &\to \Set^{\left|\bA\right|},
+    \end{align*}
+    their action on morphisms given by \cref{def:action-decorations}, with empty prefix and postfix. 
+    Moreover, for all arities $\Gamma$ and $\Gamma'$, the concatenation of \cref{rem:concatenation} is an isomorphism of $\bE$-modules
+    \[
+    \Dec(\_, \Gamma) \times \Dec(\_, \Gamma')^{(\Gamma)} \cong \Dec(\_, \Gamma \concat \Gamma').
+    \]
+\end{proposition}
+
+\begin{proof}
+    The module laws follow from \cref{relative-monad}. To establish the isomorphism, we just need to show that the bijections from \cref{rem:concatenation} commute with the module actions, that is, that the square
+    \[
+    \begin{tikzcd}[column sep=large]
+        \Dec(\Xi, \Gamma) \times \Dec(\Xi \concat \Gamma, \Gamma') \arrow[r, "\_\concat\_"] \arrow[d, "{\_[\sigma] \times \_[\sigma \concat \Gamma]}"'] & \Dec(\Xi, \Gamma \concat \Gamma') \arrow[d, "{\_[\sigma]}"] \\
+        \Dec(\Xi', \Gamma) \times \Dec(\Xi' \concat \Gamma, \Gamma') \arrow[r, "\_\concat\_"'] & \Dec(\Xi', \Gamma \concat \Gamma')
+    \end{tikzcd}
+    \]
+    commutes for every $\sigma : \Xi \sub \Xi'$. This follows from \cref{lem:depth-derived}.
+\end{proof}

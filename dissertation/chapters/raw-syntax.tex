@@ -183,7 +183,7 @@ which will serve as the unit of the relative monad of expressions.
     assigning to each slot $x : \Gamma \ni \alpha$ an abstraction $\sigma(x)$ over $\alpha$ in context $\Delta$. We write $\Subst(\Gamma, \Delta)$ for the set of substitutions $\Gamma \sub \Delta$.
 \end{definition}
 
-The $\eta$-expansion provides the \emph{identity substitution} $\id_\Gamma : \Gamma \sub \Gamma$, which sends each slot $x$ to $\eta(x)$. More generally, every renaming $\rho : \Gamma \ren \Delta$ induces a substitution $\Gamma \sub \Delta$, which sends $x$ to $\eta(\rho\, x)$. Note also that the arguments of an application form a substitution: by definition, $\Args(\Gamma, \alpha) = \Subst(\alpha, \Gamma)$. An application $x(t)$, with $x : \Gamma \ni \alpha$, is thus constructed from a slot of arity $\alpha$ and a substitution $t : \alpha \sub \Gamma$.
+The $\eta$-expansion provides the \emph{identity substitution} $\id_\Gamma : \Gamma \sub \Gamma$, which sends each slot $x$ to $\eta(x)$. More generally, every renaming $\rho : \Gamma \ren \Delta$ induces a substitution $\hat{\rho} : \Gamma \sub \Delta$, which sends $x$ to $\eta(\rho\, x)$. Note also that the arguments of an application form a substitution: by definition, $\Args(\Gamma, \alpha) = \Subst(\alpha, \Gamma)$. An application $x(t)$, with $x : \Gamma \ni \alpha$, is thus constructed from a slot of arity $\alpha$ and a substitution $t : \alpha \sub \Gamma$.
 
 Let us consider how a substitution $\sigma : \Gamma \sub \Delta$ should act on an expression $x(t)$, with $x : \Gamma \ni \alpha$ and $t : \alpha \sub \Gamma$. Intuitivelly, we would like to replace the head by its value and act on it by the substituted arguments:
 \[
