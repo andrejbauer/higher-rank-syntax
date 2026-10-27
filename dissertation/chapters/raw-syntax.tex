@@ -256,9 +256,9 @@ Relative monads for type-theoretic syntax are common in the literature; we brief
 \end{example}
 
 \begin{example}
-    The simply typed $\lambda$-calculus forms a relative monad in a similar way~\cite[Ex.~2.5]{AltenkirchChapmanUustalu2015}. Let $\mathsf{Ty}$ be the set of types, regarded as a discrete category, and let $\mathbb{F} \downarrow \mathsf{Ty}$ be the category of typed contexts $(\Gamma, \rho)$, with $\rho : \Gamma \to \mathsf{Ty}$, and type-preserving renamings. The functor
+    The simply typed $\lambda$-calculus forms a relative monad in a similar way~\cite[Ex.~2.5]{AltenkirchChapmanUustalu2015}. Let $\mathsf{Ty}$ be the set of types, regarded as a discrete category, and let $\mathbb{F}{\downarrow}\mathsf{Ty}$ be the category of typed contexts $(\Gamma, \rho)$, with $\rho : \Gamma \to \mathsf{Ty}$, and type-preserving renamings. The functor
     \[
-    J : \mathbb{F} \downarrow \mathsf{Ty} \to \Set^{\Ty}, \qquad J(\Gamma, \rho)(\sigma) = \{\, x \in \Gamma \mid \rho(x) = \sigma \,\}
+    J : \mathbb{F}{\downarrow}\mathsf{Ty} \to \Set^{\Ty}, \qquad J(\Gamma, \rho)(\sigma) = \{\, x \in \Gamma \mid \rho(x) = \sigma \,\}
     \]
     sends a typed context to its variables, sorted by type, and the typed terms form a relative monad on $J$, sending $(\Gamma, \rho)$ to the type-indexed family of sets of terms.
 \end{example}
@@ -457,7 +457,7 @@ Let $\mathrm{Ty}$ be the set of simple types over a single base type $\mathsf{o}
 \]
 which is clearly bijection. Under this map, the rank of an arity is the order of the corresponding type.
 
-Accordingly, an arity $\Gamma = [\gamma_1, \ldots, \gamma_n]$ may be read as a typed context whose variables are the slots of $\Gamma$, the slot $i$ having type $\llbracket \gamma_i \rrbracket$, and renamings are then precisely type-preserving maps between such contexts. This identifies $\bA$ with the category $\mathrm{Fin} \downarrow \mathrm{Ty}$ of typed contexts of~\cite[Ex.~2.5]{AltenkirchChapmanUustalu2015}, and $\Set^{\left|\bA\right|}$ with $[\mathrm{Ty}, \Set]$; under these identifications, the slot functor $\_ \ni \_$ is the functor $J_t$, sending a typed context to the type-indexed family of its variables.
+Accordingly, an arity $\Gamma = [\gamma_1, \ldots, \gamma_n]$ may be read as a typed context whose variables are the slots of $\Gamma$, the slot $i$ having type $\llbracket \gamma_i \rrbracket$, and renamings are then precisely type-preserving maps between such contexts. This identifies $\bA$ with the category $\mathrm{Fin}{\downarrow}\mathrm{Ty}$ of typed contexts of~\cite[Ex.~2.5]{AltenkirchChapmanUustalu2015}, and $\Set^{\left|\bA\right|}$ with $[\mathrm{Ty}, \Set]$; under these identifications, the slot functor $\_ \ni \_$ is the functor $J_t$, sending a typed context to the type-indexed family of its variables.
 
 For an arity $\Gamma$ and a type $A$, we write $\Lambda(\Gamma, A)$ for the set of simply typed $\lambda$-terms of type $A$ in the context $\Gamma$, and $\Lambda_{\beta\eta}(\Gamma)(A)$ for its quotient by $\beta\eta$-equality. The latter is a relative monad on $J_t$~\cite[Ex.~2.5]{AltenkirchChapmanUustalu2015}: the unit sends a variable to itself, and the Kleisli extension of a substitution, assigning to each variable of $\Gamma$ a term of the same type in context $\Delta$, is the simultaneous substitution of these terms, which respects $\beta\eta$-equality. For $\alpha = [\alpha_1, \ldots, \alpha_n]$ and a term $M : \Lambda(\Gamma \concat \alpha, \mathsf{o})$, we write $\lambda_\alpha. M \coloneqq \lambda y_1. \cdots \lambda y_n. M : \Lambda(\Gamma, \llbracket \alpha \rrbracket)$, where $y_1, \ldots, y_n$ are the slots of $\alpha$.
 
@@ -542,7 +542,7 @@ Recall from~\cite[Def.~2.2]{AltenkirchChapmanUustalu2015} that a \emph{morphism}
 commute, for all $f : JX \to TY$. Such a family $\varphi$ is automatically natural.
 
 \begin{proposition}\label{prop:lambda}
-    Under the identifications of $\bA$ with $\mathrm{Fin} \downarrow \mathrm{Ty}$ and of $\_ \ni \_$ with $J_t$, the maps
+    Under the identifications of $\bA$ with $\mathrm{Fin}{\downarrow}\mathrm{Ty}$ and of $\_ \ni \_$ with $J_t$, the maps
     \begin{align*}
         \varphi_{\Gamma, \alpha} : \bE(\Gamma)(\alpha) &\to \Lambda_{\beta\eta}(\Gamma)(\llbracket \alpha \rrbracket)\\
         e &\mapsto [\ulcorner e \urcorner^\alpha],

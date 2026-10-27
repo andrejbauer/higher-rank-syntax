@@ -126,7 +126,7 @@ The action of substitutions of \cref{def:action} extends from expressions to bou
 Next, we recall the definition of modules over a relative monad. 
 
 \begin{definition}\label{def:module}
-    Let $(T, \eta, (\_)^\sharp)$ be a relative monad on $J : \cat{J} \to \cat{C}$. A \emph{$T$-module} $(M, (\_)^M)$ in a category $\cat{D}$ is given by the following data:
+    Let $(T, \eta, (\_)^\sharp)$ be a relative monad on $J : \cat{J} \to \cat{C}$. A \emph{(left) $T$-module} $(M, (\_)^M)$ in a category $\cat{D}$ is given by the following data:
     \begin{itemize}
         \item a map on objects $M : \left|\cat{J}\right| \to \left|\cat{D}\right|$
         \item for any two objects $X,Y : \cat{C}$, an action $$(\_)^M : \cat{C}(JX,TY) \to \cat{D}(MX,MY),$$
@@ -195,3 +195,53 @@ Modules over monads were introduced by Hirschowitz and Maggesi to describe synta
     \]
     commutes for every $\sigma : \Xi \sub \Xi'$. This follows from \cref{lem:depth-derived}.
 \end{proof}
+
+\subsection{The raw syntax C-system}
+
+We now organise raw contexts and substitutions between them into a C-system, generalising Voevodsky's construction of the C-system of a module over a $J_f$-relative monad~\cite{Voevodsky2016Relative}. C-systems were introduced by Cartmell under the name contextual categories~\cite{Cartmell1986}; we recall them in Voevodsky's formulation~\cite[Def.~2.1 and Prop.~2.4]{Voevodsky2014Subsystems}.
+
+\begin{definition}\label{def:c-system}
+    A \emph{C-system} is a category $\cat{C}$ together with
+    \begin{itemize}
+        \item a \emph{length} function $l : \left|\cat{C}\right| \to \N$,
+        \item an object $\pt$,
+        \item a map $\ft : \left|\cat{C}\right| \to \left|\cat{C}\right|$,
+        \item for every object $X$, a morphism $p_X : X \to \ft(X)$,
+        \item for every object $X$ with $l(X) > 0$ and every morphism $f : Y \to \ft(X)$, an object $f^*X$ and a morphism $q(f, X) : f^*X \to X$,
+    \end{itemize}
+    such that
+    \begin{itemize}
+        \item $\pt$ is the unique object of length $0$, and is terminal,
+        \item $\ft(\pt) = \pt$, and $l(\ft(X)) = l(X) - 1$ for every object $X$ with $l(X) > 0$,
+    \end{itemize}
+    and such that, for every object $X$ with $l(X) > 0$ and all morphisms $f : Y \to \ft(X)$ and $g : Z \to Y$,
+    \begin{itemize}
+        \item $l(f^*X) > 0$, $\ft(f^*X) = Y$, and the square
+        \[
+        \begin{tikzcd}
+            f^*X \arrow[r, "{q(f, X)}"] \arrow[d, "p_{f^*X}"'] & X \arrow[d, "p_X"] \\
+            Y \arrow[r, "f"'] & \ft(X)
+        \end{tikzcd}
+        \]
+        is a pullback,
+        \item $\id_{\ft(X)}^*X = X$ and $q(\id_{\ft(X)}, X) = \id_X$,
+        \item $(f \circ g)^*X = g^*(f^*X)$ and $q(f \circ g, X) = q(f, X) \circ q(g, f^*X)$.
+    \end{itemize}
+    A \emph{homomorphism} of C-systems is a functor that preserves all of this structure strictly.
+\end{definition}
+
+The objects of a C-system are to be thought of as contexts, with $\pt$ the empty context, and a morphism $f : \Delta \to \Gamma$ as a substitution, assigning to each variable of $\Gamma$ a term in context $\Delta$. An object $X$ of positive length is a context $(\Gamma, x \of A)$ with $\Gamma = \ft(X)$, and $p_X : (\Gamma, x \of A) \to \Gamma$ is the weakening substitution. For $f : \Delta \to \Gamma$, the object $f^*X = (\Delta, x \of A[f])$ is obtained by substituting $f$ into the type of the last variable, and $q(f, X) : (\Delta, x \of A[f]) \to (\Gamma, x \of A)$ extends $f$ by $x \mapsto x$. A C-system can equivalently be described as a category with families in which every object is uniquely an iterated extension of the terminal one~\cite[Props.~41 and~45]{AhrensLumsdaineNorth2024}: types over $\Gamma$ are the objects $X$ of positive length with $\ft(X) = \Gamma$, and terms of $X$ are the sections of $p_X$.
+
+Let $J_f : \mathbb{F} \to \Set$ be the inclusion of finite cardinals. Voevodsky constructs C-systems from the raw syntax of a type theory in two steps. First, for a $J_f$-relative monad $R$, the opposite of its Kleisli category is a C-system $\Csys(R)$~\cite[\S5]{Voevodsky2016Relative}, whose objects are the natural numbers, with $l(n) = n$, $\pt = 0$ and $\ft(n + 1) = n$. A morphism $f : m \to n$ of $\Csys(R)$ is a morphism $J_f n \to Rm$, assigning to each of $n$ variables an expression in $m$ variables; $p_{n+1}$ is the inclusion of $n$ into $n + 1$, and for $f : m \to n$ we have $f^*(n + 1) = m + 1$, while $q(f, n + 1) : m + 1 \to n + 1$ is given by $i \mapsto R(\iota)(f(i))$ for $i < n$ and $n \mapsto \eta(m)$, where $\iota : m \to m + 1$ is the inclusion.
+
+An $R$-module $M : \Kl(R) \to \Set$ is the same as a presheaf on $\Csys(R)$, and the C-system $\Csys(R, M)$ is defined as the presheaf extension of $\Csys(R)$ by $M$~\cite[\S\S3 and~6]{Voevodsky2016Relative}. Its objects of length $n$ are sequences $(T_0, \ldots, T_{n-1})$ with $T_i \in M(i)$, and $\Hom_{\Csys(R,M)}((T_0, \ldots, T_{m-1}), (T'_0, \ldots, T'_{n-1})) = \Hom_{\Csys(R)}(m,n)$. Much of the $C$-system structure --- $\ft$, $p$ and $q$ --- is inherited from $\Csys(R)$, while
+\[
+f^*(T'_0, \ldots, T'_n) \coloneqq (T_0, \ldots, T_{m-1}, f^M(T'_n))
+\]
+for $f : (T_0, \ldots, T_{m-1}) \to (T'_0, \ldots, T'_{n-1})$. Read type-theoretically, $T_i$ is the (raw) type of the $i$-th variable, an expression in the variables before it. When $R$ and $M$ are the raw expressions and raw types of a type theory, $\Csys(R, M)$ is the C-system of its raw syntax~\cite[\S\S1 and~6]{Voevodsky2016Relative}, and the term C-system is obtained as its regular subquotient.
+
+To adapt it to our setting, we now generalise Voevodsky's construction in two directions. First, $\bE$ is a relative monad not on $J_f$ but on the slot functor $\_ \ni \_ : \bA \to \Set^{\left|\bA\right|}$, under which each slot has a sort, namely its arity. We therefore pass from $J_f$ to the inclusion $J_S : \mathbb{F}{\downarrow}S \to \Set^S$ of finite $S$-sorted sets, of which the slot functor is the instance for $S = \left|\bA\right|$, and from $\Set$-valued modules over $J_f$-relative monads to $\Set^S$-valued modules over $J_S$-relative monads, so that the decorations available for a variable depend on its sort.
+Second, Voevodsky's variables are first-order, so a raw type suffices to decorate each of them. By contrast, a decoration of a higher-rank slot must also recursively decorate the slots it binds. Entries $\Ent$ arise from boundaries $\Bd$ by recursion on arities (\cref{def:decorated-arities}), and this recursion can be generalised: for every set of sorts $S$ equipped with a well-founded binding sturcture and every $\Set$-valued module, which specifies how a first-order variable may be decorated, we obtain a $\Set^S$-valued module, which specifies how a variable of any rank may be decorated, namely as a first-order variable over the variables it binds, which are themselves decorated recursively.
+In the unsorted case, $S = 1$, our construction reduces to Voevodsky's; for $\bE$ and $\Bd$, it will yield the raw syntax C-system of $\ToS^{\omega}$.
+
+
