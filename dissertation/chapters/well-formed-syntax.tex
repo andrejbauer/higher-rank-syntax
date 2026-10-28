@@ -9,7 +9,7 @@ Different logical frameworks differ in their treatment of equality. \emph{Syntac
 
 The syntax of $\ToS^\omega$ is constructed from the raw syntax by judgements, defined by mutual induction, that single out the well-formed contexts, expressions and substitutions and determine when two of them are equal; in other words, typing is extrinsic. We establish the basic metatheoretical properties of $\ToS^{\omega}$, namely admissibility of weakening and of substitution, and presuppositivity, for arbitrary signatures at every rank. Our syntactic model is canonical in the sense of Canonical LF~\cite{HarperLicata2007}, meaning that its operations compute within $\beta$-normal, $\eta$-long expressions, so that a quotient is needed only for the equations of object theories, whereas a free construction, in the style of~\cite{AltenkirchKaposi2016}, builds terms as syntactic trees, quotiented by the equations of the framework as well.
 
-We construct this term model following Voevodsky's approach. Boundaries form a module $\Bd : \Kl(\bE) \to \Set$ over the relative monad of raw syntax, from which a higher-rank generalisation of his construction of the C-system of a module over a $J_f$-relative monad~\cite{Voevodsky2014Module,Voevodsky2016Relative} yields the \emph{raw syntax C-system} $\Ctxr$. The well-formed syntax then arises as the term C-system of $\ToS^\omega$, that is, as a regular subquotient $\Ctx$ of $\Ctxr$~\cite{Voevodsky2014Subsystems}, selected by the judgements and quotiented by judgemental equality. The judgements are defined so as to present the generalised algebraic theory of categories with families, equipped with a Tarski universe of sorts, dependent products over arbitrary types, and extensional equality types for sorts and for elements of a sort, which we prove $\Ctx$ to be an initial model of. This algebraic characterization hence establishes the initiality conjecture for the logical framework $\ToS^{\omega}$.
+We construct this term model following Voevodsky's approach. Entries form a module $\Ent : \Kl(\bE) \to \Set^{\left|A\right|}$ over the relative monad of raw syntax, from which a higher-rank generalisation of his construction of the C-system of a module over a $J_f$-relative monad~\cite{Voevodsky2014Module,Voevodsky2016Relative} yields the \emph{raw syntax C-system} $\Ctxr$. The well-formed syntax then arises as the term C-system of $\ToS^\omega$, that is, as a regular subquotient $\Ctx$ of $\Ctxr$~\cite{Voevodsky2014Subsystems}, selected by the judgements and quotiented by judgemental equality. The judgements are defined so as to present the generalised algebraic theory of categories with families, equipped with a Tarski universe of sorts, dependent products over arbitrary types, and extensional equality types for sorts and for elements of a sort, which we prove $\Ctx$ to be an initial model of. This algebraic characterization hence establishes the initiality conjecture for the logical framework $\ToS^{\omega}$.
 
 \section{Raw contexts}
 
@@ -241,7 +241,90 @@ f^*(T'_0, \ldots, T'_n) \coloneqq (T_0, \ldots, T_{m-1}, f^M(T'_n))
 for $f : (T_0, \ldots, T_{m-1}) \to (T'_0, \ldots, T'_{n-1})$. Read type-theoretically, $T_i$ is the (raw) type of the $i$-th variable, an expression in the variables before it. When $R$ and $M$ are the raw expressions and raw types of a type theory, $\Csys(R, M)$ is the C-system of its raw syntax~\cite[\S\S1 and~6]{Voevodsky2016Relative}, and the term C-system is obtained as its regular subquotient.
 
 To adapt it to our setting, we now generalise Voevodsky's construction in two directions. First, $\bE$ is a relative monad not on $J_f$ but on the slot functor $\_ \ni \_ : \bA \to \Set^{\left|\bA\right|}$, under which each slot has a sort, namely its arity. We therefore pass from $J_f$ to the inclusion $J_S : \mathbb{F}{\downarrow}S \to \Set^S$ of finite $S$-sorted sets, of which the slot functor is the instance for $S = \left|\bA\right|$, and from $\Set$-valued modules over $J_f$-relative monads to $\Set^S$-valued modules over $J_S$-relative monads, so that the decorations available for a variable depend on its sort.
-Second, Voevodsky's variables are first-order, so a raw type suffices to decorate each of them. By contrast, a decoration of a higher-rank slot must also recursively decorate the slots it binds. Entries $\Ent$ arise from boundaries $\Bd$ by recursion on arities (\cref{def:decorated-arities}), and this recursion can be generalised: for every set of sorts $S$ equipped with a well-founded binding sturcture and every $\Set$-valued module, which specifies how a first-order variable may be decorated, we obtain a $\Set^S$-valued module, which specifies how a variable of any rank may be decorated, namely as a first-order variable over the variables it binds, which are themselves decorated recursively.
-In the unsorted case, $S = 1$, our construction reduces to Voevodsky's; for $\bE$ and $\Bd$, it will yield the raw syntax C-system of $\ToS^{\omega}$.
+Second, Voevodsky's variables are first-order, so a raw type suffices to decorate each of them; by contrast, a decoration of a higher-rank variable must also recursively decorate the variables it binds.
+In the unsorted case, $S = 1$, our construction reduces to Voevodsky's; for $\bE$ and $\Ent$, it will yield the raw syntax C-system of $\ToS^{\omega}$.
 
+\begin{definition}
+    Fix a set $S$ of \emph{sorts}. Generalising the arities of \cref{def:arities}, let $\mathbb{F}{\downarrow}S$ be the category whose objects are lists $\Gamma = [\gamma_1, \ldots, \gamma_n]$ of sorts, and whose morphisms $\rho : \Gamma \to \Delta$ are families of functions $\rho_s : (\Gamma \ni s) \to (\Delta \ni s)$, where
+    \[
+    \Gamma \ni s \coloneqq \{\, i : \{1, \ldots, n\} \mid \gamma_i = s \,\}
+    \]
+    is the set of \emph{variables} of $\Gamma$ of sort $s$. The assignment $\Gamma \mapsto \Gamma \ni \_$ then defines a fully faithful functor $J_S : \mathbb{F}{\downarrow}S \to \Set^S$. For $S = 1$, this is $J_f$, and for $S = \left|\bA\right|$, it is the slot functor $\_ \ni \_ : \bA \to \Set^{\left|\bA\right|}$.
+\end{definition}
+        
+\begin{remark}
+    For a relative monad $T$ on $J_S$, the Kleisli category $\Kl(T)$ has finite coproducts, given by concatenation. The empty list is evidently initial. 
+    For lists $\Gamma$ and $\Delta$, let $\inl : \Gamma \to \Gamma \concat \Delta$ and $\inr : \Delta \to \Gamma \concat \Delta$ be the inclusions in $\mathbb{F}{\downarrow}S$, and define $\iota_1 \coloneqq \eta \circ J_S(\inl)$ and $\iota_2 \coloneqq \eta \circ J_S(\inr)$. Since $J_S$ preserves coproducts, the map
+    \begin{align*}
+        \Set^S(J_S(\Gamma\concat\Delta),T\Theta) &\overset{\cong}{\to} \Set^S(J_S\Gamma,T\Theta) \times \Set^S(J_S\Delta,T\Theta)\\
+        f &\mapsto \left<f \circ J_S(\inl), f \circ J_S(\inr)\right> 
+    \end{align*}
+    is an isomorphism. By the unit law, we compute $f \odot \iota_1 = f^{\sharp} \circ \eta \circ J_S(\inl) = f \circ J_S(\inl)$, and similarly for $\iota_2$, so we can identify this isomorphism with
+    \begin{align*}
+        \Kl(T)(\Gamma\concat\Delta,T\Theta) &\overset{\cong}{\to} \Kl(T)(\Gamma,T\Theta) \times \Kl(T)(\Delta,T\Theta)\\
+        f &\mapsto \left<f \odot \iota_1, f \odot \iota_2\right>.
+    \end{align*}
+    Henceforth, we abbreviate $\iota_1$ and $\iota_2$ to $\inl$ and $\inr$, and, for a morphism $f : \Gamma \to \Delta$ of $\Kl(T)$ and a list $\Phi$, write $f \concat \Phi : \Gamma \concat \Phi \to \Delta \concat \Phi$ for the coproduct $\left<f,\id_{\Phi}\right>$.
+\end{remark}
+    
+\begin{definition}\label{def:sorted-c-system}
+    Let $T$ be a relative monad on $J_S$ and $M : \Kl(T) \to \Set^S$ a $T$-module. The C-system $\Csys(T, M)$ consists of the following data.
+    \begin{itemize}
+        \item Objects are pairs $(\Gamma, c)$ of a list $\Gamma = [\gamma_1, \ldots, \gamma_n]$ of sorts and a sequence $c = (c_1, \ldots, c_n)$ with $c_i \in M([\gamma_1, \ldots, \gamma_{i-1}])_{\gamma_i}$, and the length of $(\Gamma, c)$ is $n$.
+        \item Morphisms $(\Delta, d) \to (\Gamma, c)$ are the morphisms $\Gamma \to \Delta$ of $\Kl(T)$; identities and composition are inherited from $\Kl(T)^{\op}$.
+        \item The point is $\pt := (\emptyar, ())$, and $\ft(\pt) \coloneqq \pt$.
+        \item For an object $X = (\Gamma \concat [s], (c_1, \ldots, c_n, m))$ of positive length and a morphism $f : (\Delta, (d_1, \ldots, d_k)) \to (\Gamma, (c_1, \ldots, c_n))$, we have:
+        \begin{align*}
+            \ft(X) &\coloneqq (\Gamma, (c_1, \ldots, c_n)),\\
+            p_X &\coloneqq \inl : \Gamma \to \Gamma \concat [s],\\
+            f^*X &\coloneqq (\Delta \concat [s], (d_1, \ldots, d_k, (f^M)_s(m)))\\
+            q(f, X) &\coloneqq f \concat [s] : f^*X \to X.
+        \end{align*}
+    \end{itemize}
+    % We write $\Csys(T) \coloneqq \Csys(T, 1)$, where $1$ is the terminal $T$-module, whose underlying category is $\Kl(T)^{\op}$.
+\end{definition}
 
+% predelaj od tod naprej
+
+\begin{proposition}\label{prop:sorted-c-system}
+    For every relative monad $T$ on $J_S$ and every $T$-module $M : \Kl(T) \to \Set^S$, $\Csys(T, M)$ is a C-system.
+    % , and forgetting the decorations is a homomorphism of C-systems $\Csys(T, M) \to \Csys(T)$. For $S = 1$, the C-systems $\Csys(T)$ and $\Csys(T, M)$ are those of Voevodsky.
+\end{proposition}
+
+\begin{proof}
+    The conditions on $\pt$ and $\ft$ are clearly satisfied. The functor $\Csys(T, M) \to \Kl(T)^\op$ that forgets decorations is fully faithful and therefore reflects pullbacks. It thus suffices to show that the square
+    \[
+    \begin{tikzcd}
+        \Gamma \arrow[r, "\inl"] \arrow[d, "f"'] & \Gamma \concat [s] \arrow[d, "f \concat {[s]}"] \\
+        \Delta \arrow[r, "\inl"'] & \Delta \concat [s]
+    \end{tikzcd}
+    \]
+    is a pushout in $\Kl(T)$ for every $f : \Gamma \sub \Delta \in \Kl(T)$ and every $s : \left|\bA\right|$. The square clearly commutes. To see that it is a pushout, let $g : \Gamma \concat [s] \to \Theta$ and $h : \Delta \to \Theta$ be such that $g \odot \inl = h \odot f$; we show that $k \coloneqq \left<h, g \odot \inr\right> : \Delta \concat [s] \to \Theta$ is the unique morphism with $k \odot \inl = h$ and $k \odot (f \concat [s]) = g$. The first equation holds by definition. For the second, both sides agree on the coprojections of $\Gamma \concat [s]$, since $(f \concat [s]) \odot \inr = \inr$:
+    \begin{align*}
+        k \odot (f \concat [s]) \odot \inl &= k \odot \inl \odot f = h \odot f = g \odot \inl,\\
+        k \odot (f \concat [s]) \odot \inr &= k \odot \inr = g \odot \inr.
+    \end{align*}
+    Conversely, if $k'$ satisfies both equations, then $k' \odot \inl = h$ and $k' \odot \inr = k' \odot (f \concat [s]) \odot \inr = g \odot \inr$, so $k' = k$ by the universal property of $\Delta \concat [s]$.
+
+    
+    It remains to verify the conditions on $(\_)^*$ and $q$. The objects $\id^*X$ and $X$ differ at most in their last decorations, $\eta_\Gamma^M(m)$ and $m$, which agree by the unit law of $M$. Similarly, $(f \circ g)^*X$ and $g^*(f^*X)$ differ at most in their last decorations, $(g \odot f)^M(m)$ and $g^M(f^M(m))$, which agree by the composition law of $M$. For $q$, read in $\Kl(T)$, we must show that
+    \[
+    \eta_\Gamma \concat [s] = \eta_{\Gamma \concat [s]} \qquad \text{and} \qquad (g \odot f) \concat [s] = (g \concat [s]) \odot (f \concat [s]),
+    \]
+    which is easy to see.
+\end{proof}
+
+\begin{remark}
+    Taking $S = 1$ clearly recovers Voevodsky's construction~\cite[S6]{Voevodsky2016Relative}.
+\end{remark}
+
+\begin{remark}
+    In the reading of C-systems as categories with families, the types over $(\Gamma, c)$ are the pairs of a sort $s$ and a decoration $m \in M(\Gamma)_s$, and the terms of such a type are the elements of $T(\Gamma)_s$: a section of $p_X$ is a morphism $\Gamma \concat [s] \to \Gamma$ of $\Kl(T)$ that restricts to the identity on $\Gamma$, and so amounts to a morphism $[s] \to \Gamma$, that is, an element of $T(\Gamma)_s$.
+\end{remark}
+    
+\begin{definition}\label{def:raw-syntax-c-system}
+    The \emph{raw syntax C-system} of $\ToS^\omega$ is $\Ctxr \coloneqq \Csys(\bE, \Ent)$.
+\end{definition}
+
+Unfolding definitions, the objects of $\Ctxr$ are precisely the raw contexts of~\ref{def:decorated-arities}. For a raw context $\Gamma$, we will write $\ar(\Gamma)$ for its underlying arity.
+Morphisms $\Delta \to \Gamma$ in $\Ctxr$ are the substitutions $\ar(\Gamma) \sub \ar(\Delta)$. The types over a raw context $\Gamma$ are the entries over $\ar(\Gamma)$ of arbitrary arity, and the terms of an entry of arity $\alpha$ are the expressions in $\Expr(\Gamma \concat \alpha)$.
