@@ -38,7 +38,8 @@ The well-typedness judgements will be phrased for arities in which every slot is
 
     We will write an entry as $[\Theta]\beta : \Ent(\Xi,\alpha)$, where $\Theta : \Dec(\Xi, \alpha)$ is a decoration of the bound slots and $\beta : \Bd(\Xi \concat \alpha)$ is the slot's boundary. We omit the prefix $[\Theta]$ when $\alpha = \emptyar$.
     
-    A \emph{raw context} of arity $\Xi$ is an element of $\Dec(\emptyar, \Xi)$, that is, an arity whose each slot decorated only over the previous slots and those that it binds, in an empty ambient. 
+    A \emph{raw context} of arity $\Xi$ is an element of $\Dec(\emptyar, \Xi)$, that is, an arity whose each slot decorated only over the previous slots and those that it binds, in an 
+    empty ambient. Given a decorated arity $\Gamma : \Dec(\Delta, \Xi)$, we write $\Gamma^{\downarrow} = \Xi : \bA$ for its underlying arity.
 \end{definition}
 
 \begin{remark}
@@ -114,7 +115,7 @@ The action of substitutions of \cref{def:action} extends from expressions to bou
         \_[\sigma]_\Phi^\Psi &: \Dec(\Phi \concat \Xi \concat \Psi, \Gamma) \to \Dec(\Phi \concat \Xi' \concat \Psi, \Gamma),
     \end{aligned}
     \]
-    acting on a boundary through the expressions it contains, and on entries and decorated arities by simultaneous recursion:
+    acting on a boundary pointwise, through the expressions it contains, and on entries and decorated arities by simultaneous recursion:
     \begin{align*}
         ([\Theta]\beta)[\sigma]_\Phi^\Psi &\coloneqq [\Theta[\sigma]_\Phi^\Psi]\,\beta[\sigma]_\Phi^{\Psi \concat \alpha},\\
         ()[\sigma]_\Phi^\Psi &\coloneqq (),\\
@@ -123,7 +124,22 @@ The action of substitutions of \cref{def:action} extends from expressions to bou
     where $[\Theta]\beta$ and $E$ are entries of arity $\alpha$.
 \end{definition}
 
-Next, we recall the definition of modules over a relative monad. 
+In particular, the action of substitutions on boundaries is used to compute the boundaries of expressions. To this end, we first introduce some notation. Let $\Gamma$ be a raw context and $x : \Gamma^{\downarrow} \ni \alpha$ one of its slots. According to \cref{def:decorated-arities}, $x$ is declared in $\Gamma$ by an entry over the slots preceding it; weakening this entry along the inclusion of those slots into $\Gamma^{\downarrow}$ yields an entry $[\Theta]\beta : \Ent(\Gamma^{\downarrow}, \alpha)$. We then write
+\[
+x : \Gamma \ni [\Theta]\beta,
+\]
+and call $\Theta : \Dec(\Gamma^{\downarrow}, \alpha)$ the \emph{binding} and $\beta : \Bd(\Gamma^{\downarrow} \concat \alpha)$ the \emph{boundary} of $x$.
+
+\begin{definition}\label{def:boundary-of-expression}
+    Let $\Gamma$ be a raw context. The \emph{boundary} of an expression $x(t) : \Expr(\Gamma^{\downarrow})$, where $x : \Gamma \ni [\Theta]\beta$ and $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$, is
+    \[
+    \partial_\Gamma\big(x(t)\big) \coloneqq \beta[t]_{\Gamma^{\downarrow}} : \Bd(\Gamma^{\downarrow}).
+    \]
+\end{definition}
+
+In the terminology of bidirectional typing~\cite{McBride2019Ni}, every expression thus synthesises its boundary. In particular, this explains why an equational boundary need not record its sort.
+
+Next, we recall the notion of modules over a relative monad. 
 
 \begin{definition}\label{def:module}
     Let $(T, \eta, (\_)^\sharp)$ be a relative monad on $J : \cat{J} \to \cat{C}$. A \emph{(left) $T$-module} $(M, (\_)^M)$ in a category $\cat{D}$ is given by the following data:
@@ -284,8 +300,6 @@ In the unsorted case, $S = 1$, our construction reduces to Voevodsky's; for $\bE
     % We write $\Csys(T) \coloneqq \Csys(T, 1)$, where $1$ is the terminal $T$-module, whose underlying category is $\Kl(T)^{\op}$.
 \end{definition}
 
-% predelaj od tod naprej
-
 \begin{proposition}\label{prop:sorted-c-system}
     For every relative monad $T$ on $J_S$ and every $T$-module $M : \Kl(T) \to \Set^S$, $\Csys(T, M)$ is a C-system.
     % , and forgetting the decorations is a homomorphism of C-systems $\Csys(T, M) \to \Csys(T)$. For $S = 1$, the C-systems $\Csys(T)$ and $\Csys(T, M)$ are those of Voevodsky.
@@ -326,5 +340,181 @@ In the unsorted case, $S = 1$, our construction reduces to Voevodsky's; for $\bE
     The \emph{raw syntax C-system} of $\ToS^\omega$ is $\Ctxr \coloneqq \Csys(\bE, \Ent)$.
 \end{definition}
 
-Unfolding definitions, the objects of $\Ctxr$ are precisely the raw contexts of~\ref{def:decorated-arities}. For a raw context $\Gamma$, we will write $\ar(\Gamma)$ for its underlying arity.
-Morphisms $\Delta \to \Gamma$ in $\Ctxr$ are the substitutions $\ar(\Gamma) \sub \ar(\Delta)$. The types over a raw context $\Gamma$ are the entries over $\ar(\Gamma)$ of arbitrary arity, and the terms of an entry of arity $\alpha$ are the expressions in $\Expr(\Gamma \concat \alpha)$.
+Unfolding definitions, the objects of $\Ctxr$ are precisely the raw contexts, and its morphisms $\Delta \to \Gamma$ are the substitutions $\Gamma^{\downarrow} \sub \Delta^{\downarrow}$. The types over a raw context $\Gamma$ are the entries over $\Gamma^{\downarrow}$ of arbitrary arity, and the terms of an entry of arity $\alpha$ are the expressions in $\Expr(\Gamma^{\downarrow} \concat \alpha)$.
+\section{Judgements}
+
+The raw syntax C-system imposes no well-formedness constraints. We impose these constraints by judgements on the raw syntax, which single out the well-formed raw contexts, expressions and substitutions, and determine when two of them are equal.
+
+\subsection{Judgement forms}
+
+The raw syntax of~\cref{def:raw-syntax-c-system} consists of four syntactic classes: expressions, boundaries, decorated arities and substitutions; for each of them, we have a corresponding well-formedness judgment, and one of equality.
+
+Since an expression $e$ synthesises its boundary as $\partial_{\Gamma}(e)$, the judgements $\Gamma \vdash e$ and $\Gamma \vdash e \equiv e'$ mention no boundary. Boundaries are judged, by $\Gamma \vdash \beta\ \mathsf{bd}$ and $\Gamma \vdash \beta \equiv \beta'$, pointwise through the expressions they are built out of. The well-formedness judgment $\Gamma \vdash \Theta$ of decorated arities must primitive, since it will appear as a premise to the congruence rule for expressions, whereas the equality of decorated arities $\Gamma \vdash \Theta \equiv \Theta'$ is a derived judgment form. A raw context $\Gamma$ is well formed, written $\vdash \Gamma$, when it is well formed as a decorated arity over the empty raw context. Substitutions, finally, are judged relative to a decorated arity: for $\Theta : \Dec(\Gamma^{\downarrow}, \Theta^{\downarrow})$, the judgement $\Gamma \vdash t : \Theta$ asserts that $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ is a well-formed substitution, meaning that its value at each slot of $\Theta$ is well formed and has, up to equality, the boundary declared by that slot, and that it satisfies the equations declared in $\Theta$. The judgement $\Gamma \vdash t \equiv t' : \Theta$ asserts that the two substitutions are pointwise equal. 
+All judgements are made over an arbitrary raw context.
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Judgement & Reading\\
+        \midrule
+        $\Gamma \vdash e$ & $e : \Expr(\Gamma^{\downarrow})$ is well formed\\
+        $\Gamma \vdash e \equiv e'$ & $e, e' : \Expr(\Gamma^{\downarrow})$ are equal\\
+        \midrule
+        $\Gamma \vdash \beta\ \mathsf{bd}$ & $\beta : \Bd(\Gamma^{\downarrow})$ is well formed\\
+        $\Gamma \vdash \beta \equiv \beta'$ & $\beta, \beta' : \Bd(\Gamma^{\downarrow})$ are equal\\
+        \midrule
+        $\Gamma \vdash \Theta$ & $\Theta : \Dec(\Gamma^{\downarrow}, \Theta^{\downarrow})$ is well formed\\
+        \midrule
+        $\Gamma \vdash t : \Theta$ & $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ is well formed\\
+        $\Gamma \vdash t \equiv t' : \Theta$ & $t, t': \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ are equal\\
+        \bottomrule
+    \end{tabular}
+    \caption{The primitive judgement forms of $\ToS^\omega$}
+    \label{tab:judgement-forms}
+\end{table}
+
+Comparing these judgement forms with the more familiar ones of MLTT, one striking difference is that there, the judgements $\Gamma \vdash \Delta$ and $\Gamma \vdash \sigma : \Delta$ on telescopes $\Delta$ over $\Gamma$ are derived. In our setup, they must be primitive, since the formation rule for expressions takes a whole telescope of arguments. The well-formedness judgments for types and terms are then obtained by restricting to one-slot decorated arities. Explicitly, in the raw syntax C-system, a type over $\Gamma$ is an entry $E : \Ent(\Gamma^{\downarrow}, \alpha)$, which we can identify with the one-slot decorated arity $[x : E] : \Dec(\Gamma^{\downarrow}, [\alpha])$, and a term of $E$ is an expression $e : \Expr(\Gamma^{\downarrow} \concat \alpha)$, which we can identify with the substitution $[x : \alpha] \sub \Gamma^{\downarrow}$ sending $x$ to $e$.
+
+\subsection{Rules}
+
+The derivation rules of $\ToS^{\omega}$ are listed in \cref{fig:rules-wf,fig:rules-eq}. When stating the rules, we write $\Gamma \concat \Theta$ for the raw context $\Gamma$ extended by $\Theta : \Dec(\Gamma^{\downarrow}, \Theta^{\downarrow})$, as in \cref{rem:concatenation}, and abbreviate the action $e[t]_{\Gamma^{\downarrow}}$ of a substitution $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ with prefix $\Gamma^{\downarrow}$ to $e[t]$, and likewise for boundaries and decorated arities.
+A substitution $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ with $\Theta = [x : [\Psi]\beta] \concat \Theta' : \Dec(\Gamma^{\downarrow},\Theta^{\downarrow})$ is written as $t =: (u, t')$, where $u : \Expr(\Gamma^{\downarrow} \concat \Psi^{\downarrow})$ is its value at $x$ and $t' : \Theta'^{\downarrow} \sub \Gamma^{\downarrow}$ is its tail. 
+We have $\Theta' : \Dec(\Gamma^{\downarrow}\concat[x : \Psi^{\downarrow}],\Theta'^{\downarrow})$ and $[x \mapsto u] : [\Psi^{\downarrow}] \sub \Gamma^{\downarrow}$, and we write
+\[
+\Theta'[u] \coloneqq \Theta'[x \mapsto u]_{\Gamma^{\downarrow}} : \Dec(\Gamma^{\downarrow}, \Theta'^{\downarrow})
+\]
+for the decorated arity over $\Gamma^{\downarrow}$ obtained by instantiating $x$ for $u$.
+The empty decorated arity and the empty substitution are both written $()$. We write $\isEq : \{\Xi : \bA\} \to \Bd(\Xi) \to \Prop$ for the predicate which selects the equational boundaries, i.e. those that lie in the third summand of $\Bd = \Sigma_{i = 0}^2\Expr^i$.
+
+\begin{figure}[ht]
+    \centering
+    \textit{Expressions}
+    \begin{mathpar}
+        \inferrule*[right=\textsc{ap}]
+            {x : \Gamma \ni [\Theta]\beta \\ \neg \isEq(\beta) \\ \Gamma \vdash t : \Theta}
+            {\Gamma \vdash x(t)}
+    \end{mathpar}
+
+    \textit{Boundaries}
+    \begin{mathpar}
+        \inferrule*[right=\textsc{bd-sort}]
+            { }
+            {\Gamma \vdash \bsort\ \mathsf{bd}}
+        \and
+        \inferrule*[right=\textsc{bd-of}]
+            {\Gamma \vdash S \\ \Gamma \vdash \partial_\Gamma(S) \equiv \bsort}
+            {\Gamma \vdash \bof(S)\ \mathsf{bd}}
+        \and
+        \inferrule*[right=\textsc{bd-eq}]
+            {\Gamma \vdash l \\ \Gamma \vdash r \\ \Gamma \vdash \partial_\Gamma(l) \equiv \partial_\Gamma(r)}
+            {\Gamma \vdash \beq(l, r)\ \mathsf{bd}}
+    \end{mathpar}
+
+    \textit{Decorated arities}
+    \begin{mathpar}
+        \inferrule*[right=\textsc{dec-nil}]
+            { }
+            {\Gamma \vdash ()}
+        \and
+        \inferrule*[right=\textsc{dec-cons}]
+            {\Gamma \vdash \Theta \\ \Gamma \concat \Theta \vdash \beta\ \mathsf{bd} \\ \Gamma \concat [x : [\Theta]\beta] \vdash \Theta'}
+            {\Gamma \vdash [x : [\Theta]\beta] \concat \Theta'}
+    \end{mathpar}
+
+    \textit{Substitutions}
+    \begin{mathpar}
+        \inferrule*[right=\textsc{sub-nil}]
+            { }
+            {\Gamma \vdash () : ()}
+        \and
+        \inferrule*[right=\textsc{sub-cons}]
+            {\neg\isEq(\beta) \\ \Gamma \concat \Theta \vdash u \\ \Gamma \concat \Theta \vdash \partial_{\Gamma \concat \Theta}(u) \equiv \beta \\ \Gamma \vdash t : \Theta'[u]}
+            {\Gamma \vdash (u, t) : [x : [\Theta]\beta] \concat \Theta'}
+        \and
+        \inferrule*[right=\textsc{sub-eq}]
+            {\Gamma \concat \Theta \vdash l \equiv r \\ \Gamma \vdash t : \Theta'[u]}
+            {\Gamma \vdash (u, t) : [x : [\Theta]\,\beq(l, r)] \concat \Theta'}
+    \end{mathpar}
+    \caption{The rules of well-formedness of $\ToS^\omega$.}
+    \label{fig:rules-wf}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \textit{Equality of expressions}
+    \begin{mathpar}
+        \inferrule*[right=\textsc{refl}]
+            {\Gamma \vdash e}
+            {\Gamma \vdash e \equiv e}
+        \and
+        \inferrule*[right=\textsc{symm}]
+            {\Gamma \vdash e \equiv e'}
+            {\Gamma \vdash e' \equiv e}
+        \and
+        \inferrule*[right=\textsc{trans}]
+            {\Gamma \vdash e \equiv e' \\ \Gamma \vdash e' \equiv e''}
+            {\Gamma \vdash e \equiv e''}
+        \and
+        \inferrule*[right=\textsc{hyp}]
+            {x : \Gamma \ni [\Theta]\,\beq(l, r) \\ \Gamma \concat \Theta \vdash l \\ \Gamma \concat \Theta \vdash r \\ \Gamma \vdash t : \Theta}
+            {\Gamma \vdash l[t] \equiv r[t]}
+        \and
+        \inferrule*[right=\textsc{congr}]
+            {\Gamma \vdash \Theta \\ \Gamma \vdash t : \Theta \\ \Gamma \vdash t' : \Theta \\ \Gamma \vdash t \equiv t' : \Theta \\ \Gamma \concat \Theta \vdash e \equiv e'}
+            {\Gamma \vdash e[t] \equiv e'[t']}
+    \end{mathpar}
+
+    \textit{Equality of boundaries}
+    \begin{mathpar}
+        \inferrule*[right=\textsc{eq-sort}]
+            { }
+            {\Gamma \vdash \bsort \equiv \bsort}
+        \and
+        \inferrule*[right=\textsc{eq-of}]
+            {\Gamma \vdash S \equiv S'}
+            {\Gamma \vdash \bof(S) \equiv \bof(S')}
+        \and
+        \inferrule*[right=\textsc{eq-eq}]
+            {\Gamma \vdash l \equiv l' \\ \Gamma \vdash r \equiv r'}
+            {\Gamma \vdash \beq(l, r) \equiv \beq(l', r')}
+    \end{mathpar}
+
+    \textit{Equality of substitutions}
+    \begin{mathpar}
+        \inferrule*[right=\textsc{subeq-nil}]
+            { }
+            {\Gamma \vdash () \equiv () : ()}
+        \and
+        \inferrule*[right=\textsc{subeq-cons}]
+            {\neg \isEq(\beta) \\ \Gamma \concat \Theta \vdash u \equiv u' \\ \Gamma \vdash t \equiv t' : \Theta'[u]}
+            {\Gamma \vdash (u, t) \equiv (u', t') : [x : [\Theta]\beta] \concat \Theta'}
+        \and
+        \inferrule*[right=\textsc{subeq-eq}]
+            {\Gamma \vdash t \equiv t' : \Theta'[u]}
+            {\Gamma \vdash (u, t) \equiv (u', t') : [x : [\Theta]\,\beq(l, r)] \concat \Theta'}
+    \end{mathpar}
+    \caption{The rules of equality of $\ToS^\omega$.}
+    \label{fig:rules-eq}
+\end{figure}
+
+The well-formedness of an expressions is obtained by a single rule \textsc{ap}: an application $x(t)$ is well formed when its arguments form a well-formed substitution for the binding of its head, which must not be an equational slot. In finitary type theories, symbols, metavariables and variables are introduced by separate rules, namely the symbol rules~\cite[Def.~2.10]{HaselwarterBauer2023}, the metavariable rules~\cite[Def.~2.15]{HaselwarterBauer2023} and the variable rule~\cite[Fig.~2.4]{HaselwarterBauer2023}; since in $\ToS^\omega$, the three syntactic classes are treated homogenously as slots, a single rule suffices.
+
+The rules for boundaries, decorated arities and substitutions follow the recursive structure of their subjects. This is where expressions are checked, by comparing their synthesised boundary to the expected one: in \textsc{bd-of}, in order for the boundary $\bof(S)$ to be well formed, the boundary of $S$ needs to be $\bsort$; in \textsc{bd-eq}, in order for the boundary $\beq(l,r)$ to be well formed, the boundaries of $l$ and $r$ need to be equal; and in \textsc{sub-cons}, in order for a substitution to be well formed, its value at each non-equational slot needs to have the boundary declared by that slot.
+The value of the substitution at a slot declared to be an equation $\beq(l, r)$ is left unconstrained, since equality is proof-irrelevant: an equation is witnessed only by the fact that it holds, just as finitary type theories fill an equation boundary with a dummy value~\cite[Fig.~2.3]{HaselwarterBauer2023}. Instead, \textsc{sub-eq} requires the declared equation to hold.
+
+Equality of expressions is generated by five rules, the first three of which ensure that it is an equivalence relation. The rule \textsc{hyp} is the equational counterpart of \textsc{ap},  instantiating a declared equation. The rule \textsc{congr} states that equality is stable under substitution; it subsumes the congruence rules of finitary type theories~\cite[Def.~2.13]{HaselwarterBauer2023}.
+The premises of the rules for equality of expressions are chosen so that equal expressions are automatically well formed. In the equality rules for substitutions, in contrast, equated substitutions are not necessarily well formed; this is why \textsc{congr} assumes $\Gamma \vdash t, t' : \Theta$ and not $\Gamma \vdash e, e'$.
+The rules \textsc{subeq-cons} and \textsc{subeq-eq} are left-leaning: the tails are compared at $\Theta'[u]$, instantiated by the left value $u$ rather than by $u'$. We will later show that this choice is immaterial, so that the equality of substitutions is symmetric.
+
+The equality of decorated arities is defined post festum by the clauses:
+
+\begin{mathpar}
+    \inferrule*[right=\textsc{deceq-nil}]
+        { }
+        {\Gamma \vdash () \equiv ()}
+    \and
+    \inferrule*[right=\textsc{deceq-cons}]
+        {\Gamma \vdash \Theta \equiv \Psi \\ \Gamma \concat \Theta \vdash \beta \equiv \gamma \\ \Gamma \concat [x : [\Theta]\beta] \vdash \Theta' \equiv \Psi'}
+        {\Gamma \vdash [x : [\Theta]\beta] \concat \Theta' \equiv [x : [\Psi]\gamma] \concat \Psi'}
+\end{mathpar}
