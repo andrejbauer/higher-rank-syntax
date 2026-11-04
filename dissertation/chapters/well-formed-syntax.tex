@@ -1,529 +1,736 @@
-\chapter{Well-formed syntax}
+\chapter{Well-typed syntax}
 \label{ch:wf-syntax}
+\providecommand{\free}[1]{\langle\!\langle #1 \rangle\!\rangle}
 
-In this chapter, we add a judgement layer to the raw syntax of \cref{ch:raw-syntax}, obtaining a logical framework that we call the \emph{theory of higher-order signatures}, or $\ToS^\omega$ for short. A \emph{logical framework} is a formal system for specifying logics and type theories. Logical frameworks build on Martin-L{\"o}f's analysis of judgements~\cite{MartinLof1996}: a judgement may be made under the assumption of other judgements, which makes it \emph{hypothetical}, or for an arbitrary value of a variable, which makes it \emph{general}, and interleaving the two forms yields \emph{hypothetico-general} judgements. The hypotheses may themselves be hypothetico-general judgements, so that judgements of higher order arise. Following the principle of \emph{judgements as types}, introduced with the Edinburgh Logical Framework (LF)~\cite{HarperHonsellPlotkin1993}, the judgement forms of a theory are declared in its signature as types, whose elements are the evidence for the corresponding judgements, and each of its rules as a constant whose type is the (higher-order) judgement it expresses. In $\ToS^\omega$, judgement forms are declared as sorts and rules as elements of corresponding sorts, their arity recording the shapes of their premises, so that the rank of an arity is the nesting depth of hypothetico-general judgements. The theory of signatures $\ToS^+$ of second-order generalised algebraic theories~\cite{KaposiXie2024} bounds this depth at two; $\ToS^\omega$ admits every rank, hence the superscript $\omega$.
+This chapter constructs the well-typed syntax of $\ToS^\omega$ from the raw syntax of \cref{ch:raw-syntax}. \Cref{sec:natural-models,sec:shaped-syntax,sec:typings,sec:type-theories} are general: \cref{sec:natural-models} collects what we need of natural models; \cref{sec:shaped-syntax} identifies the category in which syntax over a set of shapes lives and describes, for a relative monad $T$ on a category of finite sets of shaped variables, the raw syntax as an object of it; \cref{sec:typings} describes the judgement layers that can be imposed on the raw syntax, which we call typings; and \cref{sec:type-theories} the type theories over $T$, each specified by its raw types and a set of rules. The syntax of $\ToS^\omega$ is the instance for the relative monad $\bE$.
 
-The judgements of $\ToS^\omega$ are made in \emph{contexts}, which are arities whose slots are decorated with \emph{boundaries}: each slot is declared to be a sort, an element of a sort, or an equation. Since the premises of a slot are again decorated slots, equations may be hypothesised at every rank, like any other judgement. Contexts play a double role: they record the hypotheses under which a judgement is made, and they are also the \emph{signatures} by which $\ToS^\omega$ specifies theories, whose sorts, operations and equations are declared and used exactly like variables and hypotheses. A judgement of an object theory is thus simply one made in a context that extends its signature.
+\section{Natural models}
+\label{sec:natural-models}
 
-Different logical frameworks differ in their treatment of equality. \emph{Syntactic} logical frameworks, such as LF and Adams' lambda-free framework, have no equality types, and their terms directly represent the derivations of the object theory, two terms being equal only if they represent the same derivation. An equation of the theory is represented like any other judgement, by a declared type family whose elements derive it; since the definitional equality of LF is fixed independently of the signature, the equated terms remain distinct, and every use of the equation has to be declared as a rule of its own. $\ToS^\omega$, by contrast, is a \emph{semantic} logical framework, like Martin-L{\"o}f's logical framework~\cite{NordstromPeterssonSmith1990} and those of Harper~\cite{Harper2021} and Uemura~\cite{Uemura2023}: it has extensional equality types, both for sorts and their elements, so that declaring an equation in a signature makes its two sides judgementally equal, and terms represent derivations modulo equality in the object theory.
+For a presheaf $X : \cat{C}^{\op} \to \Set$, a morphism $\sigma : \Delta \to \Gamma \in \cat{C}$ and $x \in X(\Gamma)$, we write $x[\sigma] \coloneqq X(\sigma)(x) \in X(\Delta)$. The \emph{category of elements} $\cel{X}$ has as objects the pairs $(\Gamma, x)$ with $x \in X(\Gamma)$ and as morphisms $(\Delta, x[\sigma]) \to (\Gamma, x)$ the morphisms $\sigma : \Delta \to \Gamma$ of $\cat{C}$; the projection $\cel{X} \to \cat{C}$ is a discrete fibration. A natural transformation $f : Y \to X$ is the same as a morphism $\cel{f} : \cel{Y} \to \cel{X}$ over $\cat{C}$. We write $\yo : \cat{C} \to \Set^{\cat{C}^\op}$, $\yo\Gamma \coloneqq \cat{C}(\_, \Gamma)$, for the Yoneda embedding, and identify a natural transformation $\yo\Gamma \to X$ with an element of $X(\Gamma)$.
 
-The syntax of $\ToS^\omega$ is constructed from the raw syntax by judgements, defined by mutual induction, that single out the well-formed contexts, expressions and substitutions and determine when two of them are equal; in other words, typing is extrinsic. We establish the basic metatheoretical properties of $\ToS^{\omega}$, namely admissibility of weakening and of substitution, and presuppositivity, for arbitrary signatures at every rank. Our syntactic model is canonical in the sense of Canonical LF~\cite{HarperLicata2007}, meaning that its operations compute within $\beta$-normal, $\eta$-long expressions, so that a quotient is needed only for the equations of object theories, whereas a free construction, in the style of~\cite{AltenkirchKaposi2016}, builds terms as syntactic trees, quotiented by the equations of the framework as well.
-
-We construct this term model following Voevodsky's approach. Entries form a module $\Ent : \Kl(\bE) \to \Set^{\left|A\right|}$ over the relative monad of raw syntax, from which a higher-rank generalisation of his construction of the C-system of a module over a $J_f$-relative monad~\cite{Voevodsky2014Module,Voevodsky2016Relative} yields the \emph{raw syntax C-system} $\Ctxr$. The well-formed syntax then arises as the term C-system of $\ToS^\omega$, that is, as a regular subquotient $\Ctx$ of $\Ctxr$~\cite{Voevodsky2014Subsystems}, selected by the judgements and quotiented by judgemental equality. The judgements are defined so as to present the generalised algebraic theory of categories with families, equipped with a Tarski universe of sorts, dependent products over arbitrary types, and extensional equality types for sorts and for elements of a sort, which we prove $\Ctx$ to be an initial model of. This algebraic characterization hence establishes the initiality conjecture for the logical framework $\ToS^{\omega}$.
-
-\section{Raw contexts}
-
-As a first step towards constructing well-formed syntax, we consider \emph{raw context}, which are arities each of whose slots is freely decorated with a boundary over the preceeding slots, with no typing constraints. We show that boundaries form a module over the raw syntax monad $\bE$ which, in analogy with Voevodsky's construction~\cite{Voevodsky2016Relative}, determines the $C$-system structure on raw contexts.
-
-\subsection{Decorated arities}
-
-\begin{definition}\label{def:boundaries}
-    For an arity $\Xi$, the set of \emph{boundaries} over $\Xi$ is defined as:
-    $$\Bd(\Xi) := 1 + \Expr(\Xi) + \Expr(\Xi) \times \Expr(\Xi),$$
-    that is, a boundary given by either zero, one, or two expressions. We introduce the following suggestive notation:
-    $$\Bd(\Xi) := \{\bsort\} + \{S \;|\; S \in \Expr(\Xi) \} + \{\beq(l,r) \;|\; l,r\in\Expr(\Xi)\}.$$
-\end{definition}
-
-A boundary records what a slot is declared to be: a sort, an element of the sort $S$, or a witness that $l$ and $r$ are equal. Boundaries are raw and enforce no well-typedness constraints: nothing yet requires $S$ to be a sort, or $l$ and $r$ to be two sorts or two elements of a common sort. Once the judgements impose these conditions, $\beq$ splits into equations between sorts and between elements of sorts, and the four forms of boundaries of finitary type theories~\cite{HaselwarterBauer2023} are recovered. Unlike the boundary $l \equiv r : S$ of finitary type theories, however, an equation boundary $\beq(l, r)$ between elements does not record their sort, since every expression determines its sort.
-
-The well-typedness judgements will be phrased for arities in which every slot is freely decorated with a boundary over the slots that precede it and those that it binds. Since the bound slots must be decorated as well, decorations are defined by recursion on arities, relative to a base arity of variables already in scope.
-
-\begin{definition}\label{def:decorated-arities}
-    Let $\Xi, \Gamma, \alpha$ be arities. The sets $\Dec(\Xi, \Gamma)$ of \emph{$\Xi$-decorated arities} of shape $\Gamma$ and $\Ent(\Xi, \alpha)$ of \emph{entries} of arity $\alpha$ over $\Xi$ are defined by simultaneous structural recursion on $\Gamma$ and $\alpha$:
-    \begin{align*}
-        \Ent(\Xi, \alpha) &\coloneqq \Dec(\Xi, \alpha) \times \Bd(\Xi \concat \alpha),\\
-        \Dec(\Xi, \emptyar) &\coloneqq \{()\},\\
-        \Dec(\Xi, [\alpha] \concat \Gamma) &\coloneqq \Ent(\Xi, \alpha) \times \Dec(\Xi \concat [\alpha], \Gamma).
-    \end{align*}
-
-    We will write an entry as $[\Theta]\beta : \Ent(\Xi,\alpha)$, where $\Theta : \Dec(\Xi, \alpha)$ is a decoration of the bound slots and $\beta : \Bd(\Xi \concat \alpha)$ is the slot's boundary. We omit the prefix $[\Theta]$ when $\alpha = \emptyar$.
-    
-    A \emph{raw context} of arity $\Xi$ is an element of $\Dec(\emptyar, \Xi)$, that is, an arity whose each slot decorated only over the previous slots and those that it binds, in an 
-    empty ambient. Given a decorated arity $\Gamma : \Dec(\Delta, \Xi)$, we write $\Gamma^{\downarrow} = \Xi : \bA$ for its underlying arity.
-\end{definition}
-
-\begin{remark}
-    Unfolding the recursion, an $\Xi$-decorated arity of shape $\Gamma = [\gamma_1, \ldots, \gamma_n]$ is a list $[x_1 : [\Theta_1]\beta_1, \ldots, x_n : [\Theta_n]\beta_n]$ of entries $[\Theta_i]\beta_i : \Ent(\Xi \concat [\gamma_1, \ldots, \gamma_{i-1}], \gamma_i)$, each over $\Xi$ extended by the slots before it.
-    An entry $[\Theta]\beta$ generalises the abstracted boundaries $\{x_1 : A_1\} \cdots \{x_m : A_m\}\, \mathscr{b}$ by which finitary type theories declare the metavariables of a rule~\cite[\S2.1]{HaselwarterBauer2023}: the variables it abstracts may have non-trivial binding arities, and we also allow abstracting over sorts and equations, not just elements.
-\end{remark}
-
-\begin{remark}\label{rem:concatenation}
-    Concatenation of arities lifts to decorated arities: overloading the notation, we define 
-    \[
-    \_ \concat \_ : \Dec(\Xi, \Gamma) \times \Dec(\Xi \concat \Gamma, \Gamma') \to \Dec(\Xi, \Gamma \concat \Gamma')
-    \]
-    by recursion on $\Gamma$, by $() \concat \Theta' \coloneqq \Theta'$ and $(E, \Theta) \concat \Theta' \coloneqq (E, \Theta \concat \Theta')$. Every decorated arity of shape $\Gamma \concat \Gamma'$ splits uniquely, hence $\_ \concat \_$ is a bijection.
-\end{remark}
-
-\begin{example}\label{ex:raw-context}
-    The raw context
-    \[
-    \begin{aligned}
-        \big[\,&\mathsf{Ty} : \bsort,\\
-        &\mathsf{Tm} : [A : \mathsf{Ty}]\,\bsort,\\
-        &\Pi : [A : \mathsf{Ty},\ B : [x : \mathsf{Tm}(A)]\,\mathsf{Ty}]\,\mathsf{Ty}\,\big]
-    \end{aligned}
-    \]
-    of arity $[\emptyar, [\emptyar], [\emptyar, [\emptyar]]]$ declares a sort $\mathsf{Ty}$ of types, a family $\mathsf{Tm}$ of sorts of terms indexed by types, and the formation rule of dependent products, whose second premise $B$ is a type-family depending on a variable $x : \mathsf{Tm}(A)$.
-    
-    Extending this raw context by the application of dependent functions,
-    \[
-    \begin{aligned}
-        \mathsf{app} : \big[\,&A : \mathsf{Ty},\ B : [x : \mathsf{Tm}(A)]\,\mathsf{Ty},\\
-        &f : \mathsf{Tm}(\Pi(A, \{x\}B(x))),\ a : \mathsf{Tm}(A)\,\big]\,\mathsf{Tm}(B(a)),
-    \end{aligned}
-    \]
-    extensionality of dependent functions may be declared as
-    \[
-    \begin{aligned}
-        \mathsf{funext} : \big[\,&A : \mathsf{Ty},\ B : [x : \mathsf{Tm}(A)]\,\mathsf{Ty},\\
-        &f, g : \mathsf{Tm}(\Pi(A, \{x\}B(x))),\\
-        &h : [x : \mathsf{Tm}(A)]\,\beq\big(\mathsf{app}(A, \{x\}B(x), f, x),\\
-        &\hphantom{h : [x : \mathsf{Tm}(A)]\,\beq\big(}\mathsf{app}(A, \{x\}B(x), g, x)\big)\,\big]\,\beq(f, g),
-    \end{aligned}
-    \]
-    whose premise $h$ is an equation hypothesised generally in $x$.
-
-    Sorts may be bound just as well as elements and equations. A raw context may declare a sort of natural numbers with its usual constructors, together with an eliminator into arbitrary families of sorts,
-    \[
-    \begin{aligned}
-        \mathsf{natrec} : \big[\,&C : [n : \mathsf{Nat}]\,\bsort,\ c_0 : C(\mathsf{zero}),\\
-        &c_s : [n : \mathsf{Nat},\ c : C(n)]\,C(\mathsf{succ}(n)),\ n : \mathsf{Nat}\,\big]\,C(n),
-    \end{aligned}
-    \]
-    whose premise $C$ is a sort hypothesised generally in $n$.
-\end{example}
-
-\begin{example}\label{ex:raw-nonsense}
-    Decorations enforce no typing constraints, so a raw context may declare nonsense. For example, in the raw context
-    \[
-    [\,A : \bsort,\ a : A,\ b : a,\ e : \beq(A, a),\ f : [x : A]\,A,\ c : f(e)\,],
-    \]
-    the slot $b$ is declared an element of $a$, which is an element rather than a sort; $e$ equates the sort $A$ with its own element $a$; and $c$ is declared an element of $f(e)$, which is not a sort either, and which moreover applies $f$ to the equation $e$ in place of an element of $A$. What decorations do enforce is scoping, so that, for instance, no slot can be declared an element of itself.
-\end{example}
-
-\subsection{Substitution in decorated arities}
-
-The action of substitutions of \cref{def:action} extends from expressions to boundaries and decorated arities.
-
-\begin{definition}\label{def:action-decorations}
-    Let $\sigma : \Xi \sub \Phi \concat \Xi'$ be a substitution and $\Psi$ an arity. The action of $\sigma$ with prefix $\Phi$ at depth $\Psi$ extends to maps
-    \[
-    \begin{aligned}
-        \_[\sigma]_\Phi^\Psi &: \Bd(\Phi \concat \Xi \concat \Psi) \to \Bd(\Phi \concat \Xi' \concat \Psi),\\
-        \_[\sigma]_\Phi^\Psi &: \Ent(\Phi \concat \Xi \concat \Psi, \alpha) \to \Ent(\Phi \concat \Xi' \concat \Psi, \alpha),\\
-        \_[\sigma]_\Phi^\Psi &: \Dec(\Phi \concat \Xi \concat \Psi, \Gamma) \to \Dec(\Phi \concat \Xi' \concat \Psi, \Gamma),
-    \end{aligned}
-    \]
-    acting on a boundary pointwise, through the expressions it contains, and on entries and decorated arities by simultaneous recursion:
-    \begin{align*}
-        ([\Theta]\beta)[\sigma]_\Phi^\Psi &\coloneqq [\Theta[\sigma]_\Phi^\Psi]\,\beta[\sigma]_\Phi^{\Psi \concat \alpha},\\
-        ()[\sigma]_\Phi^\Psi &\coloneqq (),\\
-        (E, \Theta')[\sigma]_\Phi^\Psi &\coloneqq \big(E[\sigma]_\Phi^\Psi,\ \Theta'[\sigma]_\Phi^{\Psi \concat [\alpha]}\big),
-    \end{align*}
-    where $[\Theta]\beta$ and $E$ are entries of arity $\alpha$.
-\end{definition}
-
-In particular, the action of substitutions on boundaries is used to compute the boundaries of expressions. To this end, we first introduce some notation. Let $\Gamma$ be a raw context and $x : \Gamma^{\downarrow} \ni \alpha$ one of its slots. According to \cref{def:decorated-arities}, $x$ is declared in $\Gamma$ by an entry over the slots preceding it; weakening this entry along the inclusion of those slots into $\Gamma^{\downarrow}$ yields an entry $[\Theta]\beta : \Ent(\Gamma^{\downarrow}, \alpha)$. We then write
-\[
-x : \Gamma \ni [\Theta]\beta,
-\]
-and call $\Theta : \Dec(\Gamma^{\downarrow}, \alpha)$ the \emph{binding} and $\beta : \Bd(\Gamma^{\downarrow} \concat \alpha)$ the \emph{boundary} of $x$.
-
-\begin{definition}\label{def:boundary-of-expression}
-    Let $\Gamma$ be a raw context. The \emph{boundary} of an expression $x(t) : \Expr(\Gamma^{\downarrow})$, where $x : \Gamma \ni [\Theta]\beta$ and $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$, is
-    \[
-    \partial_\Gamma\big(x(t)\big) \coloneqq \beta[t]_{\Gamma^{\downarrow}} : \Bd(\Gamma^{\downarrow}).
-    \]
-\end{definition}
-
-In the terminology of bidirectional typing~\cite{McBride2019Ni}, every expression thus synthesises its boundary. In particular, this explains why an equational boundary need not record its sort.
-
-Next, we recall the notion of modules over a relative monad. 
-
-\begin{definition}\label{def:module}
-    Let $(T, \eta, (\_)^\sharp)$ be a relative monad on $J : \cat{J} \to \cat{C}$. A \emph{(left) $T$-module} $(M, (\_)^M)$ in a category $\cat{D}$ is given by the following data:
-    \begin{itemize}
-        \item a map on objects $M : \left|\cat{J}\right| \to \left|\cat{D}\right|$
-        \item for any two objects $X,Y : \cat{C}$, an action $$(\_)^M : \cat{C}(JX,TY) \to \cat{D}(MX,MY),$$
-    \end{itemize}
-    such that 
-    \[
-    \eta_X^M = \id_{MX} \qquad \text{and} \qquad (g^\sharp \circ f)^M = g^M \circ f^M
-    \]
-    for all $f : JX \to TY$ and $g : JY \to TZ$. A \emph{morphism} of $T$-modules $\theta : (M, (\_)^M) \to (M', (\_)^{M'})$ is a family of morphisms $\theta_X : MX \to M'X$ such that the square
+\begin{definition}[{\cite[Def.~1]{Awodey2018}}]\label{def:representable}
+    A natural transformation $f : Y \to X$ of presheaves on $\cat{C}$ is \emph{representable} if for every object $\Gamma$ and every $A \in X(\Gamma)$ there are an object $\Gamma.A$, a morphism $p_A : \Gamma.A \to \Gamma$ and an element $\nu_A \in Y(\Gamma.A)$ such that 
     \[\begin{tikzcd}
-    	MX & MY \\
-    	{M'X} & {M'Y}
-    	\arrow["{f^M}", from=1-1, to=1-2]
-    	\arrow["{\vartheta_X}"', from=1-1, to=2-1]
-    	\arrow["{\vartheta_Y}", from=1-2, to=2-2]
-    	\arrow["{f^{M'}}"', from=2-1, to=2-2]
+    	{\yo(\Gamma.A)} & Y \\
+    	{\yo(\Gamma)} & X
+    	\arrow["{\nu_A}", from=1-1, to=1-2]
+    	\arrow["{\yo(p_A)}"', from=1-1, to=2-1]
+    	\arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+    	\arrow["f", from=1-2, to=2-2]
+    	\arrow["A"', from=2-1, to=2-2]
     \end{tikzcd}\]
-    commutes for every $f : JX \to TY$.
-
-    Equivalently, a $T$-module in $\cat{D}$ is just a functor $\Kl(T) \to \cat{D}$.
+    is a pullback square.
 \end{definition}
 
-Modules over monads were introduced by Hirschowitz and Maggesi to describe syntax with binding~\cite{HirschowitzMaggesi2007}, in the form of a functor $M$ with a natural transformation $M \circ T \to M$. They construe signatures as module morphisms over the term monad with domain built from the monad using products and derivation, and the syntax is characterised as initial among monads equipped with such morphisms. Ahrens extended modules to relative monads to characterise syntax together with its reduction rules~\cite{Ahrens2016}: the terms form a relative monad on the functor $\Delta : \Set \to \mathsf{Pre}$ that equips a set of variables with the discrete preorder, the preorder on terms being reduction. In both settings, binding is accounted for by \emph{derivation}~\cite[Def.~8]{HirschowitzMaggesi2007}\cite[Def.~25]{Ahrens2016}: the derived module $M'(V) \coloneqq M(V + 1)$ extends the variables of $M$ by a fresh one, which substitutions keep fixed, so that a constructor binding a variable in its argument is a module morphism out of a derived module. In our case, however, a slot can have a binding structure of a higher rank, so we must derive along an arbitrary arity.
-
-\begin{definition}\label{def:derived-module}
-    Let $M$ be an $\bE$-module and $\Phi$ an arity. The \emph{derived module} $M^{(\Phi)}$ is given by
-    $$M^{(\Phi)} := M \circ\, (\_\bowtie\Phi),$$
-    where $\_\bowtie\Phi : \Kl(\bE) \to \Kl(\bE)$ is the functor defined by taking coproducts with $\Phi$.
-\end{definition}
-
-\begin{lemma}\label{lem:depth-derived}
-    Given a substitution $\sigma : \Xi \sub \Xi'$, arities $\Phi$ and $\Psi$, and an expression $e : \Expr(\Xi \concat \Phi \concat \Psi)$, we have $$e[\sigma \concat \Phi]^\Psi = e[\sigma]^{\Phi \concat \Psi}.$$
+\begin{lemma}\label{lem:right-adjoint}
+    Let $f : Y \to X$ be a natural transformation of presheaves on $\cat{C}$.
+    \begin{enumerate}
+        \item For an object $\Gamma$, $A \in X(\Gamma)$, $p_A : \Gamma.A \to \Gamma$ and $\nu_A \in Y(\Gamma.A)$ with $f(\nu_A) = A[p_A]$, the square of \cref{def:representable} is a pullback iff for every $\sigma : \Delta \to \Gamma$ and $y \in Y(\Delta)$ with $f(y) = A[\sigma]$ there is a unique morphism $\langle \sigma, y \rangle : \Delta \to \Gamma.A$ with
+        \[
+            p_A \circ \langle \sigma, y \rangle = \sigma \qquad \text{and} \qquad \nu_A[\langle \sigma, y \rangle] = y.
+        \]
+        \item Let $R : \cel{X} \to \cel{Y}$ be a functor over $\cat{C}$ and $\varepsilon : \cel{f} \circ R \Rightarrow \id$ a natural transformation, and write $R(\Gamma, A) \eqqcolon (\Gamma.A, \nu_A)$ and $\varepsilon_{(\Gamma, A)} \eqqcolon p_A$, so that $f(\nu_A) = A[p_A]$. Then $\varepsilon$ is the counit of an adjunction $\cel{f} \dashv R$ iff every $(\Gamma.A, p_A, \nu_A)$ satisfies the condition of (1).
+        \item $f$ is representable iff $\cel{f}$ has a right adjoint~\cite[Def.~3.8]{Uemura2023}.
+    \end{enumerate}
 \end{lemma}
 
 \begin{proof}
-    We first establish that $\sigma \concat \Phi = \id_{\Xi \concat \Psi}[\sigma]^{\Phi}$ as substitutions $\Xi \concat \Phi \sub \Xi' \concat \Phi$.
-    By definition, we have $\id_{\Xi \concat \Phi}[\sigma]^\Phi(x) = \eta(x)[\sigma]^{\Phi \concat \alpha}$ for a slot $x$ of arity $\alpha$. If $x : \Phi \ni \alpha$, we have $\eta(x)[\sigma]^{\Phi \concat \alpha} = \eta(x)$ by \cref{lem:eta-depth}.
-    If $x : \Xi \ni \alpha$, we have $\eta(x)[\sigma]^{\Phi \concat \alpha} = \sigma(x)[\iota]_{\Xi'}$, where $\iota(i : \alpha \ni \delta) = \eta(i)[\sigma]^{\Phi \concat \alpha \concat \delta} = \eta(i)$, again by \cref{lem:eta-depth}, so that $\sigma(x)[\iota]_{\Xi'}$ is the weakening of $\sigma(x) : \Expr(\Xi' \concat \alpha)$ to $\Expr(\Xi' \concat \Phi \concat \alpha)$ along the inclusion $\Xi' \concat \inr : \Xi' \concat \alpha \ren \Xi' \concat \Phi \concat \alpha$. Hence $\id_{\Xi \concat \Phi}[\sigma]^\Phi = \sigma \concat \Phi$, and the claim follows by the associativity law of \cref{lem:substitution} and the first unit law of \cref{relative-monad}:
-    \begin{align*}
-        e[\sigma\concat\Phi]^{\Psi} &= e[\id_{\Xi\concat\Phi}[\sigma]^{\Phi}]^{\Psi}\\
-        &= e[\id_{\Xi\concat\Phi}]^{\Psi}[\sigma]^{\Phi\concat\Psi}\\
-        &= e[\sigma]^{\Phi\concat\Psi}.\qedhere
-    \end{align*}
+    (1) Limits of presheaves are computed pointwise, and by the Yoneda lemma a natural transformation $\yo\Delta \to Z$ is an element of $Z(\Delta)$. So the square is a pullback iff for every $\Delta$ the map $\tau \mapsto (p_A \circ \tau, \nu_A[\tau])$ is a bijection from $\cat{C}(\Delta, \Gamma.A)$ onto $\{\, (\sigma, y) \mid \sigma : \Delta \to \Gamma,\ y \in Y(\Delta),\ f(y) = A[\sigma] \,\}$, which is the stated condition.
+
+    (2) A morphism $(\Delta, y) \to (\Gamma.A, \nu_A)$ in $\cel{Y}$ is a morphism $\tau : \Delta \to \Gamma.A$ with $\nu_A[\tau] = y$, and a morphism $(\Delta, f(y)) \to (\Gamma, A)$ in $\cel{X}$ is a morphism $\sigma : \Delta \to \Gamma$ with $A[\sigma] = f(y)$. The natural transformation $\varepsilon$ is the counit of an adjunction iff for all $(\Delta, y)$ and $(\Gamma, A)$ the map $\tau \mapsto \varepsilon_{(\Gamma, A)} \circ \cel{f}(\tau) = p_A \circ \tau$ is a bijection between these sets, which is the condition of (1).
+
+    (3) If $\cel{f}$ has a right adjoint, then by (2) and (1) each square is a pullback. Conversely, choose $(\Gamma.A, p_A, \nu_A)$ for every $(\Gamma, A)$; by (1), for a morphism $\sigma : (\Delta, A[\sigma]) \to (\Gamma, A)$ of $\cel{X}$ the morphism $\langle \sigma \circ p_{A[\sigma]}, \nu_{A[\sigma]} \rangle : (\Delta.A[\sigma], \nu_{A[\sigma]}) \to (\Gamma.A, \nu_A)$ is defined, and this makes $R$ a functor with the counit $\varepsilon_{(\Gamma, A)} = p_A$ natural; by (2) it is a right adjoint.
 \end{proof}
 
-\begin{proposition}\label{prop:decoration-modules}
-    Boundaries, entries, and decorated arities assemble into $\bE$-modules
-    \begin{align*}
-    \Bd : \Kl(\bE) &\to \Set\\
-    \Dec, \Ent : \Kl(\bE) &\to \Set^{\left|\bA\right|},
-    \end{align*}
-    their action on morphisms given by \cref{def:action-decorations}, with empty prefix and postfix. 
-    Moreover, for all arities $\Gamma$ and $\Gamma'$, the concatenation of \cref{rem:concatenation} is an isomorphism of $\bE$-modules
+\begin{lemma}[{\cite[Cor.~4]{Awodey2018}}]\label{lem:pullback}
+    Let $f : Y \to X$ be a natural transformation with a right adjoint $(R, \varepsilon)$ of $\cel{f}$, and let $u : X' \to X$ be a natural transformation. Let $Y' \coloneqq X' \times_X Y$, so that $Y'(\Gamma) = \{\, (A', y) \mid A' \in X'(\Gamma),\ y \in Y(\Gamma),\ u(A') = f(y) \,\}$, and $f'(A', y) \coloneqq A'$. Then $\cel{f'}$ has the right adjoint
     \[
-    \Dec(\_, \Gamma) \times \Dec(\_, \Gamma')^{(\Gamma)} \cong \Dec(\_, \Gamma \concat \Gamma').
+        R'(\Gamma, A') \coloneqq \big( \Gamma.u(A'),\ (A'[p_{u(A')}], \nu_{u(A')}) \big), \qquad \varepsilon'_{(\Gamma, A')} \coloneqq p_{u(A')},
     \]
-\end{proposition}
+    so that $\Gamma.A' = \Gamma.u(A')$, $p_{A'} = p_{u(A')}$, $\nu_{A'} = (A'[p_{A'}], \nu_{u(A')})$ and $\langle \sigma, (A'[\sigma], y) \rangle = \langle \sigma, y \rangle$. In particular, representable natural transformations are stable under pullback.
+\end{lemma}
 
 \begin{proof}
-    The module laws follow from \cref{relative-monad}. To establish the isomorphism, we just need to show that the bijections from \cref{rem:concatenation} commute with the module actions, that is, that the square
-    \[
-    \begin{tikzcd}[column sep=large]
-        \Dec(\Xi, \Gamma) \times \Dec(\Xi \concat \Gamma, \Gamma') \arrow[r, "\_\concat\_"] \arrow[d, "{\_[\sigma] \times \_[\sigma \concat \Gamma]}"'] & \Dec(\Xi, \Gamma \concat \Gamma') \arrow[d, "{\_[\sigma]}"] \\
-        \Dec(\Xi', \Gamma) \times \Dec(\Xi' \concat \Gamma, \Gamma') \arrow[r, "\_\concat\_"'] & \Dec(\Xi', \Gamma \concat \Gamma')
-    \end{tikzcd}
-    \]
-    commutes for every $\sigma : \Xi \sub \Xi'$. This follows from \cref{lem:depth-derived}.
+    We verify the condition of \cref{lem:right-adjoint}(1), which gives the claim by (2). $f'(\nu_{A'}) = A'[p_{A'}]$ by definition. Let $\sigma : \Delta \to \Gamma$ and $(B', y) \in Y'(\Delta)$ with $B' = A'[\sigma]$. Then $f(y) = u(B') = u(A')[\sigma]$, so $\langle \sigma, y \rangle : \Delta \to \Gamma.u(A')$ is defined, with $p_{A'} \circ \langle \sigma, y \rangle = \sigma$ and $\nu_{A'}[\langle \sigma, y \rangle] = (A'[p_{A'}][\langle \sigma, y \rangle], \nu_{u(A')}[\langle \sigma, y \rangle]) = (A'[\sigma], y)$. If $\tau : \Delta \to \Gamma.A'$ satisfies $p_{A'} \circ \tau = \sigma$ and $\nu_{A'}[\tau] = (A'[\sigma], y)$, then $\nu_{u(A')}[\tau] = y$, so $\tau = \langle \sigma, y \rangle$.
 \end{proof}
 
-\subsection{The raw syntax C-system}
-
-We now organise raw contexts and substitutions between them into a C-system, generalising Voevodsky's construction of the C-system of a module over a $J_f$-relative monad~\cite{Voevodsky2016Relative}. C-systems were introduced by Cartmell under the name contextual categories~\cite{Cartmell1986}; we recall them in Voevodsky's formulation~\cite[Def.~2.1 and Prop.~2.4]{Voevodsky2014Subsystems}.
-
-\begin{definition}\label{def:c-system}
-    A \emph{C-system} is a category $\cat{C}$ together with
-    \begin{itemize}
-        \item a \emph{length} function $l : \left|\cat{C}\right| \to \N$,
-        \item an object $\pt$,
-        \item a map $\ft : \left|\cat{C}\right| \to \left|\cat{C}\right|$,
-        \item for every object $X$, a morphism $p_X : X \to \ft(X)$,
-        \item for every object $X$ with $l(X) > 0$ and every morphism $f : Y \to \ft(X)$, an object $f^*X$ and a morphism $q(f, X) : f^*X \to X$,
-    \end{itemize}
-    such that
-    \begin{itemize}
-        \item $\pt$ is the unique object of length $0$, and is terminal,
-        \item $\ft(\pt) = \pt$, and $l(\ft(X)) = l(X) - 1$ for every object $X$ with $l(X) > 0$,
-    \end{itemize}
-    and such that, for every object $X$ with $l(X) > 0$ and all morphisms $f : Y \to \ft(X)$ and $g : Z \to Y$,
-    \begin{itemize}
-        \item $l(f^*X) > 0$, $\ft(f^*X) = Y$, and the square
-        \[
-        \begin{tikzcd}
-            f^*X \arrow[r, "{q(f, X)}"] \arrow[d, "p_{f^*X}"'] & X \arrow[d, "p_X"] \\
-            Y \arrow[r, "f"'] & \ft(X)
-        \end{tikzcd}
-        \]
-        is a pullback,
-        \item $\id_{\ft(X)}^*X = X$ and $q(\id_{\ft(X)}, X) = \id_X$,
-        \item $(f \circ g)^*X = g^*(f^*X)$ and $q(f \circ g, X) = q(f, X) \circ q(g, f^*X)$.
-    \end{itemize}
-    A \emph{homomorphism} of C-systems is a functor that preserves all of this structure strictly.
+\begin{definition}\label{def:natural-model}
+    A \emph{natural model} $(\cat{C}, p)$ consists of a category $\cat{C}$ with a terminal object $\pt$, a natural transformation $p : \Tm \to \Ty$ of presheaves on $\cat{C}$, and a right adjoint $R$ of $P \coloneqq \cel{p}$ with counit $\varepsilon$. We write $\Gamma.A$, $p_A$, $\nu_A$ and $\langle \sigma, t \rangle$ as in \cref{lem:right-adjoint}, and $\Tm(\Gamma, A) \coloneqq \{\, t \in \Tm(\Gamma) \mid p(t) = A \,\}$; the elements of $\Ty(\Gamma)$ are the \emph{types} over $\Gamma$ and those of $\Tm(\Gamma, A)$ the \emph{terms} of $A$.
 \end{definition}
 
-The objects of a C-system are to be thought of as contexts, with $\pt$ the empty context, and a morphism $f : \Delta \to \Gamma$ as a substitution, assigning to each variable of $\Gamma$ a term in context $\Delta$. An object $X$ of positive length is a context $(\Gamma, x \of A)$ with $\Gamma = \ft(X)$, and $p_X : (\Gamma, x \of A) \to \Gamma$ is the weakening substitution. For $f : \Delta \to \Gamma$, the object $f^*X = (\Delta, x \of A[f])$ is obtained by substituting $f$ into the type of the last variable, and $q(f, X) : (\Delta, x \of A[f]) \to (\Gamma, x \of A)$ extends $f$ by $x \mapsto x$. A C-system can equivalently be described as a category with families in which every object is uniquely an iterated extension of the terminal one~\cite[Props.~41 and~45]{AhrensLumsdaineNorth2024}: types over $\Gamma$ are the objects $X$ of positive length with $\ft(X) = \Gamma$, and terms of $X$ are the sections of $p_X$.
+By \cref{lem:right-adjoint}, a natural model is a representable $p$ together with a choice of the pullback squares of \cref{def:representable}, a \emph{structured} natural model in the terminology of~\cite[Def.~42]{AhrensLumsdaineNorth2024}.
 
-Let $J_f : \mathbb{F} \to \Set$ be the inclusion of finite cardinals. Voevodsky constructs C-systems from the raw syntax of a type theory in two steps. First, for a $J_f$-relative monad $R$, the opposite of its Kleisli category is a C-system $\Csys(R)$~\cite[\S5]{Voevodsky2016Relative}, whose objects are the natural numbers, with $l(n) = n$, $\pt = 0$ and $\ft(n + 1) = n$. A morphism $f : m \to n$ of $\Csys(R)$ is a morphism $J_f n \to Rm$, assigning to each of $n$ variables an expression in $m$ variables; $p_{n+1}$ is the inclusion of $n$ into $n + 1$, and for $f : m \to n$ we have $f^*(n + 1) = m + 1$, while $q(f, n + 1) : m + 1 \to n + 1$ is given by $i \mapsto R(\iota)(f(i))$ for $i < n$ and $n \mapsto \eta(m)$, where $\iota : m \to m + 1$ is the inclusion.
-
-An $R$-module $M : \Kl(R) \to \Set$ is the same as a presheaf on $\Csys(R)$, and the C-system $\Csys(R, M)$ is defined as the presheaf extension of $\Csys(R)$ by $M$~\cite[\S\S3 and~6]{Voevodsky2016Relative}. Its objects of length $n$ are sequences $(T_0, \ldots, T_{n-1})$ with $T_i \in M(i)$, and $\Hom_{\Csys(R,M)}((T_0, \ldots, T_{m-1}), (T'_0, \ldots, T'_{n-1})) = \Hom_{\Csys(R)}(m,n)$. Much of the $C$-system structure --- $\ft$, $p$ and $q$ --- is inherited from $\Csys(R)$, while
-\[
-f^*(T'_0, \ldots, T'_n) \coloneqq (T_0, \ldots, T_{m-1}, f^M(T'_n))
-\]
-for $f : (T_0, \ldots, T_{m-1}) \to (T'_0, \ldots, T'_{n-1})$. Read type-theoretically, $T_i$ is the (raw) type of the $i$-th variable, an expression in the variables before it. When $R$ and $M$ are the raw expressions and raw types of a type theory, $\Csys(R, M)$ is the C-system of its raw syntax~\cite[\S\S1 and~6]{Voevodsky2016Relative}, and the term C-system is obtained as its regular subquotient.
-
-To adapt it to our setting, we now generalise Voevodsky's construction in two directions. First, $\bE$ is a relative monad not on $J_f$ but on the slot functor $\_ \ni \_ : \bA \to \Set^{\left|\bA\right|}$, under which each slot has a sort, namely its arity. We therefore pass from $J_f$ to the inclusion $J_S : \mathbb{F}{\downarrow}S \to \Set^S$ of finite $S$-sorted sets, of which the slot functor is the instance for $S = \left|\bA\right|$, and from $\Set$-valued modules over $J_f$-relative monads to $\Set^S$-valued modules over $J_S$-relative monads, so that the decorations available for a variable depend on its sort.
-Second, Voevodsky's variables are first-order, so a raw type suffices to decorate each of them; by contrast, a decoration of a higher-rank variable must also recursively decorate the variables it binds.
-In the unsorted case, $S = 1$, our construction reduces to Voevodsky's; for $\bE$ and $\Ent$, it will yield the raw syntax C-system of $\ToS^{\omega}$.
-
-\begin{definition}
-    Fix a set $S$ of \emph{sorts}. Generalising the arities of \cref{def:arities}, let $\mathbb{F}{\downarrow}S$ be the category whose objects are lists $\Gamma = [\gamma_1, \ldots, \gamma_n]$ of sorts, and whose morphisms $\rho : \Gamma \to \Delta$ are families of functions $\rho_s : (\Gamma \ni s) \to (\Delta \ni s)$, where
-    \[
-    \Gamma \ni s \coloneqq \{\, i : \{1, \ldots, n\} \mid \gamma_i = s \,\}
-    \]
-    is the set of \emph{variables} of $\Gamma$ of sort $s$. The assignment $\Gamma \mapsto \Gamma \ni \_$ then defines a fully faithful functor $J_S : \mathbb{F}{\downarrow}S \to \Set^S$. For $S = 1$, this is $J_f$, and for $S = \left|\bA\right|$, it is the slot functor $\_ \ni \_ : \bA \to \Set^{\left|\bA\right|}$.
-\end{definition}
-        
-\begin{remark}
-    For a relative monad $T$ on $J_S$, the Kleisli category $\Kl(T)$ has finite coproducts, given by concatenation. The empty list is evidently initial. 
-    For lists $\Gamma$ and $\Delta$, let $\inl : \Gamma \to \Gamma \concat \Delta$ and $\inr : \Delta \to \Gamma \concat \Delta$ be the inclusions in $\mathbb{F}{\downarrow}S$, and define $\iota_1 \coloneqq \eta \circ J_S(\inl)$ and $\iota_2 \coloneqq \eta \circ J_S(\inr)$. Since $J_S$ preserves coproducts, the map
-    \begin{align*}
-        \Set^S(J_S(\Gamma\concat\Delta),T\Theta) &\overset{\cong}{\to} \Set^S(J_S\Gamma,T\Theta) \times \Set^S(J_S\Delta,T\Theta)\\
-        f &\mapsto \left<f \circ J_S(\inl), f \circ J_S(\inr)\right> 
-    \end{align*}
-    is an isomorphism. By the unit law, we compute $f \odot \iota_1 = f^{\sharp} \circ \eta \circ J_S(\inl) = f \circ J_S(\inl)$, and similarly for $\iota_2$, so we can identify this isomorphism with
-    \begin{align*}
-        \Kl(T)(\Gamma\concat\Delta,T\Theta) &\overset{\cong}{\to} \Kl(T)(\Gamma,T\Theta) \times \Kl(T)(\Delta,T\Theta)\\
-        f &\mapsto \left<f \odot \iota_1, f \odot \iota_2\right>.
-    \end{align*}
-    Henceforth, we abbreviate $\iota_1$ and $\iota_2$ to $\inl$ and $\inr$, and, for a morphism $f : \Gamma \to \Delta$ of $\Kl(T)$ and a list $\Phi$, write $f \concat \Phi : \Gamma \concat \Phi \to \Delta \concat \Phi$ for the coproduct $\left<f,\id_{\Phi}\right>$.
-\end{remark}
-    
-\begin{definition}\label{def:sorted-c-system}
-    Let $T$ be a relative monad on $J_S$ and $M : \Kl(T) \to \Set^S$ a $T$-module. The C-system $\Csys(T, M)$ consists of the following data.
-    \begin{itemize}
-        \item Objects are pairs $(\Gamma, c)$ of a list $\Gamma = [\gamma_1, \ldots, \gamma_n]$ of sorts and a sequence $c = (c_1, \ldots, c_n)$ with $c_i \in M([\gamma_1, \ldots, \gamma_{i-1}])_{\gamma_i}$, and the length of $(\Gamma, c)$ is $n$.
-        \item Morphisms $(\Delta, d) \to (\Gamma, c)$ are the morphisms $\Gamma \to \Delta$ of $\Kl(T)$; identities and composition are inherited from $\Kl(T)^{\op}$.
-        \item The point is $\pt := (\emptyar, ())$, and $\ft(\pt) \coloneqq \pt$.
-        \item For an object $X = (\Gamma \concat [s], (c_1, \ldots, c_n, m))$ of positive length and a morphism $f : (\Delta, (d_1, \ldots, d_k)) \to (\Gamma, (c_1, \ldots, c_n))$, we have:
-        \begin{align*}
-            \ft(X) &\coloneqq (\Gamma, (c_1, \ldots, c_n)),\\
-            p_X &\coloneqq \inl : \Gamma \to \Gamma \concat [s],\\
-            f^*X &\coloneqq (\Delta \concat [s], (d_1, \ldots, d_k, (f^M)_s(m)))\\
-            q(f, X) &\coloneqq f \concat [s] : f^*X \to X.
-        \end{align*}
-    \end{itemize}
-    % We write $\Csys(T) \coloneqq \Csys(T, 1)$, where $1$ is the terminal $T$-module, whose underlying category is $\Kl(T)^{\op}$.
-\end{definition}
-
-\begin{proposition}\label{prop:sorted-c-system}
-    For every relative monad $T$ on $J_S$ and every $T$-module $M : \Kl(T) \to \Set^S$, $\Csys(T, M)$ is a C-system.
-    % , and forgetting the decorations is a homomorphism of C-systems $\Csys(T, M) \to \Csys(T)$. For $S = 1$, the C-systems $\Csys(T)$ and $\Csys(T, M)$ are those of Voevodsky.
-\end{proposition}
+\begin{lemma}\label{lem:pairing}
+    In a natural model, for $\sigma : \Delta \to \Gamma.A$, $\tau : \Xi \to \Delta$ and $t \in \Tm(\Delta, A[\sigma'])$ with $\sigma' : \Delta \to \Gamma$:
+    \begin{enumerate}
+        \item $\sigma = \langle p_A \circ \sigma, \nu_A[\sigma] \rangle$;
+        \item $\langle \sigma', t \rangle \circ \tau = \langle \sigma' \circ \tau, t[\tau] \rangle$;
+        \item $\id_{\Gamma.A} = \langle p_A, \nu_A \rangle$.
+    \end{enumerate}
+\end{lemma}
 
 \begin{proof}
-    The conditions on $\pt$ and $\ft$ are clearly satisfied. The functor $\Csys(T, M) \to \Kl(T)^\op$ that forgets decorations is fully faithful and therefore reflects pullbacks. It thus suffices to show that the square
+    Each right-hand side is the unique morphism with the two defining properties, and the left-hand side has them: for (1) trivially; for (2) because $p_A \circ \langle \sigma', t \rangle \circ \tau = \sigma' \circ \tau$ and $\nu_A[\langle \sigma', t \rangle \circ \tau] = \nu_A[\langle \sigma', t \rangle][\tau] = t[\tau]$; (3) is the case $\sigma = \id$ of (1).
+\end{proof}
+
+\begin{definition}[{cf.~\cite[Thm.~2.3.2]{Newstead2018}}]\label{def:nm-morphism}
+    A \emph{morphism} $F : (\cat{C}, p) \to (\cat{C}', p')$ of natural models consists of a functor $F : \cat{C} \to \cat{C}'$ with $F(\pt) = \pt$ and functors $F_\Ty : \cel{\Ty} \to \cel{\Ty'}$ and $F_\Tm : \cel{\Tm} \to \cel{\Tm'}$ over $F$, which commute with $P$, $P'$ and with the right adjoints,
     \[
     \begin{tikzcd}
-        \Gamma \arrow[r, "\inl"] \arrow[d, "f"'] & \Gamma \concat [s] \arrow[d, "f \concat {[s]}"] \\
-        \Delta \arrow[r, "\inl"'] & \Delta \concat [s]
+        \cel{\Tm} \arrow[r, "F_\Tm"] \arrow[d, "P"'] & \cel{\Tm'} \arrow[d, "P'"] \\
+        \cel{\Ty} \arrow[r, "F_\Ty"'] \arrow[d] & \cel{\Ty'} \arrow[d] \\
+        \cat{C} \arrow[r, "F"'] & \cat{C}'
+    \end{tikzcd}
+    \qquad\qquad
+    \begin{tikzcd}
+        \cel{\Ty} \arrow[r, "F_\Ty"] \arrow[d, "R"'] & \cel{\Ty'} \arrow[d, "R'"] \\
+        \cel{\Tm} \arrow[r, "F_\Tm"'] & \cel{\Tm'}
     \end{tikzcd}
     \]
-    is a pushout in $\Kl(T)$ for every $f : \Gamma \sub \Delta \in \Kl(T)$ and every $s : \left|\bA\right|$. The square clearly commutes. To see that it is a pushout, let $g : \Gamma \concat [s] \to \Theta$ and $h : \Delta \to \Theta$ be such that $g \odot \inl = h \odot f$; we show that $k \coloneqq \left<h, g \odot \inr\right> : \Delta \concat [s] \to \Theta$ is the unique morphism with $k \odot \inl = h$ and $k \odot (f \concat [s]) = g$. The first equation holds by definition. For the second, both sides agree on the coprojections of $\Gamma \concat [s]$, since $(f \concat [s]) \odot \inr = \inr$:
-    \begin{align*}
-        k \odot (f \concat [s]) \odot \inl &= k \odot \inl \odot f = h \odot f = g \odot \inl,\\
-        k \odot (f \concat [s]) \odot \inr &= k \odot \inr = g \odot \inr.
-    \end{align*}
-    Conversely, if $k'$ satisfies both equations, then $k' \odot \inl = h$ and $k' \odot \inr = k' \odot (f \concat [s]) \odot \inr = g \odot \inr$, so $k' = k$ by the universal property of $\Delta \concat [s]$.
-
-    
-    It remains to verify the conditions on $(\_)^*$ and $q$. The objects $\id^*X$ and $X$ differ at most in their last decorations, $\eta_\Gamma^M(m)$ and $m$, which agree by the unit law of $M$. Similarly, $(f \circ g)^*X$ and $g^*(f^*X)$ differ at most in their last decorations, $(g \odot f)^M(m)$ and $g^M(f^M(m))$, which agree by the composition law of $M$. For $q$, read in $\Kl(T)$, we must show that
+    and such that $F_\Ty$ commutes with the counits, $F_\Ty \varepsilon = \varepsilon' F_\Ty$:
     \[
-    \eta_\Gamma \concat [s] = \eta_{\Gamma \concat [s]} \qquad \text{and} \qquad (g \odot f) \concat [s] = (g \concat [s]) \odot (f \concat [s]),
+    \begin{tikzcd}[column sep=large]
+        \cel{\Ty} \arrow[r, bend left=40, "PR", ""{name=T, below}] \arrow[r, bend right=40, "\id"', ""{name=B, above}] & \cel{\Ty} \arrow[r, "F_\Ty"] & \cel{\Ty'}
+        \arrow[Rightarrow, from=T, to=B, "\varepsilon", shorten=1.5mm]
+    \end{tikzcd}
+    \;=\;
+    \begin{tikzcd}[column sep=large]
+        \cel{\Ty} \arrow[r, "F_\Ty"] & \cel{\Ty'} \arrow[r, bend left=40, "P'R'", ""{name=T, below}] \arrow[r, bend right=40, "\id"', ""{name=B, above}] & \cel{\Ty'}
+        \arrow[Rightarrow, from=T, to=B, "\varepsilon'", shorten=1.5mm]
+    \end{tikzcd}
     \]
-    which is easy to see.
+    We write $F_\Ty(\Gamma, A) = (F\Gamma, FA)$ and $F_\Tm(\Gamma, t) = (F\Gamma, Ft)$. Natural models and their morphisms form a category $\mathsf{NM}$. We say that $F$ is injective, surjective or bijective \emph{on objects}, and faithful, full or fully faithful, in the usual sense; and that $F$ is \emph{fibrewise} injective, surjective or bijective \emph{on types}, resp.\ \emph{on terms}, if every $\Ty(\Gamma) \to \Ty'(F\Gamma)$, resp.\ every $\Tm(\Gamma, A) \to \Tm'(F\Gamma, FA)$, is so, and \emph{fibrewise} injective, surjective or bijective if it is so on both.
+\end{definition}
+
+\begin{lemma}\label{lem:nm-morphism}
+    Let $(\cat{C}, p)$ and $(\cat{C}', p')$ be natural models, $F : \cat{C} \to \cat{C}'$ a functor with $F(\pt) = \pt$, and $F_\Ty : \cel{\Ty} \to \cel{\Ty'}$ and $F_\Tm : \cel{\Tm} \to \cel{\Tm'}$ functors over $F$, written as in \cref{def:nm-morphism}. Then $(F, F_\Ty, F_\Tm)$ is a morphism of natural models iff for all $\Gamma$, $A \in \Ty(\Gamma)$ and $t \in \Tm(\Gamma)$,
+    \[
+        p'(Ft) = F(pt), \qquad F(\Gamma.A) = F\Gamma.FA, \qquad F(\nu_A) = \nu_{FA}, \qquad F(p_A) = p_{FA}.
+    \]
+\end{lemma}
+
+\begin{proof}
+    On morphisms of the categories of elements, $F_\Ty$, $F_\Tm$, $P$ and $P'$ all act as $F$ or as the identity, so the first square of \cref{def:nm-morphism} commutes iff it does on objects, which is $p'(Ft) = F(pt)$. The second square commutes on objects iff $F(\Gamma.A) = F\Gamma.FA$ and $F(\nu_A) = \nu_{FA}$, since $F_\Tm R(\Gamma, A) = (F(\Gamma.A), F\nu_A)$ and $R' F_\Ty(\Gamma, A) = (F\Gamma.FA, \nu_{FA})$. Given these, the counit condition $F_\Ty \varepsilon = \varepsilon' F_\Ty$ is $F(p_A) = p_{FA}$, both sides being morphisms $F(\Gamma.A) = F\Gamma.FA \to F\Gamma$. It remains to see that, given the four equations, the second square commutes on morphisms. For a morphism $\sigma : (\Delta, A[\sigma]) \to (\Gamma, A)$ of $\cel{\Ty}$, we have $R\sigma = \langle \sigma \circ p_{A[\sigma]}, \nu_{A[\sigma]} \rangle$ by the proof of \cref{lem:right-adjoint}(3), and $F(R\sigma)$ is a morphism $F\Delta.FA[F\sigma] \to F\Gamma.FA$ with
+    \begin{align*}
+        p_{FA} \circ F(R\sigma) &= F(p_A \circ R\sigma) = F\sigma \circ p_{FA[F\sigma]},\\
+        \nu_{FA}[F(R\sigma)] &= F(\nu_A[R\sigma]) = F(\nu_{A[\sigma]}) = \nu_{FA[F\sigma]},
+    \end{align*}
+    using $F(A[\sigma]) = FA[F\sigma]$, which is the naturality of $F_\Ty$; hence $F(R\sigma) = R'(F\sigma)$ by uniqueness.
+\end{proof}
+
+\begin{lemma}\label{lem:map-of-adjunctions}
+    Let $F$ be a morphism of natural models. Then $F\langle \sigma, t \rangle = \langle F\sigma, Ft \rangle$ for all $\sigma : \Delta \to \Gamma$ and $t \in \Tm(\Delta, A[\sigma])$. Hence $F_\Tm$ commutes with the units, $F_\Tm \eta = \eta' F_\Tm$, and $(F_\Ty, F_\Tm)$ is a map of adjunctions from $P \dashv R$ to $P' \dashv R'$ in the sense of~\cite[\S IV.7]{MacLane1998}.
+\end{lemma}
+
+\begin{proof}
+    By \cref{lem:nm-morphism}, $p_{FA} \circ F\langle \sigma, t \rangle = F(p_A \circ \langle \sigma, t \rangle) = F\sigma$ and $\nu_{FA}[F\langle \sigma, t \rangle] = F(\nu_A[\langle \sigma, t \rangle]) = Ft$, so $F\langle \sigma, t \rangle = \langle F\sigma, Ft \rangle$ by the uniqueness in \cref{lem:right-adjoint}(1). At $\sigma = \id_\Delta$ this says that $F_\Tm$ sends the unit $\langle \id_\Delta, t \rangle$ at $(\Delta, t)$ to the unit at $(F\Delta, Ft)$.
+\end{proof}
+
+By \cref{lem:nm-morphism}, morphisms of natural models are the homomorphisms of models of the essentially algebraic theory of natural models, whose sorts are objects, morphisms, types and terms; Newstead defines them so~\cite[Def.~2.3.1]{Newstead2018} and characterises them by the squares of \cref{def:nm-morphism} together with the commutation of $F_\Ty$ with the counits and of $F_\Tm$ with the units~\cite[Thm.~2.3.2]{Newstead2018}, the latter being redundant by \cref{lem:map-of-adjunctions}. Requiring instead that the mate $F_\Tm R \Rightarrow R' F_\Ty$ of the first square be an isomorphism, the Beck--Chevalley condition of~\cite[Def.~3.14]{Uemura2023}, rather than the identity, gives the weak morphisms of~\cite[Def.~2.3.9]{Newstead2018}, the pseudo maps of~\cite[Def.~42]{AhrensLumsdaineNorth2024}, and the morphisms of models of the basic dependent type theory of~\cite[Def.~4.14 and Thm.~4.12]{Uemura2023}.
+
+\begin{lemma}\label{lem:iso}
+    A morphism of natural models is an isomorphism in $\mathsf{NM}$ iff it is bijective on objects, fully faithful and fibrewise bijective.
+\end{lemma}
+
+\begin{proof}
+    An inverse morphism inverts each of the four components. Conversely, let $F$ be bijective on objects, fully faithful and fibrewise bijective, so that each of its four components is a bijection, and let $G$ be given by the inverse maps. $G$ is a functor with $G(\pt) = \pt$, and $G_\Ty$, $G_\Tm$ are natural over $G$, because $F$ is a functor and $F_\Ty$, $F_\Tm$ are natural over $F$. The equations of \cref{lem:nm-morphism} hold for $G$ because they hold for $F$: for $\Gamma' = F\Gamma$ and $A' = FA$, $G(\Gamma'.A') = G(F(\Gamma.A)) = \Gamma.A = G\Gamma'.GA'$, and likewise $p(Gt) = G(p't)$, $G(\nu_{A'}) = \nu_{GA'}$ and $G(p_{A'}) = p_{GA'}$. So $G$ is a morphism, inverse to $F$.
+\end{proof}
+
+\begin{lemma}\label{lem:limits}
+    The forgetful functor $U : \mathsf{NM} \to \Set^4$ recording the objects, morphisms, types and terms is faithful and creates limits.
+\end{lemma}
+
+\begin{proof}
+    Let $K$ be a diagram in $\mathsf{NM}$ with vertices $K_i$ and $(L, \pi_i)$ a limit cone over $UK$ in $\Set^4$; up to the evident isomorphism, the elements of $L$ are the compatible families $(x_i)_i$ of objects, morphisms, types or terms of the $K_i$. If the $\pi_i$ are to be morphisms of natural models, the equations of \cref{lem:nm-morphism} force every piece of structure on $L$ to be computed componentwise: composition and $\pt$, $p$, the actions, $(\Gamma_i).(A_i) = (\Gamma_i.A_i)$, $p_{(A_i)} = (p_{A_i})$, $\nu_{(A_i)} = (\nu_{A_i})$ and $\langle (\sigma_i), (t_i) \rangle = (\langle \sigma_i, t_i \rangle)$. These families are compatible, because the morphisms of $K$ preserve the structure, and the axioms of a natural model, including the uniqueness of pairings in \cref{lem:right-adjoint}(1), hold because they hold componentwise; so there is exactly one cone over $K$ lying over $(L, \pi_i)$. It is a limit cone: a cone over $K$ with vertex $X$ induces a unique map $UX \to L$ in $\Set^4$, which is a morphism of natural models because its components into the $K_i$ are. Faithfulness is clear.
+\end{proof}
+
+\begin{lemma}\label{lem:mono}
+    A morphism of natural models is a monomorphism of $\mathsf{NM}$ iff it is injective on objects, faithful and fibrewise injective.
+\end{lemma}
+
+\begin{proof}
+    If $UF$ is injective in each component and $F \circ G = F \circ H$, then $UG = UH$, so $G = H$; thus $F$ is a monomorphism. Conversely, if $F$ is a monomorphism, its kernel pair is $(\id, \id)$; $U$ preserves this pullback by \cref{lem:limits}, so the kernel pair of $UF$ is $(\id, \id)$, which says that $UF$ is injective in each component; and injectivity on all types and terms is injectivity on objects together with fibrewise injectivity, since $F_\Ty(\Gamma, A) = (F\Gamma, FA)$ and $F_\Tm(\Gamma, t) = (F\Gamma, Ft)$.
+\end{proof}
+
+\begin{definition}\label{def:sub-natural-model}
+    A \emph{sub-natural-model} of $(\cat{C}, p)$ is a subobject of $(\cat{C}, p)$ in $\mathsf{NM}$. By \cref{lem:mono,lem:nm-morphism}, it is given by a subcategory $\cat{W}$ of $\cat{C}$ containing $\pt$ together with subsets $\Ty_\cat{W}(\Gamma) \subseteq \Ty(\Gamma)$ and $\Tm_\cat{W}(\Gamma) \subseteq \Tm(\Gamma)$ for $\Gamma \in \cat{W}$, the images of the monomorphism, such that the restricted data form a natural model and the inclusion is a morphism: the subsets are closed under the actions of the morphisms of $\cat{W}$, $p(\Tm_\cat{W}(\Gamma)) \subseteq \Ty_\cat{W}(\Gamma)$, and for $\Gamma \in \cat{W}$ and $A \in \Ty_\cat{W}(\Gamma)$ we have $\Gamma.A \in \cat{W}$, $p_A \in \cat{W}$, $\nu_A \in \Tm_\cat{W}(\Gamma.A)$, and $\langle \sigma, t \rangle \in \cat{W}$ whenever $\sigma \in \cat{W}(\Delta, \Gamma)$ and $t \in \Tm_\cat{W}(\Delta) \cap \Tm(\Delta, A[\sigma])$.
+\end{definition}
+
+\begin{definition}[cf.~{\cite[Def.~2]{CastellanClairambaultDybjer2021}, \cite[Defs.~6 and~8]{AhrensLumsdaineNorth2024}}]\label{def:contextual}
+    A natural model is \emph{contextual} if for every object $\Gamma$ there is a unique sequence $(A_1, \ldots, A_n)$, $n \geq 0$, with $A_i \in \Ty(\pt.A_1.\cdots.A_{i-1})$ and $\Gamma = \pt.A_1.\cdots.A_n$.
+
+    The \emph{contextualization} $\Ctx(\cat{C}, p)$ of a natural model $(\cat{C}, p)$ is the natural model whose objects are the finite sequences $\vec{A} = (A_1, \ldots, A_n)$ with
+    \[
+        A_i \in \Ty(\langle A_1, \ldots, A_{i-1} \rangle), \qquad \text{where } \langle A_1, \ldots, A_k \rangle \coloneqq \pt.A_1.\cdots.A_k,
+    \]
+    and whose remaining data are inherited along $\langle \_ \rangle$:
+    \[
+        \Hom(\vec{A}, \vec{B}) \coloneqq \cat{C}(\langle \vec{A} \rangle, \langle \vec{B} \rangle), \qquad
+        \Ty(\vec{A}) \coloneqq \Ty(\langle \vec{A} \rangle), \qquad
+        \Tm(\vec{A}) \coloneqq \Tm(\langle \vec{A} \rangle),
+    \]
+    with the terminal object $()$, extension $\vec{A}.A \coloneqq (\vec{A}, A)$, and $p_A$, $\nu_A$, $\langle \sigma, t \rangle$ those of $\cat{C}$.
+\end{definition}
+
+\begin{proposition}\label{prop:contextualisation}
+    $\Ctx(\cat{C}, p)$ is a contextual natural model, and $\vec{A} \mapsto \langle \vec{A} \rangle$ is a morphism of natural models that is fully faithful and fibrewise bijective. It is an isomorphism iff $(\cat{C}, p)$ is contextual, and it is~\cite[Prop.~48]{AhrensLumsdaineNorth2024} the counit of the adjunction
+    \[\begin{tikzcd}
+    	{\mathsf{CtxNM}} && {\mathsf{NM}.}
+    	\arrow[""{name=0, anchor=center, inner sep=0}, "\iota", shift left=3, tail, from=1-1, to=1-3]
+    	\arrow[""{name=1, anchor=center, inner sep=0}, "{\mathsf{Ctx}}", shift left=3, from=1-3, to=1-1]
+    	\arrow["\dashv"{anchor=center, rotate=-90}, draw=none, from=0, to=1]
+    \end{tikzcd}\]
+\end{proposition}
+
+\begin{proof}
+    Identities, composition and the actions on types and terms are those of $\cat{C}$ at $\langle \vec{A} \rangle$, so $\Ctx(\cat{C}, p)$ is a category with presheaves $\Tm$, $\Ty$ and a natural transformation $p$; $()$ is terminal because $\langle () \rangle = \pt$ is. Since $\langle (\vec{A}, A) \rangle = \langle \vec{A} \rangle.A$, the right adjoint of $P$ restricts to one of $\cel{p}$ over $\Ctx(\cat{C}, p)$, with the same counit. Every object $(A_1, \ldots, A_n)$ is $().A_1.\cdots.A_n$, and $(\vec{A}, A) = (\vec{B}, B)$ iff $\vec{A} = \vec{B}$ and $A = B$, so the sequence is unique. The functor $\langle \_ \rangle$ preserves $\pt$, extension, $p_A$ and $\nu_A$ by definition, and is fully faithful and fibrewise bijective by construction. By \cref{lem:iso} it is an isomorphism iff it is bijective on objects as well, that is, iff every object of $\cat{C}$ is $\langle \vec{A} \rangle$ for exactly one sequence $\vec{A}$, which is contextuality.
+\end{proof}
+
+Contextuality is Cartmell's condition on contextual categories~\cite[Def.~44]{AhrensLumsdaineNorth2024}: contextual natural models are equivalent to contextual categories, later reformulated as Voevodsky's C-systems~\cite[\S4.2]{AhrensLumsdaineNorth2024}.
+
+We write $\mathsf{CtxNM}$ for the full subcategory of $\mathsf{NM}$ on the contextual natural models. As the category of contextual categories, it is the category of models of an essentially algebraic theory whose sorts are the objects of each length and the morphisms between objects of given lengths~\cite[\S2.1]{KapulkinLumsdaine2018}, \cite[Rem.~2.6]{Voevodsky2014Subsystems}, so it has free objects: following \cite[Def.~3.9]{KapulkinLumsdaine2018}, we write $\free{\Gamma_n}$, $\free{\Gamma_n \vdash A}$ and $\free{\Gamma_n \vdash t : A}$ for the contextual natural models freely generated by an object of length $n$, by such an object with a type over it, and by these with a term of that type, so that a morphism $\free{\Gamma_n} \to (\cat{C}, p)$ is an object of length $n$ of $\cat{C}$, and likewise for the other two.
+
+\begin{lemma}\label{lem:cxl-mono}
+    A morphism of $\mathsf{CtxNM}$ is a monomorphism iff it is injective on objects, faithful and fibrewise injective. Hence, a subobject of a contextual natural model $(\cat{C}, p)$ in $\mathsf{CtxNM}$ is a sub-natural-model $\cat{W}$ of $(\cat{C}, p)$ closed under prefixes: $\Gamma \in \cat{W}$ and $A \in \Ty_\cat{W}(\Gamma)$ whenever $\Gamma.A \in \cat{W}$. We call these \emph{contextual sub-natural-models}.
+\end{lemma}
+
+\begin{proof}
+    A sortwise injective morphism is a monomorphism because $U$ is faithful. Conversely, let $F : (\cat{C}, p) \to (\cat{C}', p')$ be a monomorphism of $\mathsf{CtxNM}$. If $F\Gamma = F\Gamma'$, then $\Gamma$ and $\Gamma'$ have the same length $n$, since $F$ preserves $\pt$ and extension and $\cat{C}'$ is contextual. The two morphisms $\free{\Gamma_n} \to (\cat{C}, p)$ choosing them have the same composite with $F$, $F \circ \Gamma = F \circ \Gamma'$, and hence, since $F$ is monic $\Gamma = \Gamma'$. The same argument works for types and for terms, with $\free{\Gamma_n \vdash A}$ and $\free{\Gamma_n \vdash t : A}$. Faithfulness follows by induction on the length of the codomain: morphisms into $\pt$ are unique, and if $F\sigma = F\sigma'$ for $\sigma, \sigma' : \Delta \to \Gamma.A$, then $F\sigma_0 = F\sigma'_0$ and $F\sigma_1 = F\sigma'_1$ by \cref{lem:nm-morphism}, so $\sigma_0 = \sigma'_0$ by induction and $\sigma_1 = \sigma'_1$ by injectivity on terms. Hence the image of a monomorphism out of a contextual natural model is a sub-natural-model as in \cref{def:sub-natural-model}, closed under the structure because the morphism preserves it, whose objects are the $F(\pt.A_1.\cdots.A_n) = \pt.FA_1.\cdots.FA_n$, hence closed under prefixes; conversely a sub-natural-model closed under prefixes is contextual, every object being uniquely $\pt.A_1.\cdots.A_n$ with $A_i \in \Ty_\cat{W}(\pt.A_1.\cdots.A_{i-1})$, and its inclusion is a monomorphism.
+\end{proof}
+
+\begin{proposition}\label{prop:trivial-fibrations}
+    Let $I$ consist of the inclusions $\free{\Gamma_n} \to \free{\Gamma_n \vdash A}$ and $\free{\Gamma_n \vdash A} \to \free{\Gamma_n \vdash t : A}$ for $n \in \N$~\cite[Def.~3.10]{KapulkinLumsdaine2018}, and let $F : (\cat{C}, p) \to (\cat{C}', p')$ be a morphism of $\mathsf{CtxNM}$.
+    \begin{enumerate}
+        \item $F$ is fibrewise surjective iff it has the right lifting property against $I$. The fibrewise surjective morphisms, the \emph{trivial fibrations} of~\cite[Def.~3.11]{KapulkinLumsdaine2018}, form the right class of the weak factorisation system on $\mathsf{CtxNM}$ cofibrantly generated by $I$.
+        \item If $F$ is fibrewise surjective, then $F$ is surjective on objects and full, and
+        \begin{gather*}
+            F(\Gamma.A) = F(\Gamma'.A') \iff F\Gamma = F\Gamma' \text{ and } F_\Ty(\Gamma, A) = F_\Ty(\Gamma', A'),\\
+            F\langle \sigma, t \rangle = F\langle \sigma', t' \rangle \iff F\sigma = F\sigma' \text{ and } F_\Tm(t) = F_\Tm(t').
+        \end{gather*}
+        \item A fibrewise surjective morphism out of $(\cat{C}, p)$ is determined, up to a unique isomorphism, by its kernel on the total sets of types and of terms.
+        \item A fibrewise surjective morphism is the coequaliser of its kernel pair, in $\mathsf{CtxNM}$ and in $\mathsf{NM}$; in particular it is a regular epimorphism of both.
+    \end{enumerate}
+\end{proposition}
+
+\begin{proof}
+    (1) A morphism $\free{\Gamma_n} \to (\cat{C}, p)$ is an object of $\cat{C}$, and a morphism $\free{\Gamma_n \vdash A} \to (\cat{C}', p')$ an object of $\cat{C}'$ with a type over it; so a lifting problem against the first map of $I$ is an object $\Gamma$ with a type $A' \in \Ty'(F\Gamma)$, and a solution is a type $A \in \Ty(\Gamma)$ with $FA = A'$. Likewise for terms. For the weak factorisation system we argue as \cite[Prop.~3.12]{KapulkinLumsdaine2018} does for contextual categories with additional structure. $\mathsf{CtxNM}$ is the category of models of a finitary essentially algebraic theory, hence locally finitely presentable~\cite[Thm.~3.36]{AdamekRosicky1994}, and the domains of the maps in $I$ are finitely presentable, being free on finitely many generators. Quillen's small object argument~\cite[Thm.~12.2.2]{Riehl2014} therefore factors every morphism as a transfinite composite of pushouts of maps in $I$ followed by a morphism with the right lifting property against $I$, and the retracts of the former together with the latter form a weak factorisation system.
+
+    (2) Surjectivity on objects, by induction on the length: $\pt = F(\pt)$, and if $\Gamma' = F\Gamma$ and $A' \in \Ty'(\Gamma')$, then $A' = FA$ for some $A \in \Ty(\Gamma)$, so $\Gamma'.A' = F(\Gamma.A)$. Fullness, by induction on the length of $\Gamma$: for $\Gamma = \pt$ both hom-sets are singletons; a morphism $F\Delta \to F(\Gamma.A) = F\Gamma.FA$ is $\langle \sigma', t' \rangle$ with $\sigma' : F\Delta \to F\Gamma$ and $t' \in \Tm'(F\Delta, FA[\sigma'])$ by \cref{lem:pairing}; by induction $\sigma' = F\sigma$, so $FA[\sigma'] = F(A[\sigma])$, hence $t' = Ft$ for some $t \in \Tm(\Delta, A[\sigma])$, and $\langle \sigma', t' \rangle = F\langle \sigma, t \rangle$. The kernel: $F(\Gamma.A) = F\Gamma.FA$, and in a contextual natural model $\Gamma_1.A_1 = \Gamma_2.A_2$ implies $\Gamma_1 = \Gamma_2$ and $A_1 = A_2$, by uniqueness of the sequence; $F\langle \sigma, t \rangle = \langle F\sigma, Ft \rangle$ by \cref{lem:map-of-adjunctions}, and $\langle a, b \rangle = \langle a', b' \rangle$ implies $a = a'$ and $b = b'$, by applying $p_A \circ \_$ and $\nu_A[\_]$.
+
+    (3) The claim is that if $F : (\cat{C}, p) \to (\cat{C}', p')$ and $G : (\cat{C}, p) \to (\cat{C}'', p'')$ are fibrewise surjective and
+    \begin{gather*}
+        F_\Ty(\Gamma, A) = F_\Ty(\Gamma', A') \iff G_\Ty(\Gamma, A) = G_\Ty(\Gamma', A'),\\
+        F_\Tm(\Gamma, t) = F_\Tm(\Gamma', t') \iff G_\Tm(\Gamma, t) = G_\Tm(\Gamma', t'),
+    \end{gather*}
+    for all types and terms of $(\cat{C}, p)$, then $G = \theta \circ F$ for a unique isomorphism $\theta : (\cat{C}', p') \to (\cat{C}'', p'')$. By (2) and induction on the length, $F$ and $G$ have the same kernel on objects and on morphisms, so $\theta(Fx) \coloneqq Gx$ is well defined on objects, morphisms, types and terms; it is injective, and surjective because $G$ is surjective in every sort by (2). The equations of \cref{lem:nm-morphism} and the preservation of composition hold for $\theta$ because they hold for $F$ and $G$, and every object, morphism, type and term of $\cat{C}'$, composable pairs included, is in the image of $F$ by (2); the same applies to $\theta^{-1}$. Uniqueness holds because $\theta$ is determined on the image of $F$, which is everything by (2).
+
+    (4) The kernel pair of $F$ in $\mathsf{CtxNM}$ is the contextualization $K$ of the pullback $(\cat{C}, p) \times_{(\cat{C}', p')} (\cat{C}, p)$ of $\mathsf{NM}$, which is computed sortwise by \cref{lem:limits}, since $\mathsf{CtxNM}$ is coreflective in $\mathsf{NM}$ by \cref{prop:contextualisation}. By (2) and induction on the length, two objects with $F\Gamma = F\Gamma'$ are $\pt.A_1.\cdots.A_n$ and $\pt.A'_1.\cdots.A'_n$ with $F_\Ty(\Gamma_{<i}, A_i) = F_\Ty(\Gamma'_{<i}, A'_i)$ for all $i$, so $(\Gamma, \Gamma')$ is the object $\langle (A_1, A'_1), \ldots, (A_n, A'_n) \rangle$ of $K$; hence every pair of objects, morphisms, types or terms with the same image under $F$ lies in $K$. If $G : (\cat{C}, p) \to (\cat{D}, r)$, for any natural model $(\cat{D}, r)$, equalises the two projections of $K$, it therefore identifies whatever $F$ identifies, and $Fx \mapsto Gx$ is a well-defined morphism $(\cat{C}', p') \to (\cat{D}, r)$, as in the proof of (3), the unique one through which $G$ factors. The kernel pair of $F$ in $\mathsf{NM}$ is computed sortwise by \cref{lem:limits} and consists of the same pairs, so the same argument shows that $F$ is its coequaliser in $\mathsf{NM}$.
+\end{proof}
+
+% this still needs some reworking
+A weak factorisation system cofibrantly generated by a set $I$ of maps separates every morphism into a map built by attaching the cells of $I$, followed by a map in $I^{\pitchfork}$, along which every cell of $I$ lifts. The right class is therefore the notion of surjectivity, and hence of a quotient map, that the chosen cells determine, and the left class is the corresponding notion of free extension. The cells of $I$ in \cref{prop:trivial-fibrations} are the generators of the theory of natural models, so by (1) the trivial fibrations are the quotient maps relative to the generators.
+
+In universal algebra, a quotient map is a homomorphism that is surjective on every sort and determined by its kernel. For contextual natural models, whose sorts depend on one another, \cref{prop:trivial-fibrations} says that the trivial fibrations are precisely such maps: by (2) they are surjective in every sort, by (3) they are determined by their kernels, and by (4) they are regular. We are therefore justified to call them the \emph{quotient maps} of $\mathsf{CtxNM}$, cf.~\cite[Def.~7.4, Lemma~7.15]{Bocquet2023}.
+
+\begin{definition}\label{def:subquotient}
+    A \emph{subquotient} of a contextual natural model $\cat{X}$ is a contextual sub-natural-model $\cat{W} \hookrightarrow \cat{X}$ together with a trivial fibration $q : \cat{W} \twoheadrightarrow \cat{Q}$ with $\cat{Q}$ likewise contextual. In other words, it is a span of the form
+    \[\begin{tikzcd}
+    	{\cat{X}} & {\cat{W} } & {\cat{Q}}
+    	\arrow[hook', from=1-2, to=1-1]
+    	\arrow[two heads, from=1-2, to=1-3]
+    \end{tikzcd}\]
+    in $\mathsf{CtxNM}$.
+    Two subquotients $(\cat{W}, q)$ and $(\cat{W}, q')$ with the same subobject are \emph{isomorphic} if $q' = \theta \circ q$ for an isomorphism $\theta : \cat{Q} \to \cat{Q}'$.
+\end{definition}
+
+\section{Shaped syntax}
+\label{sec:shaped-syntax}
+
+\begin{definition}\label{def:sorted-sets}
+    Let $S$ be a set of \emph{shapes}. The category $\mathbb{F}{\downarrow}S$ has as objects the lists $\Xi = [s_1, \ldots, s_n]$ of shapes, and as morphisms $\rho : \Xi \to \Xi'$ the families of functions $\rho_s : (\Xi \ni s) \to (\Xi' \ni s)$, where $\Xi \ni s \coloneqq \{\, i \in \{1, \ldots, n\} \mid s_i = s \,\}$ is the set of \emph{variables} of $\Xi$ of shape $s$. The assignment $\Xi \mapsto (\Xi \ni s)_{s \in S}$ is a fully faithful functor $J_S : \mathbb{F}{\downarrow}S \to \Set^S$. For $S = 1$, $J_S$ is the inclusion $J_f : \mathbb{F} \to \Set$ of finite cardinals.
+\end{definition}
+
+\begin{definition}\label{def:shape-classifier}
+    Let $S$ be a set of shapes. The \emph{natural model of shapes} is $\cat{B}_0(S) \coloneqq (\mathbf{1}, \id_S)$: the terminal category $\mathbf{1}$, with $\Ty = \Tm = S$ and $p$ the identity, so that every shape is a type with exactly one term; $\cel{p}$ is the identity functor, with the identity as right adjoint. The \emph{shape classifier} of $S$ is its contextualization $\cat{B}(S) \coloneqq \Ctx(\cat{B}_0(S))$: its objects are the lists over $S$, there is exactly one morphism between any two objects, $\Ty(\Xi) = S$, and every type has exactly one term.
+\end{definition}
+
+\begin{lemma}\label{lem:shaping}
+    For a natural model $(\cat{C}, p)$, morphisms $(\cat{C}, p) \to \cat{B}_0(S)$ correspond bijectively to natural transformations $|\_| : \Ty \to S$ into the constant presheaf, which we call \emph{shapings}; a morphism $F$ between natural models with shapings lies over $\cat{B}_0(S)$ iff $|FA| = |A|$ for every type $A$, and is then called \emph{shape-preserving}. For contextual $(\cat{C}, p)$, morphisms to $\cat{B}_0(S)$ and to $\cat{B}(S)$ correspond bijectively.
+\end{lemma}
+
+\begin{proof}
+    A morphism to $\cat{B}_0(S)$ consists of the unique functor to $\mathbf{1}$, a natural transformation $F_\Ty : \Ty \to S$, and $F_\Tm : \Tm \to S$, which by $p'(Ft) = F(pt)$ must be $F_\Ty \circ p$. The remaining equations of \cref{lem:nm-morphism} hold for every $F_\Ty$: $F(\Gamma.A) = \pt = F\Gamma.FA$ and $F(p_A) = \id = p_{FA}$ trivially, and $F(\nu_A) = F_\Ty(A[p_A]) = F_\Ty(A) = \nu_{FA}$ by naturality. A morphism $F$ lies over $\cat{B}_0(S)$ iff $|\_|' \circ F_\Ty = |\_|$. The last claim is the adjunction of \cref{prop:contextualisation}.
+\end{proof}
+
+\begin{definition}\label{def:shaped}
+    For a set $S$ of shapes, a \emph{$S$-shaped} contextual natural model is a contextual natural model with a shaping $|\_| : \Ty \to S$, and $\mathsf{CtxNM}/\cat{B}(S)$ is the category of $S$-shaped contextual natural models and shape-preserving morphisms, the slice of $\mathsf{CtxNM}$ over $\cat{B}(S)$.
+\end{definition}
+
+\begin{remark}
+    We will often omit the $S$- prefix and speak simply of shaped natural models.
+\end{remark}
+
+\begin{lemma}\label{lem:shaped-fiberwise-surjection}
+    Let $\cat{X}$ be an object of $\mathsf{CtxNM}$. The weak factorisation system of \cref{prop:trivial-fibrations} induces one on the slice $\mathsf{CtxNM}/\cat{X}$: a morphism over $\cat{X}$ belongs to its left, resp.\ right, class iff its underlying morphism of $\mathsf{CtxNM}$ does. In particular, the trivial fibrations of $\mathsf{CtxNM}/\cat{X}$ are the morphisms over $\cat{X}$ that are fibrewise surjective. For $\cat{X} = \cat{B}(S)$, these are the fibrewise surjective shape-preserving morphisms, and for such a $q$, $q(\Gamma) = q(\Gamma')$ implies that $\Gamma$ and $\Gamma'$ have entrywise the same shapes.
+\end{lemma}
+
+\begin{proof}
+    Let $\cat{L}'$ and $\cat{R}'$ be the classes of morphisms over $\cat{X}$ whose underlying morphisms lie in the left, resp.\ right, class of $\mathsf{CtxNM}$. Every morphism $f : Y \to Z$ over $\cat{X}$ factors as $f = r \circ l$ with $l \in \cat{L}'$ and $r \in \cat{R}'$: factor the underlying morphism in $\mathsf{CtxNM}$ and give the middle object the structure map obtained by composing that of $Z$ with $r$. A lift in $\mathsf{CtxNM}$ for a lifting problem over $\cat{X}$ between $l \in \cat{L}'$ and $r \in \cat{R}'$ is automatically over $\cat{X}$, since its composite with $r$ is; so $\cat{L}'$ and $\cat{R}'$ lift against each other, and as both are closed under retracts, the retract argument shows that each is the class of morphisms with the lifting property against the other. The same argument applies to any slice of any category with a weak factorisation system. For $\cat{X} = \cat{B}(S)$, morphisms over $\cat{X}$ are the shape-preserving ones by \cref{lem:shaping}, and $q(\Gamma) = q(\Gamma')$ gives $q_\Ty(\Gamma_{<i}, A_i) = q_\Ty(\Gamma'_{<i}, A'_i)$ for the entries, by \cref{prop:trivial-fibrations}(2) and induction on the length, hence $|A_i| = |qA_i| = |qA'_i| = |A'_i|$.
+\end{proof}
+
+\begin{definition}\label{def:shaped-subquotient}
+    A subquotient of a $S$-shaped contextual natural model $X$ consists of a contextual sub-natural-model $\cat{W}$ of $X$ together with a fibrewise surjective shape-preserving morphism $q : \cat{W} \twoheadrightarrow \cat{Q}$ onto a $S$-shaped contextual natural model, i.e., it is given by a span in $\mathsf{CtxNM}/\mathsf{B}(S)$ of the form:
+    \[\begin{tikzcd}
+    	{\cat{X}} & {\cat{W} } & {\cat{Q}.}
+    	\arrow[hook', from=1-2, to=1-1]
+    	\arrow[two heads, from=1-2, to=1-3]
+    \end{tikzcd}\]
+\end{definition}
+
+Intuitivelly, $\mathsf{CtxNM}/\cat{B}(S)$ is the category in which syntax over a set $S$ of shapes lives, since:
+\begin{itemize}
+    \item Syntax is contextual: a context is a list of types and a substitution into it a list of terms, and the pairing with which every natural model extends contexts is, in syntax, the only way in which contexts arise.
+    \item Syntax is shaped: every type has a shape, the silent types which record equations will receive a shape $\top$ of their own, and no substitution changes a shape; so shapes are structure preserved by all morphisms.
+\end{itemize}
+
+We now restrict our attention to $\mathsf{CtxNM}/\cat{B}(S)$ that arise from a relative monad and a module over it. Recall that for a relative monad $T$ on $J$, a morphism $f : X \to Y$ of the Kleisli category $\Kl(T)$ is a morphism $f : JX \to TY$, with composition $g \odot f \coloneqq g^\sharp \circ f$. We first show that the opposite of the Kleisli category of a relative monad on $J_S$ is a shaped contextual natural model whose types are the shapes themselves, and then describe how modules of raw types and of raw equations over $T$ supply the types.
+
+\begin{lemma}\label{lem:kleisli-coproducts}
+    Let $T$ be a $J_S$-relative monad.
+    \begin{enumerate}
+        \item For a list $\Xi$ and a shape $s$, $\Kl(T)([s], \Xi) = \Set^S(J_S[s], T\Xi) \cong T(\Xi)_s$, naturally in $\Xi$, by evaluation at the unique variable of $[s]$.
+        \item $\Kl(T)$ has finite coproducts: the empty list is initial, and for lists $\Xi$, $\Phi$ the list $\Xi \concat \Phi$, with the coprojections $\inl \coloneqq \eta \circ J_S(\inl)$ and $\inr \coloneqq \eta \circ J_S(\inr)$ induced by the inclusions of $\mathbb{F}{\downarrow}S$, is a coproduct: for every $\Delta$, the map
+        \[
+            \Kl(T)(\Xi \concat \Phi, \Delta) \to \Kl(T)(\Xi, \Delta) \times \Kl(T)(\Phi, \Delta), \qquad f \mapsto (f \odot \inl, f \odot \inr),
+        \]
+        is a bijection. We write $\langle f, g \rangle$ for its inverse, and $f \concat \Phi \coloneqq \langle \inl \odot f, \inr \rangle : \Xi \concat \Phi \to \Xi' \concat \Phi$ for $f : \Xi \to \Xi'$.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    (1) $J_S[s]$ has a single element, of shape $s$. (2) $J_S$ preserves the coproduct $\Xi \concat \Phi$ of $\mathbb{F}{\downarrow}S$, so $f \mapsto (f \circ J_S(\inl), f \circ J_S(\inr))$ is a bijection $\Set^S(J_S(\Xi \concat \Phi), T\Delta) \to \Set^S(J_S\Xi, T\Delta) \times \Set^S(J_S\Phi, T\Delta)$, and by the unit law $f \odot \inl = f^\sharp \circ \eta \circ J_S(\inl) = f \circ J_S(\inl)$, likewise for $\inr$. The empty list has no variables, so $\Kl(T)(\emptyar, \Delta)$ is a singleton.
+\end{proof}
+
+\begin{proposition}\label{prop:nm-of-monad}
+    Let $T$ be a relative monad on $J_S$, and let $\cat{C}_T \coloneqq \Kl(T)^\op$. Define presheaves on $\cat{C}_T$ by
+    \[
+        \Ty_T(\Xi) \coloneqq S, \qquad \Tm_T(\Xi) \coloneqq \textstyle\coprod_{s \in S} T(\Xi)_s, \qquad t[\sigma] \coloneqq \sigma^\sharp(t),
+    \]
+    with the trivial action on $\Ty_T$, and let $p_T : \Tm_T \to \Ty_T$ send $T(\Xi)_s$ to $s$. For a list $\Xi$ and a shape $s$, put
+    \begin{gather*}
+        \Xi.s \coloneqq \Xi \concat [s], \qquad p_s \coloneqq \inl : \Xi \to \Xi \concat [s],\\
+        \nu_s \coloneqq \inr \in \Kl(T)([s], \Xi \concat [s]) = T(\Xi \concat [s])_s.
+    \end{gather*}
+    Then
+    \[\begin{tikzcd}
+        {\yo(\Xi \concat [s])} & \Tm_T \\
+        {\yo(\Xi)} & \Ty_T
+        \arrow["{\nu_s}", from=1-1, to=1-2]
+        \arrow["{\yo(p_s)}"', from=1-1, to=2-1]
+        \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+        \arrow["{p_T}", from=1-2, to=2-2]
+        \arrow["s"', from=2-1, to=2-2]
+    \end{tikzcd}\]
+    is a pullback square, so $p_T$ is representable, and with these squares $(\cat{C}_T, p_T)$ is a $S$-shaped contextual natural model with terminal object the empty list, whose pairing is $\langle \sigma, t \rangle = \langle f, t \rangle : \Xi \concat [s] \to \Delta$ for $\sigma : \Delta \to \Xi$ given by $f$ and $t \in T(\Delta)_s = \Kl(T)([s], \Delta)$.
+\end{proposition}
+
+\begin{proof}
+    $\Tm_T$ is a presheaf by the laws of $\Kl(T)$, and $p_T$ is natural because $f^\sharp$ preserves shapes. The empty list is initial in $\Kl(T)$ by \cref{lem:kleisli-coproducts}, hence terminal in $\cat{C}_T$. Under the identification $T(\Gamma)_s = \Kl(T)([s], \Gamma)$ of \cref{lem:kleisli-coproducts}(1), the action $t \mapsto t[\sigma] = g^\sharp(t)$ of $\sigma : \Delta \to \Gamma$ given by $g : \Gamma \to \Delta$ is $h \mapsto g \odot h$, since $(g \odot h)(x) = g^\sharp(h(x))$ for the variable $x$ of $[s]$; in particular $\nu_s[\sigma] = g \odot \inr$ for $\sigma : \Delta \to \Xi \concat [s]$ given by $g$. The square commutes, since $p_T(\nu_s) = s = s[p_s]$, $\Ty_T$ being constant. Pullbacks of presheaves are computed pointwise, so fix a list $\Delta$. By the Yoneda lemma, at $\Delta$ the square is
+    \[\begin{tikzcd}[column sep=large]
+        {\Kl(T)(\Xi \concat [s], \Delta)} & {\coprod_{r \in S} T(\Delta)_r} \\
+        {\Kl(T)(\Xi, \Delta)} & S
+        \arrow["{g \mapsto g \odot \inr}", from=1-1, to=1-2]
+        \arrow["{g \mapsto g \odot \inl}"', from=1-1, to=2-1]
+        \arrow["{p_T}", from=1-2, to=2-2]
+        \arrow["{f \mapsto s}"', from=2-1, to=2-2]
+    \end{tikzcd}\]
+    and the pullback of its lower right corner is $\{\, (f, t) \mid f \in \Kl(T)(\Xi, \Delta),\ p_T(t) = s \,\} = \Kl(T)(\Xi, \Delta) \times \Kl(T)([s], \Delta)$. So the square is a pullback iff $g \mapsto (g \odot \inl, g \odot \inr)$ is a bijection $\Kl(T)(\Xi \concat [s], \Delta) \to \Kl(T)(\Xi, \Delta) \times \Kl(T)([s], \Delta)$, which is \cref{lem:kleisli-coproducts}(2). By \cref{lem:right-adjoint}, the chosen squares define a right adjoint of $\cel{p_T}$ with counit $p_s$, and $\langle \sigma, t \rangle$ is the unique $g$ with $g \odot \inl = f$ and $g \odot \inr = t$, which is $\langle f, t \rangle$. Every list is uniquely $\emptyar.s_1.\cdots.s_n$, so the model is contextual.
+\end{proof}
+
+\begin{definition}\label{def:silent-types}
+    Let $(\cat{C}, p)$ be a natural model and $E$ a presheaf on $\cat{C}$. The natural model $(\cat{C}, p)$ \emph{with silent types $E$} is
+    \[
+        p \sqcup \id_E : \Tm \sqcup E \longrightarrow \Ty \sqcup E,
+    \]
+    the coproduct of $p$ with the identity of $E$, coproducts of presheaves being computed pointwise. The elements of $E$ are the \emph{silent} types; each $e \in E(\Gamma)$ is a type over $\Gamma$ with exactly one term, the element $e$ of the summand $E$ of $\Tm \sqcup E$, which we write $\star$.
+\end{definition}
+
+\begin{lemma}\label{lem:silent-types}
+    The map $p \sqcup \id_E$ is representable, with right adjoint $R \sqcup \id$ under the identifications $\cel{(\Tm \sqcup E)} = \cel{\Tm} \sqcup \cel{E}$ and $\cel{(\Ty \sqcup E)} = \cel{\Ty} \sqcup \cel{E}$, so that $(\cat{C}, p \sqcup \id_E)$ is a natural model. Explicitly, at a type of $(\cat{C}, p)$ the data are those of $(\cat{C}, p)$, and at a silent type $e \in E(\Gamma)$
+    \[
+        \Gamma.e = \Gamma, \qquad p_e = \id_\Gamma, \qquad \nu_e = \star, \qquad \langle \sigma, \star \rangle = \sigma.
+    \]
+    In particular $(\cat{C}, p \sqcup \id_E)$ is not contextual unless $E$ is empty.
+\end{lemma}
+
+\begin{proof}
+    The category of elements of a coproduct of presheaves is the coproduct of their categories of elements, since a morphism of $\cel{(X \sqcup Y)}$ lies in the summand of its codomain. Hence $\cel{(p \sqcup \id_E)} = \cel{p} \sqcup \id_{\cel{E}}$, and a coproduct of functors with right adjoints $R$ and $\id$ has the right adjoint $R \sqcup \id$, with the coproduct of the counits. The explicit form at $e$ unwinds the identity adjunction: $\sigma$ is the unique morphism $\tau : \Delta \to \Gamma$ with $\id_\Gamma \circ \tau = \sigma$ and $\star[\tau] = \star$, as in \cref{lem:right-adjoint}(1). Since $\Gamma.e = \Gamma$, the sequence presenting $\Gamma$ is not unique when $E(\Gamma) \neq \emptyset$.
+\end{proof}
+
+\begin{definition}\label{def:module}
+    Let $T$ be a relative monad on $J : \cat{J} \to \cat{C}$. A \emph{$T$-module} in a category $\cat{D}$ is a functor $M : \Kl(T) \to \cat{D}$; explicitly, an assignment of an object $MX$ to each object $X$ of $\cat{J}$ and of a morphism $f^M : MX \to MY$ to each $f : JX \to TY$, such that $\eta_X^M = \id_{MX}$ and $(g \odot f)^M = g^M \circ f^M$. A \emph{morphism} of $T$-modules is a natural transformation. In particular, $T$ itself is a $T$-module in $\cat{C}$, with $f^T \coloneqq f^\sharp$, and a $T$-module in $\Set$ is the same as a presheaf on $\cat{C}_T$.
+\end{definition}
+
+\begin{remark}
+    To see how this definition corresponds to the usual notion of modules, let $T : \cat{C} \to \cat{D}$ be a relative monad over $J : \cat{C} \to \cat{D}$ and let $M : \Kl(T) \to \Set$ be a module over $T$. The elements of $M$ are indexed over the objects of $\cat{C}$. In this settings, the scalars are the substitutions $\sigma : JX \to TY$, so that scalar multiplication is construed as the family of operations
+    $$\_\cdot\_ : \{X,Y : \cat{C}\} \to \Hom_{\cat{D}}(JX,TY) \times MX \to MY.$$
+    The module laws are then precisely the functoriality of $M$: we have $\eta_X\cdot x = x$ and $g \cdot (f \cdot x) = (g \odot f) \cdot x$. 
+\end{remark}
+
+\begin{definition}\label{def:raw-types}
+    Let $T$ be a relative monad on $J_S$. A \emph{module of raw types} over $T$ is a $T$-module $M$ in $\Set^S$. We will regard $M$ as the presheaf $\Xi \mapsto \coprod_{s \in S} M(\Xi)_s$ on $\cat{C}_T$, with action $A[\sigma] \coloneqq f^M(A)$ for $\sigma$ given by $f$, together with the natural transformation $\fst : M \to \Ty_T$, the first projection, sending $M(\Xi)_s$ to $s$, the \emph{shape}. A \emph{module of raw equations} over $T$ is a $T$-module $E$ in $\Set$, that is, a presheaf on $\cat{C}_T$; we write $e[\sigma] \coloneqq f^E(e)$.
+\end{definition}
+
+\begin{definition}\label{def:raw-natural-model}
+    Let $T$ be a relative monad on $J_S$, $M$ a module of raw types and $E$ a module of raw equations over $T$. Let $p_M : M \times_{\Ty_T} \Tm_T \to M$ be defined by
+    \[\begin{tikzcd}
+    	{M\times_{\Ty_T}\Tm_T} & {\Tm_T} \\
+    	M & {\Ty_T},
+    	\arrow[from=1-1, to=1-2]
+    	\arrow["{p_M}"', from=1-1, to=2-1]
+    	\arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+    	\arrow["{p_T}", from=1-2, to=2-2]
+    	\arrow["{\fst}"', from=2-1, to=2-2]
+    \end{tikzcd}\]
+    i.e.\ as the base change of $p_T$ along $|\_|$, with the right adjoint given by \cref{lem:pullback}, so that $(\cat{C}_T, p_M)$ is a natural model. The \emph{raw natural model} of $T$ with types $M$ and equations $E$ is
+    \[
+        \Raw(T, M, E) \coloneqq \Ctx(\cat{C}_T, p_M \sqcup \id_E),
+    \]
+    the contextualization of $(\cat{C}_T, p_M)$ with silent types $E$, a contextual natural model by \cref{lem:silent-types,prop:contextualisation}. It is shaped by
+    $$|\_| := \left<\fst, \_ \mapsto \top\right> : M \sqcup E \to S^+,$$
+    so it is an object of $\mathsf{CtxNM}/\cat{B}(S^+)$. Its objects are the \emph{raw contexts}.
+\end{definition}
+
+\begin{remark}
+    Read type-theoretically, $M$ says what variables can be declared, $E$ says what can be assumed without declaring a variable, and $T$ says what can be substituted for the variables, while $S$ determines the possible binging arities of the variables.
+\end{remark}
+
+\begin{proposition}\label{prop:raw-natural-model}
+    Define the \emph{underlying list} $(\_)^{\downarrow} : \Ob \Raw(T, M, E) \to \Ob \Kl(T)$ by recursion on the length of $\Gamma = (A_1, \ldots, A_n)$: $()^{\downarrow} \coloneqq \emptyar$, $(\Gamma, A)^{\downarrow} \coloneqq \Gamma^{\downarrow} \concat [|A|]$ for $A \in M$, and $(\Gamma, e)^{\downarrow} \coloneqq \Gamma^{\downarrow}$ for $e \in E$. Then $\Raw(T, M, E)$ is as follows.
+    \begin{enumerate}
+        \item Objects are the sequences $\Gamma = (A_1, \ldots, A_n)$ with $A_i \in M(\Gamma_{<i}^{\downarrow}) \sqcup E(\Gamma_{<i}^{\downarrow})$, where $\Gamma_{<i} \coloneqq (A_1, \ldots, A_{i-1})$. A morphism $\sigma : \Delta \to \Gamma$ is a morphism $f : \Gamma^{\downarrow} \to \Delta^{\downarrow}$ of $\Kl(T)$; identities and composition are those of $\Kl(T)^\op$.
+        \item $\Ty(\Gamma) = M(\Gamma^{\downarrow}) \sqcup E(\Gamma^{\downarrow})$, with $A[\sigma] = f^M(A)$ and $e[\sigma] = f^E(e)$.
+        \item $\Tm(\Gamma, A) = T(\Gamma^{\downarrow})_{|A|}$ for $A \in M(\Gamma^{\downarrow})$, with $t[\sigma] = f^\sharp(t)$, and $\Tm(\Gamma, e) = \{\star\}$ for $e \in E(\Gamma^{\downarrow})$.
+        \item $\Gamma.A = (\Gamma, A)$. For $A \in M(\Gamma^{\downarrow})$ with $|A| = s$: $p_A$ is $\inl : \Gamma^{\downarrow} \to \Gamma^{\downarrow} \concat [s]$, $\nu_A = \inr \in T(\Gamma^{\downarrow} \concat [s])_s$, and $\langle \sigma, t \rangle$ is $\langle f, t \rangle : \Gamma^{\downarrow} \concat [s] \to \Delta^{\downarrow}$. For $e \in E(\Gamma^{\downarrow})$: $p_e$ is $\id_{\Gamma^{\downarrow}}$, $\nu_e = \star$, and $\langle \sigma, \star \rangle = \sigma$.
+    \end{enumerate}
+\end{proposition}
+
+\begin{proof}
+    By induction on $n$, $\langle (A_1, \ldots, A_n) \rangle = (A_1, \ldots, A_n)^{\downarrow}$ in $\cat{C}_T$, since $\Xi.A = \Xi.|A| = \Xi \concat [|A|]$ for $A \in M(\Xi)$ by \cref{lem:pullback,prop:nm-of-monad}, and $\Xi.e = \Xi$ for $e \in E(\Xi)$ by \cref{lem:silent-types}. The rest unfolds \cref{def:contextual,lem:pullback,lem:silent-types,prop:nm-of-monad}: the fibre of $p_M$ over $A \in M(\Xi)$ is $\{(A, t) \mid p_T(t) = |A|\} \cong \Tm_T(\Xi, |A|) = T(\Xi)_{|A|}$, and we identify $(A, t)$ with $t$; the fibre over $e \in E(\Xi)$ is $\{\star\}$.
 \end{proof}
 
 \begin{remark}
-    Taking $S = 1$ clearly recovers Voevodsky's construction~\cite[S6]{Voevodsky2016Relative}.
+    Read as a C-system, for $E = \emptyset$ and $S = 1$, $\Raw(T, M, \emptyset)$ is Voevodsky's C-system $\Csys(T, M)$ of a module over a relative monad~\cite[\S6]{Voevodsky2016Relative}.
 \end{remark}
 
-\begin{remark}
-    In the reading of C-systems as categories with families, the types over $(\Gamma, c)$ are the pairs of a sort $s$ and a decoration $m \in M(\Gamma)_s$, and the terms of such a type are the elements of $T(\Gamma)_s$: a section of $p_X$ is a morphism $\Gamma \concat [s] \to \Gamma$ of $\Kl(T)$ that restricts to the identity on $\Gamma$, and so amounts to a morphism $[s] \to \Gamma$, that is, an element of $T(\Gamma)_s$.
+\begin{remark}\label{cor:sort-degeneracy}
+    By \cref{prop:raw-natural-model}, the types over $\Gamma$ depend only on $\Gamma^{\downarrow}$, and the terms of $A$ only on $\Gamma^{\downarrow}$ and $|A|$. Type-theoretically, this says precisely that the raw syntax is scoped, but not typed. Moreover, $\Hom(\Delta, \Gamma) = \Kl(T)(\Gamma^{\downarrow}, \Delta^{\downarrow})$ depends only on the underlying lists, so that any two raw contexts with the same underlying list are isomorphic, via the identity of that list; we call these the \emph{canonical isomorphisms} of $\Raw(T, M, E)$.
 \end{remark}
-    
-\begin{definition}\label{def:raw-syntax-c-system}
-    The \emph{raw syntax C-system} of $\ToS^\omega$ is $\Ctxr \coloneqq \Csys(\bE, \Ent)$.
+
+\section{Typings}
+\label{sec:typings}
+
+In this section, $T$ is a relative monad on $J_S$, $M$ a module of raw types and $E$ a module of raw equations over $T$, and $\Raw \coloneqq \Raw(T, M, E)$. The letters $\Gamma, \Delta, \Xi$ range over raw contexts, $\sigma, \tau$ over morphisms of $\Raw$, $A, A'$ over types and $t, t'$ over terms. For $\sigma : \Delta \to \Gamma.A$ we write $\sigma_0 \coloneqq p_A \circ \sigma : \Delta \to \Gamma$ and $\sigma_1 \coloneqq \nu_A[\sigma] \in \Tm(\Delta, A[\sigma_0])$, so that $\sigma = \langle \sigma_0, \sigma_1 \rangle$ by \cref{lem:pairing}.
+
+\begin{definition}\label{def:raw-judgements}
+    The \emph{raw judgements} of $\Raw$ are the elements of the sets
+    \begin{align*}
+        B &\coloneqq \{\, (\Gamma, A) \mid A \in \Ty(\Gamma) \,\},\\
+        \widetilde{B} &\coloneqq \{\, (\Gamma, A, t) \mid t \in \Tm(\Gamma, A) \,\},\\
+        B_{\mathrm{eq}} &\coloneqq \{\, (\Gamma, A, A') \mid A, A' \in \Ty(\Gamma),\ |A| = |A'| \,\},\\
+        \widetilde{B}_{\mathrm{eq}} &\coloneqq \{\, (\Gamma, A, t, t') \mid t, t' \in \Tm(\Gamma, A) \,\},
+    \end{align*}
+    written $\Gamma \vdash A$, $\Gamma \vdash t : A$, $\Gamma \vdash A \equiv A'$ and $\Gamma \vdash t \equiv t' : A$, respectively. A \emph{set of judgements} is a subset $\jdg \subseteq B \sqcup \widetilde{B} \sqcup B_{\mathrm{eq}} \sqcup \widetilde{B}_{\mathrm{eq}}$. When $\jdg$ is fixed, a raw judgement written on its own asserts membership in $\jdg$.
 \end{definition}
 
-Unfolding definitions, the objects of $\Ctxr$ are precisely the raw contexts, and its morphisms $\Delta \to \Gamma$ are the substitutions $\Gamma^{\downarrow} \sub \Delta^{\downarrow}$. The types over a raw context $\Gamma$ are the entries over $\Gamma^{\downarrow}$ of arbitrary arity, and the terms of an entry of arity $\alpha$ are the expressions in $\Expr(\Gamma^{\downarrow} \concat \alpha)$.
-\section{Judgements}
-
-The raw syntax C-system imposes no well-formedness constraints. We impose these constraints by judgements on the raw syntax, which single out the well-formed raw contexts, expressions and substitutions, and determine when two of them are equal.
-
-\subsection{Judgement forms}
-
-The raw syntax of~\cref{def:raw-syntax-c-system} consists of four syntactic classes: expressions, boundaries, decorated arities and substitutions; for each of them, we have a corresponding well-formedness judgment, and one of equality.
-
-Since an expression $e$ synthesises its boundary as $\partial_{\Gamma}(e)$, the judgements $\Gamma \vdash e$ and $\Gamma \vdash e \equiv e'$ mention no boundary. Boundaries are judged, by $\Gamma \vdash \beta\ \mathsf{bd}$ and $\Gamma \vdash \beta \equiv \beta'$, pointwise through the expressions they are built out of. The well-formedness judgment $\Gamma \vdash \Theta$ of decorated arities must primitive, since it will appear as a premise to the congruence rule for expressions, whereas the equality of decorated arities $\Gamma \vdash \Theta \equiv \Theta'$ is a derived judgment form. A raw context $\Gamma$ is well formed, written $\vdash \Gamma$, when it is well formed as a decorated arity over the empty raw context. Substitutions, finally, are judged relative to a decorated arity: for $\Theta : \Dec(\Gamma^{\downarrow}, \Theta^{\downarrow})$, the judgement $\Gamma \vdash t : \Theta$ asserts that $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ is a well-formed substitution, meaning that its value at each slot of $\Theta$ is well formed and has, up to equality, the boundary declared by that slot, and that it satisfies the equations declared in $\Theta$. The judgement $\Gamma \vdash t \equiv t' : \Theta$ asserts that the two substitutions are pointwise equal. 
-All judgements are made over an arbitrary raw context.
-
-\begin{table}[ht]
-    \centering
-    \begin{tabular}{ll}
-        \toprule
-        Judgement & Reading\\
-        \midrule
-        $\Gamma \vdash e$ & $e : \Expr(\Gamma^{\downarrow})$ is well formed\\
-        $\Gamma \vdash e \equiv e'$ & $e, e' : \Expr(\Gamma^{\downarrow})$ are equal\\
-        \midrule
-        $\Gamma \vdash \beta\ \mathsf{bd}$ & $\beta : \Bd(\Gamma^{\downarrow})$ is well formed\\
-        $\Gamma \vdash \beta \equiv \beta'$ & $\beta, \beta' : \Bd(\Gamma^{\downarrow})$ are equal\\
-        \midrule
-        $\Gamma \vdash \Theta$ & $\Theta : \Dec(\Gamma^{\downarrow}, \Theta^{\downarrow})$ is well formed\\
-        \midrule
-        $\Gamma \vdash t : \Theta$ & $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ is well formed\\
-        $\Gamma \vdash t \equiv t' : \Theta$ & $t, t': \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ are equal\\
-        \bottomrule
-    \end{tabular}
-    \caption{The primitive judgement forms of $\ToS^\omega$}
-    \label{tab:judgement-forms}
-\end{table}
-
-Comparing these judgement forms with the more familiar ones of MLTT, one striking difference is that there, the judgements $\Gamma \vdash \Delta$ and $\Gamma \vdash \sigma : \Delta$ on telescopes $\Delta$ over $\Gamma$ are derived. In our setup, they must be primitive, since the formation rule for expressions takes a whole telescope of arguments. The well-formedness judgments for types and terms are then obtained by restricting to one-slot decorated arities. Explicitly, in the raw syntax C-system, a type over $\Gamma$ is an entry $E : \Ent(\Gamma^{\downarrow}, \alpha)$, which we can identify with the one-slot decorated arity $[x : E] : \Dec(\Gamma^{\downarrow}, [\alpha])$, and a term of $E$ is an expression $e : \Expr(\Gamma^{\downarrow} \concat \alpha)$, which we can identify with the substitution $[x : \alpha] \sub \Gamma^{\downarrow}$ sending $x$ to $e$.
-
-\subsection{Rules}
-
-The derivation rules of $\ToS^{\omega}$ are listed in \cref{fig:rules-wf,fig:rules-eq}. When stating the rules, we write $\Gamma \concat \Theta$ for the raw context $\Gamma$ extended by $\Theta : \Dec(\Gamma^{\downarrow}, \Theta^{\downarrow})$, as in \cref{rem:concatenation}, and abbreviate the action $e[t]_{\Gamma^{\downarrow}}$ of a substitution $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ with prefix $\Gamma^{\downarrow}$ to $e[t]$, and likewise for boundaries and decorated arities.
-A substitution $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ with $\Theta = [x : [\Psi]\beta] \concat \Theta' : \Dec(\Gamma^{\downarrow},\Theta^{\downarrow})$ is written as $t =: (u, t')$, where $u : \Expr(\Gamma^{\downarrow} \concat \Psi^{\downarrow})$ is its value at $x$ and $t' : \Theta'^{\downarrow} \sub \Gamma^{\downarrow}$ is its tail. 
-We have $\Theta' : \Dec(\Gamma^{\downarrow}\concat[x : \Psi^{\downarrow}],\Theta'^{\downarrow})$ and $[x \mapsto u] : [\Psi^{\downarrow}] \sub \Gamma^{\downarrow}$, and we write
-\[
-\Theta'[u] \coloneqq \Theta'[x \mapsto u]_{\Gamma^{\downarrow}} : \Dec(\Gamma^{\downarrow}, \Theta'^{\downarrow})
-\]
-for the decorated arity over $\Gamma^{\downarrow}$ obtained by instantiating $x$ for $u$.
-The empty decorated arity and the empty substitution are both written $()$. We write $\isEq : \{\Xi : \bA\} \to \Bd(\Xi) \to \Prop$ for the predicate which selects the equational boundaries, i.e. those that lie in the third summand of $\Bd = \Sigma_{i = 0}^2\Expr^i$.
-
-\begin{figure}[ht]
-    \centering
-    \textit{Expressions}
+\begin{definition}\label{def:derived-forms}
+    Let $\jdg$ be a set of judgements. For raw contexts $\Gamma, \Gamma', \Delta$ and morphisms $\sigma, \sigma' : \Delta \to \Gamma$ of $\Raw$, the \emph{derived judgement forms}
+    \[
+        {\vdash \Gamma}, \qquad \Delta \vdash \sigma : \Gamma, \qquad {\vdash \Gamma \equiv \Gamma'}, \qquad \Delta \vdash \sigma \equiv \sigma' : \Gamma
+    \]
+    are defined by recursion on the length of $\Gamma$, as finite conjunctions of raw judgements, by the rules
     \begin{mathpar}
-        \inferrule*[right=\textsc{ap}]
-            {x : \Gamma \ni [\Theta]\beta \\ \neg \isEq(\beta) \\ \Gamma \vdash t : \Theta}
-            {\Gamma \vdash x(t)}
+        \inferrule{ }{\vdash ()}
+        \and
+        \inferrule{\vdash \Gamma \\ \Gamma \vdash A}{\vdash \Gamma.A}
+        \and
+        \inferrule{\vdash \Delta}{\Delta \vdash \sigma : ()}
+        \and
+        \inferrule{\Delta \vdash \sigma_0 : \Gamma \\ \Gamma \vdash A \\ \Delta \vdash \sigma_1 : A[\sigma_0]}{\Delta \vdash \sigma : \Gamma.A}
+        \\
+        \inferrule{ }{\vdash () \equiv ()}
+        \and
+        \inferrule{\vdash \Gamma \equiv \Gamma' \\ \Gamma \vdash A \equiv A'}{\vdash \Gamma.A \equiv \Gamma'.A'}
+        \and
+        \inferrule{\vdash \Delta}{\Delta \vdash \sigma \equiv \sigma' : ()}
+        \and
+        \inferrule{\Delta \vdash \sigma_0 \equiv \sigma'_0 : \Gamma \\ \Gamma \vdash A \\ \Delta \vdash \sigma_1 \equiv \sigma'_1 : A[\sigma_0]}{\Delta \vdash \sigma \equiv \sigma' : \Gamma.A}
     \end{mathpar}
+    each read as an equivalence: the conclusion holds iff its premises hold, where a premise written as a raw judgement holds if it is one and belongs to $\jdg$.
+\end{definition}
 
-    \textit{Boundaries}
-    \begin{mathpar}
-        \inferrule*[right=\textsc{bd-sort}]
-            { }
-            {\Gamma \vdash \bsort\ \mathsf{bd}}
-        \and
-        \inferrule*[right=\textsc{bd-of}]
-            {\Gamma \vdash S \\ \Gamma \vdash \partial_\Gamma(S) \equiv \bsort}
-            {\Gamma \vdash \bof(S)\ \mathsf{bd}}
-        \and
-        \inferrule*[right=\textsc{bd-eq}]
-            {\Gamma \vdash l \\ \Gamma \vdash r \\ \Gamma \vdash \partial_\Gamma(l) \equiv \partial_\Gamma(r)}
-            {\Gamma \vdash \beq(l, r)\ \mathsf{bd}}
-    \end{mathpar}
+Two premises are not raw judgements on their face. In the rule for $\vdash \Gamma.A \equiv \Gamma'.A'$, the type $A'$ lives over $\Gamma'$, whereas $\Gamma \vdash A \equiv A'$ requires $A' \in \Ty(\Gamma)$; in the rule for $\Delta \vdash \sigma \equiv \sigma' : \Gamma.A$, the term $\sigma'_1$ has the type $A[\sigma'_0]$, whereas $\Delta \vdash \sigma_1 \equiv \sigma'_1 : A[\sigma_0]$ requires it to have the type $A[\sigma_0]$. Both issues are resolved by~\cref{cor:sort-degeneracy}..
 
-    \textit{Decorated arities}
-    \begin{mathpar}
-        \inferrule*[right=\textsc{dec-nil}]
-            { }
-            {\Gamma \vdash ()}
-        \and
-        \inferrule*[right=\textsc{dec-cons}]
-            {\Gamma \vdash \Theta \\ \Gamma \concat \Theta \vdash \beta\ \mathsf{bd} \\ \Gamma \concat [x : [\Theta]\beta] \vdash \Theta'}
-            {\Gamma \vdash [x : [\Theta]\beta] \concat \Theta'}
-    \end{mathpar}
-
-    \textit{Substitutions}
-    \begin{mathpar}
-        \inferrule*[right=\textsc{sub-nil}]
-            { }
-            {\Gamma \vdash () : ()}
-        \and
-        \inferrule*[right=\textsc{sub-cons}]
-            {\neg\isEq(\beta) \\ \Gamma \concat \Theta \vdash u \\ \Gamma \concat \Theta \vdash \partial_{\Gamma \concat \Theta}(u) \equiv \beta \\ \Gamma \vdash t : \Theta'[u]}
-            {\Gamma \vdash (u, t) : [x : [\Theta]\beta] \concat \Theta'}
-        \and
-        \inferrule*[right=\textsc{sub-eq}]
-            {\Gamma \concat \Theta \vdash l \equiv r \\ \Gamma \vdash t : \Theta'[u]}
-            {\Gamma \vdash (u, t) : [x : [\Theta]\,\beq(l, r)] \concat \Theta'}
-    \end{mathpar}
-    \caption{The rules of well-formedness of $\ToS^\omega$.}
-    \label{fig:rules-wf}
-\end{figure}
-
-\begin{figure}[ht]
-    \centering
-    \textit{Equality of expressions}
-    \begin{mathpar}
-        \inferrule*[right=\textsc{refl}]
-            {\Gamma \vdash e}
-            {\Gamma \vdash e \equiv e}
-        \and
-        \inferrule*[right=\textsc{symm}]
-            {\Gamma \vdash e \equiv e'}
-            {\Gamma \vdash e' \equiv e}
-        \and
-        \inferrule*[right=\textsc{trans}]
-            {\Gamma \vdash e \equiv e' \\ \Gamma \vdash e' \equiv e''}
-            {\Gamma \vdash e \equiv e''}
-        \and
-        \inferrule*[right=\textsc{hyp}]
-            {x : \Gamma \ni [\Theta]\,\beq(l, r) \\ \Gamma \concat \Theta \vdash l \\ \Gamma \concat \Theta \vdash r \\ \Gamma \vdash t : \Theta}
-            {\Gamma \vdash l[t] \equiv r[t]}
-        \and
-        \inferrule*[right=\textsc{congr}]
-            {\Gamma \vdash \Theta \\ \Gamma \vdash t : \Theta \\ \Gamma \vdash t' : \Theta \\ \Gamma \vdash t \equiv t' : \Theta \\ \Gamma \concat \Theta \vdash e \equiv e'}
-            {\Gamma \vdash e[t] \equiv e'[t']}
-    \end{mathpar}
-
-    \textit{Equality of boundaries}
-    \begin{mathpar}
-        \inferrule*[right=\textsc{eq-sort}]
-            { }
-            {\Gamma \vdash \bsort \equiv \bsort}
-        \and
-        \inferrule*[right=\textsc{eq-of}]
-            {\Gamma \vdash S \equiv S'}
-            {\Gamma \vdash \bof(S) \equiv \bof(S')}
-        \and
-        \inferrule*[right=\textsc{eq-eq}]
-            {\Gamma \vdash l \equiv l' \\ \Gamma \vdash r \equiv r'}
-            {\Gamma \vdash \beq(l, r) \equiv \beq(l', r')}
-    \end{mathpar}
-
-    \textit{Equality of substitutions}
-    \begin{mathpar}
-        \inferrule*[right=\textsc{subeq-nil}]
-            { }
-            {\Gamma \vdash () \equiv () : ()}
-        \and
-        \inferrule*[right=\textsc{subeq-cons}]
-            {\neg \isEq(\beta) \\ \Gamma \concat \Theta \vdash u \equiv u' \\ \Gamma \vdash t \equiv t' : \Theta'[u]}
-            {\Gamma \vdash (u, t) \equiv (u', t') : [x : [\Theta]\beta] \concat \Theta'}
-        \and
-        \inferrule*[right=\textsc{subeq-eq}]
-            {\Gamma \vdash t \equiv t' : \Theta'[u]}
-            {\Gamma \vdash (u, t) \equiv (u', t') : [x : [\Theta]\,\beq(l, r)] \concat \Theta'}
-    \end{mathpar}
-    \caption{The rules of equality of $\ToS^\omega$.}
-    \label{fig:rules-eq}
-\end{figure}
-
-The well-formedness of an expressions is obtained by a single rule \textsc{ap}: an application $x(t)$ is well formed when its arguments form a well-formed substitution for the binding of its head, which must not be an equational slot. In finitary type theories, symbols, metavariables and variables are introduced by separate rules, namely the symbol rules~\cite[Def.~2.10]{HaselwarterBauer2023}, the metavariable rules~\cite[Def.~2.15]{HaselwarterBauer2023} and the variable rule~\cite[Fig.~2.4]{HaselwarterBauer2023}; since in $\ToS^\omega$, the three syntactic classes are treated homogenously as slots, a single rule suffices.
-
-The rules for boundaries, decorated arities and substitutions follow the recursive structure of their subjects. This is where expressions are checked, by comparing their synthesised boundary to the expected one: in \textsc{bd-of}, in order for the boundary $\bof(S)$ to be well formed, the boundary of $S$ needs to be $\bsort$; in \textsc{bd-eq}, in order for the boundary $\beq(l,r)$ to be well formed, the boundaries of $l$ and $r$ need to be equal; and in \textsc{sub-cons}, in order for a substitution to be well formed, its value at each non-equational slot needs to have the boundary declared by that slot.
-The value of the substitution at a slot declared to be an equation $\beq(l, r)$ is left unconstrained, since equality is proof-irrelevant: an equation is witnessed only by the fact that it holds, just as finitary type theories fill an equation boundary with a dummy value~\cite[Fig.~2.3]{HaselwarterBauer2023}. Instead, \textsc{sub-eq} requires the declared equation to hold.
-
-Equality of expressions is generated by five rules, the first three of which ensure that it is an equivalence relation. The rule \textsc{hyp} is the equational counterpart of \textsc{ap},  instantiating a declared equation. The rule \textsc{congr} states that equality is stable under substitution; it subsumes the congruence rules of finitary type theories~\cite[Def.~2.13]{HaselwarterBauer2023}.
-The premises of the rules for equality of expressions are chosen so that equal expressions are automatically well formed. In the equality rules for substitutions, in contrast, equated substitutions are not necessarily well formed; this is why \textsc{congr} assumes $\Gamma \vdash t, t' : \Theta$ and not $\Gamma \vdash e, e'$.
-The rules \textsc{subeq-cons} and \textsc{subeq-eq} are left-leaning: the tails are compared at $\Theta'[u]$, instantiated by the left value $u$ rather than by $u'$. We will later show that this choice is immaterial, so that the equality of substitutions is symmetric.
-
-The equality of decorated arities is defined post festum by the clauses:
-
-\begin{mathpar}
-    \inferrule*[right=\textsc{deceq-nil}]
-        { }
-        {\Gamma \vdash () \equiv ()}
-    \and
-    \inferrule*[right=\textsc{deceq-cons}]
-        {\Gamma \vdash \Theta \equiv \Psi \\ \Gamma \concat \Theta \vdash \beta \equiv \gamma \\ \Gamma \concat [x : [\Theta]\beta] \vdash \Theta' \equiv \Psi'}
-        {\Gamma \vdash [x : [\Theta]\beta] \concat \Theta' \equiv [x : [\Psi]\gamma] \concat \Psi'}
-\end{mathpar}
-
-\begin{remark}[Comparison with Adams]\label{rem:adams-judgements}
-    The closest relative of $\ToS^\omega$ is Adams' lambda-free logical framework TF~\cite{Adams2008}, whose raw syntax we compared with ours in \cref{rem:adams}. Its judgements differ from ours in three essential respects.
+\begin{lemma}\label{lem:derived-forms}
     \begin{enumerate}
-        \item \emph{Equations as hypotheses.} The `kinds' (called boundaries in our terminology) of TF are built from the base kinds of types and of their elements only, and equations can be declared only at the top level of a specification. In $\ToS^\omega$, a slot of any rank may be declared to be an equation, so that equations can be hypothesised like any other judgement.
-        \item \emph{Object theories as contexts.} In TF, an object theory is specified by extending the framework with new rules, one for each declared constant and equation~\cite[\S2.6.1]{Adams2008}, so that each theory yields a different deductive system. In $\ToS^\omega$, an object theory is specified by a raw context, its signature, whose constants and axioms are slots like any other, and the judgements of an object theory are simply those made in a raw context extending the signature. The rules and consequently the metatheory of the framework thus apply to all object theories at once. Moreover, transformations between theories now become expressible within the framework itself: a transformation of a theory with signature $\Sigma$ into one with signature $\Sigma'$ is simply a well-formed substitution $\Sigma' \vdash \varphi : \Sigma$, that sends each constant to an expression over $\Sigma'$ and that validates the axioms of $\Sigma$, and such a transformation automatically acts on the object-level judgements by substitution. In TF, where each theory is a deductive system of its own, such transformations can only be described from outside the framework.
-        \item \emph{Substitution of equals.} In TF, functionality (the fact that equal substitutions yield equal results upon application) is not a rule but a property to be proved post festum. The proof requires showing that substitutions known only to be equal are well formed; Adams establishes this together with admissibility of substitution, only for specifications with no equations and for orderable specifications of order at most $2$~\cite[Thm.~3.8]{Adams2008}.In $\ToS^\omega$, equal substitutions need not be well formed; instead, functionality is ensured by the rule \textsc{congr}, whose premises include the well-formedness of both substitutions, so that nothing has to be recovered from an equality, and admissibility of substitution will be shown to hold for arbitrary signatures at every rank.
+        \item If $\vdash \Gamma \equiv \Gamma'$, then $\Gamma^{\downarrow} = \Gamma'^{\downarrow}$ and $\Ty(\Gamma) = \Ty(\Gamma')$. Hence, given the premise $\vdash \Gamma \equiv \Gamma'$, we have $A' \in \Ty(\Gamma)$, and the premise $\Gamma \vdash A \equiv A'$ is a raw judgement precisely when $|A| = |A'|$.
+        \item For $\sigma, \sigma' : \Delta \to \Gamma.A$, $\Tm(\Delta, A[\sigma'_0]) = \Tm(\Delta, A[\sigma_0])$. Hence the premise $\Delta \vdash \sigma_1 \equiv \sigma'_1 : A[\sigma_0]$ is a raw judgement.
     \end{enumerate}
+    All other premises are raw judgements by the conventions on $\sigma_0$ and $\sigma_1$, so every derived form is a finite conjunction of memberships in $\jdg$.
+\end{lemma}
+
+\begin{proof}
+    (1) By induction on the length of $\Gamma$. For $\vdash () \equiv ()$ there is nothing to prove. If $\vdash \Gamma.A \equiv \Gamma'.A'$, then $\Gamma^{\downarrow} = \Gamma'^{\downarrow}$ by induction, and $\Gamma \vdash A \equiv A'$ is a raw judgement, so $|A| = |A'|$; hence $(\Gamma.A)^{\downarrow} = (\Gamma'.A')^{\downarrow}$ by the definition of $(\_)^{\downarrow}$. Then $\Ty(\Gamma) = M(\Gamma^{\downarrow}) = \Ty(\Gamma')$ by \cref{cor:sort-degeneracy}, so $A' \in \Ty(\Gamma)$, and $(\Gamma, A, A') \in B_{\mathrm{eq}}$ iff $|A| = |A'|$ by \cref{def:raw-judgements}.
+
+    (2) The shape map $|\_|$ is natural, so $A[\sigma_0]$ and $A[\sigma'_0]$ are types over $\Delta$ of the same shape $|A|$, and the two term sets agree by \cref{cor:sort-degeneracy}.
+\end{proof}
+
+\begin{figure}[tp]
+    \centering
+    \begin{mathpar}
+        \inferrule*[right=\textsc{Presup-Ty}]{\Gamma \vdash A}{\vdash \Gamma}
+        \and
+        \inferrule*[right=\textsc{Presup-Tm}]{\Gamma \vdash t : A}{\Gamma \vdash A}
+        \and
+        \inferrule*[right=\textsc{Presup-TyEq}]{\Gamma \vdash A \equiv A'}{\Gamma \vdash A}
+        \and
+        \inferrule*[right=\textsc{Presup-TmEq}]{\Gamma \vdash t \equiv t' : A}{\Gamma \vdash t : A}
+        \\
+        \inferrule*[right=\textsc{Subst-Ty}]{\Delta \vdash \sigma : \Gamma \\ \Gamma \vdash A}{\Delta \vdash A[\sigma]}
+        \and
+        \inferrule*[right=\textsc{Subst-Tm}]{\Delta \vdash \sigma : \Gamma \\ \Gamma \vdash t : A}{\Delta \vdash t[\sigma] : A[\sigma]}
+        \\
+        \inferrule*[right=\textsc{Wk}]{\Gamma \vdash A}{\Gamma.A \vdash p_A : \Gamma}
+        \and
+        \inferrule*[right=\textsc{Var}]{\Gamma \vdash A}{\Gamma.A \vdash \nu_A : A[p_A]}
+        \\
+        \inferrule*[right=\textsc{Refl-Ty}]{\Gamma \vdash A}{\Gamma \vdash A \equiv A}
+        \and
+        \inferrule*[right=\textsc{Sym-Ty}]{\Gamma \vdash A \equiv A'}{\Gamma \vdash A' \equiv A}
+        \and
+        \inferrule*[right=\textsc{Trans-Ty}]{\Gamma \vdash A \equiv A' \\ \Gamma \vdash A' \equiv A''}{\Gamma \vdash A \equiv A''}
+        \\
+        \inferrule*[right=\textsc{Refl-Tm}]{\Gamma \vdash t : A}{\Gamma \vdash t \equiv t : A}
+        \and
+        \inferrule*[right=\textsc{Sym-Tm}]{\Gamma \vdash t \equiv t' : A}{\Gamma \vdash t' \equiv t : A}
+        \and
+        \inferrule*[right=\textsc{Trans-Tm}]{\Gamma \vdash t \equiv t' : A \\ \Gamma \vdash t' \equiv t'' : A}{\Gamma \vdash t \equiv t'' : A}
+        \\
+        \inferrule*[right=\textsc{Cong-Ty}]{\Delta \vdash \sigma \equiv \sigma' : \Gamma \\ \Gamma \vdash A \equiv A'}{\Delta \vdash A[\sigma] \equiv A'[\sigma']}
+        \and
+        \inferrule*[right=\textsc{Cong-Tm}]{\Delta \vdash \sigma \equiv \sigma' : \Gamma \\ \Gamma \vdash t \equiv t' : A}{\Delta \vdash t[\sigma] \equiv t'[\sigma'] : A[\sigma]}
+        \\
+        \inferrule*[right=\textsc{Conv-TmEq}]{\Gamma \vdash t \equiv t' : A \\ \Gamma \vdash A \equiv A'}{\Gamma \vdash t \equiv t' : A'}
+    \end{mathpar}
+    \caption{The rules of a typing.}
+    \label{fig:typing}
+\end{figure}
+
+\begin{definition}\label{def:typing}
+    A set of judgements $\jdg$ is a \emph{typing} on $\Raw$ if it is closed under the rules of \cref{fig:typing}: whenever the premises of a rule hold in $\jdg$, so does its conclusion. The conclusions of \textsc{Cong-Ty}, \textsc{Cong-Tm} and \textsc{Conv-TmEq} are raw judgements by \cref{cor:sort-degeneracy}.
+\end{definition}
+
+\begin{figure}[tp]
+    \centering
+    \begin{mathpar}
+        \inferrule*[right=\textsc{Presup-CtxEq}]{\vdash \Gamma \equiv \Gamma'}{\vdash \Gamma}
+        \and
+        \inferrule*[right=\textsc{Presup-SbEq}]{\Delta \vdash \sigma \equiv \sigma' : \Gamma}{\Delta \vdash \sigma : \Gamma}
+        \and
+        \inferrule*[right=\textsc{Id}]{\vdash \Gamma}{\Gamma \vdash \id_\Gamma : \Gamma}
+        \and
+        \inferrule*[right=\textsc{Comp}]{\Xi \vdash \tau : \Delta \\ \Delta \vdash \sigma : \Gamma}{\Xi \vdash \sigma \circ \tau : \Gamma}
+        \and
+        \inferrule*[right=\textsc{Comp-Eq}]{\Xi \vdash \tau \equiv \tau' : \Delta \\ \Delta \vdash \sigma \equiv \sigma' : \Gamma}{\Xi \vdash \sigma \circ \tau \equiv \sigma' \circ \tau' : \Gamma}
+        \and
+        \inferrule*[right=\textsc{Refl-Ctx}]{\vdash \Gamma}{\vdash \Gamma \equiv \Gamma}
+        \and
+        \inferrule*[right=\textsc{Sym-Ctx}]{\vdash \Gamma \equiv \Gamma'}{\vdash \Gamma' \equiv \Gamma}
+        \and
+        \inferrule*[right=\textsc{Trans-Ctx}]{\vdash \Gamma \equiv \Gamma' \\ \vdash \Gamma' \equiv \Gamma''}{\vdash \Gamma \equiv \Gamma''}
+        \and
+        \inferrule*[right=\textsc{Refl-Sb}]{\Delta \vdash \sigma : \Gamma}{\Delta \vdash \sigma \equiv \sigma : \Gamma}
+        \and
+        \inferrule*[right=\textsc{Sym-Sb}]{\Delta \vdash \sigma \equiv \sigma' : \Gamma}{\Delta \vdash \sigma' \equiv \sigma : \Gamma}
+        \and
+        \inferrule*[right=\textsc{Trans-Sb}]{\Delta \vdash \sigma \equiv \sigma' : \Gamma \\ \Delta \vdash \sigma' \equiv \sigma'' : \Gamma}{\Delta \vdash \sigma \equiv \sigma'' : \Gamma}
+        \and
+        \inferrule*[right=\textsc{Conv-Tm}]{\Gamma \vdash t : A \\ \Gamma \vdash A \equiv A'}{\Gamma \vdash t : A'}
+        \and
+        \inferrule*[right=\textsc{Id-CtxEq}]{\vdash \Gamma \equiv \Gamma'}{\Gamma' \vdash \id_{\Gamma^{\downarrow}} : \Gamma}
+        \and
+        \inferrule*[right=\textsc{CtxConv-Ty}]{\vdash \Gamma \equiv \Gamma' \\ \Gamma \vdash A}{\Gamma' \vdash A}
+        \and
+        \inferrule*[right=\textsc{CtxConv-Tm}]{\vdash \Gamma \equiv \Gamma' \\ \Gamma \vdash t : A}{\Gamma' \vdash t : A}
+        \and
+        \inferrule*[right=\textsc{CtxConv-TyEq}]{\vdash \Gamma \equiv \Gamma' \\ \Gamma \vdash A \equiv A'}{\Gamma' \vdash A \equiv A'}
+        \and
+        \inferrule*[right=\textsc{CtxConv-TmEq}]{\vdash \Gamma \equiv \Gamma' \\ \Gamma \vdash t \equiv t' : A}{\Gamma' \vdash t \equiv t' : A}
+        \and
+        \inferrule*[right=\textsc{CtxConv-Sb}]{\vdash \Delta \equiv \Delta' \\ \vdash \Gamma \equiv \Gamma' \\ \Delta \vdash \sigma : \Gamma}{\Delta' \vdash \sigma : \Gamma'}
+        \and
+        \inferrule*[right=\textsc{CtxConv-SbEq}]{\vdash \Delta \equiv \Delta' \\ \vdash \Gamma \equiv \Gamma' \\ \Delta \vdash \sigma \equiv \sigma' : \Gamma}{\Delta' \vdash \sigma \equiv \sigma' : \Gamma'}
+    \end{mathpar}
+    \caption{Admissible rules of a typing.}
+    \label{fig:admissible}
+\end{figure}
+
+\begin{lemma}\label{lem:admissible}
+    Every typing is closed under the rules of \cref{fig:admissible}.
+\end{lemma}
+
+\begin{proof}
+    \textsc{Conv-Tm} is \textsc{Refl-Tm}, \textsc{Conv-TmEq} and \textsc{Presup-TmEq}.
+
+    \textsc{Refl-Ctx}, \textsc{Refl-Sb} and \textsc{Presup-SbEq}, by induction on the length of $\Gamma$. For $\Gamma = ()$ all three conclusions are $\vdash \Delta$ or $\vdash ()$. For $\Gamma.A$: the two reflexivities follow from the induction hypothesis and \textsc{Refl-Ty}, resp.\ \textsc{Refl-Tm}; and $\Delta \vdash \sigma \equiv \sigma' : \Gamma.A$ gives $\Delta \vdash \sigma_0 : \Gamma$ by induction, $\Gamma \vdash A$, and $\Delta \vdash \sigma_1 : A[\sigma_0]$ by \textsc{Presup-TmEq}.
+
+    \textsc{Id}: for $\Gamma = ()$ this is $\vdash ()$; for $\Gamma.A$, $\id_{\Gamma.A} = \langle p_A, \nu_A \rangle$ by \cref{lem:pairing}, and $\Gamma.A \vdash p_A : \Gamma$, $\Gamma \vdash A$, $\Gamma.A \vdash \nu_A : A[p_A]$ hold by \textsc{Wk} and \textsc{Var}. \textsc{Comp}, by induction on the length of $\Gamma$: for $\Gamma.A$, $(\sigma \circ \tau)_0 = \sigma_0 \circ \tau$ and $(\sigma \circ \tau)_1 = \sigma_1[\tau]$ by \cref{lem:pairing}, so $\Xi \vdash \sigma_0 \circ \tau : \Gamma$ by induction and $\Xi \vdash \sigma_1[\tau] : A[\sigma_0][\tau] = A[\sigma_0 \circ \tau]$ by \textsc{Subst-Tm}. \textsc{Comp-Eq} is the same with \textsc{Cong-Tm} in place of \textsc{Subst-Tm}.
+
+    \textsc{Presup-CtxEq}, its mirror image $\vdash \Gamma'$, \textsc{Id-CtxEq}, \textsc{CtxConv-Ty}, \textsc{CtxConv-Tm}, \textsc{CtxConv-TyEq} and \textsc{CtxConv-TmEq}, simultaneously by induction on the length of $\Gamma$. For $\vdash () \equiv ()$ there is nothing to prove. Let $\vdash \Gamma.A \equiv \Gamma'.A'$, that is, $\vdash \Gamma \equiv \Gamma'$ and $\Gamma \vdash A \equiv A'$, and let $\iota_0 : \Gamma' \to \Gamma$ be given by $\id_{\Gamma^{\downarrow}}$; by induction $\vdash \Gamma$, $\vdash \Gamma'$, $\Gamma' \vdash \iota_0 : \Gamma$, and judgements over $\Gamma$ transfer to $\Gamma'$. By \textsc{Presup-TyEq} and \textsc{Sym-Ty}, $\Gamma \vdash A$ and $\Gamma \vdash A'$, hence $\vdash \Gamma.A$, and by transfer $\Gamma' \vdash A'$, hence $\vdash \Gamma'.A'$, and $\Gamma' \vdash A' \equiv A$ by \textsc{Sym-Ty} and transfer. Let $\iota : \Gamma'.A' \to \Gamma.A$ be given by $\id_{(\Gamma.A)^{\downarrow}}$. By \cref{prop:raw-natural-model}, $\iota_0' \coloneqq p_A \circ \iota$ is given by the same morphism of $\Kl(T)$ as $\iota_0 \circ p_{A'}$, and $\nu_A[\iota] = \nu_{A'}$. Now $\Gamma'.A' \vdash \iota_0 \circ p_{A'} : \Gamma$ by \textsc{Wk} and \textsc{Comp}, $\Gamma \vdash A$, and $\Gamma'.A' \vdash \nu_{A'} : A[\iota_0 \circ p_{A'}] = A[p_{A'}]$: indeed $\Gamma'.A' \vdash \nu_{A'} : A'[p_{A'}]$ by \textsc{Var}, $\Gamma'.A' \vdash A'[p_{A'}] \equiv A[p_{A'}]$ by \textsc{Cong-Ty} applied to $\Gamma' \vdash A' \equiv A$ and $\Gamma'.A' \vdash p_{A'} \equiv p_{A'} : \Gamma'$ (from \textsc{Wk} and \textsc{Refl-Sb}), and \textsc{Conv-Tm} applies. So $\Gamma'.A' \vdash \iota : \Gamma.A$. Transfer: since $\iota$ is an identity of $\Kl(T)$, $B[\iota] = B$ and $u[\iota] = u$ for all types $B$ and terms $u$ over $\Gamma.A$, so \textsc{Subst-Ty} and \textsc{Subst-Tm} along $\iota$ transfer $\Gamma.A \vdash B$ and $\Gamma.A \vdash u : B$, and \textsc{Cong-Ty} and \textsc{Cong-Tm} along $\iota \equiv \iota$ (from \textsc{Refl-Sb}) transfer the equalities.
+
+    \textsc{Sym-Ctx} and \textsc{Trans-Ctx}, by induction on the length: for $\vdash \Gamma.A \equiv \Gamma'.A'$, symmetry of the last component is \textsc{Sym-Ty} followed by \textsc{CtxConv-TyEq}; for $\vdash \Gamma.A \equiv \Gamma'.A'$ and $\vdash \Gamma'.A' \equiv \Gamma''.A''$, transfer $\Gamma' \vdash A' \equiv A''$ to $\Gamma$ by \textsc{Sym-Ctx} and \textsc{CtxConv-TyEq}, and use \textsc{Trans-Ty}. \textsc{Sym-Sb} and \textsc{Trans-Sb} are the same with \textsc{Sym-Tm} and \textsc{Trans-Tm}, and with \textsc{Cong-Ty} (from \textsc{Refl-Ty}) and \textsc{Conv-TmEq} used to compare $\sigma'_1 \equiv \sigma''_1$ at $A[\sigma'_0]$ with the required type $A[\sigma_0]$.
+
+    \textsc{CtxConv-Sb} and \textsc{CtxConv-SbEq}, by induction on the length of $\Gamma$, using \textsc{CtxConv-Tm} and \textsc{CtxConv-TmEq} to transfer the component judgements from $\Delta$ to $\Delta'$, and \textsc{Cong-Ty} with $\Gamma \vdash A \equiv A'$ and $\Delta \vdash \sigma_0 \equiv \sigma_0 : \Gamma$ (\textsc{Refl-Sb}) followed by \textsc{Conv-Tm} and \textsc{Conv-TmEq} to pass from $A[\sigma_0]$ to $A'[\sigma_0]$.
+\end{proof}
+
+%here
+\begin{lemma}\label{lem:typing}
+    Let $\jdg$ be a typing.
+    \begin{enumerate}
+        \item $\vdash \Gamma \equiv \Gamma'$ is an equivalence relation on the contexts $\Gamma$ with $\vdash \Gamma$, and $\Delta \vdash \sigma \equiv \sigma' : \Gamma$ is an equivalence relation on the morphisms $\sigma$ with $\Delta \vdash \sigma : \Gamma$.
+        \item If $\vdash \Delta \equiv \Delta'$ and $\vdash \Gamma \equiv \Gamma'$, then $\Delta \vdash \sigma : \Gamma$ iff $\Delta' \vdash \sigma : \Gamma'$, and $\Delta \vdash \sigma \equiv \sigma' : \Gamma$ iff $\Delta' \vdash \sigma \equiv \sigma' : \Gamma'$, for morphisms $\sigma, \sigma' : \Gamma^{\downarrow} \to \Delta^{\downarrow}$ of $\Kl(T)$.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    (1) \textsc{Refl-Ctx}, \textsc{Sym-Ctx} and \textsc{Trans-Ctx}, with \textsc{Presup-CtxEq} for the domain; likewise \textsc{Refl-Sb}, \textsc{Sym-Sb}, \textsc{Trans-Sb} and \textsc{Presup-SbEq}. (2) \textsc{CtxConv-Sb} and \textsc{CtxConv-SbEq}, with \textsc{Sym-Ctx} for the converse directions.
+\end{proof}
+
+\begin{definition}\label{def:rule}
+    A \emph{rule} in the raw judgements of $\Raw$ is an implication $P_1 \wedge \cdots \wedge P_n \Rightarrow Q$, $n \in \N$, whose \emph{premises} $P_i$ and \emph{conclusion} $Q$ are raw judgements; a derived form of \cref{def:derived-forms} may stand for its finite conjunction of raw judgements, as a premise or, giving finitely many rules, as a conclusion. A set of judgements is \emph{closed} under a set $X$ of rules if it contains the conclusion of every rule of $X$ whose premises it contains.
+\end{definition}
+
+\begin{proposition}\label{prop:lattice}
+    For every set $X$ of rules there is a least typing $\jdg_X$ closed under $X$. It is $\bigcup_{n \in \N} \jdg_n$, where $\jdg_0 \coloneqq \varnothing$ and $\jdg_{n+1}$ is $\jdg_n$ together with the conclusions of all rules of \cref{fig:typing} and of $X$ whose premises lie in $\jdg_n$; so a raw judgement lies in $\jdg_X$ iff it has a finite derivation by these rules.
+\end{proposition}
+
+\begin{proof}
+    Typings closed under $X$ are closed under arbitrary intersections, since if the premises of a rule lie in every member of a family of closed sets, so does its conclusion, and the set of all raw judgements is one. Hence their intersection is the least one. It contains $\bigcup_n \jdg_n$, by induction on $n$; conversely $\bigcup_n \jdg_n$ is closed, since a rule has finitely many premises, which then lie in some $\jdg_n$, so its conclusion lies in $\jdg_{n+1}$.
+\end{proof}
+
+\begin{definition}\label{def:well-formed}
+    Let $\jdg$ be a typing on $\Raw$. A context $\Gamma$, a substitution $\sigma : \Delta \to \Gamma$, a type $A$ over $\Gamma$ and a term $t$ of $A$ are \emph{well-formed} if, respectively,
+    \[
+        {\vdash \Gamma}, \qquad \Delta \vdash \sigma : \Gamma, \qquad \Gamma \vdash A, \qquad \Gamma \vdash t : A.
+    \]
+    The well-formed contexts and substitutions form $\cat{W}_\jdg$, with
+    \[
+        \Ty_{\cat{W}_\jdg}(\Gamma) \coloneqq \{\, A \mid \Gamma \vdash A \,\}, \qquad \Tm_{\cat{W}_\jdg}(\Gamma, A) \coloneqq \{\, t \mid \Gamma \vdash t : A \,\}.
+    \]
+    The quotient $\cat{W}_\jdg/{\equiv}$ has as objects the classes $[\Gamma]$ of well-formed contexts under $\vdash \Gamma \equiv \Gamma'$, and
+    \begin{gather*}
+        \Hom([\Delta], [\Gamma]) \coloneqq \{\, \sigma \mid \Delta \vdash \sigma : \Gamma \,\} / (\Delta \vdash \sigma \equiv \sigma' : \Gamma), \qquad [\sigma] \circ [\tau] \coloneqq [\sigma \circ \tau],\\
+        \Ty_{\cat{W}_\jdg/{\equiv}}([\Gamma]) \coloneqq \Ty_{\cat{W}_\jdg}(\Gamma) / (\Gamma \vdash A \equiv A'), \qquad [A][\sigma] \coloneqq [A[\sigma]],\\
+        \Tm_{\cat{W}_\jdg/{\equiv}}([\Gamma]) \coloneqq \{\, (A, t) \mid \Gamma \vdash t : A \,\} / {\sim},\\
+        p([A, t]) \coloneqq [A], \qquad [A, t][\sigma] \coloneqq [A[\sigma], t[\sigma]],
+    \end{gather*}
+    where $(A, t) \sim (A', t')$ iff $\Gamma \vdash A \equiv A'$ and $\Gamma \vdash t \equiv t' : A$, so that
+    \[
+        \Tm_{\cat{W}_\jdg/{\equiv}}([\Gamma], [A]) = \Tm_{\cat{W}_\jdg}(\Gamma, A) / (\Gamma \vdash t \equiv t' : A),
+    \]
+    whose elements we write $[t]$; and
+    \[
+        [\Gamma].[A] \coloneqq [\Gamma.A], \qquad p_{[A]} \coloneqq [p_A], \qquad \nu_{[A]} \coloneqq [\nu_A], \qquad \langle [\sigma], [t] \rangle \coloneqq [\langle \sigma, t \rangle].
+    \]
+\end{definition}
+
+\begin{proposition}\label{prop:quotient}
+    Let $\jdg$ be a typing on $\Raw$.
+    \begin{enumerate}
+        \item $\cat{W}_\jdg$ is a contextual sub-natural-model of $\Raw$.
+        \item $\cat{W}_\jdg/{\equiv}$ is well defined and a contextual natural model, and $[\_] : \cat{W}_\jdg \to \cat{W}_\jdg/{\equiv}$ is a fibrewise surjective morphism of natural models.
+        \item $\cat{W}_\jdg/{\equiv}$ is shaped by $|[A]| \coloneqq |A|$, and $[\_]$ is shape-preserving, so that $(\cat{W}_\jdg, [\_])$ is a subquotient of $\Raw$.
+    \end{enumerate}
+\end{proposition}
+
+\begin{proof}
+    (1) The closure conditions of \cref{def:sub-natural-model}: $\vdash ()$; identities and composites by \textsc{Id} and \textsc{Comp}; closure of types and terms under the actions by \textsc{Subst-Ty} and \textsc{Subst-Tm}; $p$ restricts by \textsc{Presup-Tm}; extension by the definition of $\vdash \Gamma.A$; $p_A$ and $\nu_A$ by \textsc{Wk} and \textsc{Var}; pairing by the definition of $\Delta \vdash \langle \sigma, t \rangle : \Gamma.A$, since $\langle \sigma, t \rangle_0 = \sigma$ and $\langle \sigma, t \rangle_1 = t$. It is contextual: for $\Gamma = (A_1, \ldots, A_n)$, $\vdash \Gamma$ unfolds to $\Gamma_{<i} \vdash A_i$ for every $i$, so $\Gamma = ().A_1.\cdots.A_n$ in $\cat{W}_\jdg$, uniquely because this holds in $\Raw$.
+
+    (2) \emph{Well-definedness.} The relations on contexts, substitutions and types are equivalence relations, by \cref{lem:typing}(1) and by \textsc{Refl-Ty}, \textsc{Sym-Ty} and \textsc{Trans-Ty}. So is $\sim$: for $\Gamma \vdash A \equiv A'$ we have $\Tm_{\cat{W}_\jdg}(\Gamma, A) = \Tm_{\cat{W}_\jdg}(\Gamma, A')$ by \textsc{Conv-Tm}, and $\Gamma \vdash t \equiv t' : A$ iff $\Gamma \vdash t \equiv t' : A'$ by \textsc{Conv-TmEq}; together with \textsc{Refl-Tm}, \textsc{Sym-Tm} and \textsc{Trans-Tm} this gives reflexivity, symmetry and transitivity of $\sim$, and the fibre of $p$ over $[A]$ is $\Tm_{\cat{W}_\jdg}(\Gamma, A)/(\Gamma \vdash t \equiv t' : A)$, as stated. The hom-sets, types and terms do not depend on the representative contexts: for $\vdash \Gamma \equiv \Gamma'$, we have $\Ty_{\cat{W}_\jdg}(\Gamma) = \Ty_{\cat{W}_\jdg}(\Gamma')$ with the same relation, and likewise for terms and for substitutions, by the \textsc{CtxConv} rules of \cref{lem:admissible}. The identifications are the identity on the raw data. Composition is well defined by \textsc{Comp-Eq}, the actions on types and terms by \textsc{Cong-Ty} and \textsc{Cong-Tm}, extension by the definition of $\vdash \Gamma.A \equiv \Gamma'.A'$, and $p_{[A]}$, $\nu_{[A]}$ because $p_A$ and $\nu_A$ depend only on $\Gamma^{\downarrow}$ and $|A|$ by \cref{prop:raw-natural-model}. Associativity, unit laws, functoriality of the actions and naturality of $p$ hold for representatives, hence for classes. The object $[()]$ is terminal.
+
+    \emph{Representability.} We have $p(\nu_{[A]}) = [A[p_A]] = [A][p_{[A]}]$. Let $[\sigma] : [\Delta] \to [\Gamma]$ and $[t] \in \Tm_{\cat{W}_\jdg/{\equiv}}([\Delta], [A][\sigma]) = \Tm_{\cat{W}_\jdg}(\Delta, A[\sigma])/{\equiv}$; by the above we may take $t$ with $\Delta \vdash t : A[\sigma]$. Then $\Delta \vdash \langle \sigma, t \rangle : \Gamma.A$ by (1), and $\langle \sigma, t \rangle \equiv \langle \sigma', t' \rangle$ whenever $\sigma \equiv \sigma'$ and $t \equiv t'$, by \cref{def:derived-forms}; so $\langle [\sigma], [t] \rangle$ is well defined, and $p_{[A]} \circ \langle [\sigma], [t] \rangle = [\sigma]$ and $\nu_{[A]}[\langle [\sigma], [t] \rangle] = [t]$ hold for representatives. If $[\tau]$ satisfies $p_{[A]} \circ [\tau] = [\sigma]$ and $\nu_{[A]}[[\tau]] = [t]$, then $\tau = \langle \tau_0, \tau_1 \rangle$ by \cref{lem:pairing}, with $\Delta \vdash \tau_0 \equiv \sigma : \Gamma$, and $\Delta \vdash \tau_1 \equiv t : A[\sigma]$, since $\Delta \vdash A[\tau_0] \equiv A[\sigma]$ by \textsc{Cong-Ty} and \textsc{Refl-Ty}, and $\equiv$ at $A[\tau_0]$ and at $A[\sigma]$ agree by \textsc{Conv-TmEq}; hence $\Delta \vdash \tau \equiv \langle \sigma, t \rangle : \Gamma.A$.
+
+    \emph{Contextuality.} For $\Gamma = (A_1, \ldots, A_n)$, $[\Gamma] = [()].[A_1].\cdots.[A_n]$, and $[\Gamma.A] = [\Gamma'.A']$ iff $\vdash \Gamma \equiv \Gamma'$ and $\Gamma \vdash A \equiv A'$, iff $[\Gamma] = [\Gamma']$ and $[A] = [A']$; objects of different lengths are distinct.
+
+    \emph{The quotient map} preserves $\pt$, extension, $p_A$, $\nu_A$ and the actions by definition. It is fibrewise surjective: every element of $\Ty_{\cat{W}_\jdg/{\equiv}}([\Gamma])$ is $[A]$ for some $A \in \Ty_{\cat{W}_\jdg}(\Gamma)$, and every element of $\Tm_{\cat{W}_\jdg/{\equiv}}([\Gamma], [A])$ is $[t]$ for some $t \in \Tm_{\cat{W}_\jdg}(\Gamma, A)$, by the independence of representatives.
+
+    (3) $\Gamma \vdash A \equiv A'$ requires $|A| = |A'|$ by \cref{def:raw-judgements}, so $|[A]| \coloneqq |A|$ is well defined; it is natural because $|A[\sigma]| = |A|$, and $[\_]$ preserves it by construction. Now (1)--(3) are the description of \cref{def:shaped-subquotient}.
+\end{proof}
+
+\begin{proposition}\label{prop:span}
+    For a typing $\jdg$, in the kernel of $[\_] : \cat{W}_\jdg \twoheadrightarrow \cat{W}_\jdg/{\equiv}$ is given by the relation $\equiv$, that is, $[\Gamma] = [\Gamma']$ iff $\vdash \Gamma \equiv \Gamma'$; $[\sigma] = [\sigma']$ iff $\Delta \vdash \sigma \equiv \sigma' : \Gamma$; $[A] = [A']$ iff $\Gamma \vdash A \equiv A'$; $[t] = [t']$ iff $\Gamma \vdash t \equiv t' : A$.
+\end{proposition}
+
+\begin{proof}
+    By \cref{prop:quotient} and the definitions.
+\end{proof}
+
+\begin{definition}\label{def:saturated}
+    Let $(\cat{W}, q)$ be a subquotient of $\Raw$. If $q(\Gamma) = q(\Gamma')$, then $\Gamma^{\downarrow} = \Gamma'^{\downarrow}$ by \cref{lem:shaped-fiberwise-surjection}, and so $\Ty_{\Raw}(\Gamma) = \Ty_{\Raw}(\Gamma')$ by \cref{cor:sort-degeneracy}. If moreover $q_{\Ty}(\Gamma, A) = q_{\Ty}(\Gamma', A')$, then it follows by $q$'s shape preservation,
+    $$|A|_{\cat{W}} = |q_{\Ty}^{\Gamma}(A)|_{\cat{Q}} = |q_{\Ty}^{\Gamma'}(A')|_{\cat{Q}} = |A'|_{\cat{W}},$$
+    that $|A| = |A'|$, and thus $\Tm_{\Raw}(\Gamma, A) = \Tm_{\Raw}(\Gamma', A')$ by \cref{cor:sort-degeneracy}.
+    
+    The subquotient is \emph{saturated} if:
+    \begin{description}[font=\normalfont, leftmargin=!, labelwidth=3em]
+        \item[(S1)] if $q(\Gamma) = q(\Gamma')$, then $\Ty_\cat{W}(\Gamma) = \Ty_\cat{W}(\Gamma')$, and $q_{\Ty}(\Gamma, B) = q_{\Ty}(\Gamma', B)$ for every $B$ in them;
+        \item[(S2)] if $q(\Gamma) = q(\Gamma')$ and $q_{\Ty}(\Gamma, A) = q_{\Ty}(\Gamma', A')$, then we have $\Tm_\cat{W}(\Gamma, A) = \Tm_\cat{W}(\Gamma', A')$, and $q_{\Tm}(\Gamma, A, t) = q_{\Tm}(\Gamma', A', t)$ for every $t$ in them.
+    \end{description}
+\end{definition}
+
+\begin{lemma}\label{lem:saturated}
+    A subquotient $(\cat{W}, q)$ of $\Raw$ is saturated iff
+    \begin{enumerate}
+        \item whenever $q(\Gamma) = q(\Gamma')$, the canonical isomorphism $\iota : \Gamma' \to \Gamma$ of \cref{cor:sort-degeneracy} lies in $\cat{W}$ and $q(\iota) = \id_{q\Gamma}$;
+        \item whenever $q_\Ty(\Gamma, A) = q_\Ty(\Gamma, A')$, we have $\Tm_\cat{W}(\Gamma, A) = \Tm_\cat{W}(\Gamma, A')$ and $q_\Tm(\Gamma, A, t) = q_\Tm(\Gamma, A', t)$ for every $t$ in them.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    Suppose (1) and (2). For (S1), let $q(\Gamma) = q(\Gamma')$ and $B \in \Ty_\cat{W}(\Gamma)$; then $B = B[\iota] \in \Ty_\cat{W}(\Gamma')$ and $q_{\Ty}(\Gamma', B) = q_{\Ty}(\Gamma, B)[q\iota] = q_{\Ty}(\Gamma, B)$, and symmetrically with the inverse canonical isomorphism. For (S2), let moreover $q_\Ty(\Gamma, A) = q_\Ty(\Gamma', A')$ and $t \in \Tm_\cat{W}(\Gamma, A)$; then $t = t[\iota] \in \Tm_\cat{W}(\Gamma', A)$ with $q_\Tm(\Gamma', A, t) = q_\Tm(\Gamma, A, t)$, and since $q_\Ty(\Gamma', A) = q_\Ty(\Gamma, A) = q_\Ty(\Gamma', A')$, (2) at $\Gamma'$ gives $t \in \Tm_\cat{W}(\Gamma', A')$ with the same image; symmetrically.
+
+    Conversely, (2) is (S2) with $\Gamma = \Gamma'$. For (1), by induction on the length, the case of the empty contexts being trivial: let $q(\Gamma.A) = q(\Gamma'.A')$ and let $\iota : \Gamma'.A' \to \Gamma.A$ and $\iota_0 : \Gamma' \to \Gamma$ be the canonical isomorphisms. By \cref{prop:trivial-fibrations}(2), $q(\Gamma) = q(\Gamma')$ and $q_\Ty(\Gamma, A) = q_\Ty(\Gamma', A')$, so $\iota_0 \in \cat{W}$ with $q\iota_0 = \id$ by induction, and $A' \in \Ty_\cat{W}(\Gamma)$ by (S1). By \cref{prop:raw-natural-model}, $p_A \circ \iota = \iota_0 \circ p_{A'}$ and $\nu_A[\iota] = \nu_{A'}$, so $\iota = \langle \iota_0 \circ p_{A'}, \nu_{A'} \rangle$ by \cref{lem:pairing}. Now $\nu_{A'} \in \Tm_\cat{W}(\Gamma'.A', A'[p_{A'}])$, and
+    \begin{align*}
+        q_\Ty(\Gamma'.A', A'[p_{A'}]) &= q_\Ty(\Gamma', A')[qp_{A'}] = q_\Ty(\Gamma, A)[q\iota_0 \circ qp_{A'}]\\
+        &= q_\Ty(\Gamma, A)[q(\iota_0 \circ p_{A'})] = q_\Ty(\Gamma'.A', A[\iota_0 \circ p_{A'}]),
+    \end{align*}
+    so by (2) $\nu_{A'} \in \Tm_\cat{W}(\Gamma'.A', A[\iota_0 \circ p_{A'}])$, and $\iota \in \cat{W}$ by the closure of $\cat{W}$ under pairing. Finally $q\iota = \langle q\iota_0 \circ p_{qA'}, \nu_{qA'} \rangle = \langle p_{qA'}, \nu_{qA'} \rangle = \id$ by \cref{lem:map-of-adjunctions,lem:pairing}.
+\end{proof}
+
+\begin{remark}\label{rem:saturated}
+    Saturation refers to the canonical isomorphisms and to the common raw terms of \cref{cor:sort-degeneracy}, structure of $\Raw$ that $\mathsf{CtxNM}/\cat{B}(S^+)$ does not see; it is therefore a property of subquotients of $\Raw$, not part of the notion of subquotient. It says that the identifications made by $q$ respect those made by the raw syntax itself. In the reading of \cref{prop:characterisation} below it is the conversion rule, and it is exactly what makes the kernel of $q$ be generated by equalities $\Gamma \vdash A \equiv A'$ and $\Gamma \vdash t \equiv t' : A$ over single contexts.
 \end{remark}
+
+\begin{proposition}\label{prop:characterisation}
+    The assignment $\jdg \mapsto (\cat{W}_\jdg, [\_] : \cat{W}_\jdg \to \cat{W}_\jdg/{\equiv})$ is a bijection between typings on $\Raw$ and isomorphism classes of saturated subquotients of $\Raw$, with inverse $[(\cat{W}, q)] \mapsto \jdg_q$, where $\jdg_q$ consists of the $\Gamma \vdash A$ with $A \in \Ty_\cat{W}(\Gamma)$, the $\Gamma \vdash t : A$ with $t \in \Tm_\cat{W}(\Gamma, A)$, the $\Gamma \vdash A \equiv A'$ with $A, A' \in \Ty_\cat{W}(\Gamma)$ and $q_{\Ty}(\Gamma, A) = q_{\Ty}(\Gamma, A')$, and the $\Gamma \vdash t \equiv t' : A$ with $t, t' \in \Tm_\cat{W}(\Gamma, A)$ and $q_{\Tm}(\Gamma, A, t) = q_{\Tm}(\Gamma, A, t')$.
+\end{proposition}
+
+\begin{proof}
+    Let $\jdg$ be a typing. By \cref{prop:quotient}, $(\cat{W}_\jdg, [\_])$ is a subquotient of $\Raw$; it is saturated, since by \cref{prop:quotient} the sets $\Ty_{\cat{W}_\jdg/{\equiv}}([\Gamma])$ and $\Tm_{\cat{W}_\jdg/{\equiv}}([\Gamma], [A])$ are computed from any representatives, with the identifications the identity on raw data, which is (S1) and (S2); and $\jdg_{[\_]} = \jdg$ by \cref{prop:span}.
+
+    Conversely, let $(\cat{W}, q)$ be saturated. The set $\jdg_q$ depends only on the isomorphism class of $(\cat{W}, q)$: if $q' = \theta \circ q$ with $\theta$ an isomorphism, then $q'_{\Ty}(\Gamma, A) = q'_{\Ty}(\Gamma, A')$ iff $q_{\Ty}(\Gamma, A) = q_{\Ty}(\Gamma, A')$, since $\theta$ is injective on types, and likewise for terms, so $\jdg_{q'} = \jdg_q$. By contextuality of $\cat{W}$, \cref{prop:trivial-fibrations}(2) and induction on the length, the derived forms of $\jdg_q$ are: $\vdash \Gamma$ iff $\Gamma \in \cat{W}$; $\Delta \vdash \sigma : \Gamma$ iff $\sigma \in \cat{W}(\Delta, \Gamma)$; $\vdash \Gamma \equiv \Gamma'$ iff $q(\Gamma) = q(\Gamma')$; $\Delta \vdash \sigma \equiv \sigma' : \Gamma$ iff $q(\sigma) = q(\sigma')$. We verify that $\jdg_q$ is a typing. \textsc{Presup-Ty}, \textsc{Presup-Tm}, \textsc{Presup-TyEq}, \textsc{Presup-TmEq}, \textsc{Subst-Ty}, \textsc{Subst-Tm}, \textsc{Wk} and \textsc{Var} hold because $\cat{W}$ is a sub-natural-model and the equalities of $\jdg_q$ relate elements of $\cat{W}$. \textsc{Refl-Ty}, \textsc{Sym-Ty}, \textsc{Trans-Ty}, \textsc{Refl-Tm}, \textsc{Sym-Tm} and \textsc{Trans-Tm} hold because the relations are kernels of functions. \textsc{Cong-Ty}: $q(A[\sigma]) = q(A)[q(\sigma)] = q(A')[q(\sigma')] = q(A'[\sigma'])$, and \textsc{Cong-Tm} likewise. \textsc{Conv-TmEq}: if $t \in \Tm_\cat{W}(\Gamma, A)$ and $q_{\Ty}(\Gamma, A) = q_{\Ty}(\Gamma, A')$, then $t \in \Tm_\cat{W}(\Gamma, A')$ and $q_{\Tm}(\Gamma, A', t) = q_{\Tm}(\Gamma, A, t)$ by (S2) with $\Gamma = \Gamma'$; hence $q_{\Tm}(\Gamma, A, t) = q_{\Tm}(\Gamma, A, t')$ implies $q_{\Tm}(\Gamma, A', t) = q_{\Tm}(\Gamma, A', t')$. Now $\cat{W}_{\jdg_q} = \cat{W}$, and the congruence of $\jdg_q$ is the kernel of $q$. The map $\theta : \cat{W}/{\equiv} \to \cat{Q}$, $[x] \mapsto q(x)$, is well defined and a morphism of natural models, since $q$ is and respects its kernel; it is injective on objects, faithful and fibrewise injective by \cref{prop:span}, and fibrewise surjective because $q$ is, hence also surjective on objects and full by \cref{prop:trivial-fibrations}(2). So $\theta$ is an isomorphism by \cref{lem:iso}, shape-preserving since $|\theta[A]| = |qA| = |A| = |[A]|$, with $q = \theta \circ [\_]$, and the two assignments are inverse up to isomorphism.
+\end{proof}
+
+\section{Type theories}
+\label{sec:type-theories}
+
+\begin{definition}\label{def:type-theory}
+    Let $T$ be a relative monad on $J_S$. A \emph{type theory} $\TT$ over $T$ is specified by the following data:
+    \begin{itemize}
+        \item a module of raw types $M : \Kl(T) \to \Set^S$,
+        \item a module of raw equations $E : \Kl(T) \to \Set$, and
+        \item a set $X$ of raw judgments of $\Raw(T, M, E)$.
+    \end{itemize}
+    The \emph{judgements} of $\TT$, $\jdg_{\TT}$ are defined as least typing on $\Raw(T, M, E)$ closed under $X$.
+    The \emph{syntax} of $\TT$ is the $S$-shaped contextual natural model $\Syn_{\TT} \coloneqq \cat{W}_{\jdg_{\TT}}/{\equiv_{\TT}}$ of \cref{prop:quotient}.
+\end{definition}

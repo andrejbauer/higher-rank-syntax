@@ -1,0 +1,365 @@
+\section{Judgements on a raw syntax C-system}
+\label{sec:raw-judgements}
+
+The well-formed syntax of $\ToS^\omega$ will be a C-system whose objects are the well-formed raw contexts and whose morphisms are the well-formed substitutions, both up to judgemental equality: a quotient of a sub-C-system of $\Ctxr$. The machinery of Voevodsky's regular quotients~\cite{Voevodsky2014Subsystems} of C-subsystems makes this precise. Since the operations of a C-system are only partially defined, a congruence relation compatible with them need not descend to the quotient; regularity is what makes the quotient a C-system and the projection a homomorphism. The term C-systems of type theories are regular quotients of sub-C-systems of their raw syntax C-systems~\cite[\S1]{Voevodsky2016Relative}.
+
+In this section, following~\cite{Voevodsky2014Module}, we describe such regular subquotients of the C-systems $\Csys(T, M)$ of \cref{def:sorted-c-system} in terms of judgements on the raw syntax. A set of judgements of the four forms $X \vdash A$, $X \vdash t : A$, $X \vdash A \equiv A'$ and $X \vdash t \equiv t' : A$ determines a regular subquotient whenever it is closed under the structural rules of type theory: the well-formed objects and terms form a sub-C-system, and the equality judgements generate a regular congruence relation on it (\cref{prop:structural-subquotient}). Conversely, every regular subquotient in which context equality is pointwise arises in this way from exactly one such set. Closure under the structural rules is preserved by intersections, so any set of judgements, such as the instances of the rules of a type theory, generates a least closed set, and hence a regular subquotient (\cref{lem:closed-intersections}).
+
+\begin{definition}[{\cite[\S\S4--5]{Voevodsky2014Subsystems}}]\label{def:regular-subquotient}
+    Let $\cat{C}$ be a C-system.
+    \begin{itemize}
+        \item A \emph{sub-C-system} of $\cat{C}$ is a subcategory closed under $\pt$, $\ft$, $p$, $f^*$ and $q$. It is a C-system with the induced structure, so that the inclusion is a C-system homomorphism.
+        \item A \emph{regular congruence relation} on $\cat{C}$ is a pair of equivalence relations $\sim$ on objects and on morphisms, compatible with the operations of $\cat{C}$, and such that
+        \begin{itemize}
+            \item if $X \sim Y$, then $\ell(X) = \ell(Y)$,
+            \item if $\ft(X) \sim Y$, then $X \sim Y'$ for some $Y'$ with $\ft(Y') = Y$,
+            \item if $f : X \to Y$, $X' \sim X$ and $Y' \sim Y$, then $f \sim f'$ for some $f' : X' \to Y'$.
+        \end{itemize}
+        \item A \emph{regular quotient} of $\cat{C}$ is the quotient of the objects and the morphisms of $\cat{C}$ by a regular congruence relation. It carries a unique C-system structure for which the quotient projection is a homomorphism~\cite[Lemma~5.2]{Voevodsky2014Subsystems}.
+        \item A \emph{regular subquotient} of $\cat{C}$ is a regular quotient of a sub-C-system of $\cat{C}$.
+    \end{itemize}
+\end{definition}
+
+Both sub-C-systems and regular congruence relations can be described in terms of the B-sets of a C-system, which we recall in the formulation of~\cite{AhrensEmmeneggerNorthRijke2025}.
+
+\begin{definition}[{\cite[Defs.~4.1 and~4.5]{AhrensEmmeneggerNorthRijke2025}}]\label{def:b-frame}
+    A \emph{B-frame} $\mathbb{B}$ is a presheaf on the `comb' category
+    \[\begin{tikzcd}
+    	& \bullet & \bullet & \bullet & \\
+    	\bullet & \bullet & \bullet & \bullet & {\cdots,}
+    	\arrow[from=2-1, to=2-2]
+    	\arrow[from=2-2, to=1-2]
+    	\arrow[from=2-2, to=2-3]
+    	\arrow[from=2-3, to=1-3]
+    	\arrow[from=2-3, to=2-4]
+    	\arrow[from=2-4, to=1-4]
+    	\arrow[from=2-4, to=2-5]
+    \end{tikzcd}\]
+    that is, a diagram of sets of the form
+    \[\begin{tikzcd}
+        & \widetilde{B}_1 \arrow[d, "\partial"] & \widetilde{B}_2 \arrow[d, "\partial"] & \widetilde{B}_3 \arrow[d, "\partial"] & \\
+        B_0 & B_1 \arrow[l, "\ft"'] & B_2 \arrow[l, "\ft"'] & B_3 \arrow[l, "\ft"'] & \cdots, \arrow[l, "\ft"']
+    \end{tikzcd}\]
+    with $B_0$ a singleton. A \emph{homomorphism} of B-frames is natrual transformation. For $X \in B_n$ and $m \in \N$, the \emph{slice} $\mathbb{B}/X$ is the B-frame with
+    \begin{align*}
+        (B/X)_m &\coloneqq \{\, Y \in B_{n+m} \mid \ft^m(Y) = X \,\},\\
+        (\widetilde{B}/X)_{m+1} &\coloneqq \{\, y \in \widetilde{B}_{n+m+1} \mid \ft^{m+1}(\partial(y)) = X \,\}.
+    \end{align*}
+\end{definition}
+
+\begin{definition}[{ \cite[\S2]{Voevodsky2014BSystems}, \cite[Constrs.~3.22 and~5.6]{AhrensEmmeneggerNorthRijke2025}}]\label{def:b-sets}
+    Let $\cat{C}$ be a C-system. The \emph{B-sets} of $\cat{C}$ are
+    \begin{align*}
+        B_n &\coloneqq \{\, X \in \mathrm{Ob}(\cat{C}) \mid \ell(X) = n \,\},\\
+        \widetilde{B}_{n+1} &\coloneqq \{\, x : \ft(X) \to X \mid X \in B_{n+1},\ p_X \circ x = \id_{\ft(X)} \,\};
+    \end{align*}
+    with $\ft$ as in $\cat{C}$ and $\partial(x : \ft(X) \to X) \coloneqq X$, they form a B-frame $\mathbb{B}(\cat{C})$.
+
+    Let $f : Y \to X$ be a morphism of $\cat{C}$, with $X \in B_n$ and $Y \in B_k$. By recursion on $m$, we define for every $Z \in (B/X)_m$ an object $f^\dagger(Z) \in (B/Y)_m$ and a morphism $\pi_f(Z) : f^\dagger(Z) \to Z$. For $m = 0$, we have $(B/X)_0 = \{X\}$ and $(B/Y)_0 = \{Y\}$, and we set $f^\dagger(X) \coloneqq Y$ and $\pi_f(X) \coloneqq f$. Let $Z \in (B/X)_{m+1}$. Then $\ft(Z) \in (B/X)_m$, so the inductive hypothesis gives $f^\dagger(\ft(Z)) \in (B/Y)_m$ and
+    \[
+        \pi_f(\ft(Z)) : f^\dagger(\ft(Z)) \to \ft(Z).
+    \]
+    Since $\ell(Z) > 0$ and the codomain of $\pi_f(\ft(Z))$ is $\ft(Z)$, \cref{def:c-system} provides the pullback of $Z$ along $\pi_f(\ft(Z))$, and we set
+    \begin{align*}
+        f^\dagger(Z) &\coloneqq \pi_f(\ft(Z))^*Z, & \pi_f(Z) &\coloneqq q(\pi_f(\ft(Z)), Z) : f^\dagger(Z) \to Z.
+    \end{align*}
+    By \cref{def:c-system}, $\ell(f^\dagger(Z)) > 0$ and $\ft(f^\dagger(Z)) = f^\dagger(\ft(Z)) \in (B/Y)_m$, so that $f^\dagger(Z) \in (B/Y)_{m+1}$, and the square
+    \[
+    \begin{tikzcd}[column sep=5em]
+        f^\dagger(Z) \arrow[r, "\pi_f(Z)"] \arrow[d, "p_{f^\dagger(Z)}"'] & Z \arrow[d, "p_Z"] \\
+        f^\dagger(\ft(Z)) \arrow[r, "\pi_f(\ft(Z))"'] & \ft(Z)
+    \end{tikzcd}
+    \]
+    is a pullback. For a section $y \in (\widetilde{B}/X)_{m+1}$ with $\partial(y) = Z$, we define $f^\dagger(y)$ as the morphism induced by this pullback,
+    \[
+    \begin{tikzcd}[column sep=5em]
+        f^\dagger(\ft(Z)) \arrow[dr, dashed, "f^\dagger(y)" description] \arrow[drr, bend left, "y \circ \pi_f(\ft(Z))"] \arrow[ddr, bend right, equal] & & \\
+        & f^\dagger(Z) \arrow[r, "\pi_f(Z)"] \arrow[d, "p_{f^\dagger(Z)}"'] & Z \arrow[d, "p_Z"] \\
+        & f^\dagger(\ft(Z)) \arrow[r, "\pi_f(\ft(Z))"'] & \ft(Z),
+    \end{tikzcd}
+    \]
+    that is, the unique section of $p_{f^\dagger(Z)}$ with $\pi_f(Z) \circ f^\dagger(y) = y \circ \pi_f(\ft(Z))$. By construction $f^\dagger$ commutes with $\ft$ and $\partial$, and is thus a homomorphism $f^\dagger : \mathbb{B}(\cat{C})/X \to \mathbb{B}(\cat{C})/Y$. For $Z \in (B/X)_1$, we have $f^\dagger(Z) = f^*Z$ and $\pi_f(Z) = q(f, Z)$.
+
+    For $X \in B_{n+1}$ and $x \in \widetilde{B}_{n+1}$, the \emph{weakening} and \emph{substitution} homomorphisms are defined as
+    \begin{align*}
+        W_X &\coloneqq p_X^\dagger : \mathbb{B}(\cat{C})/\ft(X) \to \mathbb{B}(\cat{C})/X,\\
+        S_x &\coloneqq x^\dagger : \mathbb{B}(\cat{C})/\partial(x) \to \mathbb{B}(\cat{C})/\ft(\partial(x)),
+    \end{align*}
+    and the \emph{generic element} $\delta(X) \in \widetilde{B}_{n+2}$ is defined as the diagonal of $p_X$:
+    \[
+    \begin{tikzcd}[column sep=5em]
+        X \arrow[dr, dashed, "\delta(X)" description] \arrow[drr, bend left, equal] \arrow[ddr, bend right, equal] & & \\
+        & W_X(X) \arrow[r, "{q(p_X, X)}"] \arrow[d, "p_{W_X(X)}"'] & X \arrow[d, "p_X"] \\
+        & X \arrow[r, "p_X"'] & \ft(X),
+    \end{tikzcd}
+    \]
+    that is, the unique section of $p_{W_X(X)}$ with $q(p_X, X) \circ \delta(X) = \id_X$.
+\end{definition}
+
+Read type-theoretically, an element of $B_{n+1}$ is a context of length $n$ together with a type over it, and an element of $\widetilde{B}_{n+1}$ is a term of such a type; $W_X$ weakens by the last type of $X$, $S_x$ substitutes $x$ for the last variable, and $\delta(X)$ is the last variable.
+
+\begin{proposition}[{\cite[Props.~4.3 and~5.4]{Voevodsky2014Subsystems}}]\label{prop:b-characterisation}
+    Let $\cat{C}$ be a C-system, so that $\mathrm{Ob}(\cat{C}) = \coprod_n B_n$, and write $\widetilde{B} \coloneqq \coprod_n \widetilde{B}_{n+1}$.
+    \begin{enumerate}
+        \item Sub-C-systems of $\cat{C}$ correspond bijectively to pairs of subsets $B' \subseteq \mathrm{Ob}(\cat{C})$ and $\widetilde{B}' \subseteq \widetilde{B}$ that contain $B_0$, are closed under $\ft$, $\partial$ and $\delta$, and satisfy $W_X(y) \in \widetilde{B}'$ and $S_x(y) \in \widetilde{B}'$ whenever $X \in B'$ and $x, y \in \widetilde{B}'$.
+        \item Regular congruence relations on $\cat{C}$ correspond bijectively to pairs of equivalence relations $\sim$ on $\mathrm{Ob}(\cat{C})$ and $\simeq$ on $\widetilde{B}$ such that $\sim$ relates only elements of the same $B_n$, both are compatible with $\ft$, $\partial$, $\delta$, weakening and substitution, and:
+        \begin{itemize}
+            \item if $\ft(X) \sim X'$, then $X \sim Y$ for some $Y$ with $\ft(Y) = X'$,
+            \item if $\partial(x) \sim X$, then $x \simeq y$ for some $y$ with $\partial(y) = X$.
+        \end{itemize}
+        Here, compatibility with weakening means that $X \sim X'$ and $Y \sim Y'$ imply $W_X(Y) \sim W_{X'}(Y')$, and similarly for terms and for compatibility with substitution.
+    \end{enumerate}
+\end{proposition}
+
+We now describe the B-sets of $\Csys(T, M)$ and their operations in terms, concretely in terms of the raw syntax. In the rest of the section, $T$ is a relative monad on $J_S$ and $M : \Kl(T) \to \Set^S$ is a $T$-module. For a morphism $f : \Gamma \to \Delta$ of $\Kl(T)$, we write $f^T \coloneqq f^\sharp : T(\Gamma) \to T(\Delta)$, since $T$ is itself a $T$-module. We regard the elements of an $S$-sorted set as carrying their sort, so that $M(\Gamma)_s$ and $M(\Gamma)_{s'}$ are disjoint for $s \neq s'$; this can always be arranged by replacing $M(\Gamma)_s$ with $\{s\} \times M(\Gamma)_s$, and holds for $\Ent$, whose entries determine their arity.
+
+\begin{definition}\label{def:raw-judgements}
+    The \emph{raw judgements} of $\Csys(T, M)$ are the elements of the sets
+    \begin{align*}
+        B &\coloneqq \coprod_{s \in S} \{\, (\Gamma, A) \mid \Gamma \in \Ob(\Csys(T,M)),\, A \in M(\Gamma^{\downarrow})_s \,\},\\
+        \widetilde{B} &\coloneqq \coprod_{s \in S} \{\, (\Gamma, A, t) \mid \Gamma \in \Ob(\Csys(T,M)),\, A \in M(\Gamma^{\downarrow})_s,\ t \in T(\Gamma^{\downarrow})_s \,\},\\
+        B_{\mathrm{eq}} &\coloneqq \coprod_{s \in S} \{\, (\Gamma, A, A') \mid \Gamma \in \Ob(\Csys(T,M)),\, A, A' \in M(\Gamma^{\downarrow})_s \,\},\\
+        \widetilde{B}_{\mathrm{eq}} &\coloneqq \coprod_{s \in S} \{\, (\Gamma, A, t, t') \mid \Gamma \in \Ob(\Csys(T,M)),\, A \in M(\Gamma^{\downarrow})_s,\ t, t' \in T(\Gamma^{\downarrow})_s \,\},
+    \end{align*}
+    written, respectively,
+    \[
+        \Gamma \vdash A, \qquad \Gamma \vdash t : A, \qquad \Gamma \vdash A \equiv A', \qquad \Gamma \vdash t \equiv t' : A.
+    \]
+\end{definition}
+
+The sets $B$ and $\widetilde{B}$ are precisely the B-sets of $\Csys(T, M)$. By construction, every object of positive length is $\Gamma \concat [A]$ for a unique $\Gamma \vdash A$, and by \cref{rem:sorted-c-system-cwf}, every section of $p_{\Gamma \concat [A]}$ is the copairing $\langle \id, t \rangle : \Gamma^{\downarrow} \concat [s] \to \Gamma^{\downarrow}$ in $\Kl(T)$ for a unique $\Gamma \vdash t : A$ in $\widetilde{B}$. Identifying along these bijections, we have
+\begin{align*}
+    B_{n+1} = \{\, \Gamma \vdash A \mid \ell(\Gamma) = n \,\} \;\;\;\;\;\; \text{ and } \;\;\;\;\;\;  \widetilde{B}_{n+1} = \{\, \Gamma \vdash t : A \mid \ell(\Gamma) = n \,\}.
+\end{align*}
+
+\begin{definition}\label{def:sets-of-judgements}
+    A \emph{set of judgements} of $\Csys(T,M)$ is a subset $J \subseteq B \sqcup \widetilde{B} \sqcup B_{\mathrm{eq}} \sqcup \widetilde{B}_{\mathrm{eq}}$, and we say that a raw judgement $\jdg$ \emph{holds in} $J$ if $\jdg \in J$. The \emph{well-formed contexts} of $J$ are the elements of
+    \[
+        B_J \coloneqq \{\pt\} \cup \{\, \Gamma \concat [A] \mid (\Gamma \vdash A) \in J \,\} = B_0 \cup (B \cap J),
+    \]
+    and we say that $\vdash \Gamma$ holds in $J$ if $\Gamma \in B_J$. We write $\widetilde{B}_J \coloneqq \widetilde{B} \cap J$.
+\end{definition}
+
+The following lemma computes the operations of \cref{def:b-sets} on raw syntax. Read type-theoretically, a morphism $f : \Delta \to \Gamma$ of $\Csys(T, M)$ is a substitution of terms over $\Delta^{\downarrow}$ for the variables of $\Gamma^{\downarrow}$, and $f^\dagger$ applies it to every type and term of a judgement in a context $\Gamma \concat \Theta$ over $\Gamma$, extended by the identity on the variables of $\Theta$. Weakening and substitution are the instances of the renaming $\inl$ and of the substitution $\langle \id, u \rangle$ of $u$ for the last variable, and the generic element pops the last variable.
+
+\begin{lemma}\label{lem:b-sets-raw}
+    Let $f : \Delta \to \Gamma$ be a morphism of $\Csys(T, M)$, that is, a morphism $f : \Gamma^{\downarrow} \to \Delta^{\downarrow}$ of $\Kl(T)$. Every element of $(B/\Gamma)_{m+1}$, resp.\ $(\widetilde{B}/\Gamma)_{m+1}$, is $\Gamma \concat \Theta \vdash A$, resp.\ $\Gamma \concat \Theta \vdash t : A$, for unique $\Theta \in \coprod_{\Phi} \Dec_M(\Gamma^{\downarrow}, \Phi)$ with $\Theta^{\downarrow}$ of length $m$, $s \in S$, $A \in M(\Gamma^{\downarrow} \concat \Theta^{\downarrow})_s$ and $t \in T(\Gamma^{\downarrow} \concat \Theta^{\downarrow})_s$. With $f \concat \Theta^{\downarrow} : \Gamma^{\downarrow} \concat \Theta^{\downarrow} \to \Delta^{\downarrow} \concat \Theta^{\downarrow}$ as in \cref{rem:kleisli-coproducts}, we then have:
+    \begin{enumerate}
+        \item $f^\dagger(\Gamma \concat \Theta \vdash A) = \big(\Delta \concat f^M(\Theta) \vdash (f \concat \Theta^{\downarrow})^M(A)\big)$,
+        \item $f^\dagger(\Gamma \concat \Theta \vdash t : A) = \big(\Delta \concat f^M(\Theta) \vdash (f \concat \Theta^{\downarrow})^T(t) : (f \concat \Theta^{\downarrow})^M(A)\big)$,
+        \item for $\Gamma \vdash A$ and $\Gamma \vdash u : A$ with $A$ of sort $s$,
+        \begin{gather*}
+            W_{\Gamma \concat [A]} = \inl^\dagger, \qquad S_{(\Gamma, A, u)} = \langle \id, u \rangle^\dagger,\\
+            \delta(\Gamma \concat [A]) = \big(\Gamma \concat [A] \vdash \inr : \inl^M(A)\big),
+        \end{gather*}
+        where $\inl : \Gamma^{\downarrow} \to \Gamma^{\downarrow} \concat [s]$ and $\langle \id, u \rangle : \Gamma^{\downarrow} \concat [s] \to \Gamma^{\downarrow}$ are regarded as morphisms $\Gamma \concat [A] \to \Gamma$ and $\Gamma \to \Gamma \concat [A]$ of $\Csys(T, M)$, and $\inr : [s] \to \Gamma^{\downarrow} \concat [s]$ as an element of $T(\Gamma^{\downarrow} \concat [s])_s$.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    Write $g_\Theta \coloneqq f \concat \Theta^{\downarrow}$. Since $(\Gamma \concat \Theta)^{\downarrow} = \Gamma^{\downarrow} \concat \Theta^{\downarrow}$ and $(\Delta \concat f^M(\Theta))^{\downarrow} = \Delta^{\downarrow} \concat \Theta^{\downarrow}$, we may regard $g_\Theta$ as a morphism $\Delta \concat f^M(\Theta) \to \Gamma \concat \Theta$ of $\Csys(T, M)$. We first show, by induction on the length of $\Theta^{\downarrow}$, that
+    \[
+        f^\dagger(\Gamma \concat \Theta) = \Delta \concat f^M(\Theta) \qquad \text{and} \qquad \pi_f(\Gamma \concat \Theta) = g_\Theta.
+    \]
+    For $\Theta = ()$, this is \cref{def:b-sets}, since $g_{()} = f$. For the inductive step, let $A \in M(\Gamma^{\downarrow} \concat \Theta^{\downarrow})_s$. By \cref{def:b-sets}, the inductive hypothesis and \cref{def:sorted-c-system},
+    \begin{align*}
+        f^\dagger(\Gamma \concat \Theta \concat [A]) &= g_\Theta^*(\Gamma \concat \Theta \concat [A]) = \Delta \concat f^M(\Theta) \concat [g_\Theta^M(A)],\\
+        \pi_f(\Gamma \concat \Theta \concat [A]) &= q(g_\Theta, \Gamma \concat \Theta \concat [A]) = g_\Theta \concat [s].
+    \end{align*}
+    By the definition of $f^M$ on $M$-decorations, $f^M(\Theta) \concat [g_\Theta^M(A)] = f^M(\Theta \concat [A])$, and $g_\Theta \concat [s] = f \concat (\Theta^{\downarrow} \concat [s]) = g_{\Theta \concat [A]}$. This proves the first item.
+
+    For terms, recall that a section $y$ of $p_{\Gamma \concat \Theta \concat [A]} = \inl$ is a morphism $y : \Gamma^{\downarrow} \concat \Theta^{\downarrow} \concat [s] \to \Gamma^{\downarrow} \concat \Theta^{\downarrow}$ of $\Kl(T)$ with $y \odot \inl = \id$, so $y = \langle \id, t \rangle$ for the unique $t \coloneqq y \odot \inr \in T(\Gamma^{\downarrow} \concat \Theta^{\downarrow})_s$. By \cref{def:b-sets}, $f^\dagger(y)$ is the unique section $y' = \langle \id, t' \rangle$ of $p_{\Delta \concat f^M(\Theta) \concat [g_\Theta^M(A)]}$ for which the square
+    \[
+    \begin{tikzcd}[column sep=7em]
+        \Delta \concat f^M(\Theta) \arrow[r, "{\pi_f(\Gamma \concat \Theta)}"] \arrow[d, "y'"'] & \Gamma \concat \Theta \arrow[d, "y"] \\
+        \Delta \concat f^M(\Theta) \concat [g_\Theta^M(A)] \arrow[r, "{\pi_f(\Gamma \concat \Theta \concat [A])}"'] & \Gamma \concat \Theta \concat [A]
+    \end{tikzcd}
+    \]
+    commutes in $\Csys(T, M)$. Writing out this square in $\Kl(T)$ yields:
+    \[
+    \begin{tikzcd}[column sep=5em]
+        \Gamma^{\downarrow} \concat \Theta^{\downarrow} \concat [s] \arrow[r, "{g_\Theta \concat [s]}"] \arrow[d, "{\langle \id, t \rangle}"'] & \Delta^{\downarrow} \concat \Theta^{\downarrow} \concat [s] \arrow[d, "{\langle \id, t' \rangle}"] \\
+        \Gamma^{\downarrow} \concat \Theta^{\downarrow} \arrow[r, "g_\Theta"'] & \Delta^{\downarrow} \concat \Theta^{\downarrow}.
+    \end{tikzcd}
+    \]
+    Along $\inr$, the upper composite restricts to $t'$ and the lower to $g_\Theta \odot t = g_\Theta^T(t)$, which proves the second item.
+
+    For the third item, recall from \cref{def:b-sets} that $W_X = p_X^\dagger$ and $S_x = x^\dagger$, and that $\delta(X)$ is the section of $p_{W_X(X)}$ with $q(p_X, X) \circ \delta(X) = \id_X$. Let $X = \Gamma \concat [A]$ with $A$ of sort $s$. By \cref{def:sorted-c-system}, $p_X$ is $\inl : \Gamma^{\downarrow} \to \Gamma^{\downarrow} \concat [s]$, and the section given by $\Gamma \vdash u : A$ is $\langle \id, u \rangle : \Gamma^{\downarrow} \concat [s] \to \Gamma^{\downarrow}$; this gives the formulas for $W$ and $S$. By \cref{def:sorted-c-system}, $W_X(X) = p_X^*X = X \concat [\inl^M(A)]$ and $q(p_X, X) = \inl \concat [s] : \Gamma^{\downarrow} \concat [s] \to \Gamma^{\downarrow} \concat [s, s]$. As a section of $p_{W_X(X)}$, $\delta(X)$ is $\langle \id, v \rangle : \Gamma^{\downarrow} \concat [s, s] \to \Gamma^{\downarrow} \concat [s]$ for a unique $v \in T(\Gamma^{\downarrow} \concat [s])_s$, and $q(p_X, X) \circ \delta(X) = \id_X$ reads
+    \[
+        \langle \id, v \rangle \odot (\inl \concat [s]) = \id_{\Gamma^{\downarrow} \concat [s]}
+    \]
+    in $\Kl(T)$. Precomposing with $\inr : [s] \to \Gamma^{\downarrow} \concat [s]$, we obtain $v = \inr$, and hence $\delta(X) = X \vdash \inr : \inl^M(A)$.
+\end{proof}
+
+\begin{remark}
+    For $S = 1$,~\cref{lem:b-sets-raw} yields the formulas of~\cite[Thm.~6.10]{Voevodsky2016Relative}.
+\end{remark}
+
+%%% here
+
+For $\Ctxr$, the action of $f \concat \Theta^{\downarrow}$ is the action of $f$ at depth $\Theta^{\downarrow}$ (\cref{def:action-decorations,lem:depth-derived}): weakening renames, substitution of $u$ instantiates the last slot by $u$, and $\inr$ is the $\eta$-expansion of the last slot (\cref{eta-expansion}).
+
+A set of judgements $J$ determines relations $\sim_J$ and $\simeq_J$ by recursion on length, as in Def.~6.1 of~\cite{Voevodsky2014Module}: $\pt \sim_J \pt$, and $Y \concat [A] \sim_J Y' \concat [A']$ if $Y \sim_J Y'$ and $Y \vdash A \equiv A'$ holds in $J$; and $(X, A, t) \simeq_J (X', A', t')$ if $X \concat [A] \sim_J X' \concat [A']$ and $X \vdash t \equiv t' : A$ holds in $J$. Related objects have the same underlying list of sorts, so these judgements are raw judgements.
+
+\begin{definition}\label{def:structurally-closed}
+    A set of judgements $J$ is \emph{structurally closed} if it satisfies:
+    \begin{description}[font=\normalfont\itshape]
+        \item[Closure.] $B_J$ and $\widetilde{B}_J$ are closed under $\ft$, $\partial$, $\delta$, weakening and substitution.
+        \item[Presupposition.] If $X \vdash A \equiv A'$ holds in $J$, then so do $X \vdash A$ and $X \vdash A'$; if $X \vdash t \equiv t' : A$ holds in $J$, then so do $X \vdash t : A$ and $X \vdash t' : A$.
+        \item[Equivalence.] $\sim_J$ and $\simeq_J$ are equivalence relations on $B_J$ and $\widetilde{B}_J$.
+        \item[Compatibility.] $\sim_J$ and $\simeq_J$ are compatible with $\ft$, $\partial$, $\delta$, weakening and substitution.
+    \end{description}
+\end{definition}
+
+Since $\sim_J$ and $\simeq_J$ only relate judgements that hold in $J$, the equivalence condition contains context and type conversion:
+
+\begin{lemma}\label{lem:conversion}
+    Let $J$ be structurally closed. If $Y \vdash A$ holds in $J$ and $Y \sim_J Y'$, then $Y \concat [A] \sim_J Y' \concat [A]$, and in particular $Y' \vdash A$ holds. If $X \vdash t : A$ holds in $J$ and $X \concat [A] \sim_J X' \concat [A']$, then $(X, A, t) \simeq_J (X', A', t)$, and in particular $X' \vdash t : A'$ holds.
+\end{lemma}
+
+\begin{proof}
+    By reflexivity, $Y \concat [A] \sim_J Y \concat [A]$, so $Y \vdash A \equiv A$ holds; together with $Y \sim_J Y'$, this gives $Y \concat [A] \sim_J Y' \concat [A]$ by definition of $\sim_J$, and $Y' \concat [A] \in B_J$ since $\sim_J$ is a relation on $B_J$. The second claim follows in the same way from the reflexivity of $\simeq_J$.
+\end{proof}
+
+The conditions of \cref{def:structurally-closed} can be stated as inference rules, the structural rules of type theory in Voevodsky's formulation~\cite[Rem.~4.2 and Prop.~6.2]{Voevodsky2014Module}. To state them, let $X$ be an object, $A \in M(X^{\downarrow})_s$ and $u \in T(X^{\downarrow})_s$, and let $\Delta$ range over the $M$-decorations over $X^{\downarrow}$, resp.\ $X^{\downarrow} \concat [s]$, so that $X \concat \Delta$, resp.\ $X \concat [A] \concat \Delta$, is an object. We write
+\[
+    W_{X \concat [A]}(X \concat \Delta) = X \concat [A] \concat \Delta{\uparrow}, \qquad
+    S_{(X, A, u)}(X \concat [A] \concat \Delta) = X \concat \Delta[u],
+\]
+and write the images of a raw judgement $X \concat \Delta \vdash t : P$ under $W_{X \concat [A]}$ and of $X \concat [A] \concat \Delta \vdash t : P$ under $S_{(X, A, u)}$ as $X \concat [A] \concat \Delta{\uparrow} \vdash t{\uparrow} : P{\uparrow}$ and $X \concat \Delta[u] \vdash t[u] : P[u]$. Finally, $\delta(X \concat [A]) = (X \concat [A], A{\uparrow}, v_A)$. By \cref{lem:b-sets-raw}, $P{\uparrow}$ and $t{\uparrow}$ are the actions of $\inl \concat \Delta^{\downarrow}$, $P[u]$ and $t[u]$ those of $\langle \id, u \rangle \concat \Delta^{\downarrow}$, $\Delta{\uparrow} = \inl^M(\Delta)$ and $\Delta[u] = \langle \id, u \rangle^M(\Delta)$, and $v_A = \inr$.
+
+\begin{figure}[ht]
+    \centering
+    \begin{mathpar}
+        \inferrule*[right=\textsc{ft}]
+            {X \concat [A] \vdash P}
+            {X \vdash A}
+        \and
+        \inferrule*[right=\textsc{ty}]
+            {X \vdash t : A}
+            {X \vdash A}
+        \and
+        \inferrule*[right=\textsc{var}]
+            {X \vdash A}
+            {X \concat [A] \vdash v_A : A{\uparrow}}
+        \\
+        \inferrule*[right=\textsc{wk}]
+            {X \vdash A \\ X \concat \Delta \vdash t : P}
+            {X \concat [A] \concat \Delta{\uparrow} \vdash t{\uparrow} : P{\uparrow}}
+        \and
+        \inferrule*[right=\textsc{subst}]
+            {X \vdash u : A \\ X \concat [A] \concat \Delta \vdash t : P}
+            {X \concat \Delta[u] \vdash t[u] : P[u]}
+    \end{mathpar}
+    \caption{The structural rules for types and terms.}
+    \label{fig:structural-rules}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \begin{mathpar}
+        \inferrule
+            {X \vdash A \equiv A'}
+            {X \vdash A}
+        \and
+        \inferrule
+            {X \vdash A}
+            {X \vdash A \equiv A}
+        \and
+        \inferrule
+            {X \vdash A \equiv A'}
+            {X \vdash A' \equiv A}
+        \and
+        \inferrule
+            {X \vdash A \equiv A' \\ X \vdash A' \equiv A''}
+            {X \vdash A \equiv A''}
+        \\
+        \inferrule
+            {X \vdash t \equiv t' : A}
+            {X \vdash t : A}
+        \and
+        \inferrule
+            {X \vdash t : A}
+            {X \vdash t \equiv t : A}
+        \and
+        \inferrule
+            {X \vdash t \equiv t' : A}
+            {X \vdash t' \equiv t : A}
+        \and
+        \inferrule
+            {X \vdash t \equiv t' : A \\ X \vdash t' \equiv t'' : A}
+            {X \vdash t \equiv t'' : A}
+        \\
+        \inferrule*[right=\textsc{ctx-conv}]
+            {X \vdash A \equiv A' \\ X \concat [A] \concat \Delta \vdash P \equiv P'}
+            {X \concat [A'] \concat \Delta \vdash P \equiv P'}
+        \and
+        \inferrule*[right=\textsc{ctx-conv}]
+            {X \vdash A \equiv A' \\ X \concat [A] \concat \Delta \vdash t \equiv t' : P}
+            {X \concat [A'] \concat \Delta \vdash t \equiv t' : P}
+        \and
+        \inferrule*[right=\textsc{conv}]
+            {X \vdash A \equiv A' \\ X \vdash t \equiv t' : A}
+            {X \vdash t \equiv t' : A'}
+        \\
+        \inferrule*[right=\textsc{wk-eq}]
+            {X \vdash A \\ X \concat \Delta \vdash P \equiv P'}
+            {X \concat [A] \concat \Delta{\uparrow} \vdash P{\uparrow} \equiv P'{\uparrow}}
+        \and
+        \inferrule*[right=\textsc{wk-eq}]
+            {X \vdash A \\ X \concat \Delta \vdash t \equiv t' : P}
+            {X \concat [A] \concat \Delta{\uparrow} \vdash t{\uparrow} \equiv t'{\uparrow} : P{\uparrow}}
+        \\
+        \inferrule*[right=\textsc{subst-eq}]
+            {X \vdash u : A \\ X \concat [A] \concat \Delta \vdash P \equiv P'}
+            {X \concat \Delta[u] \vdash P[u] \equiv P'[u]}
+        \and
+        \inferrule*[right=\textsc{subst-eq}]
+            {X \vdash u : A \\ X \concat [A] \concat \Delta \vdash t \equiv t' : P}
+            {X \concat \Delta[u] \vdash t[u] \equiv t'[u] : P[u]}
+        \\
+        \inferrule*[right=\textsc{fun}]
+            {X \vdash u \equiv u' : A \\ X \concat [A] \concat \Delta \vdash P}
+            {X \concat \Delta[u] \vdash P[u] \equiv P[u']}
+        \and
+        \inferrule*[right=\textsc{fun}]
+            {X \vdash u \equiv u' : A \\ X \concat [A] \concat \Delta \vdash t : P}
+            {X \concat \Delta[u] \vdash t[u] \equiv t[u'] : P[u]}
+    \end{mathpar}
+    \caption{The structural rules for equality.}
+    \label{fig:structural-rules-eq}
+\end{figure}
+
+\begin{proposition}\label{prop:structural-rules}
+    A set of judgements is structurally closed if and only if it is closed under the rules of \cref{fig:structural-rules,fig:structural-rules-eq}.
+\end{proposition}
+
+\begin{proof}
+    The rules of \cref{fig:structural-rules} are the closure condition: \textsc{ft} and \textsc{ty} are closure under $\ft$ and $\partial$, and \textsc{wk}, \textsc{subst} and \textsc{var} are closure under weakening, substitution and $\delta$. Let $J$ satisfy the presupposition, equivalence and compatibility conditions. The first two rows of \cref{fig:structural-rules-eq} hold in $J$ by the presupposition and equivalence conditions; \textsc{ctx-conv} and \textsc{conv} follow from \cref{lem:conversion} and transitivity; and \textsc{wk-eq}, \textsc{subst-eq} and \textsc{fun} are the compatibility of $\sim_J$ and $\simeq_J$ with weakening, and with substitution in the argument $Y$ of $S_x(Y)$ and in $x$, respectively. Conversely, that closure under the rules of \cref{fig:structural-rules-eq} implies these three conditions is~\cite[Prop.~6.2 and Lemma~6.3]{Voevodsky2014Module} for $S = 1$; the proofs use only the operations on the B-sets, computed in \cref{lem:b-sets-raw}, and do not depend on the sorts.
+    \TODO{check the sorted case of Voevodsky's proofs line by line}
+\end{proof}
+
+The regular subquotients arising from sets of judgements are characterised as follows. A regular subquotient of $\Csys(T, M)$, given by a sub-C-system with B-sets $B'$ and $\widetilde{B}'$ and a regular congruence relation $(\sim, \simeq)$ on it, is \emph{componentwise} if $\sim$ relates only objects with the same underlying list of sorts, and
+\begin{align*}
+    Y \concat [A] \sim Y' \concat [A'] &\iff Y \sim Y' \text{ and } Y \concat [A] \sim Y \concat [A'],\\
+    (X, A, t) \simeq (X', A', t') &\iff X \concat [A] \sim X' \concat [A'] \text{ and } (X, A, t) \simeq (X, A, t'),
+\end{align*}
+for all $Y \concat [A] \in B'$ and $(X, A, t) \in \widetilde{B}'$, and all objects $Y' \concat [A']$ and raw terms $(X', A', t')$. Equality of contexts is then equality of their types, one at a time, and equal contexts carry the same types and terms.
+
+\begin{proposition}\label{prop:structural-subquotient}
+    For every structurally closed set of judgements $J$, the sets $B_J$ and $\widetilde{B}_J$ determine a sub-C-system of $\Csys(T, M)$, and $(\sim_J, \simeq_J)$ a regular congruence relation on it; we write $\Csys(T, M)/J$ for the resulting regular subquotient. This is a bijection between structurally closed sets of judgements and componentwise regular subquotients of $\Csys(T, M)$.
+\end{proposition}
+
+\begin{proof}
+    By the closure condition and \cref{prop:b-characterisation}, $B_J$ and $\widetilde{B}_J$ determine a sub-C-system. By the equivalence and compatibility conditions, $(\sim_J, \simeq_J)$ is a pair of equivalence relations compatible with the operations, and it relates only objects with the same underlying list of sorts by construction. \Cref{lem:conversion} supplies the witnesses $Y' \concat [A]$ and $(X', A', t)$ required by \cref{prop:b-characterisation}, so the congruence relation is regular, and the regular subquotient is componentwise by definition of $\sim_J$ and $\simeq_J$ and reflexivity. Conversely, given a componentwise regular subquotient with B-sets $B'$ and $\widetilde{B}'$ and congruence relation $(\sim, \simeq)$, let $J$ consist of the $X \vdash A$ with $X \concat [A] \in B'$, the $X \vdash t : A$ in $\widetilde{B}'$, the $X \vdash A \equiv A'$ with $X \concat [A] \sim X \concat [A']$, and the $X \vdash t \equiv t' : A$ with $(X, A, t) \simeq (X, A, t')$. Then $B_J = B'$ and $\widetilde{B}_J = \widetilde{B}'$, and $\sim_J = \sim$ and $\simeq_J = \simeq$ by induction on length, since both are componentwise. The two constructions are mutually inverse, using the presupposition condition for the composite starting from $J$.
+\end{proof}
+
+\begin{lemma}\label{lem:closed-intersections}
+    The intersection of any family of structurally closed sets of judgements is structurally closed. In particular, every set of judgements is contained in a least structurally closed one.
+\end{lemma}
+
+\begin{proof}
+    Since $\sim_J$ and $\simeq_J$ are defined by conjunctions of raw judgements holding in $J$, each condition of \cref{def:structurally-closed} has the form ``if certain raw judgements hold in $J$, so does a certain raw judgement'', and such conditions are preserved by intersections.
+\end{proof}
+
+This is where the form $\Csys(T, M)$ is used. Since a raw type or term over a context is also one over any other context of the same shape, equality judgements in a single context determine relations $\sim_J$ and $\simeq_J$ between arbitrary objects and terms, so that structural closure can be stated by conditions of the form ``if \ldots, then \ldots''; by \cref{lem:conversion}, these conditions nevertheless imply the lifting conditions of \cref{prop:b-characterisation}. In an arbitrary C-system, a type over $Y'$ is not a type over $Y$, and regular congruence relations can only be described as in \cref{prop:b-characterisation}, whose lifting conditions assert that witnesses exist and are not preserved by intersections.

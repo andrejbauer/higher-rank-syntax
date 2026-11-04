@@ -1,0 +1,544 @@
+\chapter{Well-formed syntax}
+\label{ch:wf-syntax}
+
+In this chapter, we add a judgement layer to the raw syntax of \cref{ch:raw-syntax}, obtaining a logical framework that we call the \emph{theory of higher-order signatures}, or $\ToS^\omega$ for short. A \emph{logical framework} is a formal system for specifying logics and type theories. Logical frameworks build on Martin-L{\"o}f's analysis of judgements~\cite{MartinLof1996}: a judgement may be made under the assumption of other judgements, which makes it \emph{hypothetical}, or for an arbitrary value of a variable, which makes it \emph{general}, and interleaving the two forms yields \emph{hypothetico-general} judgements. The hypotheses may themselves be hypothetico-general judgements, so that judgements of higher order arise. Following the principle of \emph{judgements as types}, introduced with the Edinburgh Logical Framework (LF)~\cite{HarperHonsellPlotkin1993}, the judgement forms of a theory are declared in its signature as types, whose elements are the evidence for the corresponding judgements, and each of its rules as a constant whose type is the (higher-order) judgement it expresses. In $\ToS^\omega$, judgement forms are declared as sorts and rules as elements of corresponding sorts, their arity recording the shapes of their premises, so that the rank of an arity is the nesting depth of hypothetico-general judgements. The theory of signatures $\ToS^+$ of second-order generalised algebraic theories~\cite{KaposiXie2024} bounds this depth at two; $\ToS^\omega$ admits every rank, hence the superscript $\omega$.
+
+The judgements of $\ToS^\omega$ are made in \emph{contexts}, which are arities whose slots are decorated with \emph{boundaries}: each slot is declared to be a sort, an element of a sort, or an equation. Since the premises of a slot are again decorated slots, equations may be hypothesised at every rank, like any other judgement. Contexts play a double role: they record the hypotheses under which a judgement is made, and they are also the \emph{signatures} by which $\ToS^\omega$ specifies theories, whose sorts, operations and equations are declared and used exactly like variables and hypotheses. A judgement of an object theory is thus simply one made in a context that extends its signature.
+
+Different logical frameworks differ in their treatment of equality. \emph{Syntactic} logical frameworks, such as LF and Adams' lambda-free framework, have no equality types, and their terms directly represent the derivations of the object theory, two terms being equal only if they represent the same derivation. An equation of the theory is represented like any other judgement, by a declared type family whose elements derive it; since the definitional equality of LF is fixed independently of the signature, the equated terms remain distinct, and every use of the equation has to be declared as a rule of its own. $\ToS^\omega$, by contrast, is a \emph{semantic} logical framework, like Martin-L{\"o}f's logical framework~\cite{NordstromPeterssonSmith1990} and those of Harper~\cite{Harper2021} and Uemura~\cite{Uemura2023}: it has extensional equality types, both for sorts and their elements, so that declaring an equation in a signature makes its two sides judgementally equal, and terms represent derivations modulo equality in the object theory.
+
+The syntax of $\ToS^\omega$ is constructed from the raw syntax by judgements, defined by mutual induction, that single out the well-formed contexts, expressions and substitutions and determine when two of them are equal; in other words, typing is extrinsic. We establish the basic metatheoretical properties of $\ToS^{\omega}$, namely admissibility of weakening and of substitution, and presuppositivity, for arbitrary signatures at every rank. Our syntactic model is canonical in the sense of Canonical LF~\cite{HarperLicata2007}, meaning that its operations compute within $\beta$-normal, $\eta$-long expressions, so that a quotient is needed only for the equations of object theories, whereas a free construction, in the style of~\cite{AltenkirchKaposi2016}, builds terms as syntactic trees, quotiented by the equations of the framework as well.
+
+We construct this term model following Voevodsky's approach. Entries form a module $\Ent : \Kl(\bE) \to \Set^{\left|A\right|}$ over the relative monad of raw syntax, from which a higher-rank generalisation of his construction of the C-system of a module over a $J_f$-relative monad~\cite{Voevodsky2014Module,Voevodsky2016Relative} yields the \emph{raw syntax C-system} $\Ctxr$. The well-formed syntax then arises as the term C-system of $\ToS^\omega$, that is, as a regular subquotient $\Ctx$ of $\Ctxr$~\cite{Voevodsky2014Subsystems}, selected by the judgements and quotiented by judgemental equality. The judgements are defined so as to present the generalised algebraic theory of categories with families, equipped with a Tarski universe of sorts, dependent products over arbitrary types, and extensional equality types for sorts and for elements of a sort, which we prove $\Ctx$ to be an initial model of. This algebraic characterization hence establishes the initiality conjecture for the logical framework $\ToS^{\omega}$.
+
+\section{Raw contexts}
+
+As a first step towards constructing well-formed syntax, we consider \emph{raw context}, which are arities each of whose slots is freely decorated with a boundary over the preceeding slots, with no typing constraints. We show that boundaries form a module over the raw syntax monad $\bE$ which, in analogy with Voevodsky's construction~\cite{Voevodsky2016Relative}, determines the $C$-system structure on raw contexts.
+
+\subsection{Decorated arities}
+
+\begin{definition}\label{def:boundaries}
+    For an arity $\Xi$, the set of \emph{boundaries} over $\Xi$ is defined as:
+    $$\Bd(\Xi) := 1 + \Expr(\Xi) + \Expr(\Xi) \times \Expr(\Xi),$$
+    that is, a boundary given by either zero, one, or two expressions. We introduce the following suggestive notation:
+    $$\Bd(\Xi) := \{\bsort\} + \{S \;|\; S \in \Expr(\Xi) \} + \{\beq(l,r) \;|\; l,r\in\Expr(\Xi)\}.$$
+\end{definition}
+
+A boundary records what a slot is declared to be: a sort, an element of the sort $S$, or a witness that $l$ and $r$ are equal. Boundaries are raw and enforce no well-typedness constraints: nothing yet requires $S$ to be a sort, or $l$ and $r$ to be two sorts or two elements of a common sort. Once the judgements impose these conditions, $\beq$ splits into equations between sorts and between elements of sorts, and the four forms of boundaries of finitary type theories~\cite{HaselwarterBauer2023} are recovered. Unlike the boundary $l \equiv r : S$ of finitary type theories, however, an equation boundary $\beq(l, r)$ between elements does not record their sort, since every expression determines its sort.
+
+The well-typedness judgements will be phrased for arities in which every slot is freely decorated with a boundary over the slots that precede it and those that it binds. Since the bound slots must be decorated as well, decorations are defined by recursion on arities, relative to a base arity of variables already in scope.
+
+\begin{definition}\label{def:decorated-arities}
+    Let $\Xi, \Gamma, \alpha$ be arities. The sets $\Dec(\Xi, \Gamma)$ of \emph{$\Xi$-decorated arities} of shape $\Gamma$ and $\Ent(\Xi, \alpha)$ of \emph{entries} of arity $\alpha$ over $\Xi$ are defined by simultaneous structural recursion on $\Gamma$ and $\alpha$:
+    \begin{align*}
+        \Ent(\Xi, \alpha) &\coloneqq \Dec(\Xi, \alpha) \times \Bd(\Xi \concat \alpha),\\
+        \Dec(\Xi, \emptyar) &\coloneqq \{()\},\\
+        \Dec(\Xi, [\alpha] \concat \Gamma) &\coloneqq \Ent(\Xi, \alpha) \times \Dec(\Xi \concat [\alpha], \Gamma).
+    \end{align*}
+
+    We will write an entry as $[\Theta]\beta : \Ent(\Xi,\alpha)$, where $\Theta : \Dec(\Xi, \alpha)$ is a decoration of the bound slots and $\beta : \Bd(\Xi \concat \alpha)$ is the slot's boundary. We omit the prefix $[\Theta]$ when $\alpha = \emptyar$.
+    
+    A \emph{raw context} of arity $\Xi$ is an element of $\Dec(\emptyar, \Xi)$, that is, an arity whose each slot decorated only over the previous slots and those that it binds, in an 
+    empty ambient. Given a decorated arity $\Gamma : \Dec(\Delta, \Xi)$, we write $\Gamma^{\downarrow} = \Xi : \bA$ for its underlying arity.
+\end{definition}
+
+\begin{remark}
+    Unfolding the recursion, an $\Xi$-decorated arity of shape $\Gamma = [\gamma_1, \ldots, \gamma_n]$ is a list $[x_1 : [\Theta_1]\beta_1, \ldots, x_n : [\Theta_n]\beta_n]$ of entries $[\Theta_i]\beta_i : \Ent(\Xi \concat [\gamma_1, \ldots, \gamma_{i-1}], \gamma_i)$, each over $\Xi$ extended by the slots before it.
+    An entry $[\Theta]\beta$ generalises the abstracted boundaries $\{x_1 : A_1\} \cdots \{x_m : A_m\}\, \mathscr{b}$ by which finitary type theories declare the metavariables of a rule~\cite[\S2.1]{HaselwarterBauer2023}: the variables it abstracts may have non-trivial binding arities, and we also allow abstracting over sorts and equations, not just elements.
+\end{remark}
+
+\begin{remark}\label{rem:concatenation}
+    Concatenation of arities lifts to decorated arities: overloading the notation, we define 
+    \[
+    \_ \concat \_ : \Dec(\Xi, \Gamma) \times \Dec(\Xi \concat \Gamma, \Gamma') \to \Dec(\Xi, \Gamma \concat \Gamma')
+    \]
+    by recursion on $\Gamma$, by $() \concat \Theta' \coloneqq \Theta'$ and $(E, \Theta) \concat \Theta' \coloneqq (E, \Theta \concat \Theta')$. Every decorated arity of shape $\Gamma \concat \Gamma'$ splits uniquely, hence $\_ \concat \_$ is a bijection.
+\end{remark}
+
+\begin{example}\label{ex:raw-context}
+    The raw context
+    \[
+    \begin{aligned}
+        \big[\,&\mathsf{Ty} : \bsort,\\
+        &\mathsf{Tm} : [A : \mathsf{Ty}]\,\bsort,\\
+        &\Pi : [A : \mathsf{Ty},\ B : [x : \mathsf{Tm}(A)]\,\mathsf{Ty}]\,\mathsf{Ty}\,\big]
+    \end{aligned}
+    \]
+    of arity $[\emptyar, [\emptyar], [\emptyar, [\emptyar]]]$ declares a sort $\mathsf{Ty}$ of types, a family $\mathsf{Tm}$ of sorts of terms indexed by types, and the formation rule of dependent products, whose second premise $B$ is a type-family depending on a variable $x : \mathsf{Tm}(A)$.
+    
+    Extending this raw context by the application of dependent functions,
+    \[
+    \begin{aligned}
+        \mathsf{app} : \big[\,&A : \mathsf{Ty},\ B : [x : \mathsf{Tm}(A)]\,\mathsf{Ty},\\
+        &f : \mathsf{Tm}(\Pi(A, \{x\}B(x))),\ a : \mathsf{Tm}(A)\,\big]\,\mathsf{Tm}(B(a)),
+    \end{aligned}
+    \]
+    extensionality of dependent functions may be declared as
+    \[
+    \begin{aligned}
+        \mathsf{funext} : \big[\,&A : \mathsf{Ty},\ B : [x : \mathsf{Tm}(A)]\,\mathsf{Ty},\\
+        &f, g : \mathsf{Tm}(\Pi(A, \{x\}B(x))),\\
+        &h : [x : \mathsf{Tm}(A)]\,\beq\big(\mathsf{app}(A, \{x\}B(x), f, x),\\
+        &\hphantom{h : [x : \mathsf{Tm}(A)]\,\beq\big(}\mathsf{app}(A, \{x\}B(x), g, x)\big)\,\big]\,\beq(f, g),
+    \end{aligned}
+    \]
+    whose premise $h$ is an equation hypothesised generally in $x$.
+
+    Sorts may be bound just as well as elements and equations. A raw context may declare a sort of natural numbers with its usual constructors, together with an eliminator into arbitrary families of sorts,
+    \[
+    \begin{aligned}
+        \mathsf{natrec} : \big[\,&C : [n : \mathsf{Nat}]\,\bsort,\ c_0 : C(\mathsf{zero}),\\
+        &c_s : [n : \mathsf{Nat},\ c : C(n)]\,C(\mathsf{succ}(n)),\ n : \mathsf{Nat}\,\big]\,C(n),
+    \end{aligned}
+    \]
+    whose premise $C$ is a sort hypothesised generally in $n$.
+\end{example}
+
+\begin{example}\label{ex:raw-nonsense}
+    Decorations enforce no typing constraints, so a raw context may declare nonsense. For example, in the raw context
+    \[
+    [\,A : \bsort,\ a : A,\ b : a,\ e : \beq(A, a),\ f : [x : A]\,A,\ c : f(e)\,],
+    \]
+    the slot $b$ is declared an element of $a$, which is an element rather than a sort; $e$ equates the sort $A$ with its own element $a$; and $c$ is declared an element of $f(e)$, which is not a sort either, and which moreover applies $f$ to the equation $e$ in place of an element of $A$. What decorations do enforce is scoping, so that, for instance, no slot can be declared an element of itself.
+\end{example}
+
+\subsection{Substitution in decorated arities}
+
+The action of substitutions of \cref{def:action} extends from expressions to boundaries and decorated arities.
+
+\begin{definition}\label{def:action-decorations}
+    Let $\sigma : \Xi \sub \Phi \concat \Xi'$ be a substitution and $\Psi$ an arity. The action of $\sigma$ with prefix $\Phi$ at depth $\Psi$ extends to maps
+    \[
+    \begin{aligned}
+        \_[\sigma]_\Phi^\Psi &: \Bd(\Phi \concat \Xi \concat \Psi) \to \Bd(\Phi \concat \Xi' \concat \Psi),\\
+        \_[\sigma]_\Phi^\Psi &: \Ent(\Phi \concat \Xi \concat \Psi, \alpha) \to \Ent(\Phi \concat \Xi' \concat \Psi, \alpha),\\
+        \_[\sigma]_\Phi^\Psi &: \Dec(\Phi \concat \Xi \concat \Psi, \Gamma) \to \Dec(\Phi \concat \Xi' \concat \Psi, \Gamma),
+    \end{aligned}
+    \]
+    acting on a boundary pointwise, through the expressions it contains, and on entries and decorated arities by simultaneous recursion:
+    \begin{align*}
+        ([\Theta]\beta)[\sigma]_\Phi^\Psi &\coloneqq [\Theta[\sigma]_\Phi^\Psi]\,\beta[\sigma]_\Phi^{\Psi \concat \alpha},\\
+        ()[\sigma]_\Phi^\Psi &\coloneqq (),\\
+        (E, \Theta')[\sigma]_\Phi^\Psi &\coloneqq \big(E[\sigma]_\Phi^\Psi,\ \Theta'[\sigma]_\Phi^{\Psi \concat [\alpha]}\big),
+    \end{align*}
+    where $[\Theta]\beta$ and $E$ are entries of arity $\alpha$.
+\end{definition}
+
+In particular, the action of substitutions on boundaries is used to compute the boundaries of expressions. To this end, we first introduce some notation. Let $\Gamma$ be a raw context and $x : \Gamma^{\downarrow} \ni \alpha$ one of its slots. According to \cref{def:decorated-arities}, $x$ is declared in $\Gamma$ by an entry over the slots preceding it; weakening this entry along the inclusion of those slots into $\Gamma^{\downarrow}$ yields an entry $[\Theta]\beta : \Ent(\Gamma^{\downarrow}, \alpha)$. We then write
+\[
+x : \Gamma \ni [\Theta]\beta,
+\]
+and call $\Theta : \Dec(\Gamma^{\downarrow}, \alpha)$ the \emph{binding} and $\beta : \Bd(\Gamma^{\downarrow} \concat \alpha)$ the \emph{boundary} of $x$.
+
+\begin{definition}\label{def:boundary-of-expression}
+    Let $\Gamma$ be a raw context. The \emph{boundary} of an expression $x(t) : \Expr(\Gamma^{\downarrow})$, where $x : \Gamma \ni [\Theta]\beta$ and $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$, is
+    \[
+    \partial_\Gamma\big(x(t)\big) \coloneqq \beta[t]_{\Gamma^{\downarrow}} : \Bd(\Gamma^{\downarrow}).
+    \]
+\end{definition}
+
+In the terminology of bidirectional typing~\cite{McBride2019Ni}, every expression thus synthesises its boundary. In particular, this explains why an equational boundary need not record its sort.
+
+Next, we recall the notion of modules over a relative monad. 
+
+\begin{definition}\label{def:module}
+    Let $(T, \eta, (\_)^\sharp)$ be a relative monad on $J : \cat{J} \to \cat{C}$. A \emph{(left) $T$-module} $(M, (\_)^M)$ in a category $\cat{D}$ is given by the following data:
+    \begin{itemize}
+        \item a map on objects $M : \left|\cat{J}\right| \to \left|\cat{D}\right|$
+        \item for any two objects $X,Y : \cat{C}$, an action $$(\_)^M : \cat{C}(JX,TY) \to \cat{D}(MX,MY),$$
+    \end{itemize}
+    such that 
+    \[
+    \eta_X^M = \id_{MX} \qquad \text{and} \qquad (g^\sharp \circ f)^M = g^M \circ f^M
+    \]
+    for all $f : JX \to TY$ and $g : JY \to TZ$. A \emph{morphism} of $T$-modules $\theta : (M, (\_)^M) \to (M', (\_)^{M'})$ is a family of morphisms $\theta_X : MX \to M'X$ such that the square
+    \[\begin{tikzcd}
+    	MX & MY \\
+    	{M'X} & {M'Y}
+    	\arrow["{f^M}", from=1-1, to=1-2]
+    	\arrow["{\vartheta_X}"', from=1-1, to=2-1]
+    	\arrow["{\vartheta_Y}", from=1-2, to=2-2]
+    	\arrow["{f^{M'}}"', from=2-1, to=2-2]
+    \end{tikzcd}\]
+    commutes for every $f : JX \to TY$.
+
+    Equivalently, a $T$-module in $\cat{D}$ is just a functor $\Kl(T) \to \cat{D}$.
+\end{definition}
+
+\begin{remark}
+    To see how this definition corresponds to the usual notion of modules, let $T : \cat{C} \to \cat{D}$ be a relative monad over $J : \cat{C} \to \cat{D}$ and let $M : \Kl(T) \to \Set$ be a module over $T$. The elements of $M$ are indexed over the objects of $\cat{C}$. In this settings, the scalars are the substitutions $\sigma : JX \to TY$, so that scalar multiplication is construed as the family of operations
+    $$\_\cdot\_ : \{X,Y : \cat{C}\} \to \Hom_{\cat{D}}(JX,TY) \times MX \to MY.$$
+    The module laws are then precisely the functoriality of $M$: we have $\eta_X\cdot x = x$ and $g \cdot (f \cdot x) = (g \odot f) \cdot x$. 
+\end{remark}
+
+Modules over monads were introduced by Hirschowitz and Maggesi to describe syntax with binding~\cite{HirschowitzMaggesi2007}, in the form of a functor $M$ with a natural transformation $M \circ T \to M$. They construe signatures as module morphisms over the term monad with domain built from the monad using products and derivation, and the syntax is characterised as initial among monads equipped with such morphisms. Ahrens extended modules to relative monads to characterise syntax together with its reduction rules~\cite{Ahrens2016}: the terms form a relative monad on the functor $\Delta : \Set \to \mathsf{Pre}$ that equips a set of variables with the discrete preorder, the preorder on terms being reduction. In both settings, binding is accounted for by \emph{derivation}~\cite[Def.~8]{HirschowitzMaggesi2007}\cite[Def.~25]{Ahrens2016}: the derived module $M'(V) \coloneqq M(V + 1)$ extends the variables of $M$ by a fresh one, which substitutions keep fixed, so that a constructor binding a variable in its argument is a module morphism out of a derived module. In our case, however, a slot can have a binding structure of a higher rank, so we must derive along an arbitrary arity.
+
+\begin{definition}\label{def:derived-module}
+    Let $M$ be an $\bE$-module and $\Phi$ an arity. The \emph{derived module} $M^{(\Phi)}$ is given by
+    $$M^{(\Phi)} := M \circ\, (\_\bowtie\Phi),$$
+    where $\_\bowtie\Phi : \Kl(\bE) \to \Kl(\bE)$ is the functor defined by taking coproducts with $\Phi$.
+\end{definition}
+
+\begin{lemma}\label{lem:depth-derived}
+    Given a substitution $\sigma : \Xi \sub \Xi'$, arities $\Phi$ and $\Psi$, and an expression $e : \Expr(\Xi \concat \Phi \concat \Psi)$, we have $$e[\sigma \concat \Phi]^\Psi = e[\sigma]^{\Phi \concat \Psi}.$$
+\end{lemma}
+
+\begin{proof}
+    We first establish that $\sigma \concat \Phi = \id_{\Xi \concat \Psi}[\sigma]^{\Phi}$ as substitutions $\Xi \concat \Phi \sub \Xi' \concat \Phi$.
+    By definition, we have $\id_{\Xi \concat \Phi}[\sigma]^\Phi(x) = \eta(x)[\sigma]^{\Phi \concat \alpha}$ for a slot $x$ of arity $\alpha$. If $x : \Phi \ni \alpha$, we have $\eta(x)[\sigma]^{\Phi \concat \alpha} = \eta(x)$ by \cref{lem:eta-depth}.
+    If $x : \Xi \ni \alpha$, we have $\eta(x)[\sigma]^{\Phi \concat \alpha} = \sigma(x)[\iota]_{\Xi'}$, where $\iota(i : \alpha \ni \delta) = \eta(i)[\sigma]^{\Phi \concat \alpha \concat \delta} = \eta(i)$, again by \cref{lem:eta-depth}, so that $\sigma(x)[\iota]_{\Xi'}$ is the weakening of $\sigma(x) : \Expr(\Xi' \concat \alpha)$ to $\Expr(\Xi' \concat \Phi \concat \alpha)$ along the inclusion $\Xi' \concat \inr : \Xi' \concat \alpha \ren \Xi' \concat \Phi \concat \alpha$. Hence $\id_{\Xi \concat \Phi}[\sigma]^\Phi = \sigma \concat \Phi$, and the claim follows by the associativity law of \cref{lem:substitution} and the first unit law of \cref{relative-monad}:
+    \begin{align*}
+        e[\sigma\concat\Phi]^{\Psi} &= e[\id_{\Xi\concat\Phi}[\sigma]^{\Phi}]^{\Psi}\\
+        &= e[\id_{\Xi\concat\Phi}]^{\Psi}[\sigma]^{\Phi\concat\Psi}\\
+        &= e[\sigma]^{\Phi\concat\Psi}.\qedhere
+    \end{align*}
+\end{proof}
+
+\begin{proposition}\label{prop:decoration-modules}
+    Boundaries, entries, and decorated arities assemble into $\bE$-modules
+    \begin{align*}
+    \Bd : \Kl(\bE) &\to \Set\\
+    \Dec, \Ent : \Kl(\bE) &\to \Set^{\left|\bA\right|},
+    \end{align*}
+    their action on morphisms given by \cref{def:action-decorations}, with empty prefix and postfix. 
+    Moreover, for all arities $\Gamma$ and $\Gamma'$, the concatenation of \cref{rem:concatenation} is an isomorphism of $\bE$-modules
+    \[
+    \Dec(\_, \Gamma) \times \Dec(\_, \Gamma')^{(\Gamma)} \cong \Dec(\_, \Gamma \concat \Gamma').
+    \]
+\end{proposition}
+
+\begin{proof}
+    The module laws follow from \cref{relative-monad}. To establish the isomorphism, we just need to show that the bijections from \cref{rem:concatenation} commute with the module actions, that is, that the square
+    \[
+    \begin{tikzcd}[column sep=large]
+        \Dec(\Xi, \Gamma) \times \Dec(\Xi \concat \Gamma, \Gamma') \arrow[r, "\_\concat\_"] \arrow[d, "{\_[\sigma] \times \_[\sigma \concat \Gamma]}"'] & \Dec(\Xi, \Gamma \concat \Gamma') \arrow[d, "{\_[\sigma]}"] \\
+        \Dec(\Xi', \Gamma) \times \Dec(\Xi' \concat \Gamma, \Gamma') \arrow[r, "\_\concat\_"'] & \Dec(\Xi', \Gamma \concat \Gamma')
+    \end{tikzcd}
+    \]
+    commutes for every $\sigma : \Xi \sub \Xi'$. This follows from \cref{lem:depth-derived}.
+\end{proof}
+
+\subsection{The raw syntax C-system}
+
+We now organise raw contexts and substitutions between them into a C-system, generalising Voevodsky's construction of the C-system of a module over a $J_f$-relative monad~\cite{Voevodsky2016Relative}. C-systems were introduced by Cartmell under the name contextual categories~\cite{Cartmell1986}; we recall them in Voevodsky's formulation~\cite[Def.~2.1 and Prop.~2.4]{Voevodsky2014Subsystems}.
+
+\begin{definition}\label{def:c-system}
+    A \emph{C-system} is a category $\cat{C}$ together with
+    \begin{itemize}
+        \item a \emph{length} function $l : \left|\cat{C}\right| \to \N$,
+        \item an object $\pt$,
+        \item a map $\ft : \left|\cat{C}\right| \to \left|\cat{C}\right|$,
+        \item for every object $X$, a morphism $p_X : X \to \ft(X)$,
+        \item for every object $X$ with $l(X) > 0$ and every morphism $f : Y \to \ft(X)$, an object $f^*X$ and a morphism $q(f, X) : f^*X \to X$,
+    \end{itemize}
+    such that
+    \begin{itemize}
+        \item $\pt$ is the unique object of length $0$, and is terminal,
+        \item $\ft(\pt) = \pt$, and $l(\ft(X)) = l(X) - 1$ for every object $X$ with $l(X) > 0$,
+    \end{itemize}
+    and such that, for every object $X$ with $l(X) > 0$ and all morphisms $f : Y \to \ft(X)$ and $g : Z \to Y$,
+    \begin{itemize}
+        \item $l(f^*X) > 0$, $\ft(f^*X) = Y$, and the square
+        \[
+        \begin{tikzcd}
+            f^*X \arrow[r, "{q(f, X)}"] \arrow[d, "p_{f^*X}"'] & X \arrow[d, "p_X"] \\
+            Y \arrow[r, "f"'] & \ft(X)
+        \end{tikzcd}
+        \]
+        is a pullback,
+        \item $\id_{\ft(X)}^*X = X$ and $q(\id_{\ft(X)}, X) = \id_X$,
+        \item $(f \circ g)^*X = g^*(f^*X)$ and $q(f \circ g, X) = q(f, X) \circ q(g, f^*X)$.
+    \end{itemize}
+    A \emph{homomorphism} of C-systems is a functor that preserves all of this structure strictly.
+\end{definition}
+
+The objects of a C-system are to be thought of as contexts, with $\pt$ the empty context, and a morphism $f : \Delta \to \Gamma$ as a substitution, assigning to each variable of $\Gamma$ a term in context $\Delta$. An object $X$ of positive length is a context $(\Gamma, x \of A)$ with $\Gamma = \ft(X)$, and $p_X : (\Gamma, x \of A) \to \Gamma$ is the weakening substitution. For $f : \Delta \to \Gamma$, the object $f^*X = (\Delta, x \of A[f])$ is obtained by substituting $f$ into the type of the last variable, and $q(f, X) : (\Delta, x \of A[f]) \to (\Gamma, x \of A)$ extends $f$ by $x \mapsto x$. A C-system can equivalently be described as a category with families in which every object is uniquely an iterated extension of the terminal one~\cite[Props.~41 and~45]{AhrensLumsdaineNorth2024}: types over $\Gamma$ are the objects $X$ of positive length with $\ft(X) = \Gamma$, and terms of $X$ are the sections of $p_X$.
+
+Let $J_f : \mathbb{F} \to \Set$ be the inclusion of finite cardinals. Voevodsky constructs C-systems from the raw syntax of a type theory in two steps. First, for a $J_f$-relative monad $R$, the opposite of its Kleisli category is a C-system $\Csys(R)$~\cite[\S5]{Voevodsky2016Relative}, whose objects are the natural numbers, with $l(n) = n$, $\pt = 0$ and $\ft(n + 1) = n$. A morphism $f : m \to n$ of $\Csys(R)$ is a morphism $J_f n \to Rm$, assigning to each of $n$ variables an expression in $m$ variables; $p_{n+1}$ is the inclusion of $n$ into $n + 1$, and for $f : m \to n$ we have $f^*(n + 1) = m + 1$, while $q(f, n + 1) : m + 1 \to n + 1$ is given by $i \mapsto R(\iota)(f(i))$ for $i < n$ and $n \mapsto \eta(m)$, where $\iota : m \to m + 1$ is the inclusion.
+
+An $R$-module $M : \Kl(R) \to \Set$ is the same as a presheaf on $\Csys(R)$, and the C-system $\Csys(R, M)$ is defined as the presheaf extension of $\Csys(R)$ by $M$~\cite[\S\S3 and~6]{Voevodsky2016Relative}. Its objects of length $n$ are sequences $(T_0, \ldots, T_{n-1})$ with $T_i \in M(i)$, and $\Hom_{\Csys(R,M)}((T_0, \ldots, T_{m-1}), (T'_0, \ldots, T'_{n-1})) = \Hom_{\Csys(R)}(m,n)$. Much of the $C$-system structure --- $\ft$, $p$ and $q$ --- is inherited from $\Csys(R)$, while
+\[
+f^*(T'_0, \ldots, T'_n) \coloneqq (T_0, \ldots, T_{m-1}, f^M(T'_n))
+\]
+for $f : (T_0, \ldots, T_{m-1}) \to (T'_0, \ldots, T'_{n-1})$. Read type-theoretically, $T_i$ is the (raw) type of the $i$-th variable, an expression in the variables before it. When $R$ and $M$ are the raw expressions and raw types of a type theory, $\Csys(R, M)$ is the C-system of its raw syntax~\cite[\S\S1 and~6]{Voevodsky2016Relative}, and the term C-system is obtained as its regular subquotient.
+
+To adapt it to our setting, we now generalise Voevodsky's construction in two directions. First, $\bE$ is a relative monad not on $J_f$ but on the slot functor $\_ \ni \_ : \bA \to \Set^{\left|\bA\right|}$, under which each slot has a sort, namely its arity. We therefore pass from $J_f$ to the inclusion $J_S : \mathbb{F}{\downarrow}S \to \Set^S$ of finite $S$-sorted sets, of which the slot functor is the instance for $S = \left|\bA\right|$, and from $\Set$-valued modules over $J_f$-relative monads to $\Set^S$-valued modules over $J_S$-relative monads, so that the decorations available for a variable depend on its sort.
+Second, Voevodsky's variables are first-order, so a raw type suffices to decorate each of them; by contrast, a decoration of a higher-rank variable must also recursively decorate the variables it binds.
+In the unsorted case, $S = 1$, our construction reduces to Voevodsky's; for $\bE$ and $\Ent$, it will yield the raw syntax C-system of $\ToS^{\omega}$.
+
+\begin{definition}
+    Fix a set $S$ of \emph{sorts}. Generalising the arities of \cref{def:arities}, let $\mathbb{F}{\downarrow}S$ be the category whose objects are lists $\Gamma = [\gamma_1, \ldots, \gamma_n]$ of sorts, and whose morphisms $\rho : \Gamma \to \Delta$ are families of functions $\rho_s : (\Gamma \ni s) \to (\Delta \ni s)$, where
+    \[
+    \Gamma \ni s \coloneqq \{\, i : \{1, \ldots, n\} \mid \gamma_i = s \,\}
+    \]
+    is the set of \emph{variables} of $\Gamma$ of sort $s$. The assignment $\Gamma \mapsto \Gamma \ni \_$ then defines a fully faithful functor $J_S : \mathbb{F}{\downarrow}S \to \Set^S$. For $S = 1$, this is $J_f$, and for $S = \left|\bA\right|$, it is the slot functor $\_ \ni \_ : \bA \to \Set^{\left|\bA\right|}$.
+\end{definition}
+        
+\begin{remark}\label{rem:kleisli-coproducts}
+    For a relative monad $T$ on $J_S$, the Kleisli category $\Kl(T)$ has finite coproducts, given by concatenation. The empty list is evidently initial. 
+    For lists $\Gamma$ and $\Delta$, let $\inl : \Gamma \to \Gamma \concat \Delta$ and $\inr : \Delta \to \Gamma \concat \Delta$ be the inclusions in $\mathbb{F}{\downarrow}S$, and define $\iota_1 \coloneqq \eta \circ J_S(\inl)$ and $\iota_2 \coloneqq \eta \circ J_S(\inr)$. Since $J_S$ preserves coproducts, the map
+    \begin{align*}
+        \Set^S(J_S(\Gamma\concat\Delta),T\Theta) &\overset{\cong}{\to} \Set^S(J_S\Gamma,T\Theta) \times \Set^S(J_S\Delta,T\Theta)\\
+        f &\mapsto \left<f \circ J_S(\inl), f \circ J_S(\inr)\right> 
+    \end{align*}
+    is an isomorphism. By the unit law, we compute $f \odot \iota_1 = f^{\sharp} \circ \eta \circ J_S(\inl) = f \circ J_S(\inl)$, and similarly for $\iota_2$, so we can identify this isomorphism with
+    \begin{align*}
+        \Kl(T)(\Gamma\concat\Delta,T\Theta) &\overset{\cong}{\to} \Kl(T)(\Gamma,T\Theta) \times \Kl(T)(\Delta,T\Theta)\\
+        f &\mapsto \left<f \odot \iota_1, f \odot \iota_2\right>.
+    \end{align*}
+    Henceforth, we abbreviate $\iota_1$ and $\iota_2$ to $\inl$ and $\inr$, and, for a morphism $f : \Gamma \to \Delta$ of $\Kl(T)$ and a list $\Phi$, write $f \concat \Phi \coloneqq \left<\inl \odot f, \inr\right> : \Gamma \concat \Phi \to \Delta \concat \Phi$.
+\end{remark}
+    
+\begin{definition}\label{def:sorted-c-system}
+    Let $T$ be a relative monad on $J_S$ and $M : \Kl(T) \to \Set^S$ a $T$-module. For lists $\Xi$ and $\Phi = [s_1, \ldots, s_m]$ of sorts, the set $\Dec_M(\Xi, \Phi)$ of \emph{$M$-decorations} of $\Phi$ over $\Xi$ consists of the sequences $\Theta = (A_1, \ldots, A_m)$ with $A_j \in M(\Xi \concat [s_1, \ldots, s_{j-1}])_{s_j}$; we write $\Theta^{\downarrow} \coloneqq \Phi$. Concatenation of sequences is a bijection
+    \[
+        \_ \concat \_ : \Dec_M(\Xi, \Phi) \times \Dec_M(\Xi \concat \Phi, \Phi') \to \Dec_M(\Xi, \Phi \concat \Phi'),
+    \]
+    and we write $\Theta \concat [A]$ for $\Theta \concat (A)$. A morphism $f : \Xi \to \Xi'$ of $\Kl(T)$ acts on $M$-decorations by
+    \[
+        f^M(A_1, \ldots, A_m) \coloneqq \big((f \concat [s_1, \ldots, s_{j-1}])^M(A_j)\big)_{j = 1}^m \in \Dec_M(\Xi', \Phi).
+    \]
+    The C-system $\Csys(T, M)$ consists of the following data.
+    \begin{itemize}
+        \item Objects are the elements $\Gamma$ of $\coprod_{\Phi} \Dec_M(\emptyar, \Phi)$, where $\Phi$ ranges over the lists of sorts, and the length of $\Gamma$ is the length of $\Gamma^{\downarrow}$.
+        \item Morphisms $\Delta \to \Gamma$ are the morphisms $\Gamma^{\downarrow} \to \Delta^{\downarrow}$ of $\Kl(T)$; identities and composition are inherited from $\Kl(T)^{\op}$.
+        \item The point is $\pt \coloneqq ()$, and $\ft(\pt) \coloneqq \pt$.
+        \item For an object $\Gamma \concat [A]$ of positive length, with $A \in M(\Gamma^{\downarrow})_s$, and a morphism $f : \Delta \to \Gamma$, we have:
+        \begin{align*}
+            \ft(\Gamma \concat [A]) &\coloneqq \Gamma,\\
+            p_{\Gamma \concat [A]} &\coloneqq \inl : \Gamma^{\downarrow} \to \Gamma^{\downarrow} \concat [s],\\
+            f^*(\Gamma \concat [A]) &\coloneqq \Delta \concat [f^M(A)],\\
+            q(f, \Gamma \concat [A]) &\coloneqq f \concat [s] : f^*(\Gamma \concat [A]) \to \Gamma \concat [A].
+        \end{align*}
+    \end{itemize}
+    % We write $\Csys(T) \coloneqq \Csys(T, 1)$, where $1$ is the terminal $T$-module, whose underlying category is $\Kl(T)^{\op}$.
+\end{definition}
+
+\begin{proposition}\label{prop:sorted-c-system}
+    For every relative monad $T$ on $J_S$ and every $T$-module $M : \Kl(T) \to \Set^S$, $\Csys(T, M)$ is a C-system.
+    % , and forgetting the decorations is a homomorphism of C-systems $\Csys(T, M) \to \Csys(T)$. For $S = 1$, the C-systems $\Csys(T)$ and $\Csys(T, M)$ are those of Voevodsky.
+\end{proposition}
+
+\begin{proof}
+    The conditions on $\pt$ and $\ft$ are clearly satisfied. The functor $\Csys(T, M) \to \Kl(T)^\op$ that forgets decorations is fully faithful and therefore reflects pullbacks. It thus suffices to show that the square
+    \[
+    \begin{tikzcd}
+        \Xi \arrow[r, "\inl"] \arrow[d, "f"'] & \Xi \concat [s] \arrow[d, "f \concat {[s]}"] \\
+        \Xi' \arrow[r, "\inl"'] & \Xi' \concat [s]
+    \end{tikzcd}
+    \]
+    is a pushout in $\Kl(T)$ for every morphism $f : \Xi \to \Xi'$ of $\Kl(T)$ and every $s \in S$. The square clearly commutes. To see that it is a pushout, let $g : \Xi \concat [s] \to \Psi$ and $h : \Xi' \to \Psi$ be such that $g \odot \inl = h \odot f$; we show that $k \coloneqq \left<h, g \odot \inr\right> : \Xi' \concat [s] \to \Psi$ is the unique morphism with $k \odot \inl = h$ and $k \odot (f \concat [s]) = g$. The first equation holds by definition. For the second, both sides agree on the coprojections of $\Xi \concat [s]$, since $(f \concat [s]) \odot \inr = \inr$:
+    \begin{align*}
+        k \odot (f \concat [s]) \odot \inl &= k \odot \inl \odot f = h \odot f = g \odot \inl,\\
+        k \odot (f \concat [s]) \odot \inr &= k \odot \inr = g \odot \inr.
+    \end{align*}
+    Conversely, if $k'$ satisfies both equations, then $k' \odot \inl = h$ and $k' \odot \inr = k' \odot (f \concat [s]) \odot \inr = g \odot \inr$, so $k' = k$ by the universal property of $\Xi' \concat [s]$.
+
+    
+    It remains to verify the conditions on $(\_)^*$ and $q$. Let $X = \Gamma \concat [A]$ with $A \in M(\Gamma^{\downarrow})_s$. The objects $\id^*X$ and $X$ differ at most in their last decorations, $\eta^M(A)$ and $A$, which agree by the unit law of $M$. Similarly, $(f \circ g)^*X$ and $g^*(f^*X)$ differ at most in their last decorations, $(g \odot f)^M(A)$ and $g^M(f^M(A))$, which agree by the composition law of $M$. For $q$, read in $\Kl(T)$, we must show that
+    \[
+    \eta_{\Gamma^{\downarrow}} \concat [s] = \eta_{\Gamma^{\downarrow} \concat [s]} \qquad \text{and} \qquad (g \odot f) \concat [s] = (g \concat [s]) \odot (f \concat [s]),
+    \]
+    which is easy to see.
+\end{proof}
+
+\begin{remark}
+    Taking $S = 1$ clearly recovers Voevodsky's construction~\cite[S6]{Voevodsky2016Relative}.
+\end{remark}
+
+\begin{remark}\label{rem:sorted-c-system-cwf}
+    In the reading of C-systems as categories with families, the types over $\Gamma$ are the decorations $A \in M(\Gamma^{\downarrow})_s$, for $s \in S$, and the terms of such a type are the elements of $T(\Gamma^{\downarrow})_s$: a section of $p_{\Gamma \concat [A]}$ is a morphism $\Gamma^{\downarrow} \concat [s] \to \Gamma^{\downarrow}$ of $\Kl(T)$ that restricts to the identity on $\Gamma^{\downarrow}$, and so amounts to a morphism $[s] \to \Gamma^{\downarrow}$, that is, an element of $T(\Gamma^{\downarrow})_s$.
+\end{remark}
+    
+\begin{definition}\label{def:raw-syntax-c-system}
+    The \emph{raw syntax C-system} of $\ToS^\omega$ is $\Ctxr \coloneqq \Csys(\bE, \Ent)$.
+\end{definition}
+
+Unfolding definitions, the objects of $\Ctxr$ are precisely the raw contexts, and its morphisms $\Delta \to \Gamma$ are the substitutions $\Gamma^{\downarrow} \sub \Delta^{\downarrow}$. The types over a raw context $\Gamma$ are the entries over $\Gamma^{\downarrow}$ of arbitrary arity, and the terms of an entry of arity $\alpha$ are the expressions in $\Expr(\Gamma^{\downarrow} \concat \alpha)$.
+
+% \section{Judgements}
+
+% The raw syntax C-system imposes no well-formedness constraints. We impose these constraints by judgements on the raw syntax, which single out the well-formed raw contexts, expressions and substitutions, and determine when two of them are equal.
+
+% \subsection{Judgement forms}
+
+% The raw syntax of~\cref{def:raw-syntax-c-system} consists of four syntactic classes: expressions, boundaries, decorated arities and substitutions; for each of them, we have a corresponding well-formedness judgment, and one of equality.
+
+% Since an expression $e$ synthesises its boundary as $\partial_{\Gamma}(e)$, the judgements $\Gamma \vdash e$ and $\Gamma \vdash e \equiv e'$ mention no boundary. Boundaries are judged, by $\Gamma \vdash \beta\ \mathsf{bd}$ and $\Gamma \vdash \beta \equiv \beta'$, pointwise through the expressions they are built out of. The well-formedness judgment $\Gamma \vdash \Theta$ of decorated arities must primitive, since it will appear as a premise to the congruence rule for expressions, whereas the equality of decorated arities $\Gamma \vdash \Theta \equiv \Theta'$ is a derived judgment form. A raw context $\Gamma$ is well formed, written $\vdash \Gamma$, when it is well formed as a decorated arity over the empty raw context. Substitutions, finally, are judged relative to a decorated arity: for $\Theta : \Dec(\Gamma^{\downarrow}, \Theta^{\downarrow})$, the judgement $\Gamma \vdash t : \Theta$ asserts that $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ is a well-formed substitution, meaning that its value at each slot of $\Theta$ is well formed and has, up to equality, the boundary declared by that slot, and that it satisfies the equations declared in $\Theta$. The judgement $\Gamma \vdash t \equiv t' : \Theta$ asserts that the two substitutions are pointwise equal. 
+% All judgements are made over an arbitrary raw context.
+
+% \begin{table}[ht]
+%     \centering
+%     \begin{tabular}{ll}
+%         \toprule
+%         Judgement & Reading\\
+%         \midrule
+%         $\Gamma \vdash e$ & $e : \Expr(\Gamma^{\downarrow})$ is well formed\\
+%         $\Gamma \vdash e \equiv e'$ & $e, e' : \Expr(\Gamma^{\downarrow})$ are equal\\
+%         \midrule
+%         $\Gamma \vdash \beta\ \mathsf{bd}$ & $\beta : \Bd(\Gamma^{\downarrow})$ is well formed\\
+%         $\Gamma \vdash \beta \equiv \beta'$ & $\beta, \beta' : \Bd(\Gamma^{\downarrow})$ are equal\\
+%         \midrule
+%         $\Gamma \vdash \Theta$ & $\Theta : \Dec(\Gamma^{\downarrow}, \Theta^{\downarrow})$ is well formed\\
+%         \midrule
+%         $\Gamma \vdash t : \Theta$ & $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ is well formed\\
+%         $\Gamma \vdash t \equiv t' : \Theta$ & $t, t': \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ are equal\\
+%         \bottomrule
+%     \end{tabular}
+%     \caption{The primitive judgement forms of $\ToS^\omega$}
+%     \label{tab:judgement-forms}
+% \end{table}
+
+% Comparing these judgement forms with the more familiar ones of MLTT, one striking difference is that there, the judgements $\Gamma \vdash \Delta$ and $\Gamma \vdash \sigma : \Delta$ on telescopes $\Delta$ over $\Gamma$ are derived. In our setup, they must be primitive, since the formation rule for expressions takes a whole telescope of arguments. The well-formedness judgments for types and terms are then obtained by restricting to one-slot decorated arities. Explicitly, in the raw syntax C-system, a type over $\Gamma$ is an entry $E : \Ent(\Gamma^{\downarrow}, \alpha)$, which we can identify with the one-slot decorated arity $[x : E] : \Dec(\Gamma^{\downarrow}, [\alpha])$, and a term of $E$ is an expression $e : \Expr(\Gamma^{\downarrow} \concat \alpha)$, which we can identify with the substitution $[x : \alpha] \sub \Gamma^{\downarrow}$ sending $x$ to $e$.
+
+% \subsection{Rules}
+
+% The derivation rules of $\ToS^{\omega}$ are listed in \cref{fig:rules-wf,fig:rules-eq}. When stating the rules, we write $\Gamma \concat \Theta$ for the raw context $\Gamma$ extended by $\Theta : \Dec(\Gamma^{\downarrow}, \Theta^{\downarrow})$, as in \cref{rem:concatenation}, and abbreviate the action $e[t]_{\Gamma^{\downarrow}}$ of a substitution $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ with prefix $\Gamma^{\downarrow}$ to $e[t]$, and likewise for boundaries and decorated arities.
+% A substitution $t : \Theta^{\downarrow} \sub \Gamma^{\downarrow}$ with $\Theta = [x : [\Psi]\beta] \concat \Theta' : \Dec(\Gamma^{\downarrow},\Theta^{\downarrow})$ is written as $t =: (u, t')$, where $u : \Expr(\Gamma^{\downarrow} \concat \Psi^{\downarrow})$ is its value at $x$ and $t' : \Theta'^{\downarrow} \sub \Gamma^{\downarrow}$ is its tail. 
+% We have $\Theta' : \Dec(\Gamma^{\downarrow}\concat[x : \Psi^{\downarrow}],\Theta'^{\downarrow})$ and $[x \mapsto u] : [\Psi^{\downarrow}] \sub \Gamma^{\downarrow}$, and we write
+% \[
+% \Theta'[u] \coloneqq \Theta'[x \mapsto u]_{\Gamma^{\downarrow}} : \Dec(\Gamma^{\downarrow}, \Theta'^{\downarrow})
+% \]
+% for the decorated arity over $\Gamma^{\downarrow}$ obtained by instantiating $x$ for $u$.
+% The empty decorated arity and the empty substitution are both written $()$. We write $\isEq : \{\Xi : \bA\} \to \Bd(\Xi) \to \Prop$ for the predicate which selects the equational boundaries, i.e. those that lie in the third summand of $\Bd = \Sigma_{i = 0}^2\Expr^i$.
+
+% \begin{figure}[ht]
+%     \centering
+%     \textit{Expressions}
+%     \begin{mathpar}
+%         \inferrule*[right=\textsc{ap}]
+%             {x : \Gamma \ni [\Theta]\beta \\ \neg \isEq(\beta) \\ \Gamma \vdash t : \Theta}
+%             {\Gamma \vdash x(t)}
+%     \end{mathpar}
+
+%     \textit{Boundaries}
+%     \begin{mathpar}
+%         \inferrule*[right=\textsc{bd-sort}]
+%             { }
+%             {\Gamma \vdash \bsort\ \mathsf{bd}}
+%         \and
+%         \inferrule*[right=\textsc{bd-of}]
+%             {\Gamma \vdash S \\ \Gamma \vdash \partial_\Gamma(S) \equiv \bsort}
+%             {\Gamma \vdash \bof(S)\ \mathsf{bd}}
+%         \and
+%         \inferrule*[right=\textsc{bd-eq}]
+%             {\Gamma \vdash l \\ \Gamma \vdash r \\ \Gamma \vdash \partial_\Gamma(l) \equiv \partial_\Gamma(r)}
+%             {\Gamma \vdash \beq(l, r)\ \mathsf{bd}}
+%     \end{mathpar}
+
+%     \textit{Decorated arities}
+%     \begin{mathpar}
+%         \inferrule*[right=\textsc{dec-nil}]
+%             { }
+%             {\Gamma \vdash ()}
+%         \and
+%         \inferrule*[right=\textsc{dec-cons}]
+%             {\Gamma \vdash \Theta \\ \Gamma \concat \Theta \vdash \beta\ \mathsf{bd} \\ \Gamma \concat [x : [\Theta]\beta] \vdash \Theta'}
+%             {\Gamma \vdash [x : [\Theta]\beta] \concat \Theta'}
+%     \end{mathpar}
+
+%     \textit{Substitutions}
+%     \begin{mathpar}
+%         \inferrule*[right=\textsc{sub-nil}]
+%             { }
+%             {\Gamma \vdash () : ()}
+%         \and
+%         \inferrule*[right=\textsc{sub-cons}]
+%             {\neg\isEq(\beta) \\ \Gamma \concat \Theta \vdash u \\ \Gamma \concat \Theta \vdash \partial_{\Gamma \concat \Theta}(u) \equiv \beta \\ \Gamma \vdash t : \Theta'[u]}
+%             {\Gamma \vdash (u, t) : [x : [\Theta]\beta] \concat \Theta'}
+%         \and
+%         \inferrule*[right=\textsc{sub-eq}]
+%             {\Gamma \concat \Theta \vdash l \equiv r \\ \Gamma \vdash t : \Theta'[u]}
+%             {\Gamma \vdash (u, t) : [x : [\Theta]\,\beq(l, r)] \concat \Theta'}
+%     \end{mathpar}
+%     \caption{The rules of well-formedness of $\ToS^\omega$.}
+%     \label{fig:rules-wf}
+% \end{figure}
+
+% \begin{figure}[ht]
+%     \centering
+%     \textit{Equality of expressions}
+%     \begin{mathpar}
+%         \inferrule*[right=\textsc{refl}]
+%             {\Gamma \vdash e}
+%             {\Gamma \vdash e \equiv e}
+%         \and
+%         \inferrule*[right=\textsc{symm}]
+%             {\Gamma \vdash e \equiv e'}
+%             {\Gamma \vdash e' \equiv e}
+%         \and
+%         \inferrule*[right=\textsc{trans}]
+%             {\Gamma \vdash e \equiv e' \\ \Gamma \vdash e' \equiv e''}
+%             {\Gamma \vdash e \equiv e''}
+%         \and
+%         \inferrule*[right=\textsc{hyp}]
+%             {x : \Gamma \ni [\Theta]\,\beq(l, r) \\ \Gamma \concat \Theta \vdash l \\ \Gamma \concat \Theta \vdash r \\ \Gamma \vdash t : \Theta}
+%             {\Gamma \vdash l[t] \equiv r[t]}
+%         \and
+%         \inferrule*[right=\textsc{congr}]
+%             {\Gamma \vdash \Theta \\ \Gamma \vdash t : \Theta \\ \Gamma \vdash t' : \Theta \\ \Gamma \vdash t \equiv t' : \Theta \\ \Gamma \concat \Theta \vdash e \equiv e'}
+%             {\Gamma \vdash e[t] \equiv e'[t']}
+%     \end{mathpar}
+
+%     \textit{Equality of boundaries}
+%     \begin{mathpar}
+%         \inferrule*[right=\textsc{eq-sort}]
+%             { }
+%             {\Gamma \vdash \bsort \equiv \bsort}
+%         \and
+%         \inferrule*[right=\textsc{eq-of}]
+%             {\Gamma \vdash S \equiv S'}
+%             {\Gamma \vdash \bof(S) \equiv \bof(S')}
+%         \and
+%         \inferrule*[right=\textsc{eq-eq}]
+%             {\Gamma \vdash l \equiv l' \\ \Gamma \vdash r \equiv r'}
+%             {\Gamma \vdash \beq(l, r) \equiv \beq(l', r')}
+%     \end{mathpar}
+
+%     \textit{Equality of substitutions}
+%     \begin{mathpar}
+%         \inferrule*[right=\textsc{subeq-nil}]
+%             { }
+%             {\Gamma \vdash () \equiv () : ()}
+%         \and
+%         \inferrule*[right=\textsc{subeq-cons}]
+%             {\neg \isEq(\beta) \\ \Gamma \concat \Theta \vdash u \equiv u' \\ \Gamma \vdash t \equiv t' : \Theta'[u]}
+%             {\Gamma \vdash (u, t) \equiv (u', t') : [x : [\Theta]\beta] \concat \Theta'}
+%         \and
+%         \inferrule*[right=\textsc{subeq-eq}]
+%             {\Gamma \vdash t \equiv t' : \Theta'[u]}
+%             {\Gamma \vdash (u, t) \equiv (u', t') : [x : [\Theta]\,\beq(l, r)] \concat \Theta'}
+%     \end{mathpar}
+%     \caption{The rules of equality of $\ToS^\omega$.}
+%     \label{fig:rules-eq}
+% \end{figure}
+
+% The well-formedness of an expressions is obtained by a single rule \textsc{ap}: an application $x(t)$ is well formed when its arguments form a well-formed substitution for the binding of its head, which must not be an equational slot. In finitary type theories, symbols, metavariables and variables are introduced by separate rules, namely the symbol rules~\cite[Def.~2.10]{HaselwarterBauer2023}, the metavariable rules~\cite[Def.~2.15]{HaselwarterBauer2023} and the variable rule~\cite[Fig.~2.4]{HaselwarterBauer2023}; since in $\ToS^\omega$, the three syntactic classes are treated homogenously as slots, a single rule suffices.
+
+% The rules for boundaries, decorated arities and substitutions follow the recursive structure of their subjects. This is where expressions are checked, by comparing their synthesised boundary to the expected one: in \textsc{bd-of}, in order for the boundary $\bof(S)$ to be well formed, the boundary of $S$ needs to be $\bsort$; in \textsc{bd-eq}, in order for the boundary $\beq(l,r)$ to be well formed, the boundaries of $l$ and $r$ need to be equal; and in \textsc{sub-cons}, in order for a substitution to be well formed, its value at each non-equational slot needs to have the boundary declared by that slot.
+% The value of the substitution at a slot declared to be an equation $\beq(l, r)$ is left unconstrained, since equality is proof-irrelevant: an equation is witnessed only by the fact that it holds, just as finitary type theories fill an equation boundary with a dummy value~\cite[Fig.~2.3]{HaselwarterBauer2023}. Instead, \textsc{sub-eq} requires the declared equation to hold.
+
+% Equality of expressions is generated by five rules, the first three of which ensure that it is an equivalence relation. The rule \textsc{hyp} is the equational counterpart of \textsc{ap},  instantiating a declared equation. The rule \textsc{congr} states that equality is stable under substitution; it subsumes the congruence rules of finitary type theories~\cite[Def.~2.13]{HaselwarterBauer2023}.
+% The premises of the rules for equality of expressions are chosen so that equal expressions are automatically well formed. In the equality rules for substitutions, in contrast, equated substitutions are not necessarily well formed; this is why \textsc{congr} assumes $\Gamma \vdash t, t' : \Theta$ and not $\Gamma \vdash e, e'$.
+% The rules \textsc{subeq-cons} and \textsc{subeq-eq} are left-leaning: the tails are compared at $\Theta'[u]$, instantiated by the left value $u$ rather than by $u'$. We will later show that this choice is immaterial, so that the equality of substitutions is symmetric.
+
+% The equality of decorated arities is defined post festum by the clauses:
+
+% \begin{mathpar}
+%     \inferrule*[right=\textsc{deceq-nil}]
+%         { }
+%         {\Gamma \vdash () \equiv ()}
+%     \and
+%     \inferrule*[right=\textsc{deceq-cons}]
+%         {\Gamma \vdash \Theta \equiv \Psi \\ \Gamma \concat \Theta \vdash \beta \equiv \gamma \\ \Gamma \concat [x : [\Theta]\beta] \vdash \Theta' \equiv \Psi'}
+%         {\Gamma \vdash [x : [\Theta]\beta] \concat \Theta' \equiv [x : [\Psi]\gamma] \concat \Psi'}
+% \end{mathpar}
+
+% \begin{remark}[Comparison with Adams]\label{rem:adams-judgements}
+%     The closest relative of $\ToS^\omega$ is Adams' lambda-free logical framework TF~\cite{Adams2008}, whose raw syntax we compared with ours in \cref{rem:adams}. Its judgements differ from ours in three essential respects.
+%     \begin{enumerate}
+%         \item \emph{Equations as hypotheses.} The `kinds' (called boundaries in our terminology) of TF are built from the base kinds of types and of their elements only, and equations can be declared only at the top level of a specification. In $\ToS^\omega$, a slot of any rank may be declared to be an equation, so that equations can be hypothesised like any other judgement.
+%         \item \emph{Object theories as contexts.} In TF, an object theory is specified by extending the framework with new rules, one for each declared constant and equation~\cite[\S2.6.1]{Adams2008}, so that each theory yields a different deductive system. In $\ToS^\omega$, an object theory is specified by a raw context, its signature, whose constants and axioms are slots like any other, and the judgements of an object theory are simply those made in a raw context extending the signature. The rules and consequently the metatheory of the framework thus apply to all object theories at once. Moreover, transformations between theories now become expressible within the framework itself: a transformation of a theory with signature $\Sigma$ into one with signature $\Sigma'$ is simply a well-formed substitution $\Sigma' \vdash \varphi : \Sigma$, that sends each constant to an expression over $\Sigma'$ and that validates the axioms of $\Sigma$, and such a transformation automatically acts on the object-level judgements by substitution. In TF, where each theory is a deductive system of its own, such transformations can only be described from outside the framework.
+%         \item \emph{Substitution of equals.} In TF, functionality (the fact that equal substitutions yield equal results upon application) is not a rule but a property to be proved post festum. The proof requires showing that substitutions known only to be equal are well formed; Adams establishes this together with admissibility of substitution, only for specifications with no equations and for orderable specifications of order at most $2$~\cite[Thm.~3.8]{Adams2008}.In $\ToS^\omega$, equal substitutions need not be well formed; instead, functionality is ensured by the rule \textsc{congr}, whose premises include the well-formedness of both substitutions, so that nothing has to be recovered from an equality, and admissibility of substitution will be shown to hold for arbitrary signatures at every rank.
+%     \end{enumerate}
+% \end{remark}
