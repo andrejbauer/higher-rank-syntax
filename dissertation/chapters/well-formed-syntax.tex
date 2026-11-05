@@ -2,7 +2,7 @@
 \label{ch:wf-syntax}
 \providecommand{\free}[1]{\langle\!\langle #1 \rangle\!\rangle}
 
-This chapter constructs the well-typed syntax of $\ToS^\omega$ from the raw syntax of \cref{ch:raw-syntax}. \Cref{sec:natural-models,sec:shaped-syntax,sec:typings,sec:type-theories} are general: \cref{sec:natural-models} collects what we need of natural models; \cref{sec:shaped-syntax} identifies the category in which syntax over a set of shapes lives and describes, for a relative monad $T$ on a category of finite sets of shaped variables, the raw syntax as an object of it; \cref{sec:typings} describes the judgement layers that can be imposed on the raw syntax, which we call typings; and \cref{sec:type-theories} the type theories over $T$, each specified by its raw types and a set of rules. The syntax of $\ToS^\omega$ is the instance for the relative monad $\bE$.
+This chapter constructs the well-typed syntax of $\ToS^\omega$ from the raw syntax of \cref{ch:raw-syntax}. \Cref{sec:natural-models,sec:shaped-syntax,sec:typings} are general: \cref{sec:natural-models} collects what we need of natural models; \cref{sec:shaped-syntax} identifies the category in which syntax over a set of shapes lives and describes, for a relative monad $T$ on a category of finite sets of shaped variables, the raw syntax as an object of it; and \cref{sec:typings} describes the judgement layers that can be imposed on the raw syntax, which we call typings. \Cref{sec:type-theories} defines the type theories over $T$, each specified by its raw types and a set of rules, and $\ToS^\omega$ as the type theory over the relative monad $\bE$ whose raw types are hypothetical judgements.
 
 \section{Natural models}
 \label{sec:natural-models}
@@ -735,7 +735,7 @@ Two premises are not raw judgements on their face. In the rule for $\vdash \Gamm
     Conversely, let $(\cat{W}, q)$ be saturated. The set $\jdg_q$ depends only on the isomorphism class of $(\cat{W}, q)$: if $q' = \theta \circ q$ with $\theta$ an isomorphism, then $q'_{\Ty}(\Gamma, A) = q'_{\Ty}(\Gamma, A')$ iff $q_{\Ty}(\Gamma, A) = q_{\Ty}(\Gamma, A')$, since $\theta$ is injective on types, and likewise for terms, so $\jdg_{q'} = \jdg_q$. By contextuality of $\cat{W}$, \cref{prop:trivial-fibrations}(2) and induction on the length, the derived forms of $\jdg_q$ are: $\vdash \Gamma$ iff $\Gamma \in \cat{W}$; $\Delta \vdash \sigma : \Gamma$ iff $\sigma \in \cat{W}(\Delta, \Gamma)$; $\vdash \Gamma \equiv \Gamma'$ iff $q(\Gamma) = q(\Gamma')$; $\Delta \vdash \sigma \equiv \sigma' : \Gamma$ iff $q(\sigma) = q(\sigma')$. We verify that $\jdg_q$ is a typing. \textsc{Presup-Ty}, \textsc{Presup-Tm}, \textsc{Presup-TyEq}, \textsc{Presup-TmEq}, \textsc{Subst-Ty}, \textsc{Subst-Tm}, \textsc{Wk} and \textsc{Var} hold because $\cat{W}$ is a sub-natural-model and the equalities of $\jdg_q$ relate elements of $\cat{W}$. \textsc{Refl-Ty}, \textsc{Sym-Ty}, \textsc{Trans-Ty}, \textsc{Refl-Tm}, \textsc{Sym-Tm} and \textsc{Trans-Tm} hold because the relations are kernels of functions. \textsc{Cong-Ty}: $q(A[\sigma]) = q(A)[q(\sigma)] = q(A')[q(\sigma')] = q(A'[\sigma'])$, and \textsc{Cong-Tm} likewise. \textsc{Conv-TmEq}: if $t \in \Tm_\cat{W}(\Gamma, A)$ and $q_{\Ty}(\Gamma, A) = q_{\Ty}(\Gamma, A')$, then $t \in \Tm_\cat{W}(\Gamma, A')$ and $q_{\Tm}(\Gamma, A', t) = q_{\Tm}(\Gamma, A, t)$ by (S2) with $\Gamma = \Gamma'$; hence $q_{\Tm}(\Gamma, A, t) = q_{\Tm}(\Gamma, A, t')$ implies $q_{\Tm}(\Gamma, A', t) = q_{\Tm}(\Gamma, A', t')$. Now $\cat{W}_{\jdg_q} = \cat{W}$, and the congruence of $\jdg_q$ is the kernel of $q$. The map $\theta : \cat{W}/{\equiv} \to \cat{Q}$, $[x] \mapsto q(x)$, is well defined and a morphism of natural models, since $q$ is and respects its kernel; it is injective on objects, faithful and fibrewise injective by \cref{prop:span}, and fibrewise surjective because $q$ is, hence also surjective on objects and full by \cref{prop:trivial-fibrations}(2). So $\theta$ is an isomorphism by \cref{lem:iso}, shape-preserving since $|\theta[A]| = |qA| = |A| = |[A]|$, with $q = \theta \circ [\_]$, and the two assignments are inverse up to isomorphism.
 \end{proof}
 
-\section{Type theories}
+\section{The type theory \texorpdfstring{$\ToS^\omega$}{ToS-omega}}
 \label{sec:type-theories}
 
 \begin{definition}\label{def:type-theory}
@@ -748,3 +748,328 @@ Two premises are not raw judgements on their face. In the rule for $\vdash \Gamm
     The \emph{judgements} of $\TT$, $\jdg_{\TT}$ are defined as least typing \cref{prop:lattice} on $\Raw(T, M, E)$ closed under $X$.
     The \emph{syntax} of $\TT$ is the $S^+$-shaped contextual natural model $\Syn_{\TT} \coloneqq \cat{W}_{\jdg_{\TT}}/{\equiv_{\TT}}$ of \cref{prop:quotient}.
 \end{definition}
+
+In the rest of this section we define $\ToS^\omega$ as a type theory over the relative monad of expressions of \cref{ch:raw-syntax}. Its raw types are hypothetical judgements: a conclusion, which is a family of types, an element of a type, or an equation, under a telescope of hypotheses, which are again hypothetical judgements. The rules of \cref{fig:tos} say when such a judgement is well formed, when two of them are equal, and what counts as evidence for one.
+
+\subsection{Raw syntax}
+\label{sec:tos-raw}
+\providecommand{\Tel}{\mathsf{Tel}}
+
+The expressions of \cref{ch:raw-syntax} do not distinguish families of types from their elements. For $\ToS^\omega$ we record this distinction in the arities, by a kind attached to every slot.
+
+\begin{definition}\label{def:kinds}
+    Let $K \coloneqq \{\mathsf{ty}, \mathsf{tm}\}$ be the set of \emph{kinds}, and define $\widetilde{\bA}$ as the initial algebra of $X \mapsto \List(X \times K)$: an \emph{arity} is a list of \emph{shapes}, and a shape is a pair $(\alpha, \kappa)$ of an arity and a kind. The corresponding slot functor is
+    \begin{align*}
+        \_ &\ni\_ = J_{\widetilde{\bA}} : \mathbb{F}{\downarrow}\widetilde{\bA} \to \Set^{\widetilde{\bA}}\\
+        [(\gamma_1,\lambda_1),\cdots,(\gamma_n,\lambda_n)] &\ni(\alpha,\kappa) = \{i : \{1,\cdots,n\} \mid (\gamma_i,\lambda_i) = (\alpha,\kappa)\}.
+    \end{align*}
+    The sets $\Expr(\Gamma, \kappa)$ of \emph{expressions of kind $\kappa$} over an arity $\Gamma$ are defined inductively by a single rule: for every slot $x : \Gamma \ni (\alpha, \kappa)$ and every family of arguments
+    \[
+        t \in \Args(\Gamma, \alpha) \coloneqq \prod_{(\delta, \lambda) \in S}\, \prod_{i : \alpha \ni (\delta, \lambda)} \Expr(\Gamma \concat \delta, \lambda),
+    \]
+    there is an expression $x(t) \in \Expr(\Gamma, \kappa)$. An expression thus has the kind of its head, and the argument filling a slot of shape $(\delta, \lambda)$ has kind $\lambda$. We have a functor
+    \begin{align*}
+        &\widetilde{\bE} :  \mathbb{F}{\downarrow}\widetilde{\bA} \to \Set^{\widetilde{\bA}}\\
+        &\widetilde{\bE}(\Gamma,(\alpha,\kappa)) := \Expr(\Gamma \concat \alpha, \kappa).
+    \end{align*}
+\end{definition}
+
+\begin{proposition}\label{prop:kinded-monad}
+    With $\eta$-expansion of (\cref{eta-expansion}) as the unit, $\eta_{\Gamma,(\alpha,\kappa)} := \eta_{\Gamma,\alpha}$, and the action of \cref{def:action} as the Kleisli extension, $\sigma^\sharp_{(\alpha, \kappa)} \coloneqq \_[\sigma]^\alpha$, $\widetilde{\bE}$ is a relative monad on $J_S$.
+\end{proposition}
+
+An expression of $\Expr(\Gamma \concat \Phi, \kappa)$ may be regarded as an element of $\widetilde{\bE}(\Gamma)_{(\Phi, \kappa)}$ or of $\widetilde{\bE}(\Gamma \concat \Phi)_{(\emptyar, \kappa)}$, depending on how its arity is split, and the following lemma says that the two readings carry compatible actions. Recall from \cref{lem:kleisli-coproducts} the coproducts of $\Kl(\widetilde{\bE})$, the copairing $\langle f, g \rangle$, and $f \concat \Phi = \langle \inl \odot f, \inr \rangle$.
+
+\begin{lemma}\label{lem:currying}
+    Let $\sigma : \Gamma \to \Delta \in \Kl(\widetilde{\bE})$ be a substitution and $\Phi$ an arity. For every shape $(\alpha, \kappa)$, the square below commutes.
+    \[\begin{tikzcd}
+    	{\widetilde{\mathbb{E}}(\Gamma\concat\Phi)_{(\alpha,\kappa)}} && {\widetilde{\mathbb{E}}(\Delta\concat\Phi)_{(\alpha,\kappa)}} \\
+    	{\widetilde{\mathbb{E}}(\Gamma)_{(\Phi\concat \alpha,\kappa)}} && {\widetilde{\mathbb{E}}(\Delta)_{(\Phi\concat \alpha,\kappa)}}
+    	\arrow["{\_[\sigma\concat\Phi]^{\alpha}}", from=1-1, to=1-3]
+    	\arrow[equals, from=1-1, to=2-1]
+    	\arrow[equals, from=1-3, to=2-3]
+    	\arrow["{\_[\sigma]^{\Phi\concat\alpha}}"', from=2-1, to=2-3]
+    \end{tikzcd}\]    
+\end{lemma}
+
+\begin{proof}
+    By associativity.
+\end{proof}
+
+\begin{lemma}\label{lem:instantiation}
+    For a slot $x : \Gamma \ni (\alpha, \kappa)$ and $t \in \Args(\Gamma, \alpha) = \Kl(\widetilde{\bE})(\alpha, \Gamma)$, we have $\eta(x)[\langle \id_{\Gamma}, t \rangle] = x(t)$.
+\end{lemma}
+
+\begin{proof}
+    Easy.
+\end{proof}
+
+\begin{definition}\label{def:hypothetical}
+    The families of sets $\mathfrak{C}_0, \mathfrak{C} : \bA \to \Set$ of \emph{non-equational conclusions} and of \emph{conclusions} are
+    \begin{align*}
+        \mathfrak{C}_0(\Gamma) &\coloneqq \{\mathsf{type}\} \cup \{\, B \mid B \in \Expr(\Gamma, \mathsf{ty}) \,\},\\
+        \mathfrak{C}(\Gamma) &\coloneqq \mathfrak{C}_0(\Gamma) \cup \{\, l =_c r \mid c \in \mathfrak{C}_0(\Gamma),\ l, r \in \Expr(\Gamma, \kappa_c) \,\},
+    \end{align*}
+    where $\kappa : \mathfrak{C}_0(\Gamma) \to K$, the \emph{kind} of a non-equational conclusion, is given by $\kappa_{\mathsf{type}} \coloneqq \mathsf{ty}$ and $\kappa_B \coloneqq \mathsf{tm}$. Here $\mathsf{type}$, the \emph{type expressions} $B \in \Expr(\Gamma, \mathsf{ty})$ and the equations $l =_c r$ are formal symbols, so that the unions are disjoint; we use the letters $c, c'$ for non-equational conclusions and $C, C'$ for arbitrary ones. The families of sets of \emph{telescopes}, of \emph{slot entries} and of \emph{equational entries},
+    \[
+        \Tel : \left|\bA\right| \times \left|\bA\right| \to \Set, \qquad M : \left|\bA\right| \to \Set^S, \qquad E : \left|\bA\right| \to \Set,
+    \]
+    are defined by simultaneous induction, inductively by the clauses
+    \begin{alignat*}{2}
+        & && () \in \Tel(\Gamma, \emptyar),\\
+        \Theta \in \Tel(\Gamma, \vartheta),\ A \in M(\Gamma \concat \vartheta)_s &&\implies{}& (\Theta, A) \in \Tel(\Gamma, \vartheta \concat [s]),\\
+        \Theta \in \Tel(\Gamma, \vartheta),\ A \in E(\Gamma \concat \vartheta) &&\implies{}& (\Theta, A) \in \Tel(\Gamma, \vartheta),\\
+        \Theta \in \Tel(\Gamma, \vartheta),\ c \in \mathfrak{C}_0(\Gamma \concat \vartheta) &&\implies{}& [\Theta]c \in M(\Gamma)_{(\vartheta, \kappa_c)},\\
+        \Theta \in \Tel(\Gamma, \vartheta),\ C \in \mathfrak{C}(\Gamma \concat \vartheta) \setminus \mathfrak{C}_0(\Gamma \concat \vartheta) &&\implies{}& [\Theta]C \in E(\Gamma),
+    \end{alignat*}
+    for all arities $\Gamma$ and $\vartheta$, and shapes $s$.
+    The elements of $M(\Gamma)_s$ and of $E(\Gamma)$ are the \emph{entries} over $\Gamma$, written $[\Theta]C$. Every telescope $\Theta$ lies in $\Tel(\Gamma, \vartheta)$ for exactly one $\vartheta$, its \emph{arity} $\Theta^{\downarrow} \coloneqq \vartheta$, and we identify a conclusion $C$ with the entry $[()]C$.
+\end{definition}
+
+An entry $[\Theta]C$ is a hypothetical judgement: the conclusion $C$ under the hypotheses $\Theta$. The conclusions internalise the four forms of judgement of the object theories~\cite{MartinLof1984}: a type is a term of $\mathsf{type}$, an element of the type $B$ is a term of the conclusion $B$, and the two forms of equality judgement are the equations $l =_{\mathsf{type}} r$ and $l =_B r$. A slot entry $[\Theta]c$ declares a slot of shape $(\Theta^{\downarrow}, \kappa_c)$ that records the slots it binds and whether it is a family or an element. An equational entry declares no slot, so the arity of a telescope counts only its slot entries. Entries generalise the abstracted boundaries by which finitary type theories declare the metavariables of a rule~\cite[\S2.1]{HaselwarterBauer2023}: their hypotheses are again entries, of arbitrary rank, and may be families and equations as well as elements.
+
+\begin{definition}\label{def:entry-action}
+    For a substitution $\sigma : \Gamma \to \Delta \in \Kl(\widetilde{\bE})$, the maps
+    \begin{gather*}
+        \_[\sigma] : \mathfrak{C}(\Gamma) \to \mathfrak{C}(\Delta), \qquad \_[\sigma] : \Tel(\Gamma, \gamma) \to \Tel(\Delta, \gamma),\\
+        \_[\sigma] : M(\Gamma)_s \to M(\Delta)_s, \qquad \_[\sigma] : E(\Gamma) \to E(\Delta),
+    \end{gather*}
+    are defined by simultaneous recursion:
+    \begin{gather*}
+        \mathsf{type}[\sigma] \coloneqq \mathsf{type}, \qquad B[\sigma] \coloneqq \sigma^\sharp(B), \qquad (l =_c r)[\sigma] \coloneqq l[\sigma] =_{c[\sigma]} r[\sigma],\\
+        ()[\sigma] \coloneqq (), \qquad (\Theta, A)[\sigma] \coloneqq (\Theta[\sigma], A[\sigma \concat \Theta^{\downarrow}]),\\
+        ([\Theta]C)[\sigma] \coloneqq [\Theta[\sigma]]\, C[\sigma \concat \Theta^{\downarrow}].
+    \end{gather*}
+\end{definition}
+
+\begin{lemma}\label{lem:entry-modules}
+    The actions of \cref{def:entry-action} the slot entries $M$ assemble a module of raw types, and the equational entries $E$ assemble into a module of raw equations:
+    \begin{align*}
+        M : \Kl(\widetilde{\bE}) &\to \Set^{\widetilde{A}}\\
+        E : \Kl(\widetilde{\bE}) &\to \Set.
+    \end{align*}  
+\end{lemma}
+
+\begin{proof}
+    Easy.
+\end{proof}
+
+Henceforth, $\Raw \coloneqq \Raw(\widetilde{\bE}, M, E)$ is the raw natural model of $\ToS^\omega$, an object of $\mathsf{CtxNM}/\cat{B}({\widetilde{\bA}}^+)$ by \cref{def:raw-natural-model}. By \cref{prop:raw-natural-model}(1), a morphism $\sigma : \Delta \to \Gamma$ of $\Raw$ is a morphism $\Gamma^{\downarrow} \to \Delta^{\downarrow}$ of $\Kl(\widetilde{\bE})$, and we denote both by $\sigma$.
+
+\begin{definition}\label{def:telescope-operations}
+    Let $\Gamma$ be a raw context and $\vartheta$ an arity.
+    \begin{enumerate}
+        \item The \emph{extension} of $\Gamma$ by telescopes is the map
+        \[
+            \Gamma.\_ : \Tel(\Gamma^{\downarrow}, \vartheta) \to \Ob \Raw, \qquad \Gamma.() \coloneqq \Gamma, \qquad \Gamma.(\Theta, A) \coloneqq (\Gamma.\Theta).A,
+        \]
+        defined by recursion on telescopes; here $(\Gamma.\Theta).A$ is defined because, by induction, $(\Gamma.\Theta)^{\downarrow} = \Gamma^{\downarrow} \concat \Theta^{\downarrow}$, so that $A$ is a type over $\Gamma.\Theta$ by \cref{prop:raw-natural-model}(2). The \emph{projection} of $\Gamma.\Theta$ is the morphism $p_\Theta : \Gamma.\Theta \to \Gamma$ given by $p_{()} \coloneqq \id_\Gamma$ and $p_{(\Theta, A)} \coloneqq p_\Theta \circ p_A = \inl : \Gamma^{\downarrow} \to \Gamma^{\downarrow}$.
+        \item For a morphism $\sigma : \Delta \to \Gamma$ and $\Theta \in \Tel(\Gamma^{\downarrow}, \vartheta)$, let $\Theta[\sigma] \in \Tel(\Delta^{\downarrow}, \vartheta)$ be the action of \cref{def:entry-action}. The \emph{lift} of $\sigma$ along $\Theta$ is the morphism
+        \[
+            \sigma^{+\Theta} \coloneqq \sigma \concat \vartheta : \Delta.\Theta[\sigma] \to \Gamma.\Theta,
+        \]
+        that is, the morphism $\sigma \concat \vartheta : \Gamma^{\downarrow} \concat \vartheta \to \Delta^{\downarrow} \concat \vartheta$ of $\Kl(\widetilde{\bE})$ of \cref{lem:kleisli-coproducts}.
+        \item For $\Theta \in \Tel(\Gamma^{\downarrow}, \vartheta)$, an \emph{instantiation} of $\Theta$ is a family of arguments $t \in \Args(\Gamma^{\downarrow}, \vartheta) = \Kl(\widetilde{\bE})(\vartheta, \Gamma^{\downarrow})$, and $\langle \id, t \rangle : \Gamma \to \Gamma.\Theta$ is the morphism $\langle \eta_{\Gamma^{\downarrow}}, t \rangle : \Gamma^{\downarrow} \concat \vartheta \to \Gamma^{\downarrow}$.
+    \end{enumerate}
+\end{definition}
+
+\begin{lemma}\label{lem:telescopes}
+    Let $\Gamma$ be a raw context, $\sigma : \Delta \to \Gamma$ a morphism and $\Theta \in \Tel(\Gamma^{\downarrow}, \vartheta)$.
+    \begin{enumerate}
+        \item $p_\Theta = \inl : \Gamma^{\downarrow} \to \Gamma^{\downarrow} \concat \vartheta$.
+        \item $\sigma^{+()} = \sigma$, and $\sigma^{+(\Theta, A)} = \langle \sigma^{+\Theta} \circ p_{A'}, \nu_{A'} \rangle$, where $A' \coloneqq A[\sigma^{+\Theta}]$ is the last entry of $(\Theta, A)[\sigma] = (\Theta[\sigma], A')$.
+        \item For $C \in \mathfrak{C}(\Gamma^{\downarrow} \concat \vartheta)$, $([\Theta]C)[\sigma] = [\Theta[\sigma]]\, C[\sigma^{+\Theta}]$, and the square
+        \[\begin{tikzcd}
+            {\Tm(\Gamma, [\Theta]C)} && {\Tm(\Delta, ([\Theta]C)[\sigma])} \\
+            {\Tm(\Gamma.\Theta, C)} && {\Tm(\Delta.\Theta[\sigma], C[\sigma^{+\Theta}])}
+            \arrow["{\_[\sigma]}", from=1-1, to=1-3]
+            \arrow[equals, from=1-1, to=2-1]
+            \arrow[equals, from=1-3, to=2-3]
+            \arrow["{\_[\sigma^{+\Theta}]}"', from=2-1, to=2-3]
+        \end{tikzcd}\]
+        commutes.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    By \cref{prop:raw-natural-model}(4), $p_A = \inl$ and $\nu_A = \inr$ for a slot entry $A$ of shape $s$, and $p_A = \id$ and $\nu_A = \star$ for an equational one. (1) By induction on $\Theta$, composites of coprojections being coprojections. (2) $\sigma^{+()} = \sigma \concat \emptyar = \sigma$, the equation for $(\Theta, A)[\sigma]$ is \cref{def:entry-action}, and $\langle \sigma^{+\Theta} \circ p_{A'}, \nu_{A'} \rangle$ is $\langle \inl \odot (\sigma \concat \vartheta), \inr \rangle = \sigma \concat (\vartheta \concat [s])$ for $A$ a slot entry of shape $s$, and $\sigma \concat \vartheta$ for $A$ equational; in both cases this is $\sigma^{+(\Theta, A)}$. (3) The first equation is \cref{def:entry-action}; with it, the right side of the square is the left side at $\Delta$ and $\Theta[\sigma]$. For $C = c$ non-equational, both term sets on the left are $\Expr(\Gamma^{\downarrow} \concat \vartheta, \kappa_c)$ by \cref{prop:raw-natural-model}(3), acted on by $\_[\sigma]^{\vartheta}$ and $\_[\sigma \concat \vartheta]^{\emptyar}$, which agree by \cref{lem:currying}; for $C$ an equation, both are $\{\star\}$.
+\end{proof}
+
+\begin{proposition}\label{prop:tos-raw}
+    The raw natural model $\Raw$ of $\ToS^\omega$ is as follows.
+    \begin{enumerate}
+        \item \emph{Objects.} The raw contexts are the telescopes over the empty arity,
+        $$\Ob \Raw = \textstyle\bigsqcup_{\vartheta} \Tel(\emptyar, \vartheta).$$
+        \item \emph{Morphisms.} A morphism $\sigma : \Delta \to \Gamma$ is a substitution $\sigma : \Gamma^{\downarrow} \to \Delta^{\downarrow}$, that is, a morphism of $\Kl(\widetilde{\bE})$; identities and composition are those of $\Kl(\widetilde{\bE})^{\op}$.
+        \item \emph{Types.} The types over $\Gamma$ are the total space of entries over $\Gamma^{\downarrow}$,
+        $$\Ty(\Gamma) = M(\Gamma^{\downarrow}) \sqcup E(\Gamma^{\downarrow}),$$
+        with action defined pointwise as in \cref{def:entry-action}. The shaping is given by
+        \[\begin{tikzcd}[column sep=scriptsize]
+        	{\bigsqcup_sM(\Gamma)_s} & {\bigsqcup_sM(\Gamma)_s \sqcup E(\Gamma)} & {E(\Gamma)} \\
+        	{\widetilde{\mathbb{A}}} & {\widetilde{\mathbb{A}}^+} & {1.}
+        	\arrow[hook, from=1-1, to=1-2]
+        	\arrow["\fst"', from=1-1, to=2-1]
+        	\arrow["{|\_|}", from=1-2, to=2-2]
+        	\arrow[hook', from=1-3, to=1-2]
+        	\arrow[from=1-3, to=2-3]
+        	\arrow[hook, from=2-1, to=2-2]
+        	\arrow[hook', from=2-3, to=2-2]
+        \end{tikzcd}\]
+        \item \emph{Terms.} The terms of a slot entry are the expressions over the arity extended by its telescope, of the kind of its conclusion, and an equational entry has the single term $\star$:
+        \[
+            \Tm(\Gamma, [\Theta]c) = \Expr(\Gamma^{\downarrow} \concat \Theta^{\downarrow}, \kappa_c), \qquad \Tm(\Gamma, [\Theta](l =_c r)) = \{\star\}.
+        \]
+        A substitution $\sigma : \Delta \to \Gamma$ acts on $e : \Tm(\Gamma, [\Theta]c)$ by $e[\sigma] = e[\sigma]^{\Theta^{\downarrow}}$, and on equational terms by $\star[\sigma] = \star$.
+        \item \emph{Context extension.} For a type $A$ over $\Gamma$, $\Gamma.A$ is $\Gamma$ extended by $A$. If $A \in M(\Gamma^{\downarrow})_s$, then the projection is $p_A = \inl : \Gamma^{\downarrow} \to \Gamma^{\downarrow} \concat [s]$, the generic term is $\nu_A = \inr \in \Kl(\widetilde{\bE})([s], \Gamma^{\downarrow} \concat [s]) = \widetilde{\bE}(\Gamma^{\downarrow} \concat [s])_s$, and for $\sigma : \Delta \to \Gamma$ and $u \in \Tm(\Delta, A[\sigma]) = \widetilde{\bE}(\Delta^{\downarrow})_s = \Kl(\widetilde{\bE})([s], \Delta^{\downarrow})$, the pairing $\langle \sigma, u \rangle$ is the copairing $\langle \sigma, u \rangle : \Gamma^{\downarrow} \concat [s] \to \Delta^{\downarrow}$ of \cref{lem:kleisli-coproducts}. If $A \in E(\Gamma^{\downarrow})$, then $p_A = \id_{\Gamma^{\downarrow}}$, $\nu_A = \star$, and $\langle \sigma, \star \rangle = \sigma$.
+    \end{enumerate}
+\end{proposition}
+
+\begin{proof}
+    This is \cref{prop:raw-natural-model} for $T = \widetilde{\bE}$. By its part (1), the objects are the sequences $(A_1, \ldots, A_n)$ with $A_i \in M(\Gamma_{<i}^{\downarrow}) \sqcup E(\Gamma_{<i}^{\downarrow})$, and $(\_)^{\downarrow}$ appends $|A_i|$ for $A_i \in M$ and nothing for $A_i \in E$; by \cref{def:hypothetical}, these are the telescopes over $\emptyar$, with $\Gamma^{\downarrow}$ their arity. This gives (1), and the description of morphisms in the same part gives (2). Part (2) of \cref{prop:raw-natural-model}, with the shaping of \cref{def:raw-natural-model}, gives (3). Its part (3) gives $\Tm(\Gamma, [\Theta]c) = \widetilde{\bE}(\Gamma^{\downarrow})_{(\Theta^{\downarrow}, \kappa_c)} = \Expr(\Gamma^{\downarrow} \concat \Theta^{\downarrow}, \kappa_c)$, with the action $\sigma^\sharp = \_[\sigma]^{\Theta^{\downarrow}}$ of \cref{prop:kinded-monad}, which is (4). Its part (4) is (5), with the identifications of \cref{lem:kleisli-coproducts}(1).
+\end{proof}
+
+\begin{notation}
+    We will tacitly idenitfy a conclusion $C$ with the entry $[]C$. 
+\end{notation}
+
+\begin{notation}
+    Let $\Gamma$ be a raw context, $\Theta$ a telescope over $\Gamma^{\downarrow}$ and $t$ an instantiation of $\Theta$. For a conlusion, telescope, entry or term $X$ over $\Gamma^{\downarrow} \concat \Theta^{\downarrow}$, we will write $X[t] := X[\langle \id, t \rangle]$.
+\end{notation}
+
+\begin{notation}
+    Let $\Gamma$ be a raw context, $\Theta, \Theta'$ telescopes over $\Gamma^{\downarrow}$ and $t, t'$ an instantiation of $\Theta$. We write:
+    \begin{align*}
+        \Gamma \vdash \Theta \equiv \Theta' \;\;\; &\coloneqq \;\;\; \vdash \Gamma.\Theta \equiv \Gamma.\Theta'\\
+        \Gamma \vdash t : \Theta \;\;\; &\coloneqq \;\;\; \Gamma \vdash \langle \id, t \rangle : \Gamma.\Theta\\
+        \Gamma \vdash t \equiv t' : \Theta \;\;\; &\coloneqq \;\;\; \Gamma \vdash \langle \id, t \rangle \equiv \langle \id, t' \rangle : \Gamma.\Theta.
+    \end{align*}
+\end{notation}
+
+\subsection{Rules}
+\label{sec:tos-rules}
+
+A raw type of $\ToS^\omega$ is a hypothetical judgement $[\Theta]C$, and by \cref{lem:telescopes}(3) evidence for it, a term of $[\Theta]C$ over $\Gamma$, is literally evidence for its conclusion $C$ over $\Gamma.\Theta$. The rules of $\ToS^\omega$, collected in \cref{fig:tos}, accordingly fall into two groups: the rules for hypotheses, which are uniform in the conclusion, and the rules for the three conclusions, at the empty telescope.
+
+\emph{Hypotheses.} A hypothetical judgement is well formed if its conclusion is well formed under its hypotheses (\textsc{Bind-Ty}), and two of them are equal if their hypotheses and their conclusions are (\textsc{Bind-TyEq}). Evidence for a hypothetical judgement is evidence for its conclusion under its hypotheses, and so is equality of evidence (\textsc{Bind-Tm}, \textsc{Bind-TmEq}); these two rules relate judgements about the same raw terms. Binding is thus not a syntactic operation: abstraction and application are identities, and $\beta$ and $\eta$ hold on the nose, which is how the expressions of $\ToS^\omega$ stay $\beta$-normal and $\eta$-long (\cref{rem:normal-forms}).
+
+\emph{Conclusions.} The conclusion $\mathsf{type}$ is well formed in every well-formed context (\textsc{Type-Ty}). The conclusion $B$, of being an element of $B$, is well formed if $B$ is a type (\textsc{Elem-Ty}), and two such conclusions are equal if the two types are (\textsc{Elem-TyEq}). An equation is well formed if its two sides are evidence for its conclusion $c$ (\textsc{Eqn-Ty}), and two equations are equal if their conclusions and sides are (\textsc{Eqn-TyEq}). Finally, $\star$ is evidence for an equation precisely when its two sides are judgementally equal (\textsc{Eqn-Tm}): read downwards, this is reflexivity, and read upwards, it reflects an equation into a judgemental equality. There are no rules for evidence of $\mathsf{type}$ or of $B$: $\ToS^\omega$ has no constructors of types or of elements, all of which are declared as slots of a context and typed through them (\textsc{App} of \cref{fig:tos-admissible}). In terms of natural models, $\mathsf{type}$ is a universe, the conclusion $B$ its decoding, $l =_c r$ an extensional identity type and $[\Theta]\_$ a dependent product over $\Theta$ with strict $\beta$ and $\eta$.
+
+Note that Only \textsc{Bind-Tm} and \textsc{Eqn-Tm} are stated in both directions. The converses of the other rules hold by \cref{prop:inversion} below, because a type is never a hypothesis: a context is extended by types whose well-formedness has been derived, so every derivation of a judgement about an entry $[\Theta]C$, or about two entries, rests on derivations of the corresponding judgements about $\Theta$ and $C$. Evidence, on the other hand, can be hypothetical. The rule \textsc{Var} of \cref{fig:typing} makes the slot $x$ declared by a slot entry $[\Theta]c$ into evidence $\nu = \eta(x)$ for $[\Theta]c$, and an equational entry into evidence $\star$ for itself, without any derivation over the extended context. The upward directions of \textsc{Bind-Tm} and \textsc{Eqn-Tm} are therefore not inversions but the elimination rules of hypotheses: the first is how a slot is applied (\textsc{App}), the second how an equation is used (\textsc{Hyp}). The converse of \textsc{Bind-TmEq} is again admissible: \textsc{Var} provides evidence but no equalities, and the equalities that equational hypotheses yield, through the upward direction of \textsc{Eqn-Tm}, lie at the empty telescope, where the converse is trivial. Lastly, no premise is redundant: the well-formedness of contexts and conclusions is presupposed (\textsc{Presup-Ty}, \textsc{Presup-Tm}), so that, for instance, \textsc{Bind-Ty} has no premise $\vdash \Gamma.\Theta$ and \textsc{Eqn-Ty} no premise $\Gamma \vdash c$. The one premise of this kind is that of \textsc{Type-Ty}, without which \textsc{Presup-Ty} would make every raw context well formed. An equation records the conclusion $c$ of its sides because the judgement $\Gamma \vdash l \equiv r : c$ in \textsc{Eqn-Tm} does.
+
+\begin{figure}[tp]
+    \centering
+    \begin{mathpar}
+        \inferrule*[right=\textsc{Bind-Ty}]{\Gamma.\Theta \vdash C}{\Gamma \vdash [\Theta]C}
+        \and
+        \inferrule*[right=\textsc{Bind-TyEq}]{\Gamma \vdash \Theta \equiv \Theta' \\ \Gamma.\Theta \vdash C \equiv C'}{\Gamma \vdash [\Theta]C \equiv [\Theta']C'}
+        \\
+        {\mprset{fraction={===}}\inferrule*[right=\textsc{Bind-Tm}]{\Gamma.\Theta \vdash u : C}{\Gamma \vdash u : [\Theta]C}}
+        \and
+        \inferrule*[right=\textsc{Bind-TmEq}]{\Gamma.\Theta \vdash u \equiv u' : C}{\Gamma \vdash u \equiv u' : [\Theta]C}
+        \\
+        \inferrule*[right=\textsc{Type-Ty}]{\vdash \Gamma}{\Gamma \vdash \mathsf{type}}
+        \and
+        \inferrule*[right=\textsc{Elem-Ty}]{\Gamma \vdash B : \mathsf{type}}{\Gamma \vdash B}
+        \\
+        \inferrule*[right=\textsc{Elem-TyEq}]{\Gamma \vdash B \equiv B' : \mathsf{type}}{\Gamma \vdash B \equiv B'}
+        \and
+        \inferrule*[right=\textsc{Eqn-Ty}]{\Gamma \vdash l : c \\ \Gamma \vdash r : c}{\Gamma \vdash l =_c r}
+        \\
+        \inferrule*[right=\textsc{Eqn-TyEq}]{\Gamma \vdash c \equiv c' \\ \Gamma \vdash l \equiv l' : c \\ \Gamma \vdash r \equiv r' : c}{\Gamma \vdash (l =_c r) \equiv (l' =_{c'} r')}
+        \\
+        {\mprset{fraction={===}}\inferrule*[right=\textsc{Eqn-Tm}]{\Gamma \vdash l \equiv r : c}{\Gamma \vdash \star : l =_c r}}
+    \end{mathpar}
+    \caption{The rules of $\ToS^\omega$.}
+    \label{fig:tos}
+\end{figure}
+
+\begin{definition}\label{def:tos}
+    The \emph{theory of signatures} $\ToS^\omega$ is the type theory over $\bE$ with the module of raw types $M$ and the module of raw equations $E$ of \cref{def:hypothetical}, and with the rules of \cref{fig:tos} (a rule drawn with a double line is two rules, read downwards and upwards). Its judgements $\jdg_{\ToS^\omega}$ are thus the raw judgements of $\Raw$ derivable by the rules of \cref{fig:typing,fig:tos} (\cref{prop:lattice}); in the rest of this section, a raw judgement written on its own asserts membership in $\jdg_{\ToS^\omega}$.
+\end{definition}
+
+\subsection{Admissible rules}
+\label{sec:tos-admissible}
+
+We first record how the extensions $\sigma^{+\Theta}$ of \cref{lem:telescopes}(2) behave in a typing.
+
+\begin{lemma}\label{lem:lifting}
+    Let $\jdg$ be a typing on $\Raw$, let $\sigma, \sigma' : \Delta \to \Gamma$, and let $\Theta, \Theta'$ be telescopes over $\Gamma^{\downarrow}$.
+    \begin{enumerate}
+        \item If $\Delta \vdash \sigma : \Gamma$ and $\vdash \Gamma.\Theta$, then $\vdash \Delta.\Theta[\sigma]$ and $\Delta.\Theta[\sigma] \vdash \sigma^{+\Theta} : \Gamma.\Theta$.
+        \item If $\Delta \vdash \sigma \equiv \sigma' : \Gamma$ and $\Gamma \vdash \Theta \equiv \Theta'$, then $\Delta \vdash \Theta[\sigma] \equiv \Theta'[\sigma']$ and $\Delta.\Theta[\sigma] \vdash \sigma^{+\Theta} \equiv \sigma'^{+\Theta'} : \Gamma.\Theta$.
+    \end{enumerate}
+    In (2), $\Theta^{\downarrow} = \Theta'^{\downarrow}$ by \cref{lem:derived-forms}, so $\sigma'^{+\Theta'}$ is also a morphism $\Delta.\Theta[\sigma] \to \Gamma.\Theta$ by \cref{cor:sort-degeneracy}.
+\end{lemma}
+
+\begin{proof}
+    By induction on the length of $\Theta$; for $\Theta = ()$ the claims are the hypotheses, together with $\vdash \Delta \equiv \Delta$, which follows from $\vdash \Delta$ by \textsc{Refl-Ctx}. Let $\Theta = (\Theta_0, A)$ and $\tau \coloneqq \sigma^{+\Theta_0}$. (1) By $\vdash \Gamma.\Theta_0$ and induction, $\vdash \Delta.\Theta_0[\sigma]$ and $\Delta.\Theta_0[\sigma] \vdash \tau : \Gamma.\Theta_0$, so $\Gamma.\Theta_0 \vdash A$ and \textsc{Subst-Ty} give $\Delta.\Theta_0[\sigma] \vdash A[\tau]$, that is, $\vdash \Delta.\Theta[\sigma]$ by \cref{lem:telescopes}(2). The components of $\sigma^{+\Theta} = \langle \tau \circ p_{A[\tau]}, \nu_{A[\tau]} \rangle$ are well formed by \textsc{Wk}, \textsc{Comp} and \textsc{Var}, so $\Delta.\Theta[\sigma] \vdash \sigma^{+\Theta} : \Gamma.\Theta$ by \cref{def:derived-forms}. (2) Let $\Theta' = (\Theta'_0, A')$ and $\tau' \coloneqq \sigma'^{+\Theta'_0}$. By induction, $\Delta \vdash \Theta_0[\sigma] \equiv \Theta'_0[\sigma']$ and $\Delta.\Theta_0[\sigma] \vdash \tau \equiv \tau' : \Gamma.\Theta_0$, and \textsc{Cong-Ty} applied to $\Gamma.\Theta_0 \vdash A \equiv A'$ gives $\Delta.\Theta_0[\sigma] \vdash A[\tau] \equiv A'[\tau']$, so $\Delta \vdash \Theta[\sigma] \equiv \Theta'[\sigma']$. Since $|A[\tau]| = |A'[\tau']|$, the projections $p_{A[\tau]}$ and $p_{A'[\tau']}$ are given by the same morphism of $\Kl(\bE)$, and so are $\nu_{A[\tau]}$ and $\nu_{A'[\tau']}$ (\cref{prop:raw-natural-model}(4)); hence \textsc{Comp-Eq} with \textsc{Refl-Sb}, and \textsc{Refl-Tm}, give the components of $\Delta.\Theta[\sigma] \vdash \sigma^{+\Theta} \equiv \sigma'^{+\Theta'} : \Gamma.\Theta$.
+\end{proof}
+
+\begin{proposition}[Inversion]\label{prop:inversion}
+    The converses of \textup{\textsc{Bind-Ty}}, \textup{\textsc{Bind-TyEq}}, \textup{\textsc{Bind-TmEq}}, \textup{\textsc{Elem-Ty}}, \textup{\textsc{Elem-TyEq}}, \textup{\textsc{Eqn-Ty}} and \textup{\textsc{Eqn-TyEq}} hold in $\ToS^\omega$:
+    \begin{enumerate}
+        \item if $\Gamma \vdash [\Theta]C$, then $\Gamma.\Theta \vdash C$; if $\Gamma \vdash B$, then $\Gamma \vdash B : \mathsf{type}$; and if $\Gamma \vdash l =_c r$, then $\Gamma \vdash l : c$ and $\Gamma \vdash r : c$;
+        \item if $\Gamma \vdash [\Theta]C \equiv [\Theta']C'$, then $\Gamma \vdash \Theta \equiv \Theta'$ and $\Gamma.\Theta \vdash C \equiv C'$; if $\Gamma \vdash B \equiv B'$, then $\Gamma \vdash B \equiv B' : \mathsf{type}$; and if $\Gamma \vdash (l =_c r) \equiv (l' =_{c'} r')$, then $\Gamma \vdash c \equiv c'$, $\Gamma \vdash l \equiv l' : c$ and $\Gamma \vdash r \equiv r' : c$;
+        \item if $\Gamma \vdash u \equiv u' : [\Theta]C$, then $\Gamma.\Theta \vdash u \equiv u' : C$.
+    \end{enumerate}
+\end{proposition}
+
+\begin{proof}
+    Write $\jdg \coloneqq \jdg_{\ToS^\omega}$. A conclusion $C$ is \emph{invertible} over a raw context $\Delta$ if $C = \mathsf{type}$; or $C = B$ and $\Delta \vdash B : \mathsf{type}$; or $C = (l =_c r)$, $\Delta \vdash l : c$, $\Delta \vdash r : c$, and $c$ is invertible over $\Delta$. By recursion on entries, an entry $[\Theta]C$ over $\Gamma^{\downarrow}$ is \emph{invertible} over $\Gamma$ if every entry $\Theta_i$ of $\Theta$ is invertible over $\Gamma.\Theta_{<i}$, $\Gamma.\Theta \vdash C$, and $C$ is invertible over $\Gamma.\Theta$; a raw context is invertible if each of its entries is invertible over the preceding ones, so that $\Gamma.[\Theta]C$ is invertible iff $\Gamma.\Theta.C$ is. Two entries $[\Theta]C$ and $[\Theta']C'$ over $\Gamma^{\downarrow}$ are \emph{invertibly equal} if $\Gamma \vdash \Theta \equiv \Theta'$ and $\Gamma.\Theta \vdash C \equiv C'$, and moreover $\Gamma.\Theta \vdash B \equiv B' : \mathsf{type}$ if $C = B$ and $C' = B'$, and $\Gamma.\Theta \vdash c \equiv c'$, $\Gamma.\Theta \vdash l \equiv l' : c$ and $\Gamma.\Theta \vdash r \equiv r' : c$ if $C = (l =_c r)$ and $C' = (l' =_{c'} r')$. Let $\jdg^* \subseteq \jdg$ consist of the judgements $\Gamma \vdash A$ and $\Gamma \vdash u : A$ of $\jdg$ with $\Gamma.A$ invertible; the $\Gamma \vdash A \equiv A'$ of $\jdg$ with $\Gamma.A$ and $\Gamma.A'$ invertible and $A, A'$ invertibly equal; and the $\Gamma \vdash u \equiv u' : [\Theta]C$ of $\jdg$ with $\Gamma.[\Theta]C$ invertible and $\Gamma.\Theta \vdash u \equiv u' : C$. If $\jdg^*$ is a typing closed under \cref{fig:tos}, then $\jdg^* = \jdg$ by minimality, and (1)--(3) are part of the definition of $\jdg^*$. We use two facts about $\jdg$.
+
+    (i) \emph{Stability.} Let $\Delta \vdash \sigma : \Gamma$. If $A = [\Theta]C$ is invertible over $\Gamma$, then $A[\sigma]$ is invertible over $\Delta$. Indeed, $\vdash \Gamma.\Theta$ by \textsc{Presup-Ty}, so the extensions $\sigma^{+\Theta_{<i}}$ and $\sigma^{+\Theta}$ are well formed by \cref{lem:lifting}(1); by induction on entries, the $i$-th entry $\Theta_i[\sigma^{+\Theta_{<i}}]$ of $\Theta[\sigma]$ is invertible over $\Delta.\Theta[\sigma]_{<i}$, and \textsc{Subst-Ty} and \textsc{Subst-Tm} along $\sigma^{+\Theta}$ give $\Delta.\Theta[\sigma] \vdash C[\sigma^{+\Theta}]$ and the invertibility of $C[\sigma^{+\Theta}]$, so that $A[\sigma] = [\Theta[\sigma]]\,C[\sigma^{+\Theta}]$ is invertible. Likewise, if $\Delta \vdash \sigma \equiv \sigma' : \Gamma$ and $A, A'$ are invertibly equal over $\Gamma$, then $A[\sigma], A'[\sigma']$ are invertibly equal over $\Delta$, by \cref{lem:lifting}(2) and \textsc{Cong-Ty} and \textsc{Cong-Tm} along $\sigma^{+\Theta} \equiv \sigma'^{+\Theta'}$; and $\Gamma.\Theta \vdash u \equiv u' : C$ gives $\Delta.\Theta[\sigma] \vdash u[\sigma] \equiv u'[\sigma'] : C[\sigma^{+\Theta}]$, by \textsc{Cong-Tm} along $\sigma^{+\Theta} \equiv \sigma'^{+\Theta}$ and \cref{lem:telescopes}(3).
+
+    (ii) \emph{Context conversion.} If $\vdash \Gamma \equiv \Gamma'$, an entry invertible over $\Gamma$ is invertible over $\Gamma'$, by (i) along the canonical isomorphism $\iota : \Gamma' \to \Gamma$, which is well formed by \textsc{Id-CtxEq} and satisfies $A[\iota] = A$.
+
+    We now check the rules of \cref{fig:typing,fig:tos}: whenever their premises lie in $\jdg^*$, their conclusion, which lies in $\jdg$, satisfies the conditions of $\jdg^*$. A premise that is a derived form lies in $\jdg^*$ conjunct by conjunct; in particular, $\Delta \vdash \sigma : \Gamma$ and $\Delta \vdash \sigma \equiv \sigma' : \Gamma$ contain $\vdash \Delta$, so $\Delta$ is then invertible.
+
+    \emph{Presuppositions.} The conditions on the conclusions of \textsc{Presup-Ty}, \textsc{Presup-Tm}, \textsc{Presup-TyEq} and \textsc{Presup-TmEq} are among those on their premises, prefixes of invertible contexts being invertible.
+
+    \emph{Substitution.} In \textsc{Subst-Ty}, \textsc{Subst-Tm}, \textsc{Cong-Ty} and \textsc{Cong-Tm}, the context $\Delta$ is invertible, and (i) applies along $\sigma$ and $\sigma'$, which are well formed by \textsc{Presup-SbEq} and \textsc{Sym-Sb}. In \textsc{Wk} and \textsc{Var}, the context $\Gamma.A$ is invertible, and (i) applies along the projections $\Gamma.A \to \Gamma_{<i}$, which are well formed by \textsc{Wk} and \textsc{Comp}, to the entries of $\Gamma$ and to $A$.
+
+    \emph{Equivalence and conversion.} Let $A = [\Theta]C$, $A' = [\Theta']C'$ and $A'' = [\Theta'']C''$. For \textsc{Refl-Ty}, $A$ and $A$ are invertibly equal by \textsc{Refl-Ctx}, \textsc{Refl-Ty} and \textsc{Refl-Tm}. For \textsc{Sym-Ty} and \textsc{Trans-Ty}, we get $\Gamma \vdash \Theta' \equiv \Theta$ and $\Gamma \vdash \Theta \equiv \Theta''$ by \textsc{Sym-Ctx} and \textsc{Trans-Ctx}, and the remaining conditions by \textsc{Sym-Ty}, \textsc{Trans-Ty}, \textsc{Sym-Tm} and \textsc{Trans-Tm} over $\Gamma.\Theta$, after transferring judgements between $\Gamma.\Theta$, $\Gamma.\Theta'$ and $\Gamma.\Theta''$ by the \textsc{CtxConv} rules of \cref{fig:admissible}, and, for equations, judgements at $c'$ to judgements at $c$ by \textsc{Conv-TmEq}. For \textsc{Refl-Tm}, the upward direction of \textsc{Bind-Tm} turns $\Gamma \vdash u : [\Theta]C$ into $\Gamma.\Theta \vdash u : C$, to which \textsc{Refl-Tm} applies; \textsc{Sym-Tm} and \textsc{Trans-Tm} are applied over $\Gamma.\Theta$. For \textsc{Conv-TmEq}, the context $\Gamma.A'$ is invertible by the condition on $\Gamma \vdash A \equiv A'$, and $\Gamma.\Theta \vdash u \equiv u' : C$ and $\Gamma.\Theta \vdash C \equiv C'$ give $\Gamma.\Theta' \vdash u \equiv u' : C'$ by \textsc{Conv-TmEq} and \textsc{CtxConv-TmEq} along $\Gamma \vdash \Theta \equiv \Theta'$.
+
+    \emph{Hypotheses.} For \textsc{Bind-Ty} and both directions of \textsc{Bind-Tm}, the conditions on the premise and on the conclusion both say that $\Gamma.\Theta.C$ is invertible. For \textsc{Bind-TmEq}, the conditions on the conclusion are the invertibility of $\Gamma.\Theta.C$, which is part of the condition on the premise, and the premise itself. For \textsc{Bind-TyEq}, the conditions on the conclusion follow from those on the premises, except the invertibility of $\Gamma.[\Theta']C'$. For this, the conjunct $\Gamma.\Theta_{<i} \vdash \Theta_i \equiv \Theta'_i$ of $\Gamma \vdash \Theta \equiv \Theta'$ makes $\Theta'_i$ invertible over $\Gamma.\Theta_{<i}$, hence over $\Gamma.\Theta'_{<i}$ by (ii); and $\Gamma.\Theta \vdash C'$, by \textsc{Sym-Ty} and \textsc{Presup-TyEq}, and the invertibility of $C'$ over $\Gamma.\Theta$, part of the condition on $\Gamma.\Theta \vdash C \equiv C'$, transfer to $\Gamma.\Theta'$ by \textsc{CtxConv-Ty} and (ii).
+
+    \emph{Conclusions.} For \textsc{Type-Ty}, \textsc{Elem-Ty} and \textsc{Eqn-Ty}, the conditions are the premises, together with, for \textsc{Eqn-Ty}, the invertibility of $c$, which holds since $\Gamma.c$, the context of the premise $\Gamma \vdash l : c$, is invertible. For \textsc{Elem-TyEq} and \textsc{Eqn-TyEq}, the equality conditions are the premises, and it remains to see that $\Gamma.B$ and $\Gamma.B'$, resp.\ $\Gamma.(l =_c r)$ and $\Gamma.(l' =_{c'} r')$, are invertible. Here $\Gamma \vdash B : \mathsf{type}$ and $\Gamma \vdash B' : \mathsf{type}$, resp.\ $\Gamma \vdash l : c$, $\Gamma \vdash r : c$, $\Gamma \vdash l' : c'$ and $\Gamma \vdash r' : c'$, follow from the premises by \textsc{Sym-Tm}, \textsc{Presup-TmEq} and \textsc{Conv-Tm}; the invertibility of $c$ and $c'$ is part of the condition on $\Gamma \vdash c \equiv c'$; and the entries are well formed by \textsc{Elem-Ty}, resp.\ \textsc{Eqn-Ty}. For the downward direction of \textsc{Eqn-Tm}, $\Gamma \vdash l : c$ and $\Gamma \vdash r : c$ follow by \textsc{Presup-TmEq} and \textsc{Sym-Tm}, hence $\Gamma \vdash l =_c r$ by \textsc{Eqn-Ty}, and $c$ is invertible by the condition on the premise. For its upward direction, the condition is the invertibility of $\Gamma.c$, which follows from that of $l =_c r$ over $\Gamma$, with $\Gamma \vdash c$ by \textsc{Presup-Tm}.
+\end{proof}
+
+The familiar rules of a logical framework are admissible. For a raw context $\Gamma = (A_1, \ldots, A_n)$, the entry $A_i$ \emph{weakened to} $\Gamma$ is $A_i[\pi]$ for the projection $\pi : \Gamma \to \Gamma_{<i}$. If $A_i$ is a slot entry, we write $x : A_i[\pi] \in \Gamma$; if it is an equational entry, we write $A_i[\pi] \in \Gamma$.
+
+\begin{figure}[tp]
+    \centering
+    \begin{mathpar}
+        \inferrule*[right=\textsc{App}]{x : [\Theta]c \in \Gamma \\ \Gamma \vdash t : \Theta}{\Gamma \vdash x(t) : c[t]}
+        \and
+        \inferrule*[right=\textsc{App-Eq}]{x : [\Theta]c \in \Gamma \\ \Gamma \vdash t \equiv t' : \Theta}{\Gamma \vdash x(t) \equiv x(t') : c[t]}
+        \\
+        \inferrule*[right=\textsc{Hyp}]{[\Psi](l =_c r) \in \Gamma \\ \Gamma \vdash t : \Psi}{\Gamma \vdash l[t] \equiv r[t] : c[t]}
+        \and
+        \inferrule*[right=\textsc{Conv-Elem}]{\Gamma \vdash u : B \\ \Gamma \vdash B \equiv B' : \mathsf{type}}{\Gamma \vdash u : B'}
+        \\
+        \inferrule*[right=\textsc{Inst}]{\Gamma \vdash u : [\Theta]C \\ \Gamma \vdash t : \Theta}{\Gamma \vdash u[t] : C[t]}
+        \and
+        \inferrule*[right=\textsc{Inst-Eq}]{\Gamma \vdash u \equiv u' : [\Theta]C \\ \Gamma \vdash t \equiv t' : \Theta}{\Gamma \vdash u[t] \equiv u'[t'] : C[t]}
+    \end{mathpar}
+    \caption{Admissible rules of $\ToS^\omega$.}
+    \label{fig:tos-admissible}
+\end{figure}
+
+\begin{proposition}\label{prop:tos-admissible}
+    The judgements of $\ToS^\omega$ are closed under the rules of \cref{fig:tos-admissible}. Moreover, if $\vdash \Gamma$, then $\Gamma \vdash \eta(x) : A$ for every $x : A \in \Gamma$, and $\Gamma \vdash \star : A$ for every equational $A \in \Gamma$.
+\end{proposition}
+
+\begin{proof}
+    For the second claim, let $A_i$ be the entry of $\Gamma$ in question and $\pi' : \Gamma \to \Gamma_{<i}.A_i$ the projection, which is well formed by \textsc{Wk} and \textsc{Comp}. \textsc{Var} gives $\Gamma_{<i}.A_i \vdash \nu_{A_i} : A_i[p_{A_i}]$, and \textsc{Subst-Tm} along $\pi'$ gives $\Gamma \vdash \nu_{A_i}[\pi'] : A_i[\pi]$, as $p_{A_i} \circ \pi' = \pi$. If $A_i$ is equational, then $\nu_{A_i}[\pi'] = \star$. Otherwise $\nu_{A_i} = \eta(y)$ for the last slot $y$ of $(\Gamma_{<i}.A_i)^{\downarrow}$, and $\pi'$ is given by $\eta \circ J_S(\iota)$ for the inclusion $\iota$ of $(\Gamma_{<i}.A_i)^{\downarrow}$ into $\Gamma^{\downarrow}$ (\cref{lem:telescopes}(1)), so $\nu_{A_i}[\pi'] = \eta(\iota y) = \eta(x)$ by the unit law $f^\sharp \circ \eta = f$.
+
+    In \textsc{App}, \textsc{App-Eq} and \textsc{Hyp}, $\vdash \Gamma$ is part of the premise $\Gamma \vdash t : \Theta$, resp.\ $\Gamma \vdash t \equiv t' : \Theta$ or $\Gamma \vdash t : \Psi$. \textsc{App}: by the second claim and the upward direction of \textsc{Bind-Tm}, $\Gamma.\Theta \vdash \eta(x) : c$, and \textsc{Subst-Tm} along $\langle \id, t \rangle$ gives $\Gamma \vdash \eta(x)[t] : c[t]$, where $\eta(x)[t] = \eta(x)[\langle \eta, t \rangle] = x(t)$ by \cref{lem:instantiation}. \textsc{App-Eq}: likewise, with \textsc{Refl-Tm} and \textsc{Cong-Tm} along $\langle \id, t \rangle \equiv \langle \id, t' \rangle$ in place of \textsc{Subst-Tm}. \textsc{Hyp}: by the second claim and the upward directions of \textsc{Bind-Tm} and \textsc{Eqn-Tm}, $\Gamma.\Psi \vdash l \equiv r : c$, and \textsc{Cong-Tm} along $\langle \id, t \rangle$, with \textsc{Refl-Sb}, gives the conclusion. \textsc{Conv-Elem}: \textsc{Elem-TyEq} and \textsc{Conv-Tm}. \textsc{Inst} and \textsc{Inst-Eq}: the upward direction of \textsc{Bind-Tm}, resp.\ \cref{prop:inversion}(3), followed by \textsc{Subst-Tm}, resp.\ \textsc{Cong-Tm}, along $\langle \id, t \rangle$.
+\end{proof}
+
+\begin{remark}\label{rem:app}
+    Let $x : [\Theta]c \in \Gamma$ with $\Theta = (A_1, \ldots, A_n)$, and let $t \in \Args(\Gamma^{\downarrow}, \Theta^{\downarrow})$. For each $i$, write $t_{<i} \in \Args(\Gamma^{\downarrow}, \Theta_{<i}^{\downarrow})$ for the restriction of $t$ to the slots declared by $\Theta_{<i} \coloneqq (A_1, \ldots, A_{i-1})$, and, if $A_i$ is a slot entry, $t_i \in \widetilde{\bE}(\Gamma^{\downarrow})_{|A_i|}$ for the value of $t$ at the slot that $A_i$ declares, the $i$-th argument of $x$. The component of $\langle \id, t \rangle : \Gamma \to \Gamma.\Theta$ at $A_i$ is $t_i$ for a slot entry, by the unit law, and $\star$ for an equational one. So by \cref{def:derived-forms}, the premise $\Gamma \vdash t : \Theta$ of \textsc{App} holds iff $\vdash \Gamma.\Theta$ and, for every $i$,
+    \begin{itemize}
+        \item $\Gamma \vdash t_i : A_i[t_{<i}]$ if $A_i$ is a slot entry: the argument is evidence for the declaration of its slot, with the preceding arguments substituted; for $A_i = [\Phi_i]d_i$, this says by \textsc{Bind-Tm} that $t_i$ is evidence for $d_i$ under the hypotheses $\Phi_i$, both instantiated by $t_{<i}$;
+        \item $\Gamma \vdash \star : A_i[t_{<i}]$ if $A_i$ is an equational entry: by \textsc{Bind-Tm} and \textsc{Eqn-Tm}, the equational premise $A_i$ holds for the preceding arguments.
+    \end{itemize}
+    In particular, a slot can only be applied to arguments that satisfy its equational premises. The conclusion $\Gamma \vdash x(t) : c[t]$ then says that the application is evidence for the declared conclusion of $x$, with all arguments substituted. \textsc{App} is the special case of \textsc{Inst} for the evidence $\eta(x)$ that the slot provides, and \textsc{Inst} is the $\beta$-rule of $[\Theta]\_$: instantiating evidence $u$ for $[\Theta]C$ by $t$ is substituting $t$ into $u$.
+\end{remark}
