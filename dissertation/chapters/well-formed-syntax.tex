@@ -685,7 +685,7 @@ Two premises are not raw judgements on their face. In the rule for $\vdash \Gamm
 \end{proof}
 
 \begin{proposition}\label{prop:span}
-    For a typing $\jdg$, in the kernel of $[\_] : \cat{W}_\jdg \twoheadrightarrow \cat{Q}_\jdg$ is given by the relation $\equiv$, that is, $[\Gamma] = [\Gamma']$ iff $\vdash \Gamma \equiv \Gamma'$; $[\sigma] = [\sigma']$ iff $\Delta \vdash \sigma \equiv \sigma' : \Gamma$; $[A] = [A']$ iff $\Gamma \vdash A \equiv A'$; $[t] = [t']$ iff $\Gamma \vdash t \equiv t' : A$.
+    Let $\jdg$ be a typing. The kernel of $[\_] : \cat{W}_\jdg \twoheadrightarrow \cat{Q}_\jdg$ is the relation $\equiv$: for well-formed contexts $\Gamma, \Gamma'$, $[\Gamma] = [\Gamma']$ iff $\vdash \Gamma \equiv \Gamma'$; for $\sigma, \sigma' \in \cat{W}_\jdg(\Delta, \Gamma)$, $[\sigma] = [\sigma']$ iff $\Delta \vdash \sigma \equiv \sigma' : \Gamma$; for $A, A' \in \Ty_{\cat{W}_\jdg}(\Gamma)$, $[A] = [A']$ iff $\Gamma \vdash A \equiv A'$; and for $t, t' \in \Tm_{\cat{W}_\jdg}(\Gamma, A)$, $[t] = [t']$ iff $\Gamma \vdash t \equiv t' : A$.
 \end{proposition}
 
 \begin{proof}
