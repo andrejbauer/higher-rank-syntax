@@ -1,0 +1,740 @@
+\chapter{Initiality}
+\label{ch:initiality}
+\providecommand{\Mod}{\mathsf{Mod}}
+\providecommand{\PiT}{\mathsf{\Pi}}
+\providecommand{\lam}{\mathsf{lam}}
+\providecommand{\app}{\mathsf{app}}
+\providecommand{\Univ}{\mathsf{U}}
+\providecommand{\El}{\mathsf{El}}
+\providecommand{\Id}{\mathsf{Id}}
+\providecommand{\refl}{\mathsf{refl}}
+\providecommand{\At}{\mathsf{At}}
+\providecommand{\Tel}{\mathsf{Tel}}
+\providecommand{\TNM}{\mathbb{T}_{\mathsf{NM}}}
+\providecommand{\TToS}{\mathbb{T}_{\ToS^\omega}}
+\providecommand{\Env}{\mathsf{Env}}
+
+Throughout this chapter, $\Raw$ is the raw natural model of $\ToS^\omega$ (\cref{prop:tos-raw}), $\jdg \coloneqq \jdg_{\ToS^\omega}$ its judgements (\cref{def:tos}), $\cat{W} \coloneqq \cat{W}_\jdg$, and $\Syn \coloneqq \Syn_{\ToS^\omega} = \cat{Q}$ its syntax (\cref{def:type-theory}), with quotient map $[\_] : \cat{W} \to \Syn$. We define the models of $\ToS^\omega$, show that $\Syn$ is one, and prove that it is the initial one. The rules of \cref{fig:tos} are the structure of a model read as closure conditions, so that $\Syn$ is a model by construction; the content of initiality is the interpretation of raw syntax in an arbitrary model, which is Streicher's method~\cite{Streicher1991} carried out once for all ranks.
+
+\section{Models}
+\label{sec:models}
+
+Let $(\cat{C}, \varpi : \Tm \to \Ty)$ be a natural model. For $\sigma : \Delta \to \Gamma$ and $A \in \Ty(\Gamma)$ we write $\sigma^{+A} \coloneqq \langle \sigma \circ p_{A[\sigma]}, \nu_{A[\sigma]} \rangle : \Delta.A[\sigma] \to \Gamma.A$. The \emph{polynomial functor} of $\varpi$~\cite[\S2.1]{Awodey2018} is the endofunctor $P_\varpi$ of $\Set^{\cat{C}^\op}$ with
+\begin{gather*}
+    P_\varpi(X)(\Gamma) \coloneqq \{\, (A, x) \mid A \in \Ty(\Gamma),\ x \in X(\Gamma.A) \,\},\\
+    (A, x)[\sigma] \coloneqq (A[\sigma], x[\sigma^{+A}]),
+\end{gather*}
+and with $P_\varpi(f)(A, x) \coloneqq (A, f(x))$ for a natural transformation $f$. A global element $A : 1 \to \Ty$ of the terminal presheaf $1 = \yo(\pt)$ is a \emph{closed type}, and, following Awodey~\cite[\S\S1.1 and 3.1]{Awodey2018}, we write $[A]$ for the fibre of $\varpi$ over it, the pullback
+\[\begin{tikzcd}
+    {[A]} & \Tm \\
+    1 & \Ty,
+    \arrow[from=1-1, to=1-2]
+    \arrow[from=1-1, to=2-1]
+    \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+    \arrow["\varpi", from=1-2, to=2-2]
+    \arrow["A"', from=2-1, to=2-2]
+\end{tikzcd}\]
+so that $[A](\Gamma) = \Tm(\Gamma, A_\Gamma)$. By \cref{def:representable} at the terminal object, this square is the one defining $\pt.A$, so $[A] = \yo(\pt.A)$ is representable.
+
+\begin{definition}\label{def:model}
+    A \emph{model of $\ToS^\omega$} is a natural model $(\cat{C}, \varpi)$ together with:
+    \begin{enumerate}
+        \item a \emph{universe}: a closed type $\Univ : 1 \to \Ty$ together with a \emph{decoding} $\El : [\Univ] \to \Ty$ of its terms, the \emph{sorts}, as types;
+        \item \emph{dependent products}: natural transformations $\PiT : P_\varpi(\Ty) \to \Ty$ and $\lam : P_\varpi(\Tm) \to \Tm$ such that the square
+        \[\begin{tikzcd}
+            {P_\varpi(\Tm)} & \Tm \\
+            {P_\varpi(\Ty)} & \Ty
+            \arrow["\lam", from=1-1, to=1-2]
+            \arrow["{P_\varpi(\varpi)}"', from=1-1, to=2-1]
+            \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+            \arrow["\varpi", from=1-2, to=2-2]
+            \arrow["\PiT"', from=2-1, to=2-2]
+        \end{tikzcd}\]
+        is a pullback;
+        \item \emph{equations at the atoms}: with $\At \subseteq \Ty$ the image of $\langle \Univ, \El \rangle : 1 \sqcup [\Univ] \to \Ty$, the \emph{atomic} types, and $\Tm_{\At} \coloneqq \At \times_{\Ty} \Tm$ the terms of atomic types, natural transformations $\Id : \Tm_{\At} \times_{\At} \Tm_{\At} \to \Ty$ and $\refl : \Tm_{\At} \to \Tm$ such that the square below, with $\delta$ the diagonal, is a pullback:
+        \[\begin{tikzcd}
+            {\Tm_{\At}} & \Tm \\
+            {\Tm_{\At} \times_{\At} \Tm_{\At}} & \Ty.
+            \arrow["\refl", from=1-1, to=1-2]
+            \arrow["\delta"', from=1-1, to=2-1]
+            \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+            \arrow["\varpi", from=1-2, to=2-2]
+            \arrow["\Id"', from=2-1, to=2-2]
+        \end{tikzcd}\]
+    \end{enumerate}
+    A \emph{morphism} of models is a morphism of natural models $F$ that preserves the structure strictly:
+    \begin{gather*}
+        F(\Univ) = \Univ, \qquad F(\El\, S) = \El(FS), \qquad F(\PiT(A, C)) = \PiT(FA, FC),\\
+        F(\lam\, u) = \lam(Fu), \qquad F(\Id(l, r)) = \Id(Fl, Fr), \qquad F(\refl\, l) = \refl_{Fl}.
+    \end{gather*}
+    Models of $\ToS^\omega$ and their morphisms form the category $\Mod(\ToS^\omega)$.
+\end{definition}
+
+Unpacked, the structure consists of operations on types and terms, stable under substitution: a type $\Univ_\Gamma$ over every $\Gamma$ with $\Univ[\sigma] = \Univ$; a type $\El(S)$ for every $S \in \Tm(\Gamma, \Univ)$, with $\El(S)[\sigma] = \El(S[\sigma])$; a type $\PiT(A, C)$ for $A \in \Ty(\Gamma)$ and $C \in \Ty(\Gamma.A)$, with $\PiT(A, C)[\sigma] = \PiT(A[\sigma], C[\sigma^{+A}])$, and a bijection
+\[
+    \lam : \Tm(\Gamma.A, C) \xrightarrow{\simeq} \Tm(\Gamma, \PiT(A, C)), \qquad \lam(u)[\sigma] = \lam(u[\sigma^{+A}]),
+\]
+whose inverse we write $\app$. The pullback condition is precisely this bijectivity: since $P_\varpi(\Tm)(\Gamma) = \bigsqcup_{A, C} \Tm(\Gamma.A, C)$ and $(P_\varpi(\Ty) \times_{\Ty} \Tm)(\Gamma) = \bigsqcup_{A, C} \Tm(\Gamma, \PiT(A, C))$, over $A \in \Ty(\Gamma)$ and $C \in \Ty(\Gamma.A)$, the comparison map of the square is the disjoint union of the components of $\lam$, hence bijective iff they all are. Further, and for terms $a, b$ of a common atomic type, a type $\Id(a, b)$ and a term $\refl_a \in \Tm(\Gamma, \Id(a, a))$, stable under substitution, such that $\Tm(\Gamma, \Id(a, b))$ consists of $\refl_a$ alone if $b = a$ and is empty otherwise. The dependent products are as in Awodey's~\cite[Prop.~8]{Awodey2018} and the identity types are as in~\cite[Prop.~15]{Awodey2018}, just restricted to atomic types. The universe is à la Tarski, as in~\cite[Ex.~5.10]{Uemura2023}.
+
+\begin{remark}\label{rem:atoms}
+    The atomic types correspond to the object judgements of Bauer, Haselwarter and Lumsdaine~\cite[\S4.2]{BauerHaselwarterLumsdaine2020}: a term of $\Univ$ or of $\El(S)$ is the \emph{head} $A$ of \enquote{$A$ type} or $t$ of \enquote{$t : S$}, respectivelly, while the equality judgements correspond to the identity types $\Id(a,b)$. The fact that identity types are declared only at the atomic types hence corresponds to the fact that the equality judgements can only be formed between the heads of two object judgements (with a common boundary).
+\end{remark}
+
+\begin{definition}\label{def:ttos}
+    The \emph{theory of models of $\ToS^\omega$} is the generalised algebraic theory $\TToS$ extending $\TNM$ (\cref{def:tnm}) by the following declarations, with the conventions of \cref{def:tnm}, where $\sigma^{+A}$ abbreviates $\langle \sigma \circ p_{A[\sigma]}, \nu_{A[\sigma]} \rangle$, the symbols $\Id$ and $\refl$ are declared once for each of the two atoms, and the axioms of the last two lines are stated for both:
+    \begin{align*}
+        &\Univ : [\Gamma : \mathsf{Ob}]\,\Ty(\Gamma), \quad \El : [S : \Tm(\Gamma, \Univ_\Gamma)]\,\Ty(\Gamma),\\
+        &\Univ_\Gamma[\sigma] = \Univ_\Delta, \quad \El(S)[\sigma] = \El(S[\sigma]);\\
+        &\PiT : [A : \Ty(\Gamma), C : \Ty(\Gamma.A)]\,\Ty(\Gamma), \quad \PiT(A, C)[\sigma] = \PiT(A[\sigma], C[\sigma^{+A}]);\\
+        &\lam : [u : \Tm(\Gamma.A, C)]\,\Tm(\Gamma, \PiT(A, C)), \quad \lam(u)[\sigma] = \lam(u[\sigma^{+A}]),\\
+        &\app : [t : \Tm(\Gamma, \PiT(A, C))]\,\Tm(\Gamma.A, C), \quad \app(\lam(u)) = u, \quad \lam(\app(t)) = t;\\
+        &\Id : [S, S' : \Tm(\Gamma, \Univ_\Gamma)]\,\Ty(\Gamma), \quad \refl : [S : \Tm(\Gamma, \Univ_\Gamma)]\,\Tm(\Gamma, \Id(S, S)),\\
+        &\Id : [l, r : \Tm(\Gamma, \El(S))]\,\Ty(\Gamma), \quad \refl : [l : \Tm(\Gamma, \El(S))]\,\Tm(\Gamma, \Id(l, l));\\
+        &\Id(l, r)[\sigma] = \Id(l[\sigma], r[\sigma]), \quad \refl_l[\sigma] = \refl_{l[\sigma]},\\
+        &[p : \Tm(\Gamma, \Id(l, r))]\ l = r, \qquad [p : \Tm(\Gamma, \Id(l, r))]\ p = \refl_l.
+    \end{align*}
+    The last axiom is well formed because $l = r$ by the one before it.
+\end{definition}
+
+\begin{lemma}\label{lem:tos-models}
+    A model of $\ToS^\omega$ is precisely a model of $\TToS$, and a morphism of models precisely a homomorphism.
+\end{lemma}
+
+\begin{proof}
+    Standard, see~\cite{Awodey2018,Newstead2018}.
+\end{proof}
+
+\begin{lemma}\label{lem:mod-limits}
+    The forgetful functor $\Mod(\ToS^\omega) \to \Set^4$ recording objects, morphisms, types and terms is faithful and creates limits, as in \cref{lem:limits}.
+\end{lemma}
+
+\begin{proof}
+    By \cref{lem:tos-models}, $\Mod(\ToS^\omega)$ is the category of models of $\TToS$, and the proof of \cref{lem:limits} applies verbatim.
+\end{proof}
+
+\begin{definition}\label{def:sub-model}
+    A \emph{sub-model} of a model $\cat{D}$ of $\ToS^\omega$ is a sub-natural-model $\cat{S}$ of $\cat{D}$ (\cref{def:sub-natural-model}) closed under $\Univ$, $\El$, $\PiT$, $\lam$, $\app$, $\Id$ and $\refl$: $\Univ_\Gamma \in \Ty_{\cat{S}}(\Gamma)$ for $\Gamma \in \cat{S}$, $\El(S) \in \Ty_{\cat{S}}(\Gamma)$ for $S \in \Tm_{\cat{S}}(\Gamma, \Univ_\Gamma)$, and likewise for the other operations applied to arguments in $\cat{S}$.
+\end{definition}
+
+The restricted data form a model of $\TToS$, hence of $\ToS^\omega$ by \cref{lem:tos-models}, and the inclusion is a morphism; hence by the argument of \cref{lem:mono}, the sub-models of $\cat{D}$ are its subobjects in $\Mod(\ToS^\omega)$.
+
+\begin{lemma}\label{lem:equaliser}
+    Let $F, G : \cat{D} \to \cat{D}'$ be morphisms of models of $\ToS^\omega$. The subcategory $\cat{E}$ of $\cat{D}$ with objects the $\Gamma$ with $F\Gamma = G\Gamma$ and morphisms the $\sigma$ with $F\sigma = G\sigma$, with
+    \[
+        \Ty_{\cat{E}}(\Gamma) \coloneqq \{\, A \in \Ty(\Gamma) \mid FA = GA \,\}, \qquad \Tm_{\cat{E}}(\Gamma) \coloneqq \{\, t \in \Tm(\Gamma) \mid Ft = Gt \,\},
+    \]
+    with the rest of the strucure inherited from $\cat{D}$, is a sub-model of $\cat{D}$, and its inclusion is the equaliser of $F$ and $G$ in $\Mod(\ToS^\omega)$.
+\end{lemma}
+
+\begin{proof}
+    By \cref{lem:mod-limits}, the equaliser of $F$ and $G$ is created from their equaliser in $\Set^4$, which is $\cat{E}$ with its inclusion.
+\end{proof}
+
+\section{The syntax as a model}
+\label{sec:syntax-model}
+
+Throughout, conclusions are identified with entries with empty telescope, so that $\mathsf{type}$, $B$ and $l =_c r$ are types, and entries are identified with one-entry telescopes, so that $A \concat \Theta$ is the telescope $\Theta$ over $(\Gamma.A)^{\downarrow}$ with $A \in \Ty(\Gamma)$ prepended (\cref{def:telescope-operations}).
+
+\begin{lemma}\label{lem:raw-structure}
+    $\Raw$ carries the structure (1)--(3) of \cref{def:model}, given by:
+    \begin{align*}
+        \Univ : 1 \to \Ty, &\qquad \Univ_\Gamma \coloneqq \mathsf{type};\\
+        \El : [\Univ] \to \Ty, &\qquad \El(B) \coloneqq B;\\
+        \PiT : P_\varpi(\Ty) \to \Ty, &\qquad \PiT(A, [\Theta]C) \coloneqq [A \concat \Theta]C;\\
+        \lam : P_\varpi(\Tm) \to \Tm, &\qquad \lam(A, u) \coloneqq u;\\
+        \app : P_\varpi(\Ty) \times_{\Ty} \Tm \to P_\varpi(\Tm), &\qquad \app((A, C), t) \coloneqq (A, t);\\
+        \Id : \Tm_{\At} \times_{\At} \Tm_{\At} \to \Ty, &\qquad \Id(l, r) \coloneqq l =_c r;\\
+        \refl : \Tm_{\At} \to \Tm, &\qquad \refl_a \coloneqq \star.
+    \end{align*}
+    We have $\varpi(\lam(A,u)) = \Pi(A,\varpi(u))$ and each component $\lam : \Tm(\Gamma.A, C) \to \Tm(\Gamma, \PiT(A, C))$ is a bijection, with inverse the component $\app : \Tm(\Gamma, \PiT(A, C)) \to \Tm(\Gamma.A, C)$, so the square of \cref{def:model}(2) is a pullback, and $\varpi(\refl_a) = \Id(a, a)$, so only reflection fails.
+\end{lemma}
+
+\begin{proof}
+    That the seven assignments are well typed and stable under substitution is \cref{prop:tos-raw}(3)--(4) and \cref{def:entry-action}, the atoms over $\Gamma$ being the non-equational conclusions $\mathfrak{C}_0(\Gamma^{\downarrow})$. For $A \in \Ty(\Gamma)$ and $[\Theta]C \in \Ty(\Gamma.A)$, $\Tm(\Gamma, [A \concat \Theta]C) = \Tm(\Gamma.A, [\Theta]C)$, both being $\Expr((\Gamma.(A \concat \Theta))^{\downarrow}, \kappa_C)$, resp.\ $\{\star\}$, since $\Gamma.(A \concat \Theta) = (\Gamma.A).\Theta$ by \cref{def:telescope-operations}(4); so $\varpi(\lam(A, u)) = \PiT(A, \varpi(u))$, and the components of $\lam$ and of $\app$ are the identity of this set. The naturality of $\PiT$ and $\lam$ is \cref{lem:telescopes}(3) and (4): $\PiT(A, [\Theta]C)[\sigma] = [A[\sigma] \concat \Theta[\sigma^{+A}]]\, C[(\sigma^{+A})^{+\Theta}] = \PiT(A[\sigma], ([\Theta]C)[\sigma^{+A}])$. Finally $\Tm(\Gamma, l =_c r) = \{\star\}$ for all $l$ and $r$, so $\varpi(\refl_a) = \Id(a, a)$.
+\end{proof}
+
+\begin{lemma}\label{lem:rules-closure}
+    $\cat{W}$ is closed under the operations of \cref{lem:raw-structure}, and $\equiv$ is a congruence for them. Moreover, $\star \in \Tm_{\cat{W}}(\Gamma, l =_c r)$ iff $\Gamma \vdash l \equiv r : c$.
+\end{lemma}
+
+\begin{proof}
+    Closure of $\cat{W}$ under $\Univ$, $\El$ and $\Id$ is \textsc{Type-Ty}, \textsc{Elem-Ty} and \textsc{Eqn-Ty}. Under $\PiT$: for $\Gamma \vdash A$ and $\Gamma.A \vdash [\Theta]C$, inversion (\cref{prop:inversion}(1)) gives $\Gamma.A.\Theta \vdash C$, that is $\Gamma.(A \concat \Theta) \vdash C$, and \textsc{$\Pi$-Ty} gives $\Gamma \vdash [A \concat \Theta]C$. Under $\lam$: if $\Gamma.A \vdash u : [\Theta]C$, then $\Gamma.A.\Theta \vdash u : C$ by the upward direction of \textsc{$\Pi$-Tm}, that is $\Gamma.(A \concat \Theta) \vdash u : C$, and $\Gamma \vdash u : [A \concat \Theta]C$ by its downward direction. Under $\app$: if $\Gamma \vdash u : [A \concat \Theta]C$, then $\Gamma.(A \concat \Theta) \vdash u : C$ by the upward direction, and $\Gamma.A \vdash u : [\Theta]C$ by the downward direction. Under $\refl$: \textsc{Refl-Tm} with the downward direction of \textsc{Eqn-Tm}. That $\equiv$ is a congruence for $\El$ and $\Id$ is \textsc{Elem-TyEq} and \textsc{Eqn-TyEq}; for $\PiT$, from $\Gamma \vdash A \equiv A'$ and $\Gamma.A \vdash [\Theta]C \equiv [\Theta']C'$, inversion (2) gives $\Gamma.A \vdash \Theta \equiv \Theta'$ and $\Gamma.A.\Theta \vdash C \equiv C'$, hence $\Gamma \vdash A \concat \Theta \equiv A' \concat \Theta'$ with the \textsc{CtxConv} rules of \cref{lem:admissible}, and \textsc{$\Pi$-TyEq} gives $\Gamma \vdash [A \concat \Theta]C \equiv [A' \concat \Theta']C'$; for $\lam$, likewise by inversion (3) and \textsc{$\Pi$-TmEq}; for $\app$ it is inversion (3); for $\Univ$ and $\refl$ there is nothing to show. The last claim is \textsc{Eqn-Tm} in both directions.
+\end{proof}
+
+\begin{proposition}\label{prop:syn-model}
+    $\Syn$ carries a unique structure (1)--(3) of \cref{def:model} for which $[\_] : \cat{W} \to \Syn$ preserves the operations, namely that of $\cat{W}$ computed on representatives, and with it $\Syn$ is a model of $\ToS^\omega$.
+\end{proposition}
+
+\begin{proof}
+    Every argument of an operation on $\Syn$ is the class of an argument on $\cat{W}$, by fibrewise surjectivity (\cref{prop:quotient}), so the operations on $\Syn$ is determined uniquely by the requirement that $[\_]$ preserves them. The operations arizing this way are well defined because $\equiv$, the kernel of $[\_]$ (\cref{prop:span}), is a congruence for the operations on $\cat{W}$ (\cref{lem:rules-closure}); it is natural because $[\_]$ is full (\cref{prop:trivial-fibrations}(2)) and preserves the actions; and the squares of \cref{def:model}(2) and (3) commute on $\Syn$ because they do on $\cat{W}$ and $[\_]$ preserves $\varpi$. In particular $\app$ descends, and the identities $\app \circ \lam = \id$ and $\lam \circ \app = \id$ pass from $\cat{W}$ to $\Syn$; so each component $\lam : \Tm_{\Syn}([\Gamma.A], [C]) \to \Tm_{\Syn}([\Gamma], [\PiT(A, C)])$ is a bijection with inverse $\app$, and the square of \cref{def:model}(2) is a pullback. By \cref{def:well-formed}, $\Tm_{\Syn}([\Gamma], [l =_c r]) = \Tm_{\cat{W}}(\Gamma, l =_c r)/{\equiv}$, which by \cref{lem:rules-closure} is $\{[\star]\}$ if $\Gamma \vdash l \equiv r : c$, that is if $[l] = [r]$, and empty otherwise: this is reflection and irrelevance, with $[\star] = \refl_{[a]}$, so the square of (3) is a pullback.
+\end{proof}
+
+\begin{proposition}\label{prop:minimality}
+    $\Syn$ has no proper sub-model.
+\end{proposition}
+
+\begin{proof}
+    Let $\cat{S}$ be a sub-model of $\Syn$ (\cref{def:sub-model}). We define a set $\cat{H}$ of well-formed contexts and, for $\Gamma \in \cat{H}$, a set $\Ty_{\cat{H}}(\Gamma) \subseteq \Ty_{\cat{W}}(\Gamma)$ of well-formed types over $\Gamma$, by recursion on the length of contexts and on \cref{def:hypothetical}, by the rules
+    \begin{mathpar}
+        \inferrule{ }{() \in \cat{H}}
+        \and
+        \inferrule{\Gamma \in \cat{H} \\ A \in \Ty_{\cat{H}}(\Gamma)}{\Gamma.A \in \cat{H}}
+        \and
+        \inferrule{ }{\mathsf{type} \in \Ty_{\cat{H}}(\Gamma)}
+        \and
+        \inferrule{[B] \in \Tm_{\cat{S}}([\Gamma], \Univ)}{B \in \Ty_{\cat{H}}(\Gamma)}
+        \\
+        \inferrule{c \in \Ty_{\cat{H}}(\Gamma) \\ [l] \in \Tm_{\cat{S}}([\Gamma], [c]) \\ [r] \in \Tm_{\cat{S}}([\Gamma], [c])}{l =_c r \in \Ty_{\cat{H}}(\Gamma)}
+        \and
+        \inferrule*[right={$\Theta \neq ()$}]{\Gamma.\Theta \in \cat{H} \\ C \in \Ty_{\cat{H}}(\Gamma.\Theta)}{[\Theta]C \in \Ty_{\cat{H}}(\Gamma)}
+    \end{mathpar}
+    each read as an equivalence, where $[x] \in \Tm_{\cat{S}}([\Gamma], [X])$, with $\Univ = [\mathsf{type}]$, asserts that $\Gamma \vdash x : X$ and $[\Gamma] \in \cat{S}$, so that $[x]$ and $\Tm_{\cat{S}}([\Gamma], [X])$ are defined, and that $[x]$ lies in the latter. In words, a type is in $\cat{H}$ iff every term occurring in it, as a type expression or as a side of an equation, has its class in $\cat{S}$ over its context. Let $\cat{H} \subseteq \cat{W}$ further consist of the well-formed substitutions $\sigma : \Delta \to \Gamma$ between its objects with $[\sigma] \in \cat{S}$, and of the well-formed terms $t$ of $A \in \Ty_{\cat{H}}(\Gamma)$ with $[t] \in \Tm_{\cat{S}}([\Gamma], [A])$.
+
+    First, $[\cat{H}] \subseteq \cat{S}$: for $\Gamma \in \cat{H}$ and $A \in \Ty_{\cat{H}}(\Gamma)$ we have $[\Gamma] \in \cat{S}$ and $[A] \in \Ty_{\cat{S}}([\Gamma])$, by induction on the rules, the structure of $\Syn$ being computed on representatives (\cref{prop:syn-model}): $[()] = \pt$ and $[\Gamma.A] = [\Gamma].[A]$, and $\cat{S}$ is closed under extension; $[\mathsf{type}] = \Univ_{[\Gamma]}$, $[B] = \El([B])$ and $[l =_c r] = \Id([l], [r])$, and $\cat{S}$ is closed under $\Univ$, $\El$ and $\Id$; and if $[\Theta]C \in \Ty_{\cat{H}}(\Gamma)$ with $\Theta = (\Theta_1, \ldots, \Theta_k)$, then the rules give $\Theta_i \in \Ty_{\cat{H}}(\Gamma.\Theta_{<i})$ for each $i$ and $C \in \Ty_{\cat{H}}(\Gamma.\Theta)$, so by induction $[\Gamma.\Theta_{<i}] \in \cat{S}$, $[\Theta_i] \in \Ty_{\cat{S}}([\Gamma.\Theta_{<i}])$ and $[C] \in \Ty_{\cat{S}}([\Gamma.\Theta])$; since $[\Theta]C = \PiT(\Theta_1, [\Theta_2, \ldots, \Theta_k]C)$ by \cref{lem:raw-structure}, $k$ applications of closure under $\PiT$ give
+    \[
+        [[\Theta]C] = \PiT([\Theta_1], \PiT([\Theta_2], \ldots \PiT([\Theta_k], [C]) \ldots)) \in \Ty_{\cat{S}}([\Gamma]).
+    \]
+
+    Second, $(\cat{H}, [\_])$ is a saturated subquotient of $\Raw$. $\cat{H}$ contains $\pt$ and is closed under extension by definition, and under composition and projections because $\cat{S}$ is. It is closed under the actions on types: if $A \in \Ty_{\cat{H}}(\Gamma)$ and $\sigma : \Delta \to \Gamma$ is in $\cat{H}$, then $A[\sigma] \in \Ty_{\cat{H}}(\Delta)$, by induction on $A$. For a conclusion this is closure of $\cat{S}$ under the actions, the terms occurring in $C[\sigma]$ being $B[\sigma]$, resp.\ $l[\sigma]$ and $r[\sigma]$. For $A = [\Theta]C$ we have $A[\sigma] = [\Theta[\sigma]]\, C[\sigma^{+\Theta}]$, where the lifts $\sigma^{+\Theta_{<i}} : \Delta.\Theta_{<i}[\sigma] \to \Gamma.\Theta_{<i}$ are obtained from $\sigma$ by composition with projections and pairing with generic terms (\cref{lem:telescopes}), hence are in $\cat{H}$ as soon as their domains are; so the entries $\Theta_i[\sigma^{+\Theta_{<i}}]$ of $\Theta[\sigma]$ and $C[\sigma^{+\Theta}]$ are in $\cat{H}$ by induction. Closure under pairing, generic terms and the actions on terms follows, $\cat{S}$ being closed under them; so $\cat{H}$ is a contextual sub-natural-model of $\Raw$. The quotient is the image $[\cat{H}] \subseteq \cat{S}$. If $\Gamma, \Gamma' \in \cat{H}$ and $[\Gamma] = [\Gamma']$, the canonical isomorphism $\iota : \Gamma \to \Gamma'$ of \cref{cor:sort-degeneracy} is well formed by \textsc{Id-CtxEq} and $[\iota] = \id_{[\Gamma]}$, so $\iota \in \cat{H}$; hence $A = A[\iota] \in \Ty_{\cat{H}}(\Gamma)$ for $A \in \Ty_{\cat{H}}(\Gamma')$, with the same class, and likewise for terms and, composing with these isomorphisms, for morphisms. So every datum of $[\cat{H}]$ is the class of one of $\cat{H}$ over any given representatives of its contexts. Therefore $[\cat{H}]$ is closed under the operations of $\Syn$, which are computed in $\cat{H}$ on representatives, hence is a contextual sub-natural-model of $\Syn$; $[\_] : \cat{H} \to [\cat{H}]$ is fibrewise surjective; and $(\cat{H}, [\_])$ is a saturated subquotient of $\Raw$ (\cref{def:saturated}).
+
+    By \cref{prop:characterisation}, the set $\jdg_{\cat{S}}$ of the judgements $\Gamma \vdash A$ with $A \in \Ty_{\cat{H}}(\Gamma)$, the $\Gamma \vdash t : A$ with $t \in \Tm_{\cat{H}}(\Gamma, A)$, and the equalities of $\jdg$ both of whose sides are of these forms, is a typing; it is contained in $\jdg$. It is closed under \cref{fig:tos}; as the conclusions of the rules lie in $\jdg$, only membership in $\cat{H}$ is to be checked. For \textsc{Type-Ty}, \textsc{Elem-Ty}, \textsc{Eqn-Ty} and \textsc{$\Pi$-Ty}, and for \textsc{$\Pi$-Tm} and \textsc{$\Pi$-TmEq} in either direction, this is the rules defining $\cat{H}$, with $[u]$ carried between $\Tm_{\cat{S}}([\Gamma.\Theta], [C])$ and $\Tm_{\cat{S}}([\Gamma], [[\Theta]C])$ by $k$ applications of $\lam$, resp.\ $\app$, which are the identity on representatives (\cref{lem:raw-structure,prop:syn-model}). For \textsc{Elem-TyEq}, \textsc{Eqn-TyEq} and \textsc{$\Pi$-TyEq}, both sides of the conclusion are in $\cat{H}$ by the same rules, (S1) and (S2) of \cref{lem:saturated} moving $\Theta'_i$ and $C'$ from $\Gamma.\Theta_{<i}$ and $\Gamma.\Theta$ to $\Gamma.\Theta'_{<i}$ and $\Gamma.\Theta'$, and $l'$ and $r'$ from $c$ to $c'$. For \textsc{Eqn-Tm} downward, $l =_c r \in \Ty_{\cat{H}}(\Gamma)$ by the equation rule, and $[\star] = \refl_{[l]}$ lies in $\cat{S}$ by closure under $\refl$; upward, the equation rule gives $c \in \Ty_{\cat{H}}(\Gamma)$ and $[l], [r] \in \Tm_{\cat{S}}([\Gamma], [c])$.
+
+    Hence $\jdg_{\cat{S}} = \jdg$ by \cref{prop:lattice}: every well-formed context, type and term is in $\cat{H}$, and so is every well-formed substitution, being an iterated pairing of well-formed terms. Thus $\cat{H} = \cat{W}$, and $\cat{S} \supseteq [\cat{W}] = \Syn$.
+\end{proof}
+
+\begin{corollary}\label{cor:uniqueness}
+    For every model $\cat{D}$ there is at most one morphism $\Syn \to \cat{D}$.
+\end{corollary}
+
+\begin{proof}
+    The equaliser of two morphisms $F,G : \Syn \to \cat{D}$ is a sub-model of $\Syn$ by \cref{lem:equaliser}, hence by \cref{prop:minimality}, the equalizing map is an isomorphism, and so $F = G$.
+\end{proof}
+
+\section{Interpretation}
+\label{sec:interpretation}
+
+Let $\cat{D}$ be a model of $\ToS^\omega$. We construct a partial interpretation of raw syntax in $\cat{D}$ by structural recursion on expressions, and show that it is a morphism of natural models on the syntax where it is defined. The construction has four components.
+\begin{enumerate}
+    \item \emph{Semantic entries} (\cref{sec:environment-model}). A raw entry $[\Theta]C$ is a telescope with a conclusion, and the interpretation of a variable of this entry applied to arguments has to instantiate the telescope. Since $\PiT$ is not injective in $\cat{D}$, a type of $\cat{D}$ does not determine such a presentation; so types are interpreted as \emph{semantic entries}, a telescope of types of $\cat{D}$ with a \emph{boundary}, the semantic counterpart of a conclusion. Semantic entries are the types of a model $\Env(\cat{D})$ over $\cat{D}$, the \emph{environment model}, in which $\PiT$ is concatenation of telescopes.
+    \item \emph{Environments} (\cref{sec:environments}). The interpretation of an expression over an arity $\Xi$ is relative to an \emph{environment}, the semantic counterpart of a substitution out of $\Xi$: it assigns to every slot of $\Xi$ a semantic entry of its shape together with a term of it, that is, a term of the natural model $(\cat{D}, \varpi^{\circ})$. Environments are reindexed along morphisms and extended by semantic entries, as substitutions are weakened and lifted, and a context of $\Env(\cat{D})$ is an environment in which every slot has its generic value.
+    \item \emph{The interpretation} (\cref{sec:interpretation-definition}). An application $x(t)$ is interpreted by instantiating the filler of $x$ at the interpretations of the arguments, each computed in the environment extended by the telescope of its slot. The recursion is structural, because environments carry the binding structure of the slots, and no substitution of raw syntax occurs in it. Hypothetical data are interpreted along \cref{def:hypothetical}, and the interpretable syntax forms a sub-natural-model $\cat{I}$ of $\Raw$.
+    \item \emph{Variables and substitution} (\cref{sec:variables-substitution}). Three lemmas say that the interpretation commutes with reindexing, that an $\eta$-expanded variable is interpreted as its value, and that $\sem{e[\sigma]}_\rho = \sem{e}_{\sem{\sigma}_\rho}$: substituting in the expression is interpreting the substitution in the environment. They imply that $\sem{\_} : \cat{I} \to \Env(\cat{D})$ is a morphism of natural models preserving the operations of \cref{lem:raw-structure} (\cref{prop:interpretation-morphism}), which is what the initiality proof uses.
+\end{enumerate}
+The interpretation is partial because $\Raw$ contains ill-typed data, and it is defined on raw rather than on well-formed syntax because derivations are not unique: a definition by recursion on derivations would require a coherence theorem.
+
+\subsection{Semantic entries and the environment model}
+\label{sec:environment-model}
+
+\begin{definition}\label{def:boundary}
+    We define presheaves $\mathfrak{B}_0 \subseteq \mathfrak{B}$ on $\cat{D}$, of \emph{non-equational boundaries} and of \emph{boundaries}, together with natural transformations
+    \[
+        |\_| : \mathfrak{B}_0 \to K, \qquad (\_)^{\circ} : \mathfrak{B} \to \Ty,
+    \]
+    the \emph{kind} of a non-equational boundary, into the constant presheaf on the set $K$ of kinds (\cref{def:kinds}), and the \emph{type} of a boundary. For an object $G$ of $\cat{D}$,
+    \begin{align*}
+        \mathfrak{B}_0(G) &\coloneqq \{\mathsf{type}\} \sqcup \{\, B \mid B \in \Tm(G, \Univ) \,\},\\
+        \mathfrak{B}(G) &\coloneqq \mathfrak{B}_0(G) \sqcup \{\, l =_c r \mid c \in \mathfrak{B}_0(G),\ l, r \in \Tm(G, c^{\circ}) \,\},
+    \end{align*}
+    where $\mathsf{type}$, the terms $B$ and the equations $l =_c r$ are formal symbols, so that the unions are disjoint, and
+    \begin{gather*}
+        |\mathsf{type}| \coloneqq \mathsf{ty}, \qquad |B| \coloneqq \mathsf{tm},\\
+        \mathsf{type}^{\circ} \coloneqq \Univ_G, \qquad B^{\circ} \coloneqq \El(B), \qquad (l =_c r)^{\circ} \coloneqq \Id(l, r).
+    \end{gather*} For $g : G' \to G$, the reindexing $\mathfrak{B}(g) : \mathfrak{B}(G) \to \mathfrak{B}(G')$, written $\mathscr{b} \mapsto \mathscr{b}[g]$, is
+    \[
+        \mathsf{type}[g] \coloneqq \mathsf{type}, \qquad B[g] \coloneqq B[g], \qquad (l =_c r)[g] \coloneqq (l[g] =_{c[g]} r[g]).
+    \]
+    It restricts to $\mathfrak{B}_0$ and preserves kinds, and $(\_)^{\circ}$ is natural, $\mathscr{b}[g]^{\circ} = \mathscr{b}^{\circ}[g]$, since $\Univ$, $\El$ and $\Id$ are stable under substitution. The boundaries in $\mathfrak{B}(G) \setminus \mathfrak{B}_0(G)$ are \emph{equational}.
+\end{definition}
+
+By \cref{def:model}(3), $(\_)^{\circ}$ maps $\mathfrak{B}_0(G)$ onto the atomic types over $G$: a non-equational boundary is an atomic type with a chosen presentation as $\Univ_G$ or as $\El(B)$.
+
+\begin{definition}\label{def:type-telescopes}
+    Let $G$ be an object of $\cat{D}$. The presheaf $\Ty^*(G) : \cat{D}^{\op}\to\Set$ of tuples of types is defined by the following rules:
+    \begin{align*}
+        \top &\implies () \in \Ty^*_{\cat{D}}(G)\\
+        \Phi \in \Ty^*_{\cat{D}}(G), A \in \Ty_{\cat{D}}(G.\Phi) &\implies (\Phi,A) \in \Ty^*_{\cat{D}}(G),
+    \end{align*}
+    where the extension is defined inductively by $G.() := G$ and $G.(\Phi,A) := (G.\Phi).A$, and a type $A$ is identified with the tuple $((),A)$. We write $p_\Phi : G.\Phi \to G$ for the composite of the projections. The presheaf action is the \emph{reindexing} $\Phi[g] \in \Ty^*_{\cat{D}}(G')$ along $g : G' \to G$, defined together with the \emph{lift} $g^{+\Phi} : G'.\Phi[g] \to G.\Phi$ by recursion on $\Phi$:
+    \begin{gather*}
+        ()[g] \coloneqq (), \qquad (\Phi, A)[g] \coloneqq (\Phi[g], A[g^{+\Phi}]),\\
+        g^{+()} \coloneqq g, \qquad g^{+(\Phi, A)} \coloneqq (g^{+\Phi})^{+A},
+    \end{gather*}
+    the lift along a type being that of \cref{sec:models}.
+
+    For $\Phi \in \Ty_{\cat{D}}^*(G)$ and $A \in \Ty_{\cat{D}}(G.\Phi)$, we can iterate the dependent product structure to obtain
+    \begin{align*}
+        \PiT_\Phi : \Ty(G.\Phi) &\to \Ty(G)\\
+        \lam_\Phi : \Tm(G.\Phi,A) &\to \Tm(G,\PiT_\Phi(A)),
+    \end{align*}
+    defined inductively by 
+    \[\begin{tikzcd}
+    	{\Ty(G.\Phi.A)} & {\Ty(G),} & {\Tm(G.\Phi.A,C)} & {\Tm(G,\PiT_{(\Phi,A)}C).} \\
+    	{\Ty(G.\Phi)} && {\Tm(G.\Phi,\PiT(A,C))}
+    	\arrow["{\PiT_{(\Phi,A)}}", dashed, from=1-1, to=1-2]
+    	\arrow["\PiT"', from=1-1, to=2-1]
+    	\arrow["{\lam_{(\Phi,A)}}", dashed, from=1-3, to=1-4]
+    	\arrow["\lam"', from=1-3, to=2-3]
+    	\arrow["{\PiT_\Phi}"', from=2-1, to=1-2]
+    	\arrow["{\lam_\Phi}"', from=2-3, to=1-4]
+    \end{tikzcd}\]
+    We write $\app_\Phi$ for the inverse of $\lam_\Phi$. For the base case, we set $\PiT_{()} = \id$ and $\lam_{()} = \id$.
+\end{definition}
+
+Reindexing of tuples is functorial, so that $\Ty^*_{\cat{D}}$ is a presheaf, and the lifts and the iterated operations satisfy
+\begin{equation}\label{eq:iterated-stability}
+    \begin{gathered}
+        (g \circ h)^{+\Phi} = g^{+\Phi} \circ h^{+\Phi[g]}, \qquad p_\Phi \circ g^{+\Phi} = g \circ p_{\Phi[g]},\\
+        \PiT_\Phi(C)[g] = \PiT_{\Phi[g]}(C[g^{+\Phi}]), \qquad \lam_\Phi(u)[g] = \lam_{\Phi[g]}(u[g^{+\Phi}]),
+    \end{gathered}
+\end{equation}
+by induction on $\Phi$, from \cref{lem:pairing} and the stability of $\PiT$ and $\lam$ under substitution.
+
+\begin{definition}\label{def:iterated-pairing}
+    We define tuples of terms of a tuple of types, their reindexing, and their pairing with a morphism.
+    \begin{enumerate}
+        \item For $\Phi \in \Ty^*_{\cat{D}}(G)$, the set $\Tm^*_{\cat{D}}(G, \Phi)$ of \emph{tuples of terms} of $\Phi$ and the section $\langle \id, u \rangle : G \to G.\Phi$ of $p_\Phi$ given by a tuple $u$ are defined by recursion on $\Phi$:
+        \begin{gather*}
+            \Tm^*_{\cat{D}}(G, ()) \coloneqq \{()\}, \qquad \langle \id, () \rangle \coloneqq \id_G,\\
+            \Tm^*_{\cat{D}}(G, (\Phi, A)) \coloneqq \{\, (u, a) \mid u \in \Tm^*_{\cat{D}}(G, \Phi),\ a \in \Tm(G, A[\langle \id, u \rangle]) \,\},\\
+            \langle \id, (u, a) \rangle \coloneqq \big\langle \langle \id, u \rangle, a \big\rangle,
+        \end{gather*}
+        the outer pairing in the last clause being that of $(\cat{D}, \varpi)$. The terms $u_1, \ldots, u_k$ making up $u$ are its \emph{components}.
+        \item For $g : G' \to G$, the \emph{reindexing} $ugh] \in \Tm^*_{\cat{D}}(G', \Phi[g])$ of $u \in \Tm^*_{\cat{D}}(G, \Phi)$ is componentwise,
+        \[
+            ()[g] \coloneqq (), \qquad (u, a)[g] \coloneqq (u[g], a[g]),
+        \]
+        by recursion on $\Phi$, simultaneously with the proof that the square
+        \[\begin{tikzcd}
+            {G'} & {G'.\Phi[g]} \\
+            G & {G.\Phi}
+            \arrow["{\langle \id, u[g] \rangle}", from=1-1, to=1-2]
+            \arrow["g"', from=1-1, to=2-1]
+            \arrow["{g^{+\Phi}}", from=1-2, to=2-2]
+            \arrow["{\langle \id, u \rangle}"', from=2-1, to=2-2]
+        \end{tikzcd}\]
+        commutes. The square for $u$ makes the clause for $(u, a)$ well typed, since $a[g]$ is a term of $A[\langle \id, u \rangle \circ g] = A[g^{+\Phi}][\langle \id, u[g] \rangle]$; and the square for $(u, a)$ commutes since
+        \begin{align*}
+            g^{+(\Phi, A)} \circ \langle \id, (u, a)[g] \rangle &= (h^{+\Phi})^{+A} \circ \big\langle \langle \id, u[g] \rangle, a[g] \big\rangle\\
+            &= \big\langle g^{+\Phi} \circ \langle \id, u[h] \rangle, a[h] \big\rangle = \big\langle \langle \id, u \rangle \circ g, a[g] \big\rangle\\
+            &= \big\langle \langle \id, u \rangle, a \big\rangle \circ g = \langle \id, (u, a) \rangle \circ g,
+        \end{align*}
+        by the definitions, the square for $u$ and \cref{lem:pairing}(2).
+        \item For $g : G \to Y$, $\Phi \in \Ty^*_{\cat{D}}(Y)$ and $u \in \Tm^*_{\cat{D}}(G, \Phi[g])$, the \emph{pairing of $g$ with $u$} is the composite $\langle g, u \rangle \coloneqq g^{+\Phi} \circ \langle \id, u \rangle : G \to Y.\Phi$, a morphism over $g$:
+        \[\begin{tikzcd}[column sep=6em, row sep=3.5em]
+            {G.\Phi[g]} & {Y.\Phi} \\
+            G & Y.
+            \arrow["{g^{+\Phi}}", from=1-1, to=1-2]
+            \arrow["{p_{\Phi[g]}}", shift left=2, from=1-1, to=2-1]
+            \arrow["{p_\Phi}", from=1-2, to=2-2]
+            \arrow["{\langle \id, u \rangle}", shift left=2, from=2-1, to=1-1]
+            \arrow["{\langle g, u \rangle}"{description, pos=0.6}, from=2-1, to=1-2]
+            \arrow["g"', from=2-1, to=2-2]
+        \end{tikzcd}\]
+        By \cref{lem:iterated-pairing}(1) below, every morphism $G \to Y.\Phi$ is of this form for a unique $g$ and $u$.
+    \end{enumerate}
+\end{definition}
+
+\begin{lemma}\label{lem:iterated-pairing}
+    Let $\Phi = (A_1, \ldots, A_k) \in \Ty^*_{\cat{D}}(Y)$.
+    \begin{enumerate}
+        \item Every $m : G \to Y.\Phi$ is $\langle g, u \rangle$ for $g = p_\Phi \circ m$ and a unique $u \in \Tm^*_{\cat{D}}(G, \Phi[g])$, with components $u_j = \nu_{A_j}[\pi'_j \circ m]$, where $\pi'_j : Y.\Phi \to Y.\Phi_{\leq j}$ are the projections. In particular, $u \mapsto \langle \id, u \rangle$ is a bijection from $\Tm^*_{\cat{D}}(Y, \Phi)$ onto the sections of $p_\Phi$.
+        \item $\langle g, u \rangle \circ h = \langle g \circ h, u[h] \rangle$, and for $h : Y' \to Y$ and $g : G \to Y'$,
+        \begin{equation}\label{eq:lift-pairing}
+            h^{+\Phi} \circ \langle g, u \rangle = \langle h \circ g, u \rangle.
+        \end{equation}
+        \item The square
+        \[\begin{tikzcd}
+            {(Y.\Phi).\Phi[p_\Phi]} & {Y.\Phi} \\
+            {Y.\Phi} & Y
+            \arrow["{p_\Phi^{+\Phi}}", from=1-1, to=1-2]
+            \arrow["{p_{\Phi[p_\Phi]}}"', from=1-1, to=2-1]
+            \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+            \arrow["{p_\Phi}", from=1-2, to=2-2]
+            \arrow["{p_\Phi}"', from=2-1, to=2-2]
+        \end{tikzcd}\]
+        is a pullback: $(Y.\Phi).\Phi[p_\Phi]$ is the kernel pair of $p_\Phi$.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    (1) By induction on $\Phi$, from \cref{lem:pairing}; the sections of $p_\Phi$ are the morphisms $m$ with $g = \id$. (2) By the square of \cref{def:iterated-pairing}(2), $\langle g, u \rangle \circ h = g^{+\Phi} \circ h^{+\Phi[g]} \circ \langle \id, u[h] \rangle$, which is $\langle g \circ h, u[h] \rangle$ by \eqref{eq:iterated-stability}; likewise \eqref{eq:lift-pairing} is $(h \circ g)^{+\Phi} = h^{+\Phi} \circ g^{+\Phi[h]}$. (3) By induction on $\Phi$, pasting the pullback squares of \cref{def:representable} along the entries of $\Phi$.
+\end{proof}
+
+\begin{definition}\label{def:generic-term}
+    Let $\Phi = (A_1, \ldots, A_k) \in \Ty^*_{\cat{D}}(G)$, so that $A_j \in \Ty(G.\Phi_{<j})$ and $G.\Phi_{\leq j} = (G.\Phi_{<j}).A_j$, and write $\pi_j : G.\Phi \to G.\Phi_{<j}$ and $\pi'_j : G.\Phi \to G.\Phi_{\leq j}$ for the projections, so that $\pi_j = p_{A_j} \circ \pi'_j$. The generic term of the $j$-th entry is
+    \[
+        \nu_j \coloneqq \nu_{A_j} \in \Tm\big(G.\Phi_{\leq j},\, A_j[p_{A_j}]\big), \qquad \text{so that} \qquad \nu_j[\pi'_j] \in \Tm\big(G.\Phi,\, A_j[\pi_j]\big).
+    \]
+    The \emph{generic tuple} of $\Phi$ is the tuple $\nu_\Phi \in \Tm^*_{\cat{D}}(G.\Phi, \Phi[p_\Phi])$ with components $\nu_j[\pi'_j]$. These have the required types: the $j$-th entry of $\Phi[p_\Phi]$ is $A_j[p_\Phi^{+\Phi_{<j}}]$, and
+    \[
+        p_\Phi^{+\Phi_{<j}} \circ \big\langle \id, (\nu_i[\pi'_i])_{i<j} \big\rangle = \big\langle p_\Phi, (\nu_i[\pi'_i])_{i<j} \big\rangle = \pi_j
+    \]
+    by \cref{lem:iterated-pairing}(1), as $\pi_j$ has the components $\nu_i[\pi'_i]$. Its pairing $\langle \id, \nu_\Phi \rangle : G.\Phi \to (G.\Phi).\Phi[p_\Phi]$ is the diagonal $\langle \id, \id \rangle$ of the kernel pair of $p_\Phi$, so that $p_\Phi^{+\Phi} \circ \langle \id, \nu_\Phi \rangle = \id$. Indeed, $p_\Phi^{+\Phi} \circ \langle \id, \nu_\Phi \rangle = \langle p_\Phi, \nu_\Phi \rangle$ by \cref{def:iterated-pairing}(3), and this is $\id_{G.\Phi}$ by \cref{lem:iterated-pairing}(1), as $\id_{G.\Phi}$ has the components $\nu_j[\pi'_j]$.
+\end{definition}
+
+\begin{definition}\label{def:semantic-telescopes}
+    We define, by simultaneous recursion, for every object $G$ of $\cat{D}$, arity $\vartheta$ and shape $s$, the sets
+    \[
+        \Tel_{\cat{D}}(G, \vartheta), \qquad M_{\cat{D}}(G)_s, \qquad E_{\cat{D}}(G)
+    \]
+    of \emph{semantic telescopes}, \emph{semantic slot entries} and \emph{semantic equational entries} over $G$, together with the functions
+    \begin{align*}        
+        (\_)^{\circ} &: M_{\cat{D}}(G)_s \sqcup E_{\cat{D}}(G) \to \Ty_{\cat{D}}(G)\\
+        (\_)^{\circ} &: \Tel_{\cat{D}}(G, \vartheta) \to \Ty^*_{\cat{D}}(G)
+    \end{align*}
+    the \emph{type} of a semantic telescope, resp.\ entry.
+
+    The sets are given by the clauses of \cref{def:hypothetical} with conclusions replaced by boundaries,
+    \begin{alignat*}{2}
+        & && () \in \Tel_{\cat{D}}(G, \emptyar),\\
+        \tau \in \Tel_{\cat{D}}(G, \vartheta),\ \mathscr{e} \in M_{\cat{D}}(G.\tau^{\circ})_s &&\implies{}& (\tau, \mathscr{e}) \in \Tel_{\cat{D}}(G, \vartheta \concat [s]),\\
+        \tau \in \Tel_{\cat{D}}(G, \vartheta),\ \mathscr{e} \in E_{\cat{D}}(G.\tau^{\circ}) &&\implies{}& (\tau, \mathscr{e}) \in \Tel_{\cat{D}}(G, \vartheta),\\
+        \tau \in \Tel_{\cat{D}}(G, \vartheta),\ \mathscr{b} \in \mathfrak{B}_0(G.\tau^{\circ}) &&\implies{}& (\tau, \mathscr{b}) \in M_{\cat{D}}(G)_{(\vartheta, |\mathscr{b}|)},\\
+        \tau \in \Tel_{\cat{D}}(G, \vartheta),\ \mathscr{b} \in \mathfrak{B}(G.\tau^{\circ}) \setminus \mathfrak{B}_0(G.\tau^{\circ}) &&\implies{}& (\tau, \mathscr{b}) \in E_{\cat{D}}(G),
+    \end{alignat*}
+    and the types by
+    \begin{align*}
+        ()^{\circ} &:= ()\\
+        (\tau,\mathscr{b})^{\circ} &:= \PiT_{\tau^{\circ}}\mathscr{b}^{\circ}\\
+        (\tau,\mathscr{e})^{\circ} &:= (\tau^{\circ},\mathscr{e}^{\circ}).
+    \end{align*}
+    The elements of $M_{\cat{D}}(G)_s$ and of $E_{\cat{D}}(G)$ are the \emph{semantic entries} over $G$, of shape $s$, resp.\ $\top$. A boundary $\mathscr{b}$ is identified with the entry $((), \mathscr{b})$, and an entry with the one-entry telescope.
+\end{definition}
+
+\begin{definition}\label{def:semantic-operations}
+    Let $\tau = (\mathscr{e}_1, \ldots, \mathscr{e}_k) \in \Tel_{\cat{D}}(G, \vartheta)$.
+    \begin{enumerate}
+        \item For $\upsilon \in \Tel_{\cat{D}}(G.\tau^{\circ}, \vartheta')$, the \emph{concatenation} $\tau \concat \upsilon \in \Tel_{\cat{D}}(G, \vartheta \concat \vartheta')$ is defined in the obvious way as $\tau$ followed by the entries of $\upsilon$: we than have that $G.(\tau \concat \upsilon)^{\circ} = (G.\tau^{\circ}).\upsilon^{\circ}$, and $\PiT_{(\tau \concat \upsilon)^{\circ}} = \PiT_{\tau^{\circ}} \circ \PiT_{\upsilon^{\circ}}$, $\lam_{(\tau \concat \upsilon)^{\circ}} = \lam_{\tau^{\circ}} \circ \lam_{\upsilon^{\circ}}$.
+        \item For $g : G' \to G$, the \emph{reindexing} $\tau[g] \in \Tel_{\cat{D}}(G', \vartheta)$ and the reindexing $\mathscr{e}[g]$ of a semantic entry $\mathscr{e}$ over $G$, a semantic entry over $G'$ of the same shape, are defined by recursion on semantic telescopes and entries:
+        \begin{gather*}
+            ()[g] \coloneqq (), \qquad (\tau, \mathscr{e})[g] \coloneqq (\tau[g], \mathscr{e}[g^{+\tau^{\circ}}]),\\
+            (\tau, \mathscr{b})[g] \coloneqq (\tau[g], \mathscr{b}[g^{+\tau^{\circ}}]),
+        \end{gather*}
+        where $\mathscr{b}[g^{+\tau^{\circ}}]$ is the reindexing of boundaries (\cref{def:boundary}). The recursion is simultaneous with the proof of the equations
+        \[
+            \tau[g]^{\circ} = \tau^{\circ}[g], \qquad \mathscr{e}[g]^{\circ} = \mathscr{e}^{\circ}[g],
+        \]
+        for all $g$ at once. The first equation is what makes the two clauses well typed. For $(\tau[g], \mathscr{e}[g^{+\tau^{\circ}}])$ to be a telescope and $(\tau[g], \mathscr{b}[g^{+\tau^{\circ}}])$ an entry over $G'$, the second components have to be an entry, resp.\ a boundary, over $G'.\tau[g]^{\circ}$ (\cref{def:semantic-telescopes}). Now $\mathscr{e}$ and $\mathscr{b}$ are over $G.\tau^{\circ}$, and the lift is a morphism $g^{+\tau^{\circ}} : G'.\tau^{\circ}[g] \to G.\tau^{\circ}$ (\cref{def:type-telescopes}), so their reindexings along it are over $G'.\tau^{\circ}[g]$; this is $G'.\tau[g]^{\circ}$ by the first equation for $\tau$. The first holds for $()$, both sides being $()$, and for $(\tau, \mathscr{e})$ since
+        \begin{align*}
+            (\tau, \mathscr{e})[g]^{\circ} &= \big(\tau[g], \mathscr{e}[g^{+\tau^{\circ}}]\big)^{\circ} = \big(\tau[g]^{\circ}, \mathscr{e}[g^{+\tau^{\circ}}]^{\circ}\big)\\
+            &= \big(\tau^{\circ}[g], \mathscr{e}^{\circ}[g^{+\tau^{\circ}}]\big) = (\tau^{\circ}, \mathscr{e}^{\circ})[g] = (\tau, \mathscr{e})^{\circ}[g],
+        \end{align*}
+        by the definitions of the reindexing and of $(\_)^{\circ}$, the equations for $\tau$ at $g$ and for $\mathscr{e}$ at $g^{+\tau^{\circ}}$, and the definition of the reindexing of tuples of types. The second holds for an entry $(\tau, \mathscr{b})$ since
+        \begin{align*}
+            (\tau, \mathscr{b})[g]^{\circ} &= \big(\tau[g], \mathscr{b}[g^{+\tau^{\circ}}]\big)^{\circ} = \PiT_{\tau[g]^{\circ}}\big(\mathscr{b}[g^{+\tau^{\circ}}]^{\circ}\big)\\
+            &= \PiT_{\tau^{\circ}[g]}\big(\mathscr{b}^{\circ}[g^{+\tau^{\circ}}]\big) = \big(\PiT_{\tau^{\circ}}\mathscr{b}^{\circ}\big)[g] = (\tau, \mathscr{b})^{\circ}[g],
+        \end{align*}
+        by the definitions of the reindexing and of $(\_)^{\circ}$, the equation for $\tau$ with the naturality of $(\_)^{\circ}$ on boundaries (\cref{def:boundary}), and \eqref{eq:iterated-stability}.
+    \end{enumerate}
+\end{definition}
+
+\begin{lemma}\label{lem:semantic-telescopes}
+    Let $\tau \in \Tel_{\cat{D}}(G, \vartheta)$, let $\mathscr{e}$ be a semantic entry over $G$, and let $h : G'' \to G'$ and $g : G' \to G$.
+    \begin{enumerate}
+        \item Reindexing is functorial:
+        \[
+            \tau[\id] = \tau, \qquad \tau[g \circ h] = \tau[g][h], \qquad \mathscr{e}[\id] = \mathscr{e}, \qquad \mathscr{e}[g \circ h] = \mathscr{e}[g][h].
+        \]
+        \item Lifts commute with the projections:
+        \[\begin{tikzcd}
+            {G'.\tau[g]^{\circ}} & {G.\tau^{\circ}} \\
+            {G'} & G.
+            \arrow["{g^{+\tau^{\circ}}}", from=1-1, to=1-2]
+            \arrow["{p_{\tau[g]^{\circ}}}"', from=1-1, to=2-1]
+            \arrow["{p_{\tau^{\circ}}}", from=1-2, to=2-2]
+            \arrow["g"', from=2-1, to=2-2]
+        \end{tikzcd}\]
+        \item Lifts compose:
+        \[\begin{tikzcd}
+            {G''.\tau[g \circ h]^{\circ}} && {G.\tau^{\circ}.} \\
+            & {G'.\tau[g]^{\circ}}
+            \arrow["{(g \circ h)^{+\tau^{\circ}}}", from=1-1, to=1-3]
+            \arrow["{h^{+\tau[g]^{\circ}}}"', from=1-1, to=2-2]
+            \arrow["{g^{+\tau^{\circ}}}"', from=2-2, to=1-3]
+        \end{tikzcd}\]
+        \item Iterated products are stable under reindexing:
+        \[\begin{tikzcd}
+            {\Ty(G.\tau^{\circ})} & {\Ty(G)} \\
+            {\Ty(G'.\tau[g]^{\circ})} & {\Ty(G').}
+            \arrow["{\PiT_{\tau^{\circ}}}", from=1-1, to=1-2]
+            \arrow["{(\_)[g^{+\tau^{\circ}}]}"', from=1-1, to=2-1]
+            \arrow["{(\_)[g]}", from=1-2, to=2-2]
+            \arrow["{\PiT_{\tau[g]^{\circ}}}"', from=2-1, to=2-2]
+        \end{tikzcd}\]
+        \item So is abstraction:
+        \[\begin{tikzcd}
+            {\Tm(G.\tau^{\circ}, C)} & {\Tm(G, \PiT_{\tau^{\circ}}(C))} \\
+            {\Tm(G'.\tau[g]^{\circ}, C[g^{+\tau^{\circ}}])} & {\Tm(G', \PiT_{\tau^{\circ}}(C)[g]).}
+            \arrow["{\lam_{\tau^{\circ}}}", from=1-1, to=1-2]
+            \arrow["{(\_)[g^{+\tau^{\circ}}]}"', from=1-1, to=2-1]
+            \arrow["{(\_)[g]}", from=1-2, to=2-2]
+            \arrow["{\lam_{\tau[g]^{\circ}}}"', from=2-1, to=2-2]
+        \end{tikzcd}\]
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    (2)--(5) are \eqref{eq:iterated-stability} at $\tau^{\circ}$, since $\tau[g]^{\circ} = \tau^{\circ}[g]$ by \cref{def:semantic-operations}; in (5), the codomain of $\lam_{\tau[g]^{\circ}}$ is as displayed by (4). (1) follows by induction on $\tau$, from (3) and the functoriality of the reindexing of boundaries.
+\end{proof}
+
+\begin{definition}\label{def:environment-model}
+    Semantic entries form a presheaf $M_{\cat{D}} \sqcup E_{\cat{D}}$ on $\cat{D}$, and $(\_)^{\circ} : M_{\cat{D}} \sqcup E_{\cat{D}} \to \Ty$ is natural. Let $\varpi^{\circ}$ be the base change of $\varpi$ along $(\_)^{\circ}$, a natural model structure on $\cat{D}$ by \cref{lem:pullback}, with $\Tm_{\varpi^{\circ}}(G, \mathscr{e}) = \Tm(G, \mathscr{e}^{\circ})$, $G.\mathscr{e} = G.\mathscr{e}^{\circ}$, $p_{\mathscr{e}} = p_{\mathscr{e}^{\circ}}$ and $\nu_{\mathscr{e}} = \nu_{\mathscr{e}^{\circ}}$. The \emph{environment model} of $\cat{D}$ is the contextualisation
+    \[
+        \Env(\cat{D}) \coloneqq \Ctx(\cat{D}, \varpi^{\circ}),
+    \]
+    shaped over $S^+$ by the shape of a semantic entry: its objects, the \emph{semantic contexts}, are the semantic telescopes $\tau$ over $\pt$, with $\langle \tau \rangle = \pt.\tau^{\circ}$; its morphisms $\tau' \to \tau$ are the morphisms $\langle \tau' \rangle \to \langle \tau \rangle$ of $\cat{D}$; its types over $\tau$ are the semantic entries over $\langle \tau \rangle$; and its terms of $\mathscr{e}$ are the terms of $\mathscr{e}^{\circ}$.
+\end{definition}
+
+\begin{lemma}\label{lem:environment-model}
+    $\Env(\cat{D})$ is a contextual model of $\ToS^\omega$, with
+    \begin{gather*}
+        \Univ_\tau \coloneqq ((), \mathsf{type}), \qquad \El(B) \coloneqq ((), B), \qquad \PiT(\mathscr{e}, (\upsilon, \mathscr{b})) \coloneqq (\mathscr{e} \concat \upsilon, \mathscr{b}),\\
+        \Id(l, r) \coloneqq ((), l =_{c} r) \ \text{ for } l, r \in \Tm(\langle \tau \rangle, c^{\circ}), \qquad \lam, \app, \refl \text{ those of } \cat{D},
+    \end{gather*}
+    and $\langle \_ \rangle : \Env(\cat{D}) \to \cat{D}$, with $(\_)^{\circ}$ on types and the identity on terms, is a morphism of models.
+\end{lemma}
+
+\begin{proof}
+    $\Env(\cat{D})$ is a contextual natural model and $\langle \_ \rangle$ a morphism of natural models by \cref{prop:contextualisation}, composed with the base change $(\cat{D}, \varpi^{\circ}) \to (\cat{D}, \varpi)$, which satisfies the equations of \cref{lem:nm-morphism} by the formulas for $G.\mathscr{e}$, $p_{\mathscr{e}}$ and $\nu_{\mathscr{e}}$. The operations are well typed and natural, since $\PiT(\mathscr{e}, (\upsilon, \mathscr{b}))^{\circ} = \PiT(\mathscr{e}^{\circ}, \PiT_{\upsilon^{\circ}} \mathscr{b}^{\circ}) = \PiT(\mathscr{e}^{\circ}, (\upsilon, \mathscr{b})^{\circ})$, $\Id(l, r)^{\circ} = \Id(l, r)$, and reindexing of entries is componentwise; the atomic types of $\Env(\cat{D})$ are the non-equational boundaries. The pullback conditions of \cref{def:model}(2) and (3) hold because the term sets are those of $\cat{D}$ at the types $\mathscr{e}^{\circ}$. By construction, $\langle \_ \rangle$ preserves the operations.
+\end{proof}
+
+\subsection{Environments}
+\label{sec:environments}
+
+\begin{definition}\label{def:environment}
+    For an object $G$ of $\cat{D}$, let $\Tm_{\varpi^{\circ}}(G) \in \Set^S$ be the terms of $(\cat{D}, \varpi^{\circ})$ over $G$ at slot entries, graded by shape:
+    \[
+        \Tm_{\varpi^{\circ}}(G)_s \coloneqq \{\, (\mathscr{e}, v) \mid \mathscr{e} \in M_{\cat{D}}(G)_s,\ v \in \Tm(G, \mathscr{e}^{\circ}) \,\}.
+    \]
+    An \emph{environment} over $G$ for an arity $\Xi$ is a morphism
+    \[
+        \rho : J_S\,\Xi \to \Tm_{\varpi^{\circ}}(G) \quad \text{of } \Set^S,
+    \]
+    that is, a function assigning to every slot $x : \Xi \ni s$ a term $\rho(x) = (\mathscr{e}_x, v_x)$ of shape $s$, its \emph{value}. We write $\mathscr{e}_x = (\tau_x, \mathscr{b}_x)$, and call $\app_{\tau_x^{\circ}}(v_x) \in \Tm(G.\tau_x^{\circ}, \mathscr{b}_x^{\circ})$ the \emph{filler} of $x$.
+\end{definition}
+
+An environment is a semantic substitution: a substitution $\Xi \sub \Delta$ is a morphism $J_S\,\Xi \to T(\Delta)$ of $\Set^S$ (\cref{sec:shaped-syntax}), and $\Tm_{\varpi^{\circ}}(G)$ takes the place of $T(\Delta)$. The operations on substitutions have their counterparts.
+
+\begin{definition}\label{def:environment-operations}
+    Let $\rho$ be an environment over $G$ for $\Xi$.
+    \begin{enumerate}
+        \item The \emph{reindexing} $\rho[g] \coloneqq \Tm_{\varpi^{\circ}}(g) \circ \rho$ along $g : G' \to G$ is the environment over $G'$ for $\Xi$ with $\rho[g](x) = (\mathscr{e}_x[g], v_x[g])$.
+        \item The \emph{extension} $\rho.\mathscr{e}$ by a semantic slot entry $\mathscr{e} \in M_{\cat{D}}(G)_s$ is the environment over $G.\mathscr{e}^{\circ}$ for $\Xi \concat [s]$ that is $\rho[p_{\mathscr{e}^{\circ}}]$ on the slots of $\Xi$ and gives the new slot the generic term $\nu_\mathscr{e} = (\mathscr{e}[p_{\mathscr{e}^{\circ}}], \nu_{\mathscr{e}^{\circ}})$ of $(\cat{D}, \varpi^{\circ})$, its \emph{generic value}. The extension by an equational entry $\mathscr{e} \in E_{\cat{D}}(G)$ is $\rho[p_{\mathscr{e}^{\circ}}]$, over $G.\mathscr{e}^{\circ}$ for $\Xi$, and the extension $\rho.\tau$ by $\tau \in \Tel_{\cat{D}}(G, \vartheta)$ is the iterate, over $G.\tau^{\circ}$ for $\Xi \concat \vartheta$.
+        \item The \emph{generic environment} of a semantic context $\tau$ is the extension of the empty environment over $\pt$ along $\tau$, an environment over $\langle \tau \rangle$ for the arity of $\tau$; we denote it by $\tau$ as well.
+    \end{enumerate}
+\end{definition}
+
+\begin{lemma}\label{lem:environment-operations}
+    Extension commutes with reindexing: $(\rho.\tau)[g^{+\tau^{\circ}}] = \rho[g].\tau[g]$.
+\end{lemma}
+
+\begin{proof}
+    By induction on $\tau$: on the old slots both sides are $\rho[g \circ p_{\mathscr{e}^{\circ}}] = \rho[p_{\mathscr{e}^{\circ}[g]} \circ g^{+\mathscr{e}^{\circ}}]$, and on the new slot $\nu_\mathscr{e}[g^{+\mathscr{e}^{\circ}}] = \nu_{\mathscr{e}[g]}$, as in every natural model.
+\end{proof}
+
+\subsection{The interpretation}
+\label{sec:interpretation-definition}
+
+\begin{definition}\label{def:interpretation}
+    Let $\rho$ be an environment over $G$ for $\Xi$. By structural recursion on expressions we define three partial functions:
+    \begin{enumerate}
+        \item for each kind $\kappa$, the \emph{interpretation} of expressions,
+        \[
+            \sem{\_}_\rho : \Expr(\Xi, \kappa) \rightharpoonup \Tm(G);
+        \]
+        \item for each semantic slot entry $\mathscr{e} = (\tau, \mathscr{b}) \in M_{\cat{D}}(G)_{(\vartheta, \kappa)}$, the \emph{interpretation at $\mathscr{e}$},
+        \[
+            \sem{\_}_{\rho, \mathscr{e}} : \Expr(\Xi \concat \vartheta, \kappa) \rightharpoonup \Tm(G, \mathscr{e}^{\circ}), \qquad \sem{u}_{\rho, \mathscr{e}} \coloneqq \lam_{\tau^{\circ}}(\sem{u}_{\rho.\tau}),
+        \]
+        defined when $\sem{u}_{\rho.\tau}$ is defined and is a term of $\mathscr{b}^{\circ}$, so that $(\mathscr{e}, \sem{u}_{\rho, \mathscr{e}})$ is a term of $(\cat{D}, \varpi^{\circ})$;
+        \item for each $\upsilon \in \Tel_{\cat{D}}(G, \vartheta)$, the \emph{interpretation of arguments along $\upsilon$}, with values the tuples of terms of $\upsilon^{\circ}$,
+        \[
+            \sem{\_}^{\upsilon}_\rho : \Args(\Xi, \vartheta) \rightharpoonup \Tm^*_{\cat{D}}(G, \upsilon^{\circ}).
+        \]
+    \end{enumerate}
+    An application $x(t)$, for a slot $x : \Xi \ni (\vartheta, \kappa)$ with $\rho(x) = ((\tau_x, \mathscr{b}_x), v_x)$ and $t \in \Args(\Xi, \vartheta)$, is interpreted by instantiating the filler of $x$ at the interpretation of its arguments along $\tau_x$:
+    \[
+        \sem{x(t)}_\rho \coloneqq \app_{\tau_x^{\circ}}(v_x)\big[\langle \id, \sem{t}^{\tau_x}_\rho \rangle\big] \in \Tm\big(G, \mathscr{b}_x^{\circ}[\langle \id, \sem{t}^{\tau_x}_\rho \rangle]\big).
+    \]
+    Arguments are interpreted by recursion on the telescope, each at the entry of its slot instantiated at the preceding ones: $\sem{t}^{()}_\rho \coloneqq ()$, and for $\upsilon = (\upsilon', \mathscr{e})$, with $u \coloneqq \sem{t}^{\upsilon'}_\rho$ the interpretation of the arguments for the slots of $\upsilon'$,
+    \[
+        \sem{t}^{\upsilon}_\rho \coloneqq \big(u,\ \sem{t_y}_{\rho, \mathscr{e}[\langle \id, u \rangle]}\big) \quad \text{if $\mathscr{e}$ is a slot entry, declaring the slot $y$ of $\vartheta$,}
+    \]
+    and $\sem{t}^{\upsilon}_\rho \coloneqq (u, u')$ if $\mathscr{e}$ is equational, where $u'$ is the element of $\Tm(G, \mathscr{e}^{\circ}[\langle \id, u \rangle])$, if it exists. Each is defined when its ingredients are.
+\end{definition}
+
+The components are well typed, $\mathscr{e}[\langle \id, u \rangle]^{\circ} = \mathscr{e}^{\circ}[\langle \id, u \rangle]$ being the type required by \cref{def:iterated-pairing}, and the recursion is structural: the arguments of $x(t)$ are interpreted at environments obtained from $\rho$ by extension, and no substitution of raw syntax occurs.
+
+\begin{definition}\label{def:substitution-environment}
+    Let $\rho$ be an environment over $G$ for $\Phi \concat \Delta$, let $\sigma : \Xi \sub \Phi \concat \Delta$ be a substitution, so that $\sigma(x) \in \Expr(\Phi \concat \Delta \concat \alpha, \kappa)$ for $x : \Xi \ni (\alpha, \kappa)$, and let $\mathscr{e} = (\mathscr{e}_x)_{x \in \Xi}$ be semantic slot entries over $G$ of the shapes of the slots of $\Xi$. The \emph{interpretation of $\sigma$ in $\rho$ at $\mathscr{e}$} is the environment $\sem{\sigma}_{\rho, \mathscr{e}} : J_S(\Phi \concat \Xi) \to \Tm_{\varpi^{\circ}}(G)$ over $G$ for $\Phi \concat \Xi$ with
+    \begin{gather*}
+        \sem{\sigma}_{\rho, \mathscr{e}}(z) \coloneqq \rho(z) \quad \text{for a slot $z$ of } \Phi,\\
+        \sem{\sigma}_{\rho, \mathscr{e}}(x) \coloneqq \big(\mathscr{e}_x, \sem{\sigma(x)}_{\rho, \mathscr{e}_x}\big) \quad \text{for a slot $x$ of } \Xi,
+    \end{gather*}
+    defined when every $\sem{\sigma(x)}_{\rho, \mathscr{e}_x}$ is.
+\end{definition}
+
+\begin{definition}\label{def:interpretation-entries}
+    Let $\rho$ be an environment over $G$ for $\Xi$. By recursion on \cref{def:hypothetical}, we define partial functions interpreting conclusions, telescopes and entries,
+    \begin{gather*}
+        \sem{\_}_\rho : \mathfrak{C}(\Xi) \rightharpoonup \mathfrak{B}(G), \qquad \sem{\_}_\rho : \Tel(\Xi, \vartheta) \rightharpoonup \Tel_{\cat{D}}(G, \vartheta),\\
+        \sem{\_}_\rho : M(\Xi)_s \rightharpoonup M_{\cat{D}}(G)_s, \qquad \sem{\_}_\rho : E(\Xi) \rightharpoonup E_{\cat{D}}(G),
+    \end{gather*}
+    as follows:
+    \begin{itemize}
+        \item the conclusion $\mathsf{type}$ is sent to the boundary $\mathsf{type}$; the conclusion $B$ to the boundary $\sem{B}_\rho$, when the expression $B$ is interpreted as a term of $\Univ$; and the equation $l =_c r$ to $\sem{l}_\rho =_{\sem{c}_\rho} \sem{r}_\rho$, when $\sem{c}_\rho$ is defined and $\sem{l}_\rho, \sem{r}_\rho$ are terms of $\sem{c}_\rho^{\circ}$;
+        \item telescopes and entries are interpreted entrywise, extending the environment as the telescope grows:
+        \begin{gather*}
+            \sem{()}_\rho \coloneqq (), \qquad \sem{(\Theta, A)}_\rho \coloneqq (\sem{\Theta}_\rho, \sem{A}_{\rho.\sem{\Theta}_\rho}),\\
+            \sem{[\Theta]C}_\rho \coloneqq (\sem{\Theta}_\rho, \sem{C}_{\rho.\sem{\Theta}_\rho}),
+        \end{gather*}
+    \end{itemize}
+    each defined when its ingredients are.
+\end{definition}
+
+\begin{definition}\label{def:interpretation-contexts}
+    We define partial interpretations of the objects, types, terms and morphisms of $\Raw$ in $\Env(\cat{D})$.
+    \begin{enumerate}
+        \item For raw contexts, $\sem{\_} : \Ob\Raw \rightharpoonup \Ob\Env(\cat{D})$ is given by recursion on the length, $\sem{()} \coloneqq ()$ and $\sem{\Gamma.A} \coloneqq (\sem{\Gamma}, \sem{A}_{\sem{\Gamma}})$, a semantic context interpreted at its generic environment; so $\sem{\Gamma.\Theta} = \sem{\Gamma} \concat \sem{\Theta}_{\sem{\Gamma}}$ for the extension of \cref{def:telescope-operations}, and $\sem{\_}_{\sem{\Gamma}} : \Ty_{\Raw}(\Gamma) \rightharpoonup \Ty_{\Env(\cat{D})}(\sem{\Gamma})$ interprets the types over $\Gamma$.
+        \item For an entry $A$ over $\Gamma$ (\cref{prop:tos-raw}(4)) with $\sem{\Gamma}$ and $\sem{A}_{\sem{\Gamma}}$ defined, the \emph{interpretation of terms at $A$},
+        \[
+            \sem{\_}_{\Gamma, A} : \Tm_{\Raw}(\Gamma, A) \rightharpoonup \Tm_{\Env(\cat{D})}(\sem{\Gamma}, \sem{A}_{\sem{\Gamma}}) = \Tm\big(\langle \sem{\Gamma} \rangle, \sem{A}_{\sem{\Gamma}}^{\circ}\big),
+        \]
+        is $\sem{u}_{\Gamma, A} \coloneqq \sem{u}_{\sem{\Gamma}, \sem{A}_{\sem{\Gamma}}}$ if $A$ is a slot entry, and sends $\star$ to the element of $\Tm(\langle \sem{\Gamma} \rangle, \sem{A}_{\sem{\Gamma}}^{\circ})$, if it exists, if $A$ is equational.
+        \item For raw contexts $\Delta, \Gamma$ with $\sem{\Delta}$ and $\sem{\Gamma}$ defined, the \emph{interpretation of substitutions},
+        \[
+            \sem{\_} : \Raw(\Delta, \Gamma) \rightharpoonup \Env(\cat{D})(\sem{\Delta}, \sem{\Gamma}) = \cat{D}\big(\langle \sem{\Delta} \rangle, \langle \sem{\Gamma} \rangle\big),
+        \]
+        is $\sem{\sigma} \coloneqq \big\langle\, {!}, \sem{\sigma}^{\sem{\Gamma}[!]}_{\sem{\Delta}} \big\rangle$, the pairing of the unique morphism ${!} : \langle \sem{\Delta} \rangle \to \pt$ with the interpretation along $\sem{\Gamma}[!]$ of $\sigma$ as a family of arguments $\sigma \in \Args(\Delta^{\downarrow}, \Gamma^{\downarrow})$ for the telescope $\Gamma$ over the empty arity (\cref{prop:tos-raw}(1)--(2)).
+    \end{enumerate}
+\end{definition}
+
+\begin{definition}\label{def:interpretable}
+    The \emph{interpretable syntax} $\cat{I} \subseteq \Raw$ consists of the raw contexts $\Gamma$ with $\sem{\Gamma}$ defined, the substitutions $\sigma : \Delta \to \Gamma$ between them with $\sem{\sigma}$ defined, the types $A$ over $\Gamma$ with $\sem{A}_{\sem{\Gamma}}$ defined, and the terms $u$ of such $A$ with $\sem{u}_{\Gamma, A}$ defined.
+\end{definition}
+
+\begin{proposition}\label{prop:interpretation-morphism}
+    $\cat{I}$ is a contextual sub-natural-model of $\Raw$, and $\sem{\_} : \cat{I} \to \Env(\cat{D})$ is a shape-preserving morphism of natural models. Moreover:
+    \begin{enumerate}
+        \item if $\Gamma, \Gamma' \in \cat{I}$ and $\sem{\Gamma} = \sem{\Gamma'}$, then the canonical isomorphism $\iota_{\Gamma', \Gamma}$ lies in $\cat{I}$ and $\sem{\iota_{\Gamma', \Gamma}} = \id$;
+        \item $\cat{I}$ is closed under the operations of \cref{lem:raw-structure}, and $\sem{\_}$ preserves them;
+        \item if $[\Theta]C \in \Ty_{\cat{I}}(\Gamma)$, then $\Gamma.\Theta \in \cat{I}$ and $C \in \Ty_{\cat{I}}(\Gamma.\Theta)$; $u \in \Tm_{\cat{I}}(\Gamma, [\Theta]C)$ iff $u \in \Tm_{\cat{I}}(\Gamma.\Theta, C)$; $B \in \Ty_{\cat{I}}(\Gamma)$ iff $B \in \Tm_{\cat{I}}(\Gamma, \mathsf{type})$; and if $l =_c r \in \Ty_{\cat{I}}(\Gamma)$, then $l, r \in \Tm_{\cat{I}}(\Gamma, c)$;
+        \item for $l, r \in \Tm_{\cat{I}}(\Gamma, c)$, $\star \in \Tm_{\cat{I}}(\Gamma, l =_c r)$ iff $\sem{l}_{\Gamma, c} = \sem{r}_{\Gamma, c}$.
+    \end{enumerate}
+\end{proposition}
+
+The proof occupies the rest of this section.
+
+\subsection{Variables, reindexing and substitution}
+\label{sec:variables-substitution}
+
+\begin{lemma}[Reindexing]\label{lem:interpretation-reindexing}
+    Let $\rho$ be an environment over $G$ for $\Xi$ and $g : G' \to G$. Then
+    \[
+        \sem{e}_{\rho[g]} = \sem{e}_\rho[g], \qquad \sem{u}_{\rho[g], \mathscr{e}[g]} = \sem{u}_{\rho, \mathscr{e}}[g], \qquad \sem{t}^{\upsilon[g]}_{\rho[g]} = \sem{t}^{\upsilon}_\rho[g],
+    \]
+    the left sides being defined whenever the right sides are.
+\end{lemma}
+
+\begin{proof}
+    By structural induction on the expression, for all $\rho$ and $g$ at once. For an application, by the stability of $\app$, the induction hypothesis for the arguments and \cref{lem:iterated-pairing}(2),
+    \begin{align*}
+        \sem{x(t)}_{\rho[g]} &= \app_{\tau_x[g]^{\circ}}(v_x[g])\big[\langle \id, \sem{t}^{\tau_x}_\rho[g] \rangle\big]\\
+        &= \app_{\tau_x^{\circ}}(v_x)\big[\langle \id, \sem{t}^{\tau_x}_\rho \rangle \circ g\big] = \sem{x(t)}_\rho[g],
+    \end{align*}
+    as $g^{+\tau_x^{\circ}} \circ \langle \id, u[g] \rangle = \langle g, u[g] \rangle = \langle \id, u \rangle \circ g$. For an interpretation at an entry,
+    \[
+        \sem{u}_{\rho[g], \mathscr{e}[g]} = \lam_{\tau[g]^{\circ}}(\sem{u}_{\rho[g].\tau[g]}) = \lam_{\tau[g]^{\circ}}(\sem{u}_{\rho.\tau}[g^{+\tau^{\circ}}]) = \sem{u}_{\rho, \mathscr{e}}[g]
+    \]
+    by \cref{lem:environment-operations}, the induction hypothesis and \cref{lem:semantic-telescopes}(5). For arguments, by induction on the telescope: with $u \coloneqq \sem{t}^{\upsilon'}_\rho$, the last component on the left is $\sem{t_y}_{\rho[g], \mathscr{e}[g^{+\upsilon'^{\circ}}][\langle \id, u[g] \rangle]} = \sem{t_y}_{\rho[g], \mathscr{e}[\langle \id, u \rangle][g]} = \sem{t_y}_{\rho, \mathscr{e}[\langle \id, u \rangle]}[g]$; at an equational entry both components are the element of the same set.
+\end{proof}
+
+\begin{lemma}[Variables]\label{lem:eta-interpretation}
+    Let $\rho$ be an environment over $G$ for $\Xi$.
+    \begin{enumerate}
+        \item For $\tau \in \Tel_{\cat{D}}(G, \vartheta)$, the $\eta$-expansions $\eta = (\eta(y))_y$ of the slots of $\vartheta$, interpreted in $\rho.\tau$ along $\tau[p_{\tau^{\circ}}]$, give the generic tuple of $\tau^{\circ}$: $\sem{\eta}^{\tau[p_{\tau^{\circ}}]}_{\rho.\tau} = \nu_{\tau^{\circ}}$.
+        \item For a slot $x$ of $\Xi$ with value $(\mathscr{e}_x, v_x)$, $\sem{\eta(x)}_{\rho, \mathscr{e}_x} = v_x$.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    By the well-founded induction of \cref{eta-expansion} on shapes, (1) and (2) together, for all environments at once. (1) By induction on the entries of $\tau$, with $\rho' \coloneqq \rho.\tau$ and $p \coloneqq p_{\tau^{\circ}}$. At the $j$-th entry $\mathscr{e}_j = (\tau_j, \mathscr{b}_j)$, declaring the slot $y$, the component is $\sem{\eta(y)}_{\rho', \mathscr{e}_j[\pi_j]}$: the entry of $\tau[p]$ is $\mathscr{e}_j[p^{+\tau^{\circ}_{<j}}]$, and $p^{+\tau^{\circ}_{<j}} \circ \langle \id, \nu_{<j} \rangle = \langle p, \nu_{<j} \rangle = \pi_j$ by \eqref{eq:lift-pairing} and \cref{def:generic-term}, $\nu_{<j}$ being the preceding components of $\nu_{\tau^{\circ}}$. Since $(\mathscr{e}_j[\pi_j], \nu_j[\pi'_j])$ is the value of $y$ in $\rho'$, (2) for $y$, whose shape is an entry of $\vartheta$, gives the component $\nu_j[\pi'_j]$, that of $\nu_{\tau^{\circ}}$; at an equational entry it is the element of $\Tm(G.\tau^{\circ}, \mathscr{e}_j^{\circ}[\pi_j])$, which is $\nu_j[\pi'_j]$. (2) Let $\tau \coloneqq \tau_x$ and $p \coloneqq p_{\tau^{\circ}}$. By \cref{eta-expansion}, $\eta(x) = x(\eta)$, and the value of $x$ in $\rho.\tau$ is $(\mathscr{e}_x[p], v_x[p])$, so by (1) and the stability of $\app$,
+    \[
+        \sem{\eta(x)}_{\rho.\tau} = \app_{\tau[p]^{\circ}}(v_x[p])\big[\langle \id, \nu_{\tau^{\circ}} \rangle\big] = \app_{\tau^{\circ}}(v_x)\big[p^{+\tau^{\circ}} \circ \langle \id, \nu_{\tau^{\circ}} \rangle\big] = \app_{\tau^{\circ}}(v_x),
+    \]
+    as $\langle \id, \nu_{\tau^{\circ}} \rangle$ is a section of $p^{+\tau^{\circ}}$ (\cref{def:generic-term}); applying $\lam_{\tau^{\circ}}$ gives $\sem{\eta(x)}_{\rho, \mathscr{e}_x} = v_x$.
+\end{proof}
+
+\begin{lemma}[Substitution]\label{lem:interpretation-substitution}
+    In the situation of \cref{def:substitution-environment}, let $\tau' \in \Tel_{\cat{D}}(G, \Psi)$ and write $\rho'' \coloneqq \sem{\sigma}_{\rho, \mathscr{e}}$. For every $e \in \Expr(\Phi \concat \Xi \concat \Psi, \kappa)$ with $\sem{e}_{\rho''.\tau'}$ defined,
+    \[
+        \sem{e[\sigma]_\Phi^\Psi}_{\rho.\tau'} = \sem{e}_{\rho''.\tau'};
+    \]
+    likewise $\sem{u[\sigma]}_{\rho.\tau', \mathscr{e}'} = \sem{u}_{\rho''.\tau', \mathscr{e}'}$ for interpretations at an entry $\mathscr{e}'$ over $G.\tau'^{\circ}$, and $\sem{t[\sigma]}^{\upsilon}_{\rho.\tau'} = \sem{t}^{\upsilon}_{\rho''.\tau'}$ for arguments along $\upsilon$ over $G.\tau'^{\circ}$, where $\sigma$ acts on $u$ and on each argument at its depth.
+\end{lemma}
+
+\begin{proof}
+    By the lexicographic induction of \cref{def:action} on the active block $\Xi$ and the expression. The environments $\rho''.\tau'$ and $\rho.\tau'$ agree on the slots of $\Phi$ and of $\Psi$: on $\Phi$ by definition, on $\Psi$ because both give them the generic values of $\tau'$. The claim for an interpretation at $\mathscr{e}' = (\tau'', \mathscr{b}'')$ is the claim for the expression at the telescope $\tau' \concat \tau''$.
+
+    \emph{Arguments.} By induction on $\upsilon$: with $u$ the common interpretation of the arguments for the slots of $\upsilon'$, at a slot entry $\mathscr{e}$ declaring $y$ the last component on the right is $\sem{t_y}_{\rho''.\tau', \mathscr{e}[\langle \id, u \rangle]}$, which the induction hypothesis for $t_y$ turns into $\sem{t_y[\sigma]}_{\rho.\tau', \mathscr{e}[\langle \id, u \rangle]}$, the last component on the left; at an equational entry both are the element of the same set.
+
+    \emph{Expressions.} Let $e = x(t)$. If $x$ is a slot of $\Phi$ or of $\Psi$, then $e[\sigma]_\Phi^\Psi = x(t[\sigma])$, the values of $x$ in $\rho.\tau'$ and in $\rho''.\tau'$ agree, and $\sem{t[\sigma]}^{\tau_x}_{\rho.\tau'} = \sem{t}^{\tau_x}_{\rho''.\tau'}$ by the case of arguments; so the two sides agree. If $x$ is a slot of $\Xi$, then $e[\sigma]_\Phi^\Psi = \sigma(x)[t']_{\Phi \concat \Delta}$ with $t' \coloneqq t[\sigma]$, a substitution $\alpha_x \sub \Phi \concat \Delta \concat \Psi$ whose active block $\alpha_x$ is an entry of $\Xi$. Let $p \coloneqq p_{\tau'^{\circ}}$, let $u \coloneqq \sem{t'}^{\tau_x[p]}_{\rho.\tau'} = \sem{t}^{\tau_x[p]}_{\rho''.\tau'}$, by the case of arguments, and let $m \coloneqq \langle p, u \rangle : G.\tau'^{\circ} \to G.\tau_x^{\circ}$. The value of $x$ in $\rho''.\tau'$ is $(\mathscr{e}_x[p], \sem{\sigma(x)}_{\rho, \mathscr{e}_x}[p])$, so by \cref{lem:interpretation-reindexing}
+    \[
+        \sem{e}_{\rho''.\tau'} = \app_{\tau_x[p]^{\circ}}\big(\sem{\sigma(x)}_{\rho, \mathscr{e}_x}[p]\big)\big[\langle \id, u \rangle\big] = \sem{\sigma(x)}_{\rho.\tau_x}[m],
+    \]
+    as $p^{+\tau_x^{\circ}} \circ \langle \id, u \rangle = m$.
+    On the other side, the induction hypothesis for the active block $\alpha_x$, applied to $\sigma(x)$, to $t'$ and to the entries $\mathscr{e}'_y \coloneqq \mathscr{e}_j[\pi_j \circ m]$ of $\tau_x = (\mathscr{e}_1, \ldots, \mathscr{e}_k)$, with $\pi_j$ and $\pi'_j$ the projections of \cref{def:generic-term}, gives
+    \[
+        \sem{\sigma(x)[t']_{\Phi \concat \Delta}}_{\rho.\tau'} = \sem{\sigma(x)}_{\sem{t'}_{\rho.\tau', \mathscr{e}'}},
+    \]
+    and $\sem{t'}_{\rho.\tau', \mathscr{e}'} = (\rho.\tau_x)[m]$: on the slots of $\Phi \concat \Delta$ both are $\rho[p]$, as $p_{\tau_x^{\circ}} \circ m = p$; and the value of the slot $y$ declared by the $j$-th entry of $\tau_x$ is $(\mathscr{e}_j[\pi_j \circ m], \sem{t'_y}_{\rho.\tau', \mathscr{e}_j[\pi_j \circ m]}) = (\mathscr{e}_j[\pi_j \circ m], u_j)$ in the former, by the definition of $u$ and \eqref{eq:lift-pairing}, and the generic value $(\mathscr{e}_j[\pi_j], \nu_j[\pi'_j])$ of $y$ in $\rho.\tau_x$ reindexed along $m$ in the latter, which is $(\mathscr{e}_j[\pi_j \circ m], u_j)$ by \cref{lem:iterated-pairing}(1). By \cref{lem:interpretation-reindexing}, $\sem{\sigma(x)}_{(\rho.\tau_x)[m]} = \sem{\sigma(x)}_{\rho.\tau_x}[m]$.
+\end{proof}
+
+\begin{corollary}\label{cor:interpretation-natural}
+    Let $\sigma : \Delta \to \Gamma$ be a morphism of $\Raw$ such that $\sem{\Delta}$, $\sem{\Gamma}$ and $\sem{\sigma}$ are defined. Then $\sem{\Gamma}[\sem{\sigma}] = \sem{\sigma}_{\sem{\Delta}, \mathscr{e}}$ for $\mathscr{e}_i \coloneqq \sem{\Gamma}_i[\pi_i \circ \sem{\sigma}]$, the entries of $\sem{\Gamma}$ reindexed along the projections $\pi_i : \langle \sem{\Gamma} \rangle \to \langle \sem{\Gamma}_{<i} \rangle$ composed with $\sem{\sigma}$; and for every conclusion, telescope or entry $X$ over $\Gamma^{\downarrow}$ with $\sem{X}_{\sem{\Gamma}}$ defined, and every term $u$ of an entry $A$ over $\Gamma$ with $\sem{u}_{\Gamma, A}$ defined,
+    \[
+        \sem{X[\sigma]}_{\sem{\Delta}} = \sem{X}_{\sem{\Gamma}}[\sem{\sigma}], \qquad \sem{u[\sigma]}_{\Delta, A[\sigma]} = \sem{u}_{\Gamma, A}[\sem{\sigma}].
+    \]
+    Moreover $\sem{\id_\Gamma} = \id$, $\sem{\tau \circ \sigma} = \sem{\tau} \circ \sem{\sigma}$, $\sem{p_A} = p_{\sem{A}^{\circ}}$, $\sem{\nu_A} = \nu_{\sem{A}^{\circ}}$ and $\sem{\langle \sigma, u \rangle} = \langle \sem{\sigma}, \sem{u}_{\Delta, A[\sigma]} \rangle$, the left sides being defined whenever the data on the right are.
+\end{corollary}
+
+\begin{proof}
+    The identity $\sem{t'}_{\rho.\tau', \mathscr{e}'} = (\rho.\tau_x)[m]$ in the proof of \cref{lem:interpretation-substitution} gives the first claim when applied to the empty environment over $\pt$ extended by $\sem{\Delta}$, to the telescope $\sem{\Gamma}$ and to $m = \sem{\sigma}$. Hence, by \cref{lem:interpretation-substitution,lem:interpretation-reindexing},
+    \[
+        \sem{X[\sigma]}_{\sem{\Delta}} = \sem{X}_{\sem{\Gamma}[\sem{\sigma}]} = \sem{X}_{\sem{\Gamma}}[\sem{\sigma}],
+    \]
+    by induction on $X$, the lemmas being applied at the depth of the subexpressions: for an entry over $\Gamma.\Theta$, at the telescope $\sem{\Theta[\sigma]}_{\sem{\Delta}} = \sem{\Theta}_{\sem{\Gamma}}[\sem{\sigma}]$, since
+    \[
+        (\Theta, A)[\sigma] = (\Theta[\sigma], A[\sigma^{+\Theta}]) \quad \text{and} \quad \sem{\Gamma}[\sem{\sigma}].\sem{\Theta}[\sem{\sigma}] = (\sem{\Gamma}.\sem{\Theta})[\sem{\sigma}^{+\sem{\Theta}^{\circ}}]
+    \]
+    by \cref{lem:telescopes}(2) and \cref{lem:environment-operations}. The equation for $u$ is the same for interpretations at an entry, and holds by irrelevance at an equational $A$. The identity and the projections are the pairings of $!$ with $\eta$-expansions, which interpret to generic tuples by \cref{lem:eta-interpretation}(1), so $\sem{\id_\Gamma} = \langle !, \nu_{\sem{\Gamma}^{\circ}} \rangle = \id$ by \cref{def:generic-term}, and likewise $\sem{p_A} = p$; $\sem{\nu_A} = \nu$ is \cref{lem:eta-interpretation}(2), since $\nu_A$ is the $\eta$-expansion of the last slot (\cref{prop:tos-admissible}), whose value in $\sem{\Gamma.A}$ is generic; composites have components $\tau_i[\sigma]$, so $\sem{\tau \circ \sigma} = \sem{\tau} \circ \sem{\sigma}$ by the equation for terms and \cref{lem:iterated-pairing}(2); and $\sem{\langle \sigma, u \rangle} = \langle \sem{\sigma}, \sem{u}_{\Delta, A[\sigma]} \rangle$ by the definition of $\sem{\_}$ on morphisms. In each case the left side is defined because its components are.
+\end{proof}
+
+\begin{proof}[Proof of \cref{prop:interpretation-morphism}]
+    $\cat{I}$ contains $()$, is closed under extension and is contextual, by the definition of $\sem{\Gamma}$; it is closed under identities, composition, projections, generic terms, pairing and the actions on types and terms by \cref{cor:interpretation-natural}; and $\varpi$ restricts to it, as $\sem{u}_{\Gamma, A}$ is a term of $\sem{A}_{\sem{\Gamma}}^{\circ}$. The same corollary gives the functoriality of $\sem{\_}$ and the equations of \cref{lem:nm-morphism}, so $\sem{\_}$ is a morphism of natural models, shape-preserving because $\sem{A}_{\sem{\Gamma}}$ has the shape of $A$ by \cref{def:interpretation-entries}.
+
+    (i) The canonical isomorphism $\Gamma' \to \Gamma$ is the identity substitution of $\Kl(T)$, whose components are $\eta$-expansions; by \cref{lem:eta-interpretation}(1) and \cref{def:generic-term} its interpretation is $\langle !, \nu_{\sem{\Gamma}^{\circ}} \rangle = \id$, as for $\sem{\id_\Gamma}$.
+
+    (ii) and (iii) are read off from \cref{def:interpretation-entries,def:interpretation-contexts}: $\sem{\mathsf{type}}_{\sem{\Gamma}} = ((), \mathsf{type})$; the type $B$ is interpreted iff the term $B$ of $\mathsf{type}$ is, and $\sem{B}_{\sem{\Gamma}} = ((), \sem{B}_{\Gamma, \mathsf{type}}) = \El(\sem{B}_{\Gamma, \mathsf{type}})$; $\sem{[\Theta]C}_{\sem{\Gamma}}$ is defined iff $\sem{\Gamma.\Theta}$ and $\sem{C}_{\sem{\Gamma.\Theta}}$ are, and $\sem{[A \concat \Theta]C}_{\sem{\Gamma}} = (\sem{A}_{\sem{\Gamma}} \concat \sem{\Theta}_{\sem{\Gamma.A}}, \sem{C}_{\sem{\Gamma.A.\Theta}}) = \PiT(\sem{A}_{\sem{\Gamma}}, \sem{[\Theta]C}_{\sem{\Gamma.A}})$; $\sem{u}_{\Gamma, [\Theta]C}$ is defined iff $\sem{u}_{\Gamma.\Theta, C}$ is, and $\sem{u}_{\Gamma, [A \concat \Theta]C} = \lam(\sem{u}_{\Gamma.A, [\Theta]C})$, as $\lam_{(\sem{A} \concat \upsilon)^{\circ}} = \lam \circ \lam_{\upsilon^{\circ}}$; $\sem{l =_c r}_{\sem{\Gamma}}$ is defined iff $\sem{c}_{\sem{\Gamma}}$, $\sem{l}_{\Gamma, c}$ and $\sem{r}_{\Gamma, c}$ are, and equals $\Id(\sem{l}_{\Gamma, c}, \sem{r}_{\Gamma, c})$; and $\sem{\star}_{\Gamma, l =_c l} = \refl_{\sem{l}_{\Gamma, c}}$.
+
+    (iv) $\sem{\star}_{\Gamma, l =_c r}$ is defined iff $\Tm(\langle \sem{\Gamma} \rangle, \Id(\sem{l}_{\Gamma, c}, \sem{r}_{\Gamma, c}))$ is non-empty, iff $\sem{l}_{\Gamma, c} = \sem{r}_{\Gamma, c}$, by reflection and irrelevance in $\cat{D}$.
+\end{proof}
+
+\section{Initiality}
+\label{sec:initiality}
+
+\begin{proposition}\label{prop:typing-relation}
+    The raw judgements with interpretable data, namely the $\Gamma \vdash A$ with $A \in \Ty_{\cat{I}}(\Gamma)$, the $\Gamma \vdash t : A$ with $t \in \Tm_{\cat{I}}(\Gamma, A)$, and the equalities between such data with equal interpretations, form a typing $\jdg_{\cat{D}}$ on $\Raw$ with $\cat{W}_{\jdg_{\cat{D}}} = \cat{I}$, closed under the rules of \cref{fig:tos}.
+\end{proposition}
+
+\begin{proof}
+    By \cref{prop:interpretation-morphism}, $\cat{I}$ with $\sem{\_} : \cat{I} \to \Env(\cat{D})$ satisfies the hypotheses of \cref{cor:sub-typing}, and $\jdg_{\cat{D}}$ is its $\jdg_{\sem{\_}}$; so $\jdg_{\cat{D}}$ is a typing with $\cat{W}_{\jdg_{\cat{D}}} = \cat{I}$, whose derived forms $\vdash \Gamma$ and $\Delta \vdash \sigma : \Gamma$ say that $\Gamma$, resp.\ $\sigma$, lies in $\cat{I}$. For the closure under \cref{fig:tos}, let the premises of a rule lie in $\jdg_{\cat{D}}$. For \textsc{Type-Ty}, \textsc{Elem-Ty}, \textsc{Eqn-Ty} and \textsc{$\Pi$-Ty}, the data of the conclusion are interpretable by closure of $\cat{I}$ under $\Univ$, $\El$, $\Id$ and $\PiT$, the last applied once per entry of $\Theta$, which are in $\cat{I}$ as $\cat{I}$ is contextual. For \textsc{Elem-TyEq}, \textsc{Eqn-TyEq} and \textsc{$\Pi$-TyEq}, both sides of the conclusion are interpretable in the same way, after moving $l'$ and $r'$ from $c$ to $c'$, and $\Theta'_i$ and $C'$ from $\Gamma.\Theta_{<i}$ and $\Gamma.\Theta$ to $\Gamma.\Theta'_{<i}$ and $\Gamma.\Theta'$, by \cref{cor:sub-typing}(1), and their interpretations agree because $\sem{\_}$ preserves $\El$, $\Id$ and $\PiT$. For \textsc{$\Pi$-Tm} and \textsc{$\Pi$-TmEq} in either direction, the conditions above and below the line coincide by (ii) and (iii) of \cref{prop:interpretation-morphism}, and the interpretations agree on one side iff on the other, as $\sem{\_}$ preserves $\lam$ and $\app$. For \textsc{Eqn-Tm} downward, $l =_c r$ is interpretable by closure under $\Id$ and $\star$ by (iv); upward, (iii) gives $l, r \in \Tm_{\cat{I}}(\Gamma, c)$ and (iv) gives $\sem{l}_{\Gamma, c} = \sem{r}_{\Gamma, c}$.
+\end{proof}
+
+\begin{theorem}\label{thm:initiality}
+    $\Syn$ is the initial object of $\Mod(\ToS^\omega)$.
+\end{theorem}
+
+\begin{proof}
+    Let $\cat{D}$ be a model. By \cref{prop:typing-relation,prop:lattice}, $\jdg \subseteq \jdg_{\cat{D}}$: every well-formed context, substitution, type and term is interpretable, and judgementally equal data have equal interpretations. So the morphism of natural models $\sem{\_} : \cat{W} \to \Env(\cat{D})$, the restriction of that of \cref{prop:interpretation-morphism}, identifies whatever $[\_] : \cat{W} \to \Syn$ identifies, the kernel of $[\_]$ being $\equiv$ (\cref{prop:span}). As $[\_]$ is the coequaliser of its kernel pair (\cref{prop:trivial-fibrations}(4)), $\sem{\_} = F' \circ [\_]$ for a unique morphism $F' : \Syn \to \Env(\cat{D})$ of natural models, and $F \coloneqq \langle \_ \rangle \circ F' : \Syn \to \cat{D}$ is one. It preserves the structure of \cref{def:model}: for an operation $f$ with arguments $x$ in $\cat{W}$, $F[f(x)] = \langle \sem{f(x)} \rangle = f(\langle \sem{x} \rangle) = f(F[x])$, since the operations of $\Syn$ are computed on representatives (\cref{prop:syn-model}) and $\sem{\_}$ and $\langle \_ \rangle$ preserve them (\cref{prop:interpretation-morphism}(ii), \cref{lem:environment-model}). So $F$ is a morphism of models, and the unique one by \cref{cor:uniqueness}.
+\end{proof}
