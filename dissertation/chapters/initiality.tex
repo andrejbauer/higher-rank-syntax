@@ -342,22 +342,22 @@ by induction on $\Phi$, from \cref{lem:pairing} and the stability of $\PiT$ and 
         \begin{equation}\label{eq:lift-pairing}
             h^{+\Phi} \circ \langle g, u \rangle = \langle h \circ g, u \rangle.
         \end{equation}
-        \item The square
+        \item For every $h : Y' \to Y$, the square
         \[\begin{tikzcd}
-            {(Y.\Phi).\Phi[p_\Phi]} & {Y.\Phi} \\
-            {Y.\Phi} & Y
-            \arrow["{p_\Phi^{+\Phi}}", from=1-1, to=1-2]
-            \arrow["{p_{\Phi[p_\Phi]}}"', from=1-1, to=2-1]
+            {Y'.\Phi[h]} & {Y.\Phi} \\
+            {Y'} & Y
+            \arrow["{h^{+\Phi}}", from=1-1, to=1-2]
+            \arrow["{p_{\Phi[h]}}"', from=1-1, to=2-1]
             \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
             \arrow["{p_\Phi}", from=1-2, to=2-2]
-            \arrow["{p_\Phi}"', from=2-1, to=2-2]
+            \arrow["h"', from=2-1, to=2-2]
         \end{tikzcd}\]
-        is a pullback: $(Y.\Phi).\Phi[p_\Phi]$ is the kernel pair of $p_\Phi$.
+        is a pullback. In particular, for $h = p_\Phi$, $(Y.\Phi).\Phi[p_\Phi]$ is the kernel pair of $p_\Phi$.
     \end{enumerate}
 \end{lemma}
 
 \begin{proof}
-    (1) By induction on $\Phi$, from \cref{lem:pairing}; the sections of $p_\Phi$ are the morphisms $m$ with $g = \id$. (2) By the square of \cref{def:iterated-pairing}(2), $\langle g, u \rangle \circ h = g^{+\Phi} \circ h^{+\Phi[g]} \circ \langle \id, u[h] \rangle$, which is $\langle g \circ h, u[h] \rangle$ by \eqref{eq:iterated-stability}; likewise \eqref{eq:lift-pairing} is $(h \circ g)^{+\Phi} = h^{+\Phi} \circ g^{+\Phi[h]}$. (3) By induction on $\Phi$, pasting the pullback squares of \cref{def:representable} along the entries of $\Phi$.
+    (1) By induction on $\Phi$, from \cref{lem:pairing}; the sections of $p_\Phi$ are the morphisms $m$ with $g = \id$. (2) By the square of \cref{def:iterated-pairing}(2), $\langle g, u \rangle \circ h = g^{+\Phi} \circ h^{+\Phi[g]} \circ \langle \id, u[h] \rangle$, which is $\langle g \circ h, u[h] \rangle$ by \eqref{eq:iterated-stability}; likewise \eqref{eq:lift-pairing} is $(h \circ g)^{+\Phi} = h^{+\Phi} \circ g^{+\Phi[h]}$. (3) The square commutes by \eqref{eq:iterated-stability}. Let $g : G \to Y'$ and $m : G \to Y.\Phi$ be morphisms with $p_\Phi \circ m = h \circ g$. By (1), $m = \langle h \circ g, u \rangle$ for a unique tuple $u$ of terms of $\Phi[h \circ g] = \Phi[h][g]$. Again by (1), a morphism $k : G \to Y'.\Phi[h]$ with $p_{\Phi[h]} \circ k = g$ is $\langle g, u' \rangle$ for a unique tuple $u'$ of terms of $\Phi[h][g]$, and then $h^{+\Phi} \circ k = \langle h \circ g, u' \rangle$ by \eqref{eq:lift-pairing}. So $h^{+\Phi} \circ k = m$ iff $u' = u$, and $\langle g, u \rangle$ is the unique morphism $k$ with $p_{\Phi[h]} \circ k = g$ and $h^{+\Phi} \circ k = m$.
 \end{proof}
 
 \begin{definition}\label{def:generic-term}

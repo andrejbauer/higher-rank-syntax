@@ -1,6 +1,7 @@
 \chapter{Theories}
 \label{ch:theories}
 \providecommand{\Mod}{\mathsf{Mod}}
+\providecommand{\modset}{\mathsf{mod}}
 \providecommand{\PiT}{\mathsf{\Pi}}
 \providecommand{\lam}{\mathsf{lam}}
 \providecommand{\app}{\mathsf{app}}
@@ -11,20 +12,26 @@
 \providecommand{\bP}{\mathbf{P}}
 \providecommand{\bS}{\mathbf{S}}
 \providecommand{\bang}{{!}}
+\providecommand{\ev}{\mathsf{ev}}
+\providecommand{\dslash}{\mathord{/\mkern-5mu/}}
+\providecommand{\Pos}{\mathsf{Pos}}
+\providecommand{\PC}{\mathcal{P}\mkern-1mu\mathit{os}}
 
 Throughout this chapter, $\Syn$ is the syntax of $\ToS^\omega$. It is a contextual model of $\ToS^\omega$ (\cref{prop:quotient,prop:syn-model}), and the initial one (\cref{thm:initiality}): for every model $\cat{D}$ of $\ToS^\omega$ there is a unique morphism of models
 \[
-    \sem{\_}_{\cat{D}} : \Syn \to \cat{D},
+    \sem{\_}_{\cat{D}} : \Syn \to \cat{D} \in \Mod(\ToS^{\omega}),
 \]
-the \emph{interpretation} in $\cat{D}$. Of \cref{ch:initiality} we use only this universal property and the calculus of tuples of types of \cref{sec:environment-model}; the construction of the interpretation plays no role.
+the \emph{interpretation} in $\cat{D}$. Of \cref{ch:initiality} we use only this universal property; the construction of the interpretation plays no role.
 
 \section{Signatures}
 \label{sec:signatures}
 
-A signature is a closed context of $\ToS^\omega$, and a model of a signature in a model $\cat{D}$ of $\ToS^\omega$ is a global element of its interpretation. We show that such models are classified by a slice of the syntax (\cref{prop:classifying}), and describe the models of $\ToS^\omega$ in which signatures are interpreted in this chapter, the presheaf models (\cref{lem:presheaf-model}).
-
 \begin{definition}\label{def:signature}
-    A \emph{signature} is an object $\Xi$ of $\Syn$, that is, a well-formed closed context of $\ToS^\omega$ up to judgemental equality. Its slot entries $[\Theta]\,\mathsf{type}$ are its \emph{sort slots}, its slot entries $[\Theta]B$ its \emph{element slots}, and its equational entries $[\Theta](l =_c r)$ its \emph{equations}. A \emph{model} of $\Xi$ in a model $\cat{D}$ of $\ToS^\omega$ is a global element $M : \pt \to \sem{\Xi}_{\cat{D}}$.
+    A \emph{signature} is an object $\Xi$ of $\Syn$. Its slot entries $[\Theta]\,\mathsf{type}$ are its \emph{sort slots}, its slot entries $[\Theta]B$ its \emph{element slots}, and its equational entries $[\Theta](l =_c r)$ its \emph{equations}. A \emph{model} of $\Xi$ in a model $\cat{D}$ of $\ToS^\omega$ is a global element of the interpretation of $\Xi$, that is, a morphism $M : \pt \to \sem{\Xi}_{\cat{D}}$ of the underlying category of $\cat{D}$. We write
+    \[
+        \modset_{\cat{D}}(\Xi) \coloneqq \cat{D}(\pt, \sem{\Xi}_{\cat{D}})
+    \]
+    for the set of models of $\Xi$ in $\cat{D}$.
 \end{definition}
 
 \begin{example}\label{ex:lambda}
@@ -36,120 +43,499 @@ A signature is a closed context of $\ToS^\omega$, and a model of a signature in 
     It has one sort slot, two element slots and one equation.
 \end{example}
 
-Let $G$ be an object of a model $\cat{D}$. Recall from \cref{def:type-telescopes,def:iterated-pairing} that a tuple of types $\Phi \in \Ty^*_{\cat{D}}(G)$ extends $G$ to $G.\Phi$, with projection $p_\Phi$; that it is reindexed along $g : G' \to G$ to $\Phi[g]$, with the lift $g^{+\Phi} : G'.\Phi[g] \to G.\Phi$; and that every morphism into $G.\Phi$ is a pairing $\langle g, u \rangle$, for a unique $g$ and a unique tuple of terms $u$ (\cref{lem:iterated-pairing}). A morphism of natural models $F$ acts on tuples of types and of terms componentwise, and it preserves these operations,
+Let $G$ be an object of a model $\cat{D}$ of $\ToS^{\omega}$. Recall from \cref{def:type-telescopes,def:iterated-pairing} that a tuple of types $\Phi \in \Ty^*_{\cat{D}}(G)$ extends $G$ to $G.\Phi$, with projection $p_\Phi$; that it is reindexed along $g : G' \to G$ to $\Phi[g]$, with the lift $g^{+\Phi} : G'.\Phi[g] \to G.\Phi$; and that every morphism into $G.\Phi$ is a pairing $\langle g, u \rangle$, for a unique $g$ and a unique tuple of terms $u$ (\cref{lem:iterated-pairing}). A morphism of natural models $F$ acts on tuples of types and of terms componentwise, and it preserves these operations,
 \begin{gather*}
     F(G.\Phi) = FG.F\Phi, \qquad F(\Phi[g]) = (F\Phi)[Fg],\\
     F(g^{+\Phi}) = (Fg)^{+F\Phi}, \qquad F\langle g, u \rangle = \langle Fg, Fu \rangle,
 \end{gather*}
 by \cref{lem:nm-morphism,lem:map-of-adjunctions} and induction on $\Phi$.
 
-Since $\Syn$ is contextual, a signature is $\Xi = \pt.A_1.\cdots.A_n$ for unique types $A_i$, and $\sem{\Xi}_{\cat{D}} = \pt.\Psi$ for the tuple $\Psi = (\sem{A_1}_{\cat{D}}, \ldots, \sem{A_n}_{\cat{D}})$. By \cref{lem:iterated-pairing}(1), a model of $\Xi$ in $\cat{D}$ is thus a tuple of terms $(M_1, \ldots, M_n) \in \Tm^*_{\cat{D}}(\pt, \Psi)$: an interpretation of every slot in terms of the preceding ones, in which every equation holds, as a type $\Id(l, r)$ has a term only if $l = r$.
+Since $\Syn$ is contextual, a signature is $\Xi = \pt.A_1.\cdots.A_n$ for unique types $A_i$, and $\sem{\Xi}_{\cat{D}} = \pt.\Psi$ for the tuple $\Psi = (\sem{A_1}_{\cat{D}}, \ldots, \sem{A_n}_{\cat{D}})$. By \cref{lem:iterated-pairing}(1), a model of $\Xi$ in $\cat{D}$ is thus a tuple of terms $(M_1, \ldots, M_n) \in \Tm^*_{\cat{D}}(\pt, \Psi)$.
 
 \begin{definition}\label{def:contextual-slice}
-    Let $G$ be an object of a model $\cat{D}$ of $\ToS^\omega$. The \emph{contextual slice} $\cat{D}_{/G}$ of $\cat{D}$ over $G$ has as objects the tuples of types $\Phi \in \Ty^*_{\cat{D}}(G)$, and as morphisms $\Phi' \to \Phi$ the morphisms $m : G.\Phi' \to G.\Phi$ of $\cat{D}$ with $p_\Phi \circ m = p_{\Phi'}$. Its types and terms over $\Phi$ are those of $\cat{D}$ over $G.\Phi$, with the same reindexing. Its terminal object is $()$, the extension of $\Phi$ by $A$ is $(\Phi, A)$, and $p_A$, $\nu_A$, the pairing and the structure of \cref{def:model} are those of $\cat{D}$.
+    Let $G$ be an object of a model $\cat{D}$ of $\ToS^\omega$. The \emph{contextual slice} $\cat{D}\dslash G$ of $\cat{D}$ over $G$ consists of the following data.
+    \begin{enumerate}
+        \item The objects are the tuples of types over $G$, and the morphisms are the morphisms of $\cat{D}$ over $G$,
+        \begin{gather*}
+            \Ob(\cat{D}\dslash G) \coloneqq \Ty^*_{\cat{D}}(G),\\
+            (\cat{D}\dslash G)(\Phi', \Phi) \coloneqq \{\, m \in \cat{D}(G.\Phi', G.\Phi) \mid p_\Phi \circ m = p_{\Phi'} \,\},
+        \end{gather*}
+        with the identities and the composition of $\cat{D}$, and with the terminal object $\pt \coloneqq ()$.
+        \item The types and the terms are those of $\cat{D}$ over the extended objects. For an object $\Phi$ and a morphism $m : \Phi' \to \Phi$ of $\cat{D}\dslash G$, which is a morphism $m : G.\Phi' \to G.\Phi$ of $\cat{D}$,
+        \begin{align*}
+            \Ty_{\cat{D}\dslash G}(\Phi) &\coloneqq \Ty_{\cat{D}}(G.\Phi), & \Tm_{\cat{D}\dslash G}(\Phi) &\coloneqq \Tm_{\cat{D}}(G.\Phi),\\
+            \Ty_{\cat{D}\dslash G}(m) &\coloneqq \Ty_{\cat{D}}(m), & \Tm_{\cat{D}\dslash G}(m) &\coloneqq \Tm_{\cat{D}}(m),
+        \end{align*}
+        so that the reindexing maps $A \mapsto A[m]$ from $\Ty_{\cat{D}}(G.\Phi)$ to $\Ty_{\cat{D}}(G.\Phi')$ and $t \mapsto t[m]$ from $\Tm_{\cat{D}}(G.\Phi)$ to $\Tm_{\cat{D}}(G.\Phi')$ are those of $\cat{D}$. The component at $\Phi$ of the natural transformation $\varpi : \Tm_{\cat{D}\dslash G} \to \Ty_{\cat{D}\dslash G}$ is the component
+        \[
+            \varpi_{G.\Phi} : \Tm_{\cat{D}}(G.\Phi) \to \Ty_{\cat{D}}(G.\Phi)
+        \]
+        of $\varpi : \Tm_{\cat{D}} \to \Ty_{\cat{D}}$ at $G.\Phi$, so that a term has the same type in $\cat{D}\dslash G$ as in $\cat{D}$.
+        \item The extension of $\Phi$ by $A \in \Ty_{\cat{D}}(G.\Phi)$ is the tuple
+        \[
+            \Phi.A \coloneqq (\Phi, A), \qquad \text{so that} \qquad G.(\Phi.A) = (G.\Phi).A,
+        \]
+        and $p_A : \Phi.A \to \Phi$, $\nu_A \in \Tm_{\cat{D}\dslash G}(\Phi.A)$ and the pairing $\langle m, t \rangle : \Phi' \to \Phi.A$ of $m : \Phi' \to \Phi$ with $t \in \Tm_{\cat{D}}(G.\Phi', A[m])$ are those of $\cat{D}$.
+        \item The structure of \cref{def:model} is that of $\cat{D}$. The universe over $\Phi$ is $\Univ_\Phi \coloneqq \Univ_{G.\Phi}$, and for
+        \begin{gather*}
+            S \in \Tm_{\cat{D}}(G.\Phi, \Univ), \qquad A \in \Ty_{\cat{D}}(G.\Phi),\\
+            C \in \Ty_{\cat{D}}(G.\Phi.A), \qquad u \in \Tm_{\cat{D}}(G.\Phi.A, C),
+        \end{gather*}
+        and for terms $l$ and $r$ of a common atomic type over $G.\Phi$, the types $\El(S)$, $\PiT(A, C)$ and $\Id(l, r)$ and the terms $\lam(u)$ and $\refl_l$ over $\Phi$ are those of $\cat{D}$ over $G.\Phi$.
+    \end{enumerate}
 \end{definition}
+
+\begin{lemma}\label{lem:slice-contextualisation}
+    Let $G$ be an object of a model $\cat{D}$ of $\ToS^\omega$.
+    \begin{enumerate}
+        \item The slice category $\cat{D}/G$ is a natural model, with the types and the terms of the domains,
+        \[
+            \Ty_{\cat{D}/G}(X, f) \coloneqq \Ty_{\cat{D}}(X), \qquad \Tm_{\cat{D}/G}(X, f) \coloneqq \Tm_{\cat{D}}(X),
+        \]
+        with $\varpi$ and the reindexing along a morphism $m : (X', f') \to (X, f)$ those of $\cat{D}$ along $m : X' \to X$, with the terminal object $(G, \id_G)$, and with the extension
+        \[
+            (X, f).A \coloneqq (X.A, f \circ p_A),
+        \]
+        where $p_A$, $\nu_A$ and the pairing are those of $\cat{D}$.
+        \item The natural model underlying the contextual slice, given by (1)--(3) of \cref{def:contextual-slice}, is the contextualisation of the slice (\cref{def:contextual}),
+        \[
+            \cat{D}\dslash G = \Ctx(\cat{D}/G).
+        \]
+        Hence $\cat{D}\dslash G$ is a contextual natural model, and
+        \[
+            \langle \_ \rangle : \cat{D}\dslash G \to \cat{D}/G, \qquad \Phi \mapsto (G.\Phi, p_\Phi),
+        \]
+        is a morphism of natural models that is fully faithful and fibrewise bijective.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    (1) $\Ty_{\cat{D}/G}$ and $\Tm_{\cat{D}/G}$ are the presheaves $\Ty_{\cat{D}}$ and $\Tm_{\cat{D}}$ restricted along the domain functor $\cat{D}/G \to \cat{D}$, and $(G, \id_G)$ is terminal. For $A \in \Ty_{\cat{D}}(X)$, the projection $p_A$ is a morphism $(X.A, f \circ p_A) \to (X, f)$ of $\cat{D}/G$; and for $m : (X', f') \to (X, f)$ and $t \in \Tm_{\cat{D}}(X', A[m])$, the pairing $\langle m, t \rangle : X' \to X.A$ of $\cat{D}$ is a morphism $(X', f') \to (X.A, f \circ p_A)$, since $f \circ p_A \circ \langle m, t \rangle = f \circ m = f'$. So the condition of \cref{lem:right-adjoint}(1) holds in $\cat{D}/G$ because it holds in $\cat{D}$.
+
+    (2) The extension of the terminal object $(G, \id_G)$ of $\cat{D}/G$ by a tuple of types $\Phi$ is $(G.\Phi, p_\Phi)$, by induction on $\Phi$: indeed, $(G.\Phi, p_\Phi).A = (G.\Phi.A, p_\Phi \circ p_A) = (G.(\Phi, A), p_{(\Phi, A)})$. So the objects of $\Ctx(\cat{D}/G)$, the sequences $(A_1, \ldots, A_n)$ of types with $A_i \in \Ty_{\cat{D}/G}(G.A_1.\cdots.A_{i-1}, p) = \Ty_{\cat{D}}(G.A_1.\cdots.A_{i-1})$, are the tuples of types over $G$. Its morphisms $\Phi' \to \Phi$ are the morphisms $(G.\Phi', p_{\Phi'}) \to (G.\Phi, p_\Phi)$ of $\cat{D}/G$, that is, the morphisms $m : G.\Phi' \to G.\Phi$ of $\cat{D}$ with $p_\Phi \circ m = p_{\Phi'}$. Its types, terms, extensions, projections, generic terms and pairing are those of $\cat{D}/G$ at the objects $(G.\Phi, p_\Phi)$, hence those of $\cat{D}$ at $G.\Phi$. This is (1)--(3) of \cref{def:contextual-slice}, and the rest is \cref{prop:contextualisation}.
+\end{proof}
 
 \begin{lemma}\label{lem:contextual-slice}
     Let $\cat{D}$ be a model of $\ToS^\omega$.
     \begin{enumerate}
-        \item $\cat{D}_{/G}$ is a contextual model of $\ToS^\omega$. For $G = \pt$ it is the contextualisation of $\cat{D}$, and $\langle \_ \rangle : \cat{D}_{/\pt} \to \cat{D}$, $\Phi \mapsto \pt.\Phi$, is a morphism of models, an isomorphism if $\cat{D}$ is contextual.
-        \item Every morphism $g : G' \to G$ of $\cat{D}$ induces a morphism of models $g^* : \cat{D}_{/G} \to \cat{D}_{/G'}$, the \emph{base change} along $g$, with
+        \item $\cat{D}\dslash G$ is a contextual model of $\ToS^\omega$. For $G = \pt$ it is the contextualisation of $\cat{D}$.
+        \item Every morphism $g : G' \to G$ of $\cat{D}$ induces a morphism of models $g^* : \cat{D}\dslash G \to \cat{D}\dslash G'$, the \emph{base change} along $g$, with
         \[
             g^*(\Phi) \coloneqq \Phi[g], \qquad g^*(A) \coloneqq A[g^{+\Phi}], \qquad g^*(t) \coloneqq t[g^{+\Phi}],
         \]
-        and with $g^*(m)$, for $m : \Phi' \to \Phi$, the unique morphism $\Phi'[g] \to \Phi[g]$ such that $g^{+\Phi} \circ g^*(m) = m \circ g^{+\Phi'}$.
-        \item Every morphism of models $F : \cat{D} \to \cat{D}'$ induces a morphism of models $F_{/G} : \cat{D}_{/G} \to \cat{D}'_{/FG}$, which acts as $F$.
+        and with $g^*(m)$, for a morphism $m : \Phi' \to \Phi$ of $\cat{D}\dslash G$, the morphism induced by the universal property of a pullback, as in the following diagram in $\cat{D}$.
+        \[\begin{tikzcd}[column sep=4em, row sep=2.5em]
+            {G'.\Phi'[g]} & {G.\Phi'} \\
+            {G'.\Phi[g]} & {G.\Phi} \\
+            {G'} & G
+            \arrow["{g^{+\Phi'}}", from=1-1, to=1-2]
+            \arrow["{g^*(m)}", dashed, from=1-1, to=2-1]
+            \arrow["{p_{\Phi'[g]}}"', bend right=60, from=1-1, to=3-1]
+            \arrow["m"', from=1-2, to=2-2]
+            \arrow["{p_{\Phi'}}", bend left=60, from=1-2, to=3-2]
+            \arrow["{g^{+\Phi}}", from=2-1, to=2-2]
+            \arrow["{p_{\Phi[g]}}", from=2-1, to=3-1]
+            \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=2-1, to=3-2]
+            \arrow["{p_\Phi}"', from=2-2, to=3-2]
+            \arrow["g"', from=3-1, to=3-2]
+        \end{tikzcd}\]
+        The lower square is a pullback by \cref{lem:iterated-pairing}(3). The outer square commutes by \eqref{eq:iterated-stability}, and the triangle on the right because $m$ is a morphism over $G$. So $p_{\Phi'[g]}$ and $m \circ g^{+\Phi'}$ induce a unique morphism $g^*(m)$ into the pullback: it is a morphism $\Phi'[g] \to \Phi[g]$ of $\cat{D}\dslash G'$, and the only one with $g^{+\Phi} \circ g^*(m) = m \circ g^{+\Phi'}$.
+        \item Every morphism of models $F : \cat{D} \to \cat{D}'$ induces a morphism of models $F\dslash G : \cat{D}\dslash G \to \cat{D}'\dslash FG$, given on objects, morphisms, types and terms by the action of $F$,
+        \begin{gather*}
+            (F\dslash G)(\Phi) \coloneqq F\Phi, \qquad (F\dslash G)(m) \coloneqq Fm,\\
+            (F\dslash G)(A) \coloneqq FA, \qquad (F\dslash G)(t) \coloneqq Ft.
+        \end{gather*}
+        Here $F\Phi \in \Ty^*_{\cat{D}'}(FG)$ is the tuple $(FA_1, \ldots, FA_n)$ for $\Phi = (A_1, \ldots, A_n)$, and since $F(G.\Phi) = FG.F\Phi$, the image of $m : G.\Phi' \to G.\Phi$ is a morphism $Fm : FG.F\Phi' \to FG.F\Phi$, and the images of $A \in \Ty_{\cat{D}}(G.\Phi)$ and $t \in \Tm_{\cat{D}}(G.\Phi)$ are $FA \in \Ty_{\cat{D}'}(FG.F\Phi)$ and $Ft \in \Tm_{\cat{D}'}(FG.F\Phi)$.
     \end{enumerate}
 \end{lemma}
 
 \begin{proof}
-    (1) Composition and identities are those of $\cat{D}$, and $()$ is terminal, the only morphism $\Phi \to ()$ being $p_\Phi$. For $A \in \Ty(G.\Phi)$, the projection $p_A$ is a morphism $(\Phi, A) \to \Phi$, since $p_{(\Phi, A)} = p_\Phi \circ p_A$, and for $m : \Phi' \to \Phi$ and $t \in \Tm(G.\Phi', A[m])$ the pairing $\langle m, t \rangle$ of $\cat{D}$ is a morphism $\Phi' \to (\Phi, A)$. So the condition of \cref{lem:right-adjoint}(1) holds in $\cat{D}_{/G}$ because it holds in $\cat{D}$, and $\cat{D}_{/G}$ is a natural model; it is contextual, an object $(A_1, \ldots, A_n)$ being $().A_1.\cdots.A_n$ for these types only. The presheaves $P_\varpi(\Ty)$, $P_\varpi(\Tm)$, $[\Univ]$ and $\Tm_{\At}$ of $\cat{D}_{/G}$ at $\Phi$ are those of $\cat{D}$ at $G.\Phi$, with the same actions, the lift of a morphism along a type being the same in both. So the structure of $\cat{D}$ restricts to $\cat{D}_{/G}$, and the squares of \cref{def:model}(2) and (3) are pullbacks, pullbacks of presheaves being pointwise. For $G = \pt$, the definition is that of the contextualisation (\cref{def:contextual}), so $\langle \_ \rangle$ is a morphism of natural models, and an isomorphism if $\cat{D}$ is contextual (\cref{prop:contextualisation}); it preserves the structure, being the identity on types and terms.
+    (1) $\cat{D}\dslash G$ is a contextual natural model by \cref{lem:slice-contextualisation}. The presheaves $P_\varpi(\Ty)$, $P_\varpi(\Tm)$, $[\Univ]$ and $\Tm_{\At}$ of $\cat{D}\dslash G$ at $\Phi$ are those of $\cat{D}$ at $G.\Phi$, with the same actions, the lift of a morphism along a type being the same in both. So the structure of $\cat{D}$ restricts to $\cat{D}\dslash G$, and the squares of \cref{def:model}(2) and (3) are pullbacks, pullbacks of presheaves being pointwise. For $G = \pt$, the slice $\cat{D}/\pt$ is $\cat{D}$, an object $(X, \bang_X)$ being identified with $X$. So $\cat{D}\dslash \pt$ is the contextualisation of $\cat{D}$, and $\langle \_ \rangle : \cat{D}\dslash \pt \to \cat{D}$, $\Phi \mapsto \pt.\Phi$, is a morphism of natural models, an isomorphism if $\cat{D}$ is contextual (\cref{prop:contextualisation}); it preserves the structure, being the identity on types and terms.
 
-    (2) By \cref{lem:iterated-pairing}(1), $m \circ g^{+\Phi'} = \langle g \circ p_{\Phi'[g]}, u \rangle$ for a unique tuple $u$ of terms of $\Phi[g][p_{\Phi'[g]}]$, and a morphism $n : \Phi'[g] \to \Phi[g]$ is $\langle p_{\Phi'[g]}, u' \rangle$ for a unique such tuple $u'$, with $g^{+\Phi} \circ n = \langle g \circ p_{\Phi'[g]}, u' \rangle$ by \eqref{eq:lift-pairing}; so $g^*(m) = \langle p_{\Phi'[g]}, u \rangle$ is the unique solution. By uniqueness, $g^*$ is a functor. It preserves $()$, and it is compatible with reindexing, as $A[m][g^{+\Phi'}] = A[g^{+\Phi}][g^*(m)]$, and likewise for terms. Since $g^{+(\Phi, A)} = (g^{+\Phi})^{+A}$, we have $g^*(\Phi, A) = (g^*(\Phi), g^*(A))$, $\nu_A[g^{+(\Phi, A)}] = \nu_{g^*(A)}$ and $p_A \circ g^{+(\Phi, A)} = g^{+\Phi} \circ p_{g^*(A)}$, that is, $g^*(\nu_A) = \nu_{g^*(A)}$ and $g^*(p_A) = p_{g^*(A)}$; so $g^*$ is a morphism of natural models by \cref{lem:nm-morphism}. It preserves the structure because the structure is stable under substitution: for instance, $g^*(\PiT(A, C)) = \PiT(A[g^{+\Phi}], C[(g^{+\Phi})^{+A}]) = \PiT(g^*(A), g^*(C))$.
+    (2) By the uniqueness of induced morphisms, $g^*$ is a functor. It preserves $()$, and it is compatible with reindexing, as $A[m][g^{+\Phi'}] = A[g^{+\Phi}][g^*(m)]$, and likewise for terms. Since $g^{+(\Phi, A)} = (g^{+\Phi})^{+A}$, we have $g^*(\Phi, A) = (g^*(\Phi), g^*(A))$, $\nu_A[g^{+(\Phi, A)}] = \nu_{g^*(A)}$ and $p_A \circ g^{+(\Phi, A)} = g^{+\Phi} \circ p_{g^*(A)}$, that is, $g^*(\nu_A) = \nu_{g^*(A)}$ and $g^*(p_A) = p_{g^*(A)}$; so $g^*$ is a morphism of natural models by \cref{lem:nm-morphism}. It preserves the structure because the structure is stable under substitution: for instance, $g^*(\PiT(A, C)) = \PiT(A[g^{+\Phi}], C[(g^{+\Phi})^{+A}]) = \PiT(g^*(A), g^*(C))$.
 
-    (3) $F$ maps tuples of types over $G$ to tuples over $FG$ and, as $F(p_\Phi) = p_{F\Phi}$, morphisms over $G$ to morphisms over $FG$. The equations of \cref{lem:nm-morphism} and the preservation of the structure hold for $F_{/G}$ because they hold for $F$.
+    (3) $F$ maps tuples of types over $G$ to tuples over $FG$ and, as $F(p_\Phi) = p_{F\Phi}$, morphisms over $G$ to morphisms over $FG$. The equations of \cref{lem:nm-morphism} and the preservation of the structure hold for $F\dslash G$ because they hold for $F$.
 \end{proof}
 
-Since $\Syn$ is contextual, $\langle \_ \rangle : \Syn_{/\pt} \to \Syn$ is an isomorphism, and we identify an object $\Gamma$ of $\Syn$ with the corresponding tuple of types over $\pt$. For a signature $\Xi$, the reindexing $\Gamma[\bang_\Xi]$ along $\bang_\Xi : \Xi \to \pt$ is then a tuple of types over $\Xi$, the context $\Gamma$ weakened to $\Xi$.
+Since $\Syn$ is contextual, $\langle \_ \rangle : \Syn\dslash \pt \to \Syn$ is an isomorphism, and we identify an object $\Gamma$ of $\Syn$ with the corresponding tuple of types over $\pt$. For a signature $\Xi$, the reindexing $\Gamma[\bang_\Xi]$ along $\bang_\Xi : \Xi \to \pt$ is then a tuple of types over $\Xi$, the context $\Gamma$ weakened to $\Xi$.
 
 \begin{definition}\label{def:syntax-over}
-    Let $\Xi$ be a signature. The \emph{syntax over} $\Xi$ is the contextual slice $\Syn_{/\Xi}$; its objects, the tuples of types of $\Syn$ over $\Xi$, are the \emph{telescopes} over $\Xi$. The \emph{weakening} is the morphism of models
+    Let $\Xi$ be a signature. The \emph{syntax over} $\Xi$ is the contextual slice $\Syn\dslash \Xi$. A \emph{telescope} over $\Xi$ is a tuple of types of $\Syn$ over $\Xi$ (\cref{def:type-telescopes}), that is, an element of $\Ty^*_{\Syn}(\Xi) = \Ob(\Syn\dslash \Xi)$. The \emph{weakening} is the morphism of models
     \[
-        \bang_\Xi^* \circ \langle \_ \rangle^{-1} : \Syn \to \Syn_{/\Xi}, \qquad \Gamma \mapsto \Gamma[\bang_\Xi], \qquad A \mapsto A[\bang_\Xi^{+\Gamma}], \qquad t \mapsto t[\bang_\Xi^{+\Gamma}],
+        \bang_\Xi^* \circ \langle \_ \rangle^{-1} : \Syn \to \Syn\dslash \Xi, \qquad \Gamma \mapsto \Gamma[\bang_\Xi], \qquad A \mapsto A[\bang_\Xi^{+\Gamma}], \qquad t \mapsto t[\bang_\Xi^{+\Gamma}],
     \]
-    which by initiality is the interpretation $\sem{\_}_{\Syn_{/\Xi}}$. The \emph{generic model} $\delta_\Xi$ of $\Xi$ is the model of $\Xi$ in $\Syn_{/\Xi}$ given by the diagonal of $\Xi$: the unique section of $p_{\Xi[\bang_\Xi]} : \Xi.\Xi[\bang_\Xi] \to \Xi$ with
+    which by initiality is the interpretation $\sem{\_}_{\Syn\dslash \Xi}$. The \emph{generic model}
+    $$\delta_\Xi \in \modset_{\Syn\dslash \Xi}(\Xi)$$
+    is the diagonal of $\Xi$, defined by the universal property of the pullback in the following diagram in $\Syn$.
+    \[\begin{tikzcd}[column sep=4em, row sep=2.5em]
+        \Xi \\
+        & {\Xi.\Xi[\bang_\Xi]} & \Xi \\
+        & \Xi & \pt
+        \arrow["{\delta_\Xi}"{description}, dashed, from=1-1, to=2-2]
+        \arrow["\id", bend left=20, from=1-1, to=2-3]
+        \arrow["\id"', bend right=20, from=1-1, to=3-2]
+        \arrow["{\bang_\Xi^{+\Xi}}", from=2-2, to=2-3]
+        \arrow["{p_{\Xi[\bang_\Xi]}}", from=2-2, to=3-2]
+        \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=2-2, to=3-3]
+        \arrow["{\bang_\Xi}", from=2-3, to=3-3]
+        \arrow["{\bang_\Xi}"', from=3-2, to=3-3]
+    \end{tikzcd}\]
+    The square is a pullback by \cref{lem:iterated-pairing}(3), so that $\Xi.\Xi[\bang_\Xi]$ is the product of $\Xi$ with itself, $\pt$ being terminal, and $\delta_\Xi$ is the morphism induced by the two identities of $\Xi$: the unique morphism with
     \[
-        \bang_\Xi^{+\Xi} \circ \delta_\Xi = \id_\Xi.
+        p_{\Xi[\bang_\Xi]} \circ \delta_\Xi = \id_\Xi \qquad \text{and} \qquad \bang_\Xi^{+\Xi} \circ \delta_\Xi = \id_\Xi.
     \]
+    By the first equation, $\delta_\Xi$ is a morphism $() \to \Xi[\bang_\Xi]$ of $\Syn\dslash \Xi$, that is, a global element of $\sem{\Xi}_{\Syn\dslash \Xi} = \Xi[\bang_\Xi]$.
 \end{definition}
 
-The generic model exists and is unique. By \cref{lem:iterated-pairing}(1), $\id_\Xi = \langle \bang_\Xi, v \rangle$ for a unique tuple $v$ of terms of $\Xi[\bang_\Xi]$, the sections of $p_{\Xi[\bang_\Xi]}$ are the morphisms $\langle \id, u \rangle$, and $\bang_\Xi^{+\Xi} \circ \langle \id, u \rangle = \langle \bang_\Xi, u \rangle$; so $\delta_\Xi = \langle \id, v \rangle$. The components of $v$ are the generic terms of the entries of $\Xi$ (\cref{def:generic-term}): the generic model interprets every slot of $\Xi$ by itself, a closed term of the syntax over $\Xi$.
+In terms of pairing, $\delta_\Xi = \langle \id, \nu_\Xi \rangle$ for the generic tuple $\nu_\Xi$ of $\Xi$ (\cref{def:generic-term}): the generic model interprets every slot of $\Xi$ by itself, a closed term of the syntax over $\Xi$.
 
 \begin{proposition}[Classifying model]\label{prop:classifying}
-    Let $\Xi$ be a signature and $\cat{D}$ a model of $\ToS^\omega$. Evaluation at the generic model is a bijection
+    Let $\Xi$ be a signature and $\cat{D}$ a model of $\ToS^\omega$. The evaluation at the generic model,
     \[
-        \Mod(\ToS^\omega)(\Syn_{/\Xi}, \cat{D}) \xrightarrow{\ \simeq\ } \{\, \text{models of $\Xi$ in $\cat{D}$} \,\}, \qquad H \mapsto H(\delta_\Xi).
+        \ev_{\delta_\Xi} : \Mod(\ToS^\omega)(\Syn\dslash \Xi, \cat{D}) \to \modset_{\cat{D}}(\Xi), \qquad \ev_{\delta_\Xi}(H) \coloneqq H(\delta_\Xi),
     \]
-    The morphism $\sem{\_}_M : \Syn_{/\Xi} \to \cat{D}$ with $\sem{\delta_\Xi}_M = M$ is given, for a telescope $\Theta$ over $\Xi$ and a type $A$ and a term $t$ over $\Xi.\Theta$, by
+    is a bijection natural in $\cat{D}$.
+    The inverse of $\ev_{\delta_\Xi}$ sends a model $M : \pt \to \sem{\Xi}_{\cat{D}}$ to the composite
     \[
-        \sem{\Theta}_M = \pt.\sem{\Theta}_{\cat{D}}[M], \qquad \sem{A}_M = \sem{A}_{\cat{D}}[M^{+\sem{\Theta}_{\cat{D}}}], \qquad \sem{t}_M = \sem{t}_{\cat{D}}[M^{+\sem{\Theta}_{\cat{D}}}],
+        \sem{\_}_M : \Syn\dslash \Xi \xrightarrow{\ \sem{\_}_{\cat{D}} \dslash \Xi\ } \cat{D}\dslash \sem{\Xi}_{\cat{D}} \xrightarrow{\ M^*\ } \cat{D}\dslash \pt \xrightarrow{\ \langle \_ \rangle\ } \cat{D}
     \]
-    where $\sem{\Theta}_{\cat{D}}$ is a tuple of types over $\sem{\Xi}_{\cat{D}}$.
+    of the morphisms of \cref{lem:contextual-slice}: the interpretation in $\cat{D}$, followed by the base change along $M$. Explicitly, let $\Theta = (A_1, \ldots, A_n)$ be a telescope over $\Xi$, an object of $\Syn\dslash \Xi$. The interpretation in $\cat{D}$ sends it, entry by entry, to the tuple of types $\sem{\Theta}_{\cat{D}} \coloneqq (\sem{A_1}_{\cat{D}}, \ldots, \sem{A_n}_{\cat{D}})$ over $\sem{\Xi}_{\cat{D}}$; the base change reindexes this tuple along $M$; and $\langle \_ \rangle$ extends $\pt$ by the result:
+    \[
+        \sem{\Theta}_M = \pt.\sem{\Theta}_{\cat{D}}[M].
+    \]
+    By \cref{lem:iterated-pairing}(3), this is the fibre over $M$ of the projection of $\sem{\Theta}_{\cat{D}}$:
+    \[\begin{tikzcd}[column sep=4em, row sep=2.5em]
+        {\sem{\Theta}_M} & {\sem{\Xi}_{\cat{D}}.\sem{\Theta}_{\cat{D}}} \\
+        \pt & {\sem{\Xi}_{\cat{D}}}
+        \arrow["{M^{+\sem{\Theta}_{\cat{D}}}}", from=1-1, to=1-2]
+        \arrow[from=1-1, to=2-1]
+        \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+        \arrow["{p_{\sem{\Theta}_{\cat{D}}}}", from=1-2, to=2-2]
+        \arrow["M"', from=2-1, to=2-2]
+    \end{tikzcd}\]
+    Likewise, a type $A$ and a term $t$ over $\Theta$, which are a type and a term of $\Syn$ over the context $\Xi.\Theta$, are sent to their interpretations in $\cat{D}$ over $\sem{\Xi.\Theta}_{\cat{D}} = \sem{\Xi}_{\cat{D}}.\sem{\Theta}_{\cat{D}}$, reindexed along the lift of $M$:
+    \[
+        \sem{A}_M = \sem{A}_{\cat{D}}[M^{+\sem{\Theta}_{\cat{D}}}], \qquad \sem{t}_M = \sem{t}_{\cat{D}}[M^{+\sem{\Theta}_{\cat{D}}}].
+    \]
 \end{proposition}
 
 \begin{proof}
-    Write $F \coloneqq \sem{\_}_{\cat{D}}$ and $W \coloneqq \sem{\_}_{\Syn_{/\Xi}}$, and let $\Psi \in \Ty^*_{\cat{D}}(\pt)$ be the image under $F$ of the tuple $\Xi$, so that $F\Xi = \pt.\Psi$, $F(\Xi[\bang_\Xi]) = \Psi[\bang_{F\Xi}]$ and $F(\bang_\Xi^{+\Xi}) = \bang_{F\Xi}^{+\Psi}$. For a morphism of models $H : \Syn_{/\Xi} \to \cat{D}$ we have $H \circ W = F$ by initiality, so $H(\delta_\Xi)$ is a morphism $\pt \to H(W\Xi) = F\Xi$, a model of $\Xi$ in $\cat{D}$.
+    Write $F \coloneqq \sem{\_}_{\cat{D}}$ and $W \coloneqq \sem{\_}_{\Syn\dslash \Xi}$, and let $\Psi \in \Ty^*_{\cat{D}}(\pt)$ be the image under $F$ of the tuple $\Xi$, so that $F\Xi = \pt.\Psi$, $F(\Xi[\bang_\Xi]) = \Psi[\bang_{F\Xi}]$ and $F(\bang_\Xi^{+\Xi}) = \bang_{F\Xi}^{+\Psi}$. For a morphism of models $H : \Syn\dslash \Xi \to \cat{D}$ we have $H \circ W = F$ by initiality, so $\ev_{\delta_\Xi}(H) = H(\delta_\Xi)$ is a morphism $\pt \to H(W\Xi) = F\Xi$, a model of $\Xi$ in $\cat{D}$. Likewise, for a morphism of models $K : \cat{D} \to \cat{D}'$ we have $K \circ F = \sem{\_}_{\cat{D}'}$, so $K$ sends a model $M : \pt \to F\Xi$ to a morphism $K(M) : \pt \to \sem{\Xi}_{\cat{D}'}$, a model of $\Xi$ in $\cat{D}'$, and $\ev_{\delta_\Xi}(K \circ H) = K(H(\delta_\Xi)) = K(\ev_{\delta_\Xi}(H))$.
 
-    \emph{Surjectivity.} Let $M$ be a model of $\Xi$ in $\cat{D}$. By \cref{lem:contextual-slice},
-    \[
-        H_M \coloneqq \langle \_ \rangle \circ M^* \circ F_{/\Xi} : \Syn_{/\Xi} \to \cat{D}_{/F\Xi} \to \cat{D}_{/\pt} \to \cat{D}
-    \]
-    is a morphism of models, and it is given by the stated formulas. Now $F(\delta_\Xi)$ is a section of $p_{\Psi[\bang_{F\Xi}]}$ with $\bang_{F\Xi}^{+\Psi} \circ F(\delta_\Xi) = F(\bang_\Xi^{+\Xi} \circ \delta_\Xi) = \id$, and $H_M(\delta_\Xi) = M^*(F\delta_\Xi)$ is the morphism $n : \pt \to \pt.\Psi[\bang_{F\Xi}][M] = \pt.\Psi$ with $M^{+\Psi[\bang_{F\Xi}]} \circ n = F(\delta_\Xi) \circ M$. Since $\bang_{F\Xi}^{+\Psi} \circ M^{+\Psi[\bang_{F\Xi}]} = (\bang_{F\Xi} \circ M)^{+\Psi} = \id$ by \eqref{eq:iterated-stability}, composing with $\bang_{F\Xi}^{+\Psi}$ gives $n = M$.
+    \emph{Surjectivity.} Let $M$ be a model of $\Xi$ in $\cat{D}$. By \cref{lem:contextual-slice}, $\sem{\_}_M$ is a morphism of models, being a composite of such. Its explicit description unfolds the definitions of its three factors: the first, $F\dslash \Xi$, sends $\Theta$, $A$ and $t$ to $F\Theta$, $FA$ and $Ft$; the base change $M^*$ reindexes these along $M$ and its lift $M^{+F\Theta}$; and $\langle \_ \rangle$ sends the tuple $(F\Theta)[M]$ to the object $\pt.(F\Theta)[M]$. The square is a pullback by \cref{lem:iterated-pairing}(3). It remains to show that $\sem{\delta_\Xi}_M = M$. Now $F(\delta_\Xi)$ is a section of $p_{\Psi[\bang_{F\Xi}]}$ with $\bang_{F\Xi}^{+\Psi} \circ F(\delta_\Xi) = F(\bang_\Xi^{+\Xi} \circ \delta_\Xi) = \id$, and $\sem{\delta_\Xi}_M = M^*(F\delta_\Xi)$ is the morphism $n : \pt \to \pt.\Psi[\bang_{F\Xi}][M] = \pt.\Psi$ with $M^{+\Psi[\bang_{F\Xi}]} \circ n = F(\delta_\Xi) \circ M$. Since $\bang_{F\Xi}^{+\Psi} \circ M^{+\Psi[\bang_{F\Xi}]} = (\bang_{F\Xi} \circ M)^{+\Psi} = \id$ by \eqref{eq:iterated-stability}, composing with $\bang_{F\Xi}^{+\Psi}$ gives $n = M$.
 
-    \emph{Injectivity.} Let $\Theta$ be a telescope over $\Xi$, and $q \coloneqq \bang_\Xi^{+\Xi} : \Xi.\Xi[\bang_\Xi] \to \Xi$. By the recursive definitions of reindexing and of lifts, $W(\Xi.\Theta) = W(\Xi).\Theta[q]$, so that $W$ maps the tuple $\Theta$ to $W(\Theta) = \Theta[q]$, and $W(A) = A[q^{+\Theta}]$ and $W(t) = t[q^{+\Theta}]$ for types and terms over $\Xi.\Theta$. As $q \circ \delta_\Xi = \id_\Xi$, the functoriality of reindexing and \eqref{eq:iterated-stability} give, in $\Syn_{/\Xi}$,
+    \emph{Injectivity.} Let $\Theta$ be a telescope over $\Xi$, and $q \coloneqq \bang_\Xi^{+\Xi} : \Xi.\Xi[\bang_\Xi] \to \Xi$. By the recursive definitions of reindexing and of lifts, $W(\Xi.\Theta) = W(\Xi).\Theta[q]$, so that $W$ maps the tuple $\Theta$ to $W(\Theta) = \Theta[q]$, and $W(A) = A[q^{+\Theta}]$ and $W(t) = t[q^{+\Theta}]$ for types and terms over $\Xi.\Theta$. As $q \circ \delta_\Xi = \id_\Xi$, the functoriality of reindexing and \eqref{eq:iterated-stability} give, in $\Syn\dslash \Xi$,
     \[
         \Theta = W(\Theta)[\delta_\Xi], \qquad A = W(A)[\delta_\Xi^{+W(\Theta)}], \qquad t = W(t)[\delta_\Xi^{+W(\Theta)}].
     \]
-    Hence a morphism of models $H$ with $H(\delta_\Xi) = M$ satisfies $H(\Theta) = \pt.F(\Theta)[M]$, $H(A) = F(A)[M^{+F\Theta}]$ and $H(t) = F(t)[M^{+F\Theta}]$, as $H \circ W = F$ and $H$ preserves reindexing and lifts. So $H$ agrees with $H_M$ on objects, types and terms, and therefore on morphisms, every morphism of $\Syn_{/\Xi}$ being the pairing of a morphism to $()$ with a tuple of terms (\cref{lem:iterated-pairing}(1)).
+    Hence a morphism of models $H$ with $H(\delta_\Xi) = M$ satisfies $H(\Theta) = \pt.F(\Theta)[M]$, $H(A) = F(A)[M^{+F\Theta}]$ and $H(t) = F(t)[M^{+F\Theta}]$, as $H \circ W = F$ and $H$ preserves reindexing and lifts. So $H$ agrees with $\sem{\_}_M$ on objects, types and terms, and therefore on morphisms, every morphism of $\Syn\dslash \Xi$ being the pairing of a morphism to $()$ with a tuple of terms (\cref{lem:iterated-pairing}(1)).
 \end{proof}
 
+%here
 \begin{remark}\label{rem:classifying}
-    So $\Syn_{/\Xi}$ is $\Syn$ with a model of $\Xi$ freely adjoined, as a polynomial category is a category with an indeterminate adjoined~\cite[Part~I]{LambekScott1986}: it is the syntax of $\ToS^\omega$ in which the slots of $\Xi$ are constants. For signatures $\Xi$ and $\Xi'$, a model of $\Xi$ in $\Syn_{/\Xi'}$ is a section of $p_{\Xi[\bang_{\Xi'}]} : \Xi'.\Xi[\bang_{\Xi'}] \to \Xi'$, that is, by \cref{lem:iterated-pairing}(1), a morphism $\Xi' \to \Xi$ of $\Syn$: an interpretation of the slots of $\Xi$ by expressions over $\Xi'$.
+    By \cref{prop:classifying}, $\Syn\dslash \Xi$ represents the functor $\cat{D} \mapsto \modset_{\cat{D}}(\Xi)$ on $\Mod(\ToS^\omega)$, with $\delta_\Xi$ as representing object: every model of $\Xi$ in $\cat{D}$ is the image of $\delta_\Xi$ under a unique morphism of models $\Syn\dslash \Xi \to \cat{D}$. Thus $\Syn\dslash \Xi$ is to $\Xi$ what the classifying topos is to a geometric theory, and $\delta_\Xi$ is its universal model. In topos-theoretic language, $\delta_\Xi$ is the universal model and $\Syn\dslash \Xi$ the classifying category.
 \end{remark}
+
+\begin{lemma}\label{lem:signature-morphisms}
+    Let $\Xi$ and $\Xi'$ be signatures. The models of $\Xi$ in the syntax over $\Xi'$ are the morphisms $\Xi' \to \Xi$ of $\Syn$: there is a bijection
+    \[
+        \modset_{\Syn\dslash \Xi'}(\Xi) \xrightarrow{\ \simeq\ } \Syn(\Xi', \Xi), \qquad s \mapsto \bang_{\Xi'}^{+\Xi} \circ s.
+    \]
+\end{lemma}
+
+\begin{proof}
+    The interpretation in $\Syn\dslash \Xi'$ is the weakening (\cref{def:syntax-over}), which sends $\Xi$ to $\Xi[\bang_{\Xi'}]$. Hence a model of $\Xi$ in $\Syn\dslash \Xi'$ is a morphism $() \to \Xi[\bang_{\Xi'}]$ of $\Syn\dslash \Xi'$, that is, a morphism $s$ of $\Syn$ with
+    \[
+        s : \Xi' \to \Xi'.\Xi[\bang_{\Xi'}], \qquad p_{\Xi[\bang_{\Xi'}]} \circ s = \id_{\Xi'}.
+    \]
+    By \cref{lem:iterated-pairing}(3), the square
+    \[\begin{tikzcd}[column sep=4em, row sep=2.5em]
+        {\Xi'.\Xi[\bang_{\Xi'}]} & \Xi \\
+        {\Xi'} & \pt
+        \arrow["{\bang_{\Xi'}^{+\Xi}}", from=1-1, to=1-2]
+        \arrow["{p_{\Xi[\bang_{\Xi'}]}}"', from=1-1, to=2-1]
+        \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+        \arrow["{\bang_\Xi}", from=1-2, to=2-2]
+        \arrow["{\bang_{\Xi'}}"', from=2-1, to=2-2]
+    \end{tikzcd}\]
+    is a pullback in $\Syn$, so postcomposing with $\bang_{\Xi'}^{+\Xi}$ is a bijection between the sections of $p_{\Xi[\bang_{\Xi'}]}$ and the morphisms $\Xi' \to \Xi$.
+\end{proof}
 
 We interpret signatures in presheaves. Fix a Grothendieck universe, whose elements are the \emph{small} sets. The models below are large: their categories are not small, and their types over a context do not form a small set. The results of the previous chapters apply to them in a larger universe.
 
 \begin{lemma}\label{lem:presheaf-model}
-    Let $\cat{N}$ be a small category. The presheaves on $\cat{N}$ form a model $\bP(\cat{N})$ of $\ToS^\omega$, the \emph{presheaf model} on $\cat{N}$, as follows. We write $\gamma \cdot f \in \Gamma(J)$ for the restriction of $\gamma \in \Gamma(I)$ along $f : J \to I$.
+    Let $\cat{C}$ be a small category. The presheaves on $\cat{C}$ form a model $\bP(\cat{C})$ of $\ToS^\omega$, the \emph{presheaf model} on $\cat{C}$, as follows.
     \begin{enumerate}
-        \item The category is $\Set^{\cat{N}^{\op}}$, with $\pt$ the terminal presheaf. A type $A$ over $\Gamma$ is a presheaf on $\cel{\Gamma}$, with values $A(I, \gamma)$, and a term $t$ of $A$ is a family of elements $t(\gamma) \in A(I, \gamma)$ with $t(\gamma) \cdot f = t(\gamma \cdot f)$. For $\sigma : \Delta \to \Gamma$,
+        \item The category is $\widehat{\mathcal{C}}$, with $\pt$ the terminal presheaf. A type $A$ over $\Gamma$ is a presheaf on $\cel{\Gamma}$, and a term of $A$ is a global element $t : 1 \to A$. For $\sigma : \Delta \to \Gamma$, we have
         \[
-            A[\sigma](I, \delta) \coloneqq A(I, \sigma\delta), \qquad t[\sigma](\delta) \coloneqq t(\sigma\delta),
+            A[\sigma](I, \delta) \coloneqq A(I, \sigma_I(\delta)), \qquad t[\sigma](I, \delta) \coloneqq t(I, \sigma_I(\delta)),
         \]
         and $(\Gamma.A)(I) \coloneqq \{\, (\gamma, a) \mid \gamma \in \Gamma(I),\ a \in A(I, \gamma) \,\}$, with $p_A$ and $\nu_A$ the two projections.
-        \item $\Univ(I)$ is the set of small presheaves on the slice category $\cat{N}/I$, restricted along $f : J \to I$ by precomposition with $f \circ \_ : \cat{N}/J \to \cat{N}/I$; and $\El(S)(I, \gamma) \coloneqq S(\gamma)(\id_I)$, restricted along $f$ by the restriction $S(\gamma)(\id_I) \to S(\gamma)(f) = S(\gamma \cdot f)(\id_J)$ of $S(\gamma)$.
-        \item $\PiT(A, C)(I, \gamma)$ is the set of families $b$ of elements $b(f, a) \in C(J, (\gamma \cdot f, a))$, for $f : J \to I$ and $a \in A(J, \gamma \cdot f)$, such that $b(f, a) \cdot g = b(f \circ g, a \cdot g)$, with $(b \cdot f)(g, a) \coloneqq b(f \circ g, a)$; and $\lam(u)(\gamma)(f, a) \coloneqq u(\gamma \cdot f, a)$.
-        \item $\Id(l, r)(I, \gamma) \coloneqq \{\, \star \mid l(\gamma) = r(\gamma) \,\}$, and $\refl_l(\gamma) \coloneqq \star$.
+        \item The universe is
+        \[
+            \Univ_\Gamma(I,\gamma) = \widehat{\cat{C}/I},
+        \] 
+        so a sort $S$ over $\Gamma$ has as components presheaves $S(I, \gamma)$ on $\cat{C}/I$. Restriction in $\Univ_\Gamma$ along a morphism $f : (J, \gamma \cdot f) \to (I, \gamma)$ is precomposition with the functor $f_* : \cat{C}/J \to \cat{C}/I$,
+        \[
+            \Univ_\Gamma(I, \gamma) \to \Univ_\Gamma(J, \gamma \cdot f), \qquad P \mapsto P \circ f_*.
+        \]
+        So the naturality of $S$ reads
+        \[
+            S(J, \gamma \cdot f)(g) = S(I, \gamma)(f \circ g) \qquad \text{for every } g : K \to J.
+        \]
+        The decoding of $S$ is the type $\El(S)$ over $\Gamma$ with the values
+        \[
+            \El(S)(I, \gamma) \coloneqq S(I, \gamma)(\id_I).
+        \]
+        Its restriction along $f : (J, \gamma \cdot f) \to (I, \gamma)$ is the map
+        \[
+            \El(S)(I, \gamma) = S(I, \gamma)(\id_I) \longrightarrow S(I, \gamma)(f) = S(J, \gamma \cdot f)(\id_J) = \El(S)(J, \gamma \cdot f).
+        \]
+        Here the arrow is the restriction of the presheaf $S(I, \gamma)$ along the morphism of $\cat{C}/I$ from the object $f : J \to I$ to the terminal object $\id_I$ that is given by $f$ itself, and the equality after it is the naturality of $S$ at $g = \id_J$.
+        \item $\PiT(A, C)(I, \gamma)$ is the set of families $b$ of elements $b(f, a) \in C(J, (\gamma \cdot f, a))$, for $f : J \to I$ and $a \in A(J, \gamma \cdot f)$, such that $b(f, a) \cdot g = b(f \circ g, a \cdot g)$, with $(b \cdot f)(g, a) \coloneqq b(f \circ g, a)$; and $\lam(u)(I, \gamma)(f, a) \coloneqq u(J, (\gamma \cdot f, a))$.
+        \item $\Id(l, r)(I, \gamma) \coloneqq \{\, \star \mid l(I, \gamma) = r(I, \gamma) \,\}$, and $\refl_l(I, \gamma) \coloneqq \star$.
+        \item Sorts are small types. Identifying $\cel{\yo(I)}$ with $\cat{C}/I$ and $\gamma \in \Gamma(I)$ with $\gamma : \yo(I) \to \Gamma$, the component of a sort $S$ over $\Gamma$ at $\gamma$ is its decoding reindexed along $\gamma$,
+        \[
+            S(I, \gamma) = \El(S)[\gamma],
+        \]
+        that is, $S(I, \gamma)(f) = \El(S)(J, \gamma \cdot f)$ for $f : J \to I$. So $S$ is determined by $\El(S)$. Conversely, every small type $A$ over $\Gamma$ is $\El(S)$ for the sort $S$ with $S(I, \gamma) \coloneqq A[\gamma]$.
     \end{enumerate}
 \end{lemma}
 
 \begin{proof}
-    That these data are presheaves, resp.\ natural, is routine: they are the presheaf model of dependent type theory~\cite{Hofmann1997} with the universe of Hofmann and Streicher~\cite{HofmannStreicher1997}. The pairing of $\sigma : \Delta \to \Gamma$ with $t \in \Tm(\Delta, A[\sigma])$ is $\langle \sigma, t \rangle(\delta) \coloneqq (\sigma\delta, t(\delta))$, the unique morphism required by \cref{lem:right-adjoint}(1). The inverse of $\lam$ is $\app(b)(\gamma, a) \coloneqq b(\gamma)(\id_I, a)$: clearly $\app(\lam(u)) = u$, and
+    That these data are presheaves, resp.\ natural, is routine: they are the presheaf model of dependent type theory~\cite{Hofmann1997} with the universe of Hofmann and Streicher~\cite{HofmannStreicher1997}, which is stable under reindexing, as $\Univ_\Gamma(I, \gamma)$ does not depend on $\gamma$. Its values are forced by the Yoneda lemma: a sort over $\yo I$ is to be a small type over $\yo I$, that is, a small presheaf on $\cel{\yo I} \cong \cat{C}/I$. The pairing of $\sigma : \Delta \to \Gamma$ with $t \in \Tm(\Delta, A[\sigma])$ has the components $\langle \sigma, t \rangle_I(\delta) \coloneqq (\sigma_I(\delta), t(I, \delta))$, and is the unique morphism required by \cref{lem:right-adjoint}(1). The inverse of $\lam$ is $\app(b)(I, (\gamma, a)) \coloneqq b(I, \gamma)(\id_I, a)$: clearly $\app(\lam(u)) = u$, and
     \[
-        \lam(\app(b))(\gamma)(f, a) = b(\gamma \cdot f)(\id_J, a) = (b(\gamma) \cdot f)(\id_J, a) = b(\gamma)(f, a),
+        \lam(\app(b))(I, \gamma)(f, a) = b(J, \gamma \cdot f)(\id_J, a) = (b(I, \gamma) \cdot f)(\id_J, a) = b(I, \gamma)(f, a),
     \]
-    as $b$ is a term. Finally, $\Id(l, r)$ has a term iff $l = r$, and then only $\refl_l$. So the squares of \cref{def:model}(2) and (3) are pullbacks.
+    as $b$ is natural. Finally, $\Id(l, r)$ has a term iff $l = r$, and then only $\refl_l$. So the squares of \cref{def:model}(2) and (3) are pullbacks.
+
+    For (5), let $f : J \to I$. By the naturality of $S$ and the definition of $\El$ in (2),
+    \[
+        S(I, \gamma)(f) = S(J, \gamma \cdot f)(\id_J) = \El(S)(J, \gamma \cdot f),
+    \]
+    with the same restriction maps, and by (1) this is $\El(S)[\gamma]$. Conversely, let $A$ be a small type over $\Gamma$. The family of the $A[\gamma]$ is natural in $(I, \gamma)$, as $A[\gamma \cdot f] = A[\gamma][\yo(f)]$ and reindexing along $\yo(f)$ is precomposition with $f_* : \cat{C}/J \to \cat{C}/I$, so it is a sort $S$, and $\El(S)(I, \gamma) = A[\gamma](\id_I) = A(I, \gamma)$.
 \end{proof}
 
-We write $\bS \coloneqq \bP(1)$ for the presheaf model on the terminal category, the model of $\ToS^\omega$ \emph{in sets}: a context is a set, a type over it a family of sets, a sort a family of small sets, and $\PiT(A, C)$ the family of the products $\prod_{a \in A(\gamma)} C(\gamma, a)$.
+We write $\bS \coloneqq \bP(1)$ for the presheaf model on the terminal category, the model of $\ToS^\omega$ \emph{in sets}.
 
-\begin{definition}\label{def:points}
-    Let $M$ be a model of a signature $\Xi$ in $\bP(\cat{N})$, with components $M_I \in \sem{\Xi}_{\bP(\cat{N})}(I)$, and let $\Theta = (A_1, \ldots, A_k)$ be a telescope over $\Xi$. The elements of $\sem{\Theta}_M(I)$ are the \emph{points} of $\Theta$ in $M$ at $I$. By \cref{prop:classifying} they are, up to the bracketing of pairs, the tuples $(x_1, \ldots, x_k)$ with
-    \[
-        x_j \in \sem{A_j}_{\bP(\cat{N})}(I, (M_I, x_1, \ldots, x_{j-1})).
-    \]
+\section{Theories and models}
+\label{sec:theories}
+
+\begin{definition}\label{def:theory}
+    A \emph{theory} $T = (\Xi, \cat{A})$ is a signature $\Xi$ together with a set $\cat{A}$ of sort slots of $\Xi$, the \emph{admissible sorts}.
 \end{definition}
 
-\begin{example}\label{ex:lambda-sets}
-    A model of the signature $\Xi_\lambda$ of \cref{ex:lambda} in $\bS$ is a small set $D$ with functions $\mathsf{app} : D \times D \to D$ and $\mathsf{lam} : D^D \to D$ such that $\mathsf{app}(\mathsf{lam}(b), a) = b(a)$ for all $b : D \to D$ and $a \in D$. The argument of $\mathsf{lam}$ ranges over all functions on $D$.
+Recall that in $\Syn$ the dependent product prepends a hypothesis, $\PiT(A, [\Theta]C) = [A \concat \Theta]C$ (\cref{lem:raw-structure,prop:syn-model}). By induction on $\Phi$, an entry $[\Phi]C$ over an object $\Gamma$ of $\Syn$ is therefore the iterated dependent product (\cref{def:type-telescopes}) of its conclusion over its hypotheses:
+\begin{equation}\label{eq:entry-product}
+    [\Phi]C = \PiT_\Phi(C).
+\end{equation}
+
+\begin{definition}\label{def:display-map}
+    Let $y : [\Phi_y]\,\mathsf{type} \in \Xi$ be a sort slot of a signature $\Xi$, its hypotheses $\Phi_y$ weakened to $\Xi$ as in \cref{sec:tos-admissible}. By \cref{prop:tos-admissible}, $\Xi.\Phi_y \vdash \eta(y) : \mathsf{type}$, so the $\eta$-expansion $\eta(y)$ is a sort over $\Phi_y$ in $\Syn\dslash\Xi$, the \emph{generic sort} of $y$. Its decoding $A_y \coloneqq \El(\eta(y))$ is the \emph{generic type} of $y$, and
+    \[
+        p_y \coloneqq p_{A_y} : \Phi_y.A_y \to \Phi_y
+    \]
+    is the \emph{display map} of $y$ in $\Syn\dslash\Xi$.
+\end{definition}
+
+So $\Phi_y.A_y$ extends the hypotheses of $y$ by a variable of sort $y$, and $p_y$ forgets that variable.
+
+\begin{example}\label{ex:theories}
+    We use three running examples.
+    \begin{enumerate}
+        \item The theory of monoids is $T_{\mathsf{mon}} \coloneqq (\Xi_{\mathsf{mon}}, \emptyset)$, where $\Xi_{\mathsf{mon}}$ is
+        \begin{gather*}
+            \mathsf{m} : \mathsf{type}, \qquad \mathsf{e} : \mathsf{m}, \qquad \mathsf{mul} : [x, y : \mathsf{m}]\,\mathsf{m},\\
+            [x : \mathsf{m}]\ \ \mathsf{mul}(\mathsf{e}, x) =_{\mathsf{m}} x, \qquad [x : \mathsf{m}]\ \ \mathsf{mul}(x, \mathsf{e}) =_{\mathsf{m}} x,\\
+            [x, y, z : \mathsf{m}]\ \ \mathsf{mul}(\mathsf{mul}(x, y), z) =_{\mathsf{m}} \mathsf{mul}(x, \mathsf{mul}(y, z)).
+        \end{gather*}
+        \item The theory of dependent types is $T_{\mathsf{dep}} \coloneqq (\Xi_{\mathsf{dep}}, \{\mathsf{tm}\})$, where
+        \[
+            \Xi_{\mathsf{dep}} \coloneqq (\mathsf{ty} : \mathsf{type},\ \ \mathsf{tm} : [A : \mathsf{ty}]\,\mathsf{type}).
+        \]
+        The generic type of its admissible sort is $A_{\mathsf{tm}} = \mathsf{tm}(A)$ over $(A : \mathsf{ty})$, and its display map is
+        \[
+            p_{\mathsf{tm}} : (A : \mathsf{ty},\ x : \mathsf{tm}(A)) \to (A : \mathsf{ty}).
+        \]
+        \item The theory of dependent types with dependent products is $T_\Pi \coloneqq (\Xi_\Pi, \{\mathsf{tm}\})$, where $\Xi_\Pi$ extends $\Xi_{\mathsf{dep}}$ by
+        \begin{gather*}
+            \mathsf{pi} : [A : \mathsf{ty},\ B : [x : \mathsf{tm}(A)]\,\mathsf{ty}]\,\mathsf{ty},\\
+            \mathsf{lam} : [A : \mathsf{ty},\ B : [x : \mathsf{tm}(A)]\,\mathsf{ty},\ b : [x : \mathsf{tm}(A)]\,\mathsf{tm}(B(x))]\ \mathsf{tm}(\mathsf{pi}(A, B)),\\
+            \mathsf{app} : [A : \mathsf{ty},\ B : [x : \mathsf{tm}(A)]\,\mathsf{ty},\ f : \mathsf{tm}(\mathsf{pi}(A, B)),\ a : \mathsf{tm}(A)]\ \mathsf{tm}(B(a)),\\
+            [A, B, b, a]\ \ \mathsf{app}(A, B, \mathsf{lam}(A, B, b), a) =_{\mathsf{tm}(B(a))} b(a),\\
+            [A, B, f]\ \ \mathsf{lam}(A, B, \{x\}\,\mathsf{app}(A, B, f, x)) =_{\mathsf{tm}(\mathsf{pi}(A, B))} f,
+        \end{gather*}
+        with the hypotheses of the two equations typed as in $\mathsf{lam}$ and $\mathsf{app}$.
+    \end{enumerate}
+\end{example}
+
+Let $\cat{C}$ be a small category with a terminal object. A model $M \in \modset_{\bP(\cat{C})}(\Xi)$ classifies the morphism of models $\sem{\_}_M : \Syn\dslash\Xi \to \bP(\cat{C})$ (\cref{prop:classifying}), the interpretation of the syntax over $\Xi$ in presheaves on $\cat{C}$.
+
+\begin{definition}\label{def:theory-model}
+    A \emph{model} of a theory $T = (\Xi, \cat{A})$ is a triple $(\cat{C}, M, R)$ of a small category $\cat{C}$ with a terminal object, a model $M \in \modset_{\bP(\cat{C})}(\Xi)$ of the signature in presheaves on $\cat{C}$, and a right adjoint $R$ of $\cel{\varpi_M}$ for the natural transformation
+    \begin{gather*}
+        \varpi_M \coloneqq \coprod_{y \in \cat{A}} \sem{p_y}_M : \Tm_M \to \Ty_M, \quad \text{where}\\
+        \Tm_M \coloneqq \coprod_{y \in \cat{A}} \sem{\Phi_y.A_y}_M, \qquad \Ty_M \coloneqq \coprod_{y \in \cat{A}} \sem{\Phi_y}_M.
+    \end{gather*}
+    Thus $(\cat{C}, \varpi_M)$, with $R$, is a natural model (\cref{def:natural-model}), the \emph{natural model} of $(\cat{C}, M, R)$.
+\end{definition}
+
+So a model interprets the signature in presheaves on a category of contexts, in such a way that a context can be extended by a variable of an admissible sort, at any values of its hypotheses. The types of the natural model are thus the admissible sorts at values of their hypotheses.
+
+\begin{definition}\label{def:points}
+    Let $M \in \modset_{\bP(\cat{C})}(\Xi)$, and let $\Theta$ be a telescope over $\Xi$. The elements of $\sem{\Theta}_M(I)$ are the \emph{points} of $\Theta$ at the object $I$ of $\cat{C}$. For $A \in \Ty_{\Syn}(\Xi.\Theta)$, the interpretation $\sem{A}_M \in \Ty_{\bP(\cat{C})}(\sem{\Theta}_M)$ is a presheaf on $\cel{\sem{\Theta}_M}$ (\cref{lem:presheaf-model}(1)), and the elements of $\sem{A}_M(I, \theta)$ are the \emph{elements of $A$ at} the point $\theta$.
+\end{definition}
+
+\begin{lemma}[Interpretation, pointwise]\label{lem:points-extension}
+    Let $M \in \modset_{\bP(\cat{C})}(\Xi)$.
+    \begin{enumerate}
+        \item Let $\Theta = (A_1, \ldots, A_k)$ be a telescope over $\Xi$, so that $A_j \in \Ty_{\Syn}(\Xi.\Theta_{<j})$ for $\Theta_{<j} \coloneqq (A_1, \ldots, A_{j-1})$. Writing iterated pairs as tuples, its points at $I$ are
+        \[
+            \sem{\Theta}_M(I) = \{\, (x_1, \ldots, x_k) \mid x_j \in \sem{A_j}_M(I, (x_1, \ldots, x_{j-1})) \,\},
+        \]
+        and the projection $\sem{p_{A_k}}_M : \sem{\Theta}_M \to \sem{\Theta_{<k}}_M$ forgets $x_k$.
+        \item Let $\sigma : \Theta' \to \Theta$ be a morphism of $\Syn\dslash\Xi$, and let $A \in \Ty_{\Syn}(\Xi.\Theta)$. For a point $\theta' \in \sem{\Theta'}_M(I)$,
+        \[
+            \sem{A[\sigma]}_M(I, \theta') = \sem{A}_M(I, \sem{\sigma}_M(\theta')),
+        \]
+        where $\sem{\sigma}_M(\theta')$ is the image of $\theta'$ under $\sem{\sigma}_M : \sem{\Theta'}_M \to \sem{\Theta}_M$.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    As $\sem{\_}_M$ is a morphism of models (\cref{prop:classifying}), it commutes with extension, projections and reindexing (\cref{def:nm-morphism,lem:nm-morphism}):
+    \[
+        \sem{\Theta.A}_M = \sem{\Theta}_M.\sem{A}_M, \qquad \sem{p_A}_M = p_{\sem{A}_M}, \qquad \sem{A[\sigma]}_M = \sem{A}_M[\sem{\sigma}_M].
+    \]
+    By \cref{lem:presheaf-model}(1), the elements of an extension in $\bP(\cat{C})$ are pairs, its projection is the first projection, and $B[g](I, \delta) = B(I, g(\delta))$. So the first two equations give (1) by induction on $k$, and the third gives (2).
+\end{proof}
+
+\begin{lemma}[Representable types]\label{lem:representable-types}
+    Let $A$ be a type over $\Gamma$ in $\bP(\cat{C})$, and let $\gamma \in \Gamma(I)$. Regard $\gamma$ as $\gamma : \yo(I) \to \Gamma$ and identify $\cel{\yo(I)}$ with $\cat{C}/I$, so that $A[\gamma]$ is the presheaf on $\cat{C}/I$ with $A[\gamma](f) = A(J, \gamma \cdot f)$ for $f : J \to I$. Let $p : I' \to I$ and $v \in A(I', \gamma \cdot p)$. The square
+    \[\begin{tikzcd}[column sep=4em, row sep=2.5em]
+        {\yo(I')} & {\Gamma.A} \\
+        {\yo(I)} & \Gamma
+        \arrow["{(\gamma \cdot p, v)}", from=1-1, to=1-2]
+        \arrow["{\yo(p)}"', from=1-1, to=2-1]
+        \arrow["{p_A}", from=1-2, to=2-2]
+        \arrow["\gamma"', from=2-1, to=2-2]
+    \end{tikzcd}\]
+    is a pullback iff $(p, v)$ represents $A[\gamma]$, that is, iff the natural transformation that $v$ induces by the Yoneda lemma, $(\cat{C}/I)(\_, p) \to A[\gamma]$, is an isomorphism. Its component at $f : J \to I$ is
+    \[
+        (\cat{C}/I)(f, p) \to A(J, \gamma \cdot f), \qquad h \mapsto v \cdot h,
+    \]
+    so this says that each of these maps is a bijection.
+\end{lemma}
+
+\begin{proof}
+    The elements of $\Gamma.A$ at $J$ over $\gamma \cdot f$ are the pairs $(\gamma \cdot f, a)$ with $a \in A(J, \gamma \cdot f)$ (\cref{lem:presheaf-model}(1)), and $(\gamma \cdot p, v) \cdot h = (\gamma \cdot f, v \cdot h)$ for $h : f \to p$. So the condition of \cref{lem:right-adjoint}(1) for the square says that $h \mapsto v \cdot h$ is a bijection from the morphisms $h : J \to I'$ with $p \circ h = f$, which are the morphisms $f \to p$ of $\cat{C}/I$, onto $A(J, \gamma \cdot f)$.
+\end{proof}
+
+\begin{proposition}[Models slot by slot]\label{prop:slots}
+    Let $\cat{D}$ be a model of $\ToS^\omega$, and let $\Xi.E$ be a signature with last entry $E = [\Phi]C$. Then pairing is a bijection
+    \begin{gather*}
+        \sum_{M \in \modset_{\cat{D}}(\Xi)} \Tm_{\cat{D}}(\sem{\Phi}_M, \sem{C}_M) \xrightarrow{\ \simeq\ } \modset_{\cat{D}}(\Xi.E),\\
+        (M, c) \mapsto \langle M, \lam_{\sem{\Phi}_{\cat{D}}[M]}(c) \rangle,
+    \end{gather*}
+    over $\modset_{\cat{D}}(\Xi)$: we have that $p_{\sem{E}_{\cat{D}}} \circ \langle M, \lam_{\sem{\Phi}_{\cat{D}}[M]}(c) \rangle = M$.
+\end{proposition}
+
+\begin{proof}
+    The interpretation preserves extension, so $\sem{\Xi.E}_{\cat{D}} = \sem{\Xi}_{\cat{D}}.\sem{E}_{\cat{D}}$, and by \cref{lem:right-adjoint}(1) pairing is a bijection
+    \[
+        \sum_{M \in \modset_{\cat{D}}(\Xi)} \Tm_{\cat{D}}(\pt, \sem{E}_{\cat{D}}[M]) \xrightarrow{\ \simeq\ } \modset_{\cat{D}}(\Xi.E), \qquad (M, t) \mapsto \langle M, t \rangle,
+    \]
+    with $p_{\sem{E}_{\cat{D}}} \circ \langle M, t \rangle = M$. As $E = \PiT_\Phi(C)$ by \eqref{eq:entry-product}, and as the interpretation preserves dependent products, \eqref{eq:iterated-stability} and \cref{prop:classifying} give
+    \[
+        \sem{E}_{\cat{D}}[M] = \PiT_{\sem{\Phi}_{\cat{D}}}(\sem{C}_{\cat{D}})[M] = \PiT_{\sem{\Phi}_{\cat{D}}[M]}(\sem{C}_{\cat{D}}[M^{+\sem{\Phi}_{\cat{D}}}]) = \PiT_{\sem{\Phi}_{\cat{D}}[M]}(\sem{C}_M)
+    \]
+    and $\pt.\sem{\Phi}_{\cat{D}}[M] = \sem{\Phi}_M$. So $\lam_{\sem{\Phi}_{\cat{D}}[M]}$ maps $\Tm_{\cat{D}}(\sem{\Phi}_M, \sem{C}_M)$ bijectively onto $\Tm_{\cat{D}}(\pt, \sem{E}_{\cat{D}}[M])$ (\cref{def:type-telescopes}).
+\end{proof}
+
+So a model $N$ of $\Xi.E$ is a model $M$ of $\Xi$ together with a term $c$ of $\sem{C}_M$ over $\sem{\Phi}_M$. If $E$ is an equation $[\Phi](l =_c r)$, then such a $c$ exists iff $\sem{l}_M = \sem{r}_M$, and it is then unique (\cref{def:model}(3)). If $E$ declares a slot $z$, then $c$ is the \emph{component} of $N$ at $z$, and it is the interpretation of the slot in $N$.
+
+A hypothesis that binds a variable is interpreted by a dependent product of presheaves, whose elements are large: by \cref{lem:presheaf-model}(3), an element of $\PiT(A, C)$ at $\gamma \in \Gamma(I)$ is a family of elements of $C$, indexed by all $f : J \to I$ and all elements of $A$ at $\gamma \cdot f$. If $A[\gamma]$ is represented by $(p, v)$, such a family amounts to its single value at $(p, v)$. In terms of contexts, $p : I' \to I$ extends $I$ by a variable of type $A$, and $v$ is that variable.
+
+\begin{lemma}[Binding]\label{lem:binding}
+    Let $A$ be a type over $\Gamma$ and $C$ a type over $\Gamma.A$ in $\bP(\cat{C})$, let $\gamma \in \Gamma(I)$, and let $(p, v)$ represent $A[\gamma]$, with $p : I' \to I$ and $v \in A(I', \gamma \cdot p)$. For $f : J \to I$ and $a \in A(J, \gamma \cdot f)$, write $\langle f, a \rangle : J \to I'$ for the unique morphism with $p \circ \langle f, a \rangle = f$ and $v \cdot \langle f, a \rangle = a$.
+    \begin{enumerate}
+        \item Every $b \in \PiT(A, C)(I, \gamma)$ is determined by its value at $(p, v)$: for all $f : J \to I$ and $a \in A(J, \gamma \cdot f)$,
+        \[
+            b(f, a) = b(p, v) \cdot \langle f, a \rangle.
+        \]
+        \item Evaluation at $(p, v)$ is a bijection
+        \[
+            \PiT(A, C)(I, \gamma) \xrightarrow{\ \simeq\ } C(I', (\gamma \cdot p, v)), \qquad b \mapsto b(p, v),
+        \]
+        with inverse $c \mapsto ((f, a) \mapsto c \cdot \langle f, a \rangle)$. It is natural in $(I, \gamma)$: if $f : J \to I$ and $(p', v')$ represents $A[\gamma \cdot f]$, with $p' : J' \to J$, then the square
+        \[\begin{tikzcd}[column sep=4em, row sep=2.5em]
+            {\PiT(A, C)(I, \gamma)} & {C(I', (\gamma \cdot p, v))} \\
+            {\PiT(A, C)(J, \gamma \cdot f)} & {C(J', (\gamma \cdot f \cdot p', v'))}
+            \arrow["\simeq", from=1-1, to=1-2]
+            \arrow["{\_ \cdot f}"', from=1-1, to=2-1]
+            \arrow["{\_ \cdot \langle f \circ p', v' \rangle}", from=1-2, to=2-2]
+            \arrow["\simeq"', from=2-1, to=2-2]
+        \end{tikzcd}\]
+        of evaluations and restrictions commutes, that is, $(b \cdot f)(p', v') = b(p, v) \cdot \langle f \circ p', v' \rangle$. So if $R$ is a right adjoint of $\cel{p_A}$, with $R(I, \gamma) = (I', (\gamma \cdot p, v))$, then evaluation is an isomorphism $\PiT(A, C) \cong C \circ R$ of presheaves on $\cel{\Gamma}$.
+    \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+    By uniqueness,
+    \[
+        \langle f, a \rangle \circ g = \langle f \circ g, a \cdot g \rangle \qquad \text{and} \qquad \langle p, v \rangle = \id_{I'}.
+    \]
+    (1) By the naturality condition of \cref{lem:presheaf-model}(3), $b(p, v) \cdot \langle f, a \rangle = b(p \circ \langle f, a \rangle, v \cdot \langle f, a \rangle) = b(f, a)$. (2) By (1), $b$ is determined by $b(p, v)$. Conversely, for $c \in C(I', (\gamma \cdot p, v))$, the family $(f, a) \mapsto c \cdot \langle f, a \rangle$ satisfies the naturality condition by the first equation, and its value at $(p, v)$ is $c$ by the second. The square commutes as $(b \cdot f)(p', v') = b(f \circ p', v') = b(p, v) \cdot \langle f \circ p', v' \rangle$, by the definition of the restriction and (1). For a right adjoint $R$ of $\cel{p_A}$, the representations $(p, v)$ are those of \cref{lem:right-adjoint,lem:representable-types}, and $R(f) = \langle f \circ p', v' \rangle$, so the bijections are natural.
+\end{proof}
+
+In a model of $T$, the lemma applies to the hypotheses that bind a variable of an admissible sort $y$. Such a hypothesis is a type $A_y[\sigma]$ over a telescope $\Theta$, where $\sigma : \Theta \to \Phi_y$ gives the arguments of $y$, and at a point $\theta$ of $\Theta$ its variable has the type $(y, \sem{\sigma}_M(\theta))$ of the natural model.
+
+\begin{proposition}[Binding is context extension]\label{prop:binding-model}
+    Let $(\cat{C}, M, R)$ be a model of a theory $T = (\Xi, \cat{A})$, and let $y \in \cat{A}$ be an admissible sort, with hypotheses $\Phi_y$ and generic type $A_y$ (\cref{def:display-map}). Let $\sigma : \Theta \to \Phi_y$ be a morphism of $\Syn\dslash\Xi$, and let $C$ be a type over $\Theta.A_y[\sigma]$. For a point $\theta \in \sem{\Theta}_M(I)$, let ${\tau \coloneqq (y, \sem{\sigma}_M(\theta)) \in \Ty_M(I)}$, with the extension $p_\tau : I.\tau \to I$ and the generic term ${\nu_\tau = (y, \sem{\sigma}_M(\theta) \cdot p_\tau, v_\tau)}$. Then $(\theta \cdot p_\tau, v_\tau)$ is a point of $\Theta.A_y[\sigma]$ at $I.\tau$, and evaluation at $(p_\tau, v_\tau)$ is a bijection
+    \[
+        \sem{\PiT(A_y[\sigma], C)}_M(I, \theta) \xrightarrow{\ \simeq\ } \sem{C}_M(I.\tau, (\theta \cdot p_\tau, v_\tau)), \qquad b \mapsto b(p_\tau, v_\tau).
+    \]
+    It is natural in $(I, \theta)$: for $f : J \to I$, the square
+    \[\begin{tikzcd}[column sep=3em, row sep=2.5em]
+        {\sem{\PiT(A_y[\sigma], C)}_M(I, \theta)} & {\sem{C}_M(I.\tau, (\theta \cdot p_\tau, v_\tau))} \\
+        {\sem{\PiT(A_y[\sigma], C)}_M(J, \theta \cdot f)} & {\sem{C}_M(J.\tau[f], (\theta \cdot f \cdot p_{\tau[f]}, v_{\tau[f]}))}
+        \arrow["\simeq", from=1-1, to=1-2]
+        \arrow["{\_ \cdot f}"', from=1-1, to=2-1]
+        \arrow["{\_ \cdot f^{+\tau}}", from=1-2, to=2-2]
+        \arrow["\simeq"', from=2-1, to=2-2]
+    \end{tikzcd}\]
+    of evaluations and restrictions commutes, where $\tau[f] = (y, \sem{\sigma}_M(\theta \cdot f))$ is the type at the point $\theta \cdot f$, and $f^{+\tau} : J.\tau[f] \to I.\tau$ is the lift of $f$ (\cref{sec:models}).
+\end{proposition}
+
+\begin{proof}
+    By \cref{lem:points-extension}(2) and the naturality of $\sem{\sigma}_M$,
+    \[
+        \sem{A_y[\sigma]}_M(I.\tau, \theta \cdot p_\tau) = \sem{A_y}_M(I.\tau, \sem{\sigma}_M(\theta) \cdot p_\tau),
+    \]
+    and $v_\tau$ is an element of this set, as $\nu_\tau \in \Tm_M(I.\tau)$. So $(\theta \cdot p_\tau, v_\tau)$ is a point of $\Theta.A_y[\sigma]$ at $I.\tau$ (\cref{lem:points-extension}(1)), and we have the diagram
+    \[\begin{tikzcd}[column sep=5em, row sep=2.5em]
+        {\yo(I.\tau)} & {\sem{\Theta.A_y[\sigma]}_M} & {\sem{\Phi_y.A_y}_M} \\
+        {\yo(I)} & {\sem{\Theta}_M} & {\sem{\Phi_y}_M}
+        \arrow["{(\theta \cdot p_\tau, v_\tau)}", from=1-1, to=1-2]
+        \arrow["{\yo(p_\tau)}"', from=1-1, to=2-1]
+        \arrow["{\sem{\sigma^{+A_y}}_M}", from=1-2, to=1-3]
+        \arrow["{\sem{p_{A_y[\sigma]}}_M}"{description}, from=1-2, to=2-2]
+        \arrow["{\sem{p_y}_M}", from=1-3, to=2-3]
+        \arrow["\theta"', from=2-1, to=2-2]
+        \arrow["{\sem{\sigma}_M}"', from=2-2, to=2-3]
+    \end{tikzcd}\]
+    of presheaves on $\cat{C}$. As $\sem{\_}_M$ is a morphism of models, it preserves lifts, so the right square is the square of \cref{lem:iterated-pairing}(3) for $\sem{\sigma}_M$ and $\sem{A_y}_M$, a pullback. By \cref{lem:presheaf-model}(1), the lift of $\sem{\sigma}_M$ maps a point $(\theta', a)$ to $(\sem{\sigma}_M(\theta'), a)$. So the composite on the top is $(\sem{\sigma}_M(\theta) \cdot p_\tau, v_\tau)$, and the outer rectangle is the square that $R$ gives at $\tau$, restricted to the summand $\sem{p_y}_M$ of $\varpi_M$. It is a pullback, as coproducts of presheaves are disjoint and stable under pullback. Hence the left square is a pullback, and $(p_\tau, v_\tau)$ represents $\sem{A_y[\sigma]}_M[\theta]$ by \cref{lem:representable-types}.
+
+    As $\sem{\_}_M$ preserves dependent products, \cref{lem:binding}(2) now gives the bijection. As $\sem{\sigma}_M$ is natural, $(y, \sem{\sigma}_M(\theta \cdot f)) = \tau[f]$, so $(p_{\tau[f]}, v_{\tau[f]})$ is the representation at the point $\theta \cdot f$. A morphism $k : J.\tau[f] \to I.\tau$ with $p_\tau \circ k = f \circ p_{\tau[f]}$ satisfies $\nu_\tau \cdot k = \nu_{\tau[f]}$ iff $v_\tau \cdot k = v_{\tau[f]}$. So $f^{+\tau} = \langle f \circ p_{\tau[f]}, v_{\tau[f]} \rangle$ in the notation of \cref{lem:binding}, and the square is that of \cref{lem:binding}(2).
+\end{proof}
+
+Together, \cref{def:theory-model,prop:slots,prop:binding-model} describe a model of $T$ as its natural model with extra structure. The admissible sorts give the types and the terms of the natural model. The components at the other slots are types, terms and equations over the points of their hypotheses, and where a hypothesis binds a variable of an admissible sort, its points are computed by context extension in the natural model.
+
+\begin{example}\label{ex:models}
+    We unfold the models of the theories of \cref{ex:theories}.
+    \begin{enumerate}
+        \item As $T_{\mathsf{mon}}$ has no admissible sorts, $\varpi_M$ is the identity of the empty presheaf and $R$ is unique, so a model of $T_{\mathsf{mon}}$ on $\cat{C}$ is a model of $\Xi_{\mathsf{mon}}$ in $\bP(\cat{C})$. By \cref{prop:slots}, it consists of a small presheaf $X \coloneqq \sem{A_{\mathsf{m}}}_M$ on $\cat{C}$, a global element $\sem{\mathsf{e}}_M$ of $X$ and a natural transformation $\sem{\mathsf{mul}(x, y)}_M : X \times X \to X$, the points of $(x, y : \mathsf{m})$ being pairs, which satisfy the three equations: a presheaf of monoids on $\cat{C}$. On a terminal category, a model of $T_{\mathsf{mon}}$ is a monoid. These are also the models whose natural model, which has no types, is contextual (\cref{def:contextual}).
+        \item Let $(\cat{C}, M, R)$ be a model of $T_{\mathsf{dep}}$, and let $\Ty \coloneqq \sem{(A : \mathsf{ty})}_M$, $\Tm \coloneqq \sem{(A : \mathsf{ty},\ x : \mathsf{tm}(A))}_M$ and $\varpi \coloneqq \sem{p_{\mathsf{tm}}}_M : \Tm \to \Ty$. By \cref{prop:slots}, the components of $M$ are a small presheaf on $\cat{C}$, which is $\Ty$ up to the identification of a point $(\star, a)$ of $(A : \mathsf{ty})$ with $a$, and the small type $\sem{A_{\mathsf{tm}}}_M$ over $\Ty$, whose extension is $\Tm$ with the projection $\varpi$ (\cref{lem:points-extension}(1)). As $\mathsf{tm}$ is the only admissible sort, $\varpi_M$ is the coproduct of the single summand $\varpi$, and we identify the two; then $R$ makes $(\cat{C}, \varpi)$ a natural model. So a model of $T_{\mathsf{dep}}$ is a natural model whose presheaves of types and terms are small, and every such natural model arises in this way, up to isomorphism.
+        \item A model $(\cat{C}, M, R)$ of $T_\Pi$ restricts to a model of $T_{\mathsf{dep}}$, and so has the natural model $(\cat{C}, \varpi)$ of (2); we write $I.a$ for the extension of $I$ by $a \in \Ty(I)$. By \cref{prop:binding-model}, the points of $(A : \mathsf{ty},\ B : [x : \mathsf{tm}(A)]\,\mathsf{ty})$ at $I$ correspond to the pairs $(a, b)$ with $a \in \Ty(I)$ and $b \in \Ty(I.a)$, restricted along $f : J \to I$ to $(a \cdot f, b \cdot f^{+a})$: they form the presheaf $P_\varpi(\Ty)$ of \cref{sec:models}. Likewise, the points of the hypotheses of $\mathsf{lam}$ form $P_\varpi(\Tm)$. So the components at $\mathsf{pi}$ and $\mathsf{lam}$ are natural transformations $\PiT : P_\varpi(\Ty) \to \Ty$ and $\lam : P_\varpi(\Tm) \to \Tm$ with $\varpi \circ \lam = \PiT \circ P_\varpi(\varpi)$, and the component at $\mathsf{app}$, with the $\beta$- and the $\eta$-law, makes every $\lam : \Tm(I.a, b) \to \Tm(I, \PiT(a, b))$ a bijection. A model of $T_\Pi$ is thus a natural model with dependent products in the sense of \cref{def:model}(2), with small presheaves of types and terms.
+    \end{enumerate}
 \end{example}
